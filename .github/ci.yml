@@ -1,0 +1,46 @@
+name: CI Code Quality
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  build-and-analyze:
+    name: Build, Lint & Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Wichtig für SonarCloud PR-Analysen
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      # 1. Formatting prüfen
+      - name: Run ktlint
+        run: ./gradlew ktlintCheck
+
+      # 2. Statische Code Analyse
+      - name: Run detekt
+        run: ./gradlew detekt
+
+      # 3. Tests & Coverage generieren
+      - name: Run Tests with Kover
+        run: ./gradlew koverXmlReport
+
+      # 4. Ergebnisse an SonarCloud senden
+      - name: SonarCloud Scan
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Automatisch von GitHub bereitgestellt
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}    # Musst du in GitHub Secrets hinterlegen
+        run: ./gradlew sonar --info
