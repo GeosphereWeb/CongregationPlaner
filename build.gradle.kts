@@ -34,6 +34,9 @@ sonar {
         property("sonar.host.url", "https://sonarcloud.io")
         // Pfade zu den Kover XML Reports (kommagetrennt für Multi-Modul)
         property("sonar.kotlin.xml.reportPaths", "composeApp/build/reports/kover/report.xml")
-        property("sonar.coverage.jacoco.xmlReportPaths", "composeApp/build/reports/kover/report.xml") // Manchmal braucht Sonar diesen Fallback
+        property(
+            "sonar.coverage.jacoco.xmlReportPaths",
+            "composeApp/build/reports/kover/report.xml",
+        ) // Manchmal braucht Sonar diesen Fallback
     }
 }
