@@ -1,0 +1,34 @@
+name: "Compliance Check"
+
+on:
+  pull_request:
+    types: [ opened, edited, synchronize, reopened ]
+
+jobs:
+  check-compliance:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. PR-Titel Prüfung
+      # Dieser Schritt prüft den Titel des Pull Requests.
+      - name: Check PR Title
+        uses: nicklegan/github-pull-request-naming-policy-action@v1.0.0
+        with:
+          # NEU: Der Regex wurde erweitert, um ein optionales Emoji nach der Ticket-ID zu erlauben.
+          # Das "/u" am Ende ist für die Unicode-Unterstützung (Emojis) wichtig.
+          # Beispiel: "CP-123: ✨ feat: Neue Funktion" ist jetzt gültig.
+          title-regex: '^(CP-[0-9]+|JDI)(:|\s)\s*((?:\p{Emoji}\s)?)?.*'
+          title-regex-flags: 'u' # Unicode-Flag für Emoji-Erkennung
+          title-error-message: 'FEHLER: Der PR-Titel muss mit "CP-123:" oder "JDI:" beginnen und kann optional ein Emoji enthalten.'
+
+      # 2. Commit-Nachrichten Prüfung
+      # Dieser Schritt prüft jede einzelne Commit-Nachricht innerhalb des Pull Requests.
+      - name: Check Commit Messages
+        uses: gsactions/commit-message-checker@v2
+        with:
+          # NEU: Auch hier wurde der Regex um die optionale Emoji-Prüfung erweitert.
+          pattern: '^(CP-[0-9]+|JDI)(:|\s)\s*((?:\p{Emoji}\s)?)?.*'
+          flags: 'u' # Unicode-Flag für Emoji-Erkennung
+          error: 'FEHLER: Ein Commit-Header beginnt nicht mit "CP-123:" oder "JDI:" (optional mit Emoji).'
+          excludeDescription: 'true' # Prüft nur die erste Zeile (Header) des Commits
+          excludeTitle: 'true'       # Wir prüfen den PR-Titel bereits im ersten Schritt
+          accessToken: ${{ secrets.GITHUB_TOKEN }}
