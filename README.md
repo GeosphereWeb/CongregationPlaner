@@ -43,6 +43,21 @@ in your IDE’s toolbar or run it directly from the terminal:
 To build and run the development version of the iOS app, use the run configuration from the run widget
 in your IDE’s toolbar or open the [/iosApp](./iosApp) directory in Xcode and run it from there.
 
+### Dependency Verification (SonarQube Fix)
+
+This project uses Gradle dependency verification to prevent security hotspots in SonarQube/SonarCloud. If you add new dependencies, update versions, or upgrade Gradle, you must update the verification metadata file.
+
+Run the following command to update `gradle/verification-metadata.xml` (disabling the configuration cache avoids conflicts with newer Java versions):
+
+- on macOS/Linux
+  ```bash
+  ./gradlew --write-verification-metadata sha256 help -Dorg.gradle.configuration-cache=false
+  ```
+- on Windows
+  ```shell
+  .\gradlew.bat --write-verification-metadata sha256 help "-Dorg.gradle.configuration-cache=false"
+  ```
+
 ---
 
 Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…

@@ -29,14 +29,26 @@ detekt {
 // SonarCloud Konfiguration
 sonar {
     properties {
-        property("sonar.projectKey", "GeosphereWeb_CongregationPlaner") // z.B. "CongregationPlaner"
+        property("sonar.projectKey", "GeosphereWeb_CongregationPlaner")
         property("sonar.organization", "geosphereweb")
         property("sonar.host.url", "https://sonarcloud.io")
-        // Pfade zu den Kover XML Reports (kommagetrennt für Multi-Modul)
+
+        // Projekt-Metadaten
+        property("sonar.projectDescription", "Kotlin Multiplatform Congregation Planner Application")
+
+        // Bei Multimodul-Projekten (KMP) entfernt: die Quellen und Tests werden
+        // vom Sonar-Gradle-Plugin pro-Subprojekt automatisch ermittelt.
+        // Explizite Angabe von `sonar.sources`/`sonar.tests` am Root kann
+        // zu doppelter Indexierung derselben Dateien führen.
+
+        // Exclusionen
+        property("sonar.exclusions", "**/build/**,**/.gradle/**")
+
+        // Coverage Reports (Kover)
         property("sonar.kotlin.xml.reportPaths", "composeApp/build/reports/kover/report.xml")
-        property(
-            "sonar.coverage.jacoco.xmlReportPaths",
-            "composeApp/build/reports/kover/report.xml",
-        ) // Manchmal braucht Sonar diesen Fallback
+        property("sonar.coverage.jacoco.xmlReportPaths", "composeApp/build/reports/kover/report.xml")
+
+        // Lint Reports
+        property("sonar.kotlin.detekt.reportPaths", "composeApp/build/reports/detekt/detekt.xml")
     }
 }
