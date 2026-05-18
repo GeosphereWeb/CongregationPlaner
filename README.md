@@ -56,6 +56,9 @@ Run the following command to update `gradle/verification-metadata.xml` (disablin
 - on Windows
   ```shell
   .\gradlew.bat --write-verification-metadata sha256 help "-Dorg.gradle.configuration-cache=false"
+  oder
+  .\gradlew.bat :composeApp:compileKotlinJvm --write-verification-metadata sha256 --refresh-dependencies "-Dorg.gradle.configuration-cache=false"
+
   ```
 
 ---
