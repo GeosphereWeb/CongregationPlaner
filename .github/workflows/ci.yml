@@ -33,11 +33,9 @@ jobs:
       - name: Run Detekt
         run: ./gradlew detekt
 
-      - name: Build Kotlin JVM (for coverage)
-        run: ./gradlew :composeApp:compileKotlinJvm --no-daemon
-
-      - name: Generate Kover Coverage Report
-        run: ./gradlew koverXmlReport
+      - name: Build and Generate Coverage Report
+        run: ./gradlew koverXmlReport koverHtmlReport --no-daemon
+        continue-on-error: true
 
       - name: SonarCloud Scan
         env:

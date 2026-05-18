@@ -94,6 +94,10 @@ compose.desktop {
 
 kover {
     reports {
+        total {
+            xml {}
+            html {}
+        }
         verify {
             rule {
                 bound {

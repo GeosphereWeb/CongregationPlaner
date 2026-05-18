@@ -66,7 +66,7 @@ jobs:
         if: matrix.language == 'java-kotlin'
         run: |
           chmod +x gradlew
-          ./gradlew clean :composeApp:compileKotlinJvm :composeApp:compileDebugKotlin --no-daemon --no-build-cache -Pkotlin.incremental=false
+          ./gradlew clean :composeApp:compileKotlinJvm :composeApp:compileDebugKotlin --no-daemon
 
       # Analyse ausführen und Ergebnisse an GitHub übermitteln
       - name: Perform CodeQL Analysis

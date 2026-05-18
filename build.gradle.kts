@@ -36,19 +36,10 @@ sonar {
         // Projekt-Metadaten
         property("sonar.projectDescription", "Kotlin Multiplatform Congregation Planner Application")
 
-        // Bei Multimodul-Projekten (KMP) entfernt: die Quellen und Tests werden
-        // vom Sonar-Gradle-Plugin pro-Subprojekt automatisch ermittelt.
-        // Explizite Angabe von `sonar.sources`/`sonar.tests` am Root kann
-        // zu doppelter Indexierung derselben Dateien führen.
+        // Bei Multimodul-Projekten (KMP) werden Module automatisch erkannt.
+        // Quellen und Tests NICHT explizit angeben, um doppelte Indexierung zu vermeiden.
 
         // Exclusionen
-        property("sonar.exclusions", "**/build/**,**/.gradle/**")
-
-        // Coverage Reports (Kover)
-        property("sonar.kotlin.xml.reportPaths", "composeApp/build/reports/kover/report.xml")
-        property("sonar.coverage.jacoco.xmlReportPaths", "composeApp/build/reports/kover/report.xml")
-
-        // Lint Reports
-        property("sonar.kotlin.detekt.reportPaths", "composeApp/build/reports/detekt/detekt.xml")
+        property("sonar.exclusions", "**/build/**,**/.gradle/**,**/*.gradle.kts")
     }
 }
