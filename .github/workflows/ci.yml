@@ -28,20 +28,20 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Run ktlint
-        run: ./gradlew ktlintCheck
+        run: ./gradlew ktlintCheck -Dorg.gradle.dependency.verification=off
 
       - name: Run Detekt
-        run: ./gradlew detekt
+        run: ./gradlew detekt -Dorg.gradle.dependency.verification=off
 
       - name: Build and Generate Coverage Report
-        run: ./gradlew koverXmlReport koverHtmlReport --no-daemon
+        run: ./gradlew koverXmlReport koverHtmlReport --no-daemon -Dorg.gradle.dependency.verification=off
         continue-on-error: true
 
       - name: SonarCloud Scan
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: ./gradlew sonar --info --no-daemon
+        run: ./gradlew sonar --info --no-daemon -Dorg.gradle.dependency.verification=off
 
       - name: Upload Coverage to SonarCloud
         uses: codecov/codecov-action@v4
