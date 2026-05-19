@@ -54,21 +54,21 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
-       # CodeQL Werkzeuge initialisieren
-       - name: Initialize CodeQL
-         uses: github/codeql-action/init@v3
-         with:
-           languages: ${{ matrix.language }}
-           build-mode: ${{ matrix.build-mode }}
+      # CodeQL Werkzeuge initialisieren
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+         languages: ${{ matrix.language }}
+         build-mode: ${{ matrix.build-mode }}
 
-       # Manueller Build für Java/Kotlin (ersetzt fehlerhaftes Autobuild)
-       - name: Manual Build for Kotlin Multiplatform
-         if: matrix.language == 'java-kotlin'
-         run: |
-           chmod +x gradlew
-           ./gradlew clean :composeApp:compileKotlinJvm :composeApp:compileDebugKotlin --no-daemon -Dorg.gradle.dependency.verification=off
+      # Manueller Build für Java/Kotlin (ersetzt fehlerhaftes Autobuild)
+      - name: Manual Build for Kotlin Multiplatform
+        if: matrix.language == 'java-kotlin'
+        run: |
+         chmod +x gradlew
+         ./gradlew clean :composeApp:compileKotlinJvm :composeApp:compileDebugKotlin --no-daemon -Dorg.gradle.dependency.verification=off
 
-       # Analyse ausführen und Ergebnisse an GitHub übermitteln
+      # Analyse ausführen und Ergebnisse an GitHub übermitteln
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
         with:
