@@ -1,12 +1,13 @@
 package de.geosphere.congregationplaner
 
 import kotlin.test.Test
-import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class ComposeAppCommonTest {
 
     @Test
-    fun example() {
-        assertEquals(3, 1 + 2)
+    fun testGreeting() {
+        val greeting = Greeting().greet()
+        assertTrue(greeting.contains("Hello"), "Greeting should contain 'Hello'")
     }
 }

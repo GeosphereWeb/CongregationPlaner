@@ -98,6 +98,14 @@ kover {
             xml {}
             html {}
         }
+        filters {
+            excludes {
+                // Exclude the main App composable and platform entry points
+//                classes("de.geosphere.congregationplaner.AppKt*")
+//                classes("de.geosphere.congregationplaner.MainKt*")
+//                classes("de.geosphere.congregationplaner.MainActivity*")
+            }
+        }
         verify {
             rule {
                 bound {
