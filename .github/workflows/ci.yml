@@ -33,6 +33,9 @@ jobs:
       - name: Run Detekt
         run: ./gradlew detekt -Dorg.gradle.dependency.verification=off
 
+      - name: Run Tests
+        run: ./gradlew jvmTest --no-daemon -Dorg.gradle.dependency.verification=off
+
       - name: Build and Generate Coverage Report
         run: ./gradlew koverXmlReport koverHtmlReport --no-daemon -Dorg.gradle.dependency.verification=off
         continue-on-error: true
