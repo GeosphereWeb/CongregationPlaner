@@ -1,0 +1,49 @@
+name: SonarCloud Analysis
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  sonar:
+    name: SonarCloud Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: gradle
+
+      - name: Build (assemble)
+        run: ./gradlew assemble --no-daemon
+
+      - name: Run SonarCloud analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          if [ -z "$SONAR_TOKEN" ]; then
+            echo "Required secret SONAR_TOKEN is missing";
+            exit 1;
+          fi
+          # Wir nutzen die Definitionen aus der build.gradle.kts
+          # Der SONAR_TOKEN wird automatisch vom Plugin aus der Umgebungsvariable gelesen
+          ./gradlew koverXmlReport mergeKoverXml assemble sonarqube --no-daemon --info
+
+      - name: Done
+        run: echo "SonarCloud analysis finished"
+
+# Notes:
+# - Create the following repository secrets in GitHub: SONAR_TOKEN (from SonarCloud),
+#   SONAR_ORGANIZATION (your SonarCloud organization key), SONAR_PROJECT_KEY (project key in SonarCloud).
+# - The root Gradle script includes the SonarQube Gradle plugin; CI runs the `sonarqube` Gradle task.
