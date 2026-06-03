@@ -11,7 +11,7 @@ jobs:
       # 1. PR-Titel Prüfung
       # Dieser Schritt prüft den Titel des Pull Requests.
       - name: Check PR Title
-        uses: nicklegan/github-pull-request-naming-policy-action@v1.0.0
+        uses: nicklegan/github-pull-request-naming-policy-action@977dbdf39cde98527b827d8f90e5064e12a5337f
         with:
           # NEU: Der Regex wurde erweitert, um ein optionales Emoji nach der Ticket-ID zu erlauben.
           # Das "/u" am Ende ist für die Unicode-Unterstützung (Emojis) wichtig.
@@ -23,7 +23,7 @@ jobs:
       # 2. Commit-Nachrichten Prüfung
       # Dieser Schritt prüft jede einzelne Commit-Nachricht innerhalb des Pull Requests.
       - name: Check Commit Messages
-        uses: gsactions/commit-message-checker@v2
+        uses: gsactions/commit-message-checker@16fa2d5de096ae0d35626443bcd24f1e756cafee
         with:
           # NEU: Auch hier wurde der Regex um die optionale Emoji-Prüfung erweitert.
           pattern: '^(CP-[0-9]+|JDI)(:|\s)\s*((?:\p{Emoji}\s)?)?.*'
