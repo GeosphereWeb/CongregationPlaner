@@ -1,0 +1,8 @@
+# Ensure shell scripts and gradle wrapper are executable on all platforms
+gradlew text eol=lf
+gradlew.bat text eol=crlf
+*.sh text eol=lf
+
+# Mark gradlew as always executable
+gradlew export-ignore
+
