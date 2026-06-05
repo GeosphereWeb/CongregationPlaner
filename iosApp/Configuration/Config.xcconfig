@@ -1,6 +1,6 @@
 TEAM_ID=
 
-PRODUCT_NAME=CongregationPlaner
+PRODUCT_NAME=Congregation Planer
 PRODUCT_BUNDLE_IDENTIFIER=de.geosphere.congregationplaner.CongregationPlaner$(TEAM_ID)
 
 CURRENT_PROJECT_VERSION=1

@@ -39,7 +39,7 @@ jobs:
       matrix:
         include:
           - language: java-kotlin
-            build-mode: manual
+            build-mode: autobuild
 
     steps:
       - name: Checkout repository
@@ -61,12 +61,9 @@ jobs:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
 
-      # Manueller Build für Java/Kotlin (ersetzt fehlerhaftes Autobuild)
-      - name: Manual Build for Kotlin Multiplatform
-        if: matrix.language == 'java-kotlin'
-        run: |
-          chmod +x gradlew
-          ./gradlew clean :composeApp:compileKotlinJvm :composeApp:compileDebugKotlin --no-daemon --no-build-cache -Pkotlin.incremental=false
+      # Autobuild für Java/Kotlin
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
 
       # Analyse ausführen und Ergebnisse an GitHub übermitteln
       - name: Perform CodeQL Analysis

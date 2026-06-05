@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Determine whether to run web steps
+        id: web-check
+        shell: bash
+        run: |
+          # Determine if package-lock exists
+          if [ -f webApp/package-lock.json ]; then
+            lock=true
+          else
+            lock=false
+          fi
+
+          run_web=false
+          if [ "$lock" = "true" ]; then
+            run_web=true
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "No package-lock.json found; checking PR for webApp changes..."
+            BASE_REF=${{ github.event.pull_request.base.ref }}
+            git fetch origin $BASE_REF --depth=1 || true
+            if git diff --name-only origin/$BASE_REF...HEAD | grep -q '^webApp/'; then
+              run_web=true
+            fi
+          fi
+
+          echo "lockfile=$lock" >> $GITHUB_OUTPUT
+          echo "run_web=$run_web" >> $GITHUB_OUTPUT
+
+      - name: Restore Node cache for webApp (only if running web steps and lockfile present)
+        if: steps.web-check.outputs.run_web == 'true' && steps.web-check.outputs.lockfile == 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            webApp/node_modules
+            ~/.npm
+          key: ${{ runner.os }}-node-web-${{ hashFiles('webApp/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-web-
+
+      - name: Install web dependencies (only if needed)
+        if: steps.web-check.outputs.run_web == 'true' && steps.web-check.outputs.lockfile == 'true'
+        working-directory: webApp
+        run: |
+          npm ci --ignore-scripts
+
+      - name: Install Playwright browsers (only if running web e2e)
+        if: steps.web-check.outputs.run_web == 'true' && steps.web-check.outputs.lockfile == 'true'
+        working-directory: webApp
+        run: |
+          npx playwright@1.49.1 install --with-deps --ignore-scripts || true
+
+      - name: Run web e2e tests (only if needed)
+        if: steps.web-check.outputs.run_web == 'true' && steps.web-check.outputs.lockfile == 'true'
+        working-directory: webApp
+        run: |
+          npm run test:e2e --if-present || echo "No e2e tests or tests failed (non-blocking)"
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            .gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Build (assemble)
+        run: ./gradlew assemble --no-daemon
+

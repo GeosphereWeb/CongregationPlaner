@@ -7,6 +7,6 @@ jobs:
   wip:
     runs-on: ubuntu-latest
     steps:
-      - uses: wip/action@v1
+      - uses: wip/action@5d388554862715b5f75a3e9916f84ba9f2ecc23e
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
