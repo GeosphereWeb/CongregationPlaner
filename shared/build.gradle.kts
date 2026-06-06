@@ -12,6 +12,9 @@ plugins {
 
 apply(from = "${rootProject.projectDir}/gradle/kover.gradle.kts")
 
+compose.resources {
+    publicResClass = true
+}
 
 kotlin {
     listOf(
