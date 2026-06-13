@@ -71,6 +71,19 @@ kotlin {
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+            implementation(libs.kotest.assertions)
+            implementation(libs.kotest.framework)
+            implementation(libs.turbine)
+        }
+        val jvmTest by getting {
+            dependencies {
+                implementation(libs.mockk)
+            }
+        }
+        val androidHostTest by getting {
+            dependencies {
+                implementation(libs.mockk)
+            }
         }
         jsMain.dependencies {
             implementation(libs.wrappers.browser)

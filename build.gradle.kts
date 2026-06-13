@@ -18,8 +18,7 @@ val koverExclusions = listOf(
     "de.geosphere.congregationplaner.Greeting",
     "de.geosphere.congregationplaner.MainKt",
     "de.geosphere.congregationplaner.MainActivity",
-    "de.geosphere.congregationplaner.MainViewControllerKt",
-    "de.geosphere.congregationplaner.Platform_jsKt"
+    "de.geosphere.congregationplaner.MainViewControllerKt"
 )
 
 val koverAnnotationExclusions = listOf(
@@ -33,8 +32,43 @@ val sonarExclusions = listOf(
     "**/Greeting.kt",
     "**/main.kt",
     "**/MainActivity.kt",
-    "**/MainViewController.kt",
-    "**/Platform.js.kt"
+    "**/MainViewController.kt"
+)
+
+// Unterprojekte nicht separat analysieren – verhindert doppelte Indexierung,
+// wenn sonar.sources am Root zusätzlich zu Gradle-Auto-Detect gesetzt ist.
+subprojects {
+    sonar {
+        isSkipProject = true
+    }
+}
+
+// KMP source sets (commonMain, jvmMain, …) explizit setzen, damit SonarCloud
+// Kover-Reports (package + Dateiname) den Quelldateien zuordnen kann.
+// Nur echte src/<sourceSet>/kotlin-Ordner – keine build/-Artefakte.
+fun collectKotlinSourceDirs(includeTests: Boolean): String =
+    subprojects.flatMap { project ->
+        val srcDir = project.file("src")
+        if (!srcDir.exists()) {
+            emptyList<String>()
+        } else {
+            srcDir.walkTopDown()
+                .maxDepth(2)
+                .filter { it.isDirectory && it.name == "kotlin" }
+                .filter { dir ->
+                    val sourceSet = dir.parentFile.name
+                    val isTestSourceSet = sourceSet.endsWith("Test") || sourceSet == "test"
+                    isTestSourceSet == includeTests
+                }
+                .map { it.relativeTo(rootDir).invariantSeparatorsPath }
+                .toList()
+        }
+    }.distinct().sorted().joinToString(",")
+
+val koverInstrumentedTestTasks = listOf(
+    "jvmTest",
+    "testAndroidHostTest",
+    "test",
 )
 
 // Zentraler Ausschluss für Kover (gilt für alle Module)
@@ -78,6 +112,9 @@ sonar {
         // Exclude build folders and non-source files
         property("sonar.exclusions", "**/build/**,**/.gradle/**,**/iosApp/**,**/*.png,**/*.xml")
 
+        property("sonar.sources", collectKotlinSourceDirs(includeTests = false))
+        property("sonar.tests", collectKotlinSourceDirs(includeTests = true))
+
         // Verheiratung: SonarCloud den Pfad zum Kover-XML geben
         // Wir nutzen hier einen relativen Pfad vom Root aus
         property("sonar.coverage.jacoco.xmlReportPaths", "build/reports/kover/merged/report.xml")
@@ -94,6 +131,14 @@ sonar {
 // If the official `koverMergedXmlReport` task is present at evaluation time, prefer it.
 // Otherwise, fall back to a lightweight merger that concatenates module reports.
 gradle.projectsEvaluated {
+    subprojects.forEach { sp ->
+        sp.tasks.findByName("koverXmlReport")?.let { koverTask ->
+            koverInstrumentedTestTasks.forEach { testTaskName ->
+                sp.tasks.findByName(testTaskName)?.let { koverTask.dependsOn(it) }
+            }
+        }
+    }
+
     // try to find the official merged task provided by the Kover plugin
     val officialMerged = tasks.findByName("koverMergedXmlReport")
 
@@ -117,7 +162,7 @@ gradle.projectsEvaluated {
         }
 
         // Make sonar depend on the official merged task
-        tasks.named("sonarqube") { dependsOn("koverMergedXmlReport") }
+        tasks.named("sonar") { dependsOn("koverMergedXmlReport") }
     } else {
         // Fallback: create a simple merger similar to the previous implementation
         tasks.register("mergeKoverXml") {
@@ -156,7 +201,7 @@ gradle.projectsEvaluated {
         }
 
         // Ensure Sonar runs after the fallback merged Kover report is generated
-        tasks.named("sonarqube") { dependsOn("mergeKoverXml") }
+        tasks.named("sonar") { dependsOn("mergeKoverXml") }
     }
 }
 
