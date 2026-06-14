@@ -30,13 +30,15 @@ jobs:
           fi
 
           run_web=false
+          # Use GitHub-provided environment variables inside scripts
           if [ "$lock" = "true" ]; then
             run_web=true
-          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+          elif [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
             echo "No package-lock.json found; checking PR for webApp changes..."
-            BASE_REF=${{ github.event.pull_request.base.ref }}
-            git fetch origin $BASE_REF --depth=1 || true
-            if git diff --name-only origin/$BASE_REF...HEAD | grep -q '^webApp/'; then
+            BASE_REF="$GITHUB_BASE_REF"
+            # fetch the base branch to compare changes
+            git fetch origin "$BASE_REF" --depth=1 || true
+            if git diff --name-only "origin/$BASE_REF...HEAD" | grep -q '^webApp/'; then
               run_web=true
             fi
           fi

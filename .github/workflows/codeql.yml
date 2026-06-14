@@ -59,11 +59,15 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
-          build-mode: ${{ matrix.build-mode }}
+          build-mode: autobuild
 
-      # Autobuild für Java/Kotlin
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+      # Make gradlew executable
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      # Manual build with Gradle
+      - name: Build with Gradle
+        run: ./gradlew build -x test --no-daemon
 
       # Analyse ausführen und Ergebnisse an GitHub übermitteln
       - name: Perform CodeQL Analysis
