@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kover)
+    id("dev.zacsweers.metro") version "1.2.1"
 }
 
 apply(from = "${rootProject.projectDir}/gradle/kover.gradle.kts")
