@@ -59,17 +59,8 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
-          build-mode: manual
+          build-mode: autobuild
 
-      # Make gradlew executable
-      - name: Make gradlew executable
-        run: chmod +x ./gradlew
-
-      # Manual build with Gradle
-      - name: Build with Gradle
-        run: ./gradlew build -x test --no-daemon
-
-      # Analyse ausführen und Ergebnisse an GitHub übermitteln
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
         with:
