@@ -5,7 +5,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 class NavigationItemTest {
-
     @Test
     fun testHomeNavigationItem() {
         val item = NavigationItem.Home
@@ -72,7 +71,7 @@ class NavigationItemTest {
     fun testAllNavigationItemsExist() {
         val items = NavigationItem.entries
         val names = items.map { it.name }
-        
+
         assertEquals(true, names.contains("Home"))
         assertEquals(true, names.contains("Settings"))
         assertEquals(true, names.contains("PlanungUnterDerWoche"))
@@ -86,14 +85,14 @@ class NavigationItemTest {
     fun testNavigationItemRouteNamesAreUnique() {
         val items = NavigationItem.entries
         val routeNames = items.map { it.routeName }
-        
+
         assertEquals(routeNames.size, routeNames.toSet().size)
     }
 
     @Test
     fun testNavigationItemLabelsAreNotEmpty() {
         val items = NavigationItem.entries
-        
+
         items.forEach { item ->
             assertEquals(true, item.label.isNotEmpty())
         }
@@ -102,7 +101,7 @@ class NavigationItemTest {
     @Test
     fun testNavigationItemRouteNamesAreNotEmpty() {
         val items = NavigationItem.entries
-        
+
         items.forEach { item ->
             assertEquals(true, item.routeName.isNotEmpty())
         }
