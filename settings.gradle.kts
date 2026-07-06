@@ -35,4 +35,6 @@ plugins {
 include(":androidApp")
 include(":desktopApp")
 include(":shared")
+include(":theming")
+include(":uilib")
 include(":webApp")

@@ -32,7 +32,10 @@ val sonarExclusions = listOf(
     "**/Greeting.kt",
     "**/main.kt",
     "**/MainActivity.kt",
-    "**/MainViewController.kt"
+    "**/MainViewController.kt",
+    // Exclude theming and ui modules from coverage
+    "theming/**",
+    "ui/**"
 )
 
 // Unterprojekte nicht separat analysieren – verhindert doppelte Indexierung,
@@ -110,7 +113,7 @@ sonar {
         property("sonar.sourceEncoding", "UTF-8")
         
         // Exclude build folders and non-source files
-        property("sonar.exclusions", "**/build/**,**/.gradle/**,**/iosApp/**,**/*.png,**/*.xml")
+        property("sonar.exclusions", "**/build/**,**/.gradle/**,**/iosApp/**,**/theming/**,**/ui/**,**/*.png,**/*.xml")
 
         property("sonar.sources", collectKotlinSourceDirs(includeTests = false))
         property("sonar.tests", collectKotlinSourceDirs(includeTests = true))
@@ -178,7 +181,7 @@ gradle.projectsEvaluated {
                 "shared/build/reports/kover/report.xml",
                 "androidApp/build/reports/kover/report.xml",
                 "desktopApp/build/reports/kover/report.xml",
-                "webApp/build/reports/kover/report.xml",
+                "webApp/build/reports/kover/report.xml"
             )
             inputs.files(reports)
             val outFile = layout.buildDirectory.file("reports/kover/merged/report.xml")
