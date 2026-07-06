@@ -8,7 +8,7 @@ interface Platform {
      * Der Anzeigename der Plattform inklusive Version.
      */
     val name: String
-    
+
     /**
      * Gibt an, ob es sich um eine Desktop-Plattform handelt.
      */
@@ -17,7 +17,7 @@ interface Platform {
 
 /**
  * Erzeugt eine Instanz der aktuellen [Platform].
- * 
+ *
  * @return Die plattformspezifische Implementierung.
  */
 expect fun getPlatform(): Platform
@@ -30,7 +30,7 @@ object HostPlatform {
      * Die Instanz der aktuellen Plattform. Wird beim ersten Zugriff initialisiert.
      */
     val current: Platform by lazy { getPlatform() }
-    
+
     /**
      * Kurzschreibweise, um zu prüfen, ob die App auf einem Desktop läuft.
      */

@@ -7,8 +7,8 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  sonar:
-    name: SonarCloud Scan
+  analyze:
+    name: Code Quality Checks
     runs-on: ubuntu-latest
 
     steps:
@@ -25,6 +25,14 @@ jobs:
           java-version: '17'
           cache: gradle
 
+      - name: Run ktlint check
+        run: ./gradlew :shared:ktlintCheck --no-daemon
+        continue-on-error: true
+
+      - name: Run detekt
+        run: ./gradlew :shared:detekt --no-daemon
+        continue-on-error: true
+
       - name: Run tests, coverage and SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -38,10 +46,25 @@ jobs:
           # assemble wird von den Test-/Android-Tasks mitgezogen – kein separater Build-Schritt nötig.
           ./gradlew :shared:jvmTest :shared:testAndroidHostTest koverXmlReport mergeKoverXml sonar --no-daemon --info
 
+      - name: Upload detekt reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: detekt-reports
+          path: shared/build/reports/detekt/
+
+      - name: Upload ktlint reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: ktlint-reports
+          path: shared/build/reports/ktlint/
+
       - name: Done
-        run: echo "SonarCloud analysis finished"
+        run: echo "Code quality analysis finished"
 
 # Notes:
 # - Create the following repository secrets in GitHub: SONAR_TOKEN (from SonarCloud),
 #   SONAR_ORGANIZATION (your SonarCloud organization key), SONAR_PROJECT_KEY (project key in SonarCloud).
 # - The root Gradle script includes the SonarQube Gradle plugin; CI runs the `sonar` Gradle task.
+# - ktlint and detekt reports are uploaded as artifacts for review.
