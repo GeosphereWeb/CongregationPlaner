@@ -25,10 +25,7 @@ jobs:
           java-version: '17'
           cache: gradle
 
-      - name: Build (assemble)
-        run: ./gradlew assemble --no-daemon
-
-      - name: Run SonarCloud analysis
+      - name: Run tests, coverage and SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
@@ -36,9 +33,10 @@ jobs:
             echo "Required secret SONAR_TOKEN is missing";
             exit 1;
           fi
-          # Wir nutzen die Definitionen aus der build.gradle.kts
-          # Der SONAR_TOKEN wird automatisch vom Plugin aus der Umgebungsvariable gelesen
-          ./gradlew koverXmlReport mergeKoverXml assemble sonarqube --no-daemon --info
+          # Definitionen aus build.gradle.kts; SONAR_TOKEN aus der Umgebungsvariable.
+          # Tests vor koverXmlReport (Kover misst nur JVM/Android-Tests).
+          # assemble wird von den Test-/Android-Tasks mitgezogen – kein separater Build-Schritt nötig.
+          ./gradlew :shared:jvmTest :shared:testAndroidHostTest koverXmlReport mergeKoverXml sonar --no-daemon --info
 
       - name: Done
         run: echo "SonarCloud analysis finished"
@@ -46,4 +44,4 @@ jobs:
 # Notes:
 # - Create the following repository secrets in GitHub: SONAR_TOKEN (from SonarCloud),
 #   SONAR_ORGANIZATION (your SonarCloud organization key), SONAR_PROJECT_KEY (project key in SonarCloud).
-# - The root Gradle script includes the SonarQube Gradle plugin; CI runs the `sonarqube` Gradle task.
+# - The root Gradle script includes the SonarQube Gradle plugin; CI runs the `sonar` Gradle task.
