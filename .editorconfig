@@ -1,0 +1,66 @@
+# EditorConfig for ktlint and IDE formatting
+# See https://kotlinlang.org/docs/coding-conventions.html
+
+root = true
+
+# Default settings for all files
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Kotlin files
+[*.{kt,kts}]
+indent_size = 4
+indent_style = space
+max_line_length = 120
+
+# ktlint specific rules
+[*.{kt,kts}]
+ij_kotlin_allow_trailing_comma = true
+ij_kotlin_allow_trailing_comma_on_call_site = true
+ij_kotlin_use_package_imports = false
+
+# IDE settings for Kotlin
+[*.{kt,kts}]
+ij_kotlin_code_style_defaults = KOTLIN_STYLE_GUIDE
+ij_kotlin_line_separator = \n
+ij_kotlin_allow_single_line_if = false
+ij_kotlin_keep_indents_on_empty_lines = false
+ij_kotlin_imports_layout = *,java.**,javax.**,kotlin.**,^
+
+# XML files
+[*.xml]
+indent_size = 2
+indent_style = space
+
+# JSON files
+[*.json]
+indent_size = 2
+indent_style = space
+
+# YAML files
+[*.{yml,yaml}]
+indent_size = 2
+indent_style = space
+
+# Gradle files
+[*.gradle]
+indent_size = 4
+indent_style = space
+
+[*.gradle.kts]
+indent_size = 4
+indent_style = space
+max_line_length = 120
+
+# Properties files
+[*.properties]
+indent_size = 2
+indent_style = space
+
+# Markdown files
+[*.md]
+trim_trailing_whitespace = false
+insert_final_newline = false

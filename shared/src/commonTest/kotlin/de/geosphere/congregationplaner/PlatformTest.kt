@@ -19,14 +19,20 @@ class PlatformTest {
 
     @Test
     fun testHostPlatformIsDesktopMatchesPlatformProperty() {
-        assertEquals(HostPlatform.current.isDesktop, HostPlatform.isDesktop, "HostPlatform.isDesktop should match current platform's isDesktop")
+        assertEquals(
+            HostPlatform.current.isDesktop,
+            HostPlatform.isDesktop,
+            "HostPlatform.isDesktop should match current platform's isDesktop",
+        )
     }
 
     @Test
     fun testDetectBrowserNameKnownBrowser() {
         assertEquals(
             "Chrome/120.0.0.0",
-            detectBrowserName("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"),
+            detectBrowserName(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+            ),
         )
     }
 

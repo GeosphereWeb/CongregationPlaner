@@ -45,7 +45,7 @@ fun App() {
 @Composable
 fun DesktopLayout(
     selectedRoute: String,
-    onRouteChange: (String) -> Unit
+    onRouteChange: (String) -> Unit,
 ) {
     Row {
         // Elegante, schlanke NavigationRail für Desktop
@@ -59,12 +59,12 @@ fun DesktopLayout(
                         icon = {
                             Icon(
                                 painter = painterResource(item.iconRes),
-                                contentDescription = null
+                                contentDescription = null,
                             )
                         },
                         label = { Text(item.label) },
                         selected = selectedRoute == item.routeName,
-                        onClick = { onRouteChange(item.routeName) }
+                        onClick = { onRouteChange(item.routeName) },
                     )
                 }
             }
@@ -78,7 +78,10 @@ fun DesktopLayout(
                     "settings" -> Text("Settings Content")
                     "leben_und_dienst" -> Text("leben_und_dienst \n Schätze \n uns verbessern \n leben als christ")
                     "planung_wochenende" -> Text("Vortragsplanung und WT Leiter")
-                    "versammlung_metadata" -> Text("versammlung_metadata \n versl_name \n vers_kalender mit Zeiten (f. planung)")
+                    "versammlung_metadata" ->
+                        Text(
+                            "versammlung_metadata \n versl_name \n vers_kalender mit Zeiten (f. planung)",
+                        )
                     "dienste" -> Text("Diensteta")
                     "userverwaltung" -> Text("userverwaltung")
                     else -> Text("Select a navigation item")
@@ -91,7 +94,7 @@ fun DesktopLayout(
 @Composable
 fun MobileLayout(
     selectedRoute: String,
-    onRouteChange: (String) -> Unit
+    onRouteChange: (String) -> Unit,
 ) {
     var drawerOpen by remember { mutableStateOf(false) }
 
@@ -106,7 +109,7 @@ fun MobileLayout(
                             icon = {
                                 Icon(
                                     painter = painterResource(Res.drawable.dummy),
-                                    contentDescription = null
+                                    contentDescription = null,
                                 )
                             },
                             label = { Text(item.label) },
@@ -114,13 +117,13 @@ fun MobileLayout(
                             onClick = {
                                 onRouteChange(item.routeName)
                                 drawerOpen = false
-                            }
+                            },
                         )
                     }
                 }
             }
         },
-        scrimColor = Color.Black.copy(alpha = 0.32f)
+        scrimColor = Color.Black.copy(alpha = 0.32f),
     ) {
         Scaffold {
             Column(modifier = Modifier.padding(it)) {
@@ -133,6 +136,3 @@ fun MobileLayout(
         }
     }
 }
-
-
-
