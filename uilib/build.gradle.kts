@@ -19,23 +19,23 @@ kotlin {
             isStatic = true
         }
     }
-    
+
     jvm()
-    
+
     js {
         browser()
     }
-    
+
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         browser()
     }
-    
+
     androidLibrary {
         namespace = "de.geosphere.congregationplaner.ui"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
-    
+
         compilerOptions {
             jvmTarget = JvmTarget.JVM_11
         }
@@ -46,19 +46,20 @@ kotlin {
             isIncludeAndroidResources = true
         }
     }
-    
+
     sourceSets {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
+            implementation(libs.compose.uiTooling)
         }
-        
+
         commonMain.dependencies {
             implementation(projects.theming)
             implementation(libs.compose.ui)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
         }
-        
+
         commonTest.dependencies {
             implementation(kotlin("test"))
         }
