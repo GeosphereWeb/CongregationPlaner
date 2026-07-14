@@ -5,8 +5,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import de.geosphere.congregationplaner.theming.AppColors
-import de.geosphere.congregationplaner.ui.button.PrimaryButton
-import de.geosphere.congregationplaner.ui.button.SecondaryButton
 
 /**
  * Confirm Dialog Komponente
@@ -19,20 +17,20 @@ fun ConfirmDialog(
     dismissText: String = "Abbrechen",
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
-    isDangerous: Boolean = false
+    isDangerous: Boolean = false,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
                 text = title,
-                color = AppColors.OnBackground
+                color = AppColors.OnBackground,
             )
         },
         text = {
             Text(
                 text = message,
-                color = AppColors.OnBackground
+                color = AppColors.OnBackground,
             )
         },
         confirmButton = {
@@ -41,9 +39,9 @@ fun ConfirmDialog(
                 content = {
                     Text(
                         text = confirmText,
-                        color = if (isDangerous) AppColors.Error else AppColors.Primary
+                        color = if (isDangerous) AppColors.Error else AppColors.Primary,
                     )
-                }
+                },
             )
         },
         dismissButton = {
@@ -52,11 +50,11 @@ fun ConfirmDialog(
                 content = {
                     Text(
                         text = dismissText,
-                        color = AppColors.Primary
+                        color = AppColors.Primary,
                     )
-                }
+                },
             )
-        }
+        },
     )
 }
 
@@ -68,20 +66,20 @@ fun InfoDialog(
     title: String,
     message: String,
     buttonText: String = "OK",
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
                 text = title,
-                color = AppColors.OnBackground
+                color = AppColors.OnBackground,
             )
         },
         text = {
             Text(
                 text = message,
-                color = AppColors.OnBackground
+                color = AppColors.OnBackground,
             )
         },
         confirmButton = {
@@ -90,10 +88,10 @@ fun InfoDialog(
                 content = {
                     Text(
                         text = buttonText,
-                        color = AppColors.Primary
+                        color = AppColors.Primary,
                     )
-                }
+                },
             )
-        }
+        },
     )
 }

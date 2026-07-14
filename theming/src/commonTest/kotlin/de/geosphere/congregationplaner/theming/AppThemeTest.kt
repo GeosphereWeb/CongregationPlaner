@@ -11,7 +11,7 @@ class AppThemeTest {
         val scheme = AppTheme.colorScheme(isDark = false)
         assertNotNull(scheme.primary)
         assertNotNull(scheme.secondary)
-        assertEquals(scheme.primary.toString(), AppColors.Primary.toString())
+        assertEquals(AppColors.Primary, scheme.primary)
     }
 
     @Test
