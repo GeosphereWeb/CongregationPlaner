@@ -1,25 +1,40 @@
 package de.geosphere.congregationplaner.theming
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 /**
  * Zentrale Theming-Konfiguration für alle Plattformen
  */
 object AppTheme {
-    
-    fun colorScheme(isDark: Boolean): ColorScheme {
-        return if (isDark) {
-            darkColorScheme()
-        } else {
-            lightColorScheme()
-        }
-    }
-    
-    fun typography(): Typography {
-        return createTypography()
-    }
+    /**
+     * Gibt das ColorScheme basierend auf dem Dark-Mode-Status zurück.
+     * Nützlich für Unit-Tests oder plattformspezifische Previews.
+     */
+    fun colorScheme(isDark: Boolean): ColorScheme = if (isDark) darkColorScheme() else lightColorScheme()
+
+    /**
+     * Gibt die Standard-Typografie zurück.
+     */
+    fun typography(): Typography = createTypography()
+}
+
+@Composable
+fun AppTheme(
+    useDarkTheme: Boolean = isSystemInDarkTheme(),
+    content: @Composable () -> Unit
+) {
+    val colorScheme = AppTheme.colorScheme(useDarkTheme)
+
+    MaterialTheme(
+        colorScheme = colorScheme,
+        typography = AppTheme.typography(),
+        content = content
+    )
 }
 
 private fun lightColorScheme(): ColorScheme {

@@ -4,11 +4,7 @@ import congregationplaner.shared.generated.resources.Res
 import congregationplaner.shared.generated.resources.dummy
 import org.jetbrains.compose.resources.DrawableResource
 
-enum class NavigationItem(
-    val iconRes: DrawableResource,
-    val label: String,
-    val routeName: String,
-) {
+enum class NavigationItem(val iconRes: DrawableResource, val label: String, val routeName: String) {
     Home(
         iconRes = Res.drawable.dummy,
         label = "Home",
