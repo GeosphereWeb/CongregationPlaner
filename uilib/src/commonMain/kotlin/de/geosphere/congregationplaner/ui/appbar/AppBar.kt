@@ -18,33 +18,35 @@ fun AppTopBar(
     title: String,
     modifier: Modifier = Modifier,
     onNavigationClick: (() -> Unit)? = null,
-    actions: @Composable () -> Unit = {}
+    actions: @Composable () -> Unit = {},
 ) {
     CenterAlignedTopAppBar(
         title = {
             Text(
                 text = title,
-                color = AppColors.OnPrimary
+                color = AppColors.OnPrimary,
             )
         },
         modifier = modifier,
-        navigationIcon = if (onNavigationClick != null) {
-            {
-                IconButton(onClick = onNavigationClick) {
-                    Text("<")  // Simple back button
+        navigationIcon =
+            if (onNavigationClick != null) {
+                {
+                    IconButton(onClick = onNavigationClick) {
+                        Text("<") // Simple back button
+                    }
                 }
-            }
-        } else {
-            {}
-        },
+            } else {
+                {}
+            },
         actions = {
             actions()
         },
-        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-            containerColor = AppColors.Primary,
-            titleContentColor = AppColors.OnPrimary,
-            navigationIconContentColor = AppColors.OnPrimary
-        )
+        colors =
+            TopAppBarDefaults.centerAlignedTopAppBarColors(
+                containerColor = AppColors.Primary,
+                titleContentColor = AppColors.OnPrimary,
+                navigationIconContentColor = AppColors.OnPrimary,
+            ),
     )
 }
 
@@ -53,21 +55,19 @@ fun AppTopBar(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SimpleAppTopBar(
-    title: String,
-    modifier: Modifier = Modifier
-) {
+fun SimpleAppTopBar(title: String, modifier: Modifier = Modifier) {
     CenterAlignedTopAppBar(
         title = {
             Text(
                 text = title,
-                color = AppColors.OnPrimary
+                color = AppColors.OnPrimary,
             )
         },
         modifier = modifier,
-        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-            containerColor = AppColors.Primary,
-            titleContentColor = AppColors.OnPrimary
-        )
+        colors =
+            TopAppBarDefaults.centerAlignedTopAppBarColors(
+                containerColor = AppColors.Primary,
+                titleContentColor = AppColors.OnPrimary,
+            ),
     )
 }
