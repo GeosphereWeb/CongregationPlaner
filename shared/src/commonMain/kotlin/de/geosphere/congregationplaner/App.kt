@@ -25,12 +25,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import congregationplaner.shared.generated.resources.Res
 import congregationplaner.shared.generated.resources.dummy
+import de.geosphere.congregationplaner.theming.AppTheme
 import org.jetbrains.compose.resources.painterResource
 
 @Composable
 @Preview
 fun App() {
-    MaterialTheme {
+    AppTheme {
         var selectedRoute by remember { mutableStateOf("home") }
 
         // Platform-spezifisches Layout
@@ -43,10 +44,7 @@ fun App() {
 }
 
 @Composable
-fun DesktopLayout(
-    selectedRoute: String,
-    onRouteChange: (String) -> Unit,
-) {
+fun DesktopLayout(selectedRoute: String, onRouteChange: (String) -> Unit) {
     Row {
         // Elegante, schlanke NavigationRail für Desktop
         NavigationRail(
@@ -92,10 +90,7 @@ fun DesktopLayout(
 }
 
 @Composable
-fun MobileLayout(
-    selectedRoute: String,
-    onRouteChange: (String) -> Unit,
-) {
+fun MobileLayout(selectedRoute: String, onRouteChange: (String) -> Unit) {
     var drawerOpen by remember { mutableStateOf(false) }
 
     ModalNavigationDrawer(

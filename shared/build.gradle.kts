@@ -108,16 +108,20 @@ dependencies {
 ktlint {
     version.set("1.3.0")
     verbose.set(false)
-    android.set(true)
+    android.set(false)
     outputToConsole.set(true)
     coloredOutput.set(true)
     ignoreFailures.set(false)
+    filter {
+        exclude("**/generated/**")
+    }
 }
 
 // detekt configuration
 detekt {
     toolVersion = "1.23.6"
-    config.setFrom("${rootProject.projectDir}/.detekt.yml")
+    config.setFrom("${rootProject.projectDir}/config/detekt/detekt.yml")
     buildUponDefaultConfig = true
+//    allRules = false
     ignoreFailures = false
 }
