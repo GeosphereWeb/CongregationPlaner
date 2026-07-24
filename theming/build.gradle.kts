@@ -11,7 +11,7 @@ plugins {
 kotlin {
     listOf(
         iosArm64(),
-        iosSimulatorArm64()
+        iosSimulatorArm64(),
     ).forEach { iosTarget ->
         iosTarget.binaries.framework {
             baseName = "Theming"
@@ -20,6 +20,7 @@ kotlin {
     }
 
     jvm()
+
 
     androidLibrary {
         namespace = "de.geosphere.congregationplaner.theming"
@@ -40,16 +41,22 @@ kotlin {
     sourceSets {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
+            implementation(libs.androidx.core.ktx)
         }
 
         commonMain.dependencies {
             implementation(libs.compose.ui)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
+            implementation(libs.compose.uiToolingPreview)
         }
 
         commonTest.dependencies {
             implementation(kotlin("test"))
         }
     }
+}
+
+dependencies {
+    androidRuntimeClasspath(libs.compose.uiTooling)
 }
