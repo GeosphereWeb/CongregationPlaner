@@ -1,11 +1,11 @@
 package de.geosphere.congregationplaner
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -30,7 +30,7 @@ import congregationplaner.shared.generated.resources.Res
 import congregationplaner.shared.generated.resources.dummy
 import de.geosphere.congregationplaner.theming.AppTheme
 import de.geosphere.congregationplaner.theming.customColors
-import de.geosphere.congregationplaner.ui.brushes.backgroundBrush
+import de.geosphere.congregationplaner.theming.brushes.backgroundBrush
 import org.jetbrains.compose.resources.painterResource
 
 @Composable
@@ -63,7 +63,7 @@ fun DesktopLayout(selectedRoute: String, onRouteChange: (String) -> Unit) {
                             Icon(
                                 painter = painterResource(item.iconRes),
                                 contentDescription = null,
-                                tint = MaterialTheme.customColors.success
+                                tint = MaterialTheme.customColors.success,
                             )
                         },
                         label = { Text(item.label) },
@@ -127,11 +127,13 @@ fun MobileLayout(selectedRoute: String, onRouteChange: (String) -> Unit) {
         scrimColor = Color.Black.copy(alpha = 0.32f),
     ) {
         Scaffold {
-            Column(modifier = Modifier.padding(it)) {
-                when (selectedRoute) {
-                    "home" -> Text("Home Content")
-                    "settings" -> Text("Settings Content")
-                    else -> Text("Select a navigation item")
+            Box(Modifier.fillMaxSize().background(brush = Brush.backgroundBrush).padding(it)) {
+                Column(modifier = Modifier.padding(it)) {
+                    when (selectedRoute) {
+                        "home" -> Text("Home Content")
+                        "settings" -> Text("Settings Content")
+                        else -> Text("Select a navigation item")
+                    }
                 }
             }
         }

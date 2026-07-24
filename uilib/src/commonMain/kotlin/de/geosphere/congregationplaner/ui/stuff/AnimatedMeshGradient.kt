@@ -1,4 +1,4 @@
-package de.geosphere.congregationplaner.ui.button
+package de.geosphere.congregationplaner.ui.stuff
 
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode

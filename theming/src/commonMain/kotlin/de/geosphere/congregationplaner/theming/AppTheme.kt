@@ -14,86 +14,113 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 
-
-val baseColor1 = Color(0xFF27345B)
-val baseColor2 = Color(0xFF34275b)
-val baseColor3 = Color(0xFF274e5b)
-val baseColor4 = Color(0xFF5b4e27)
-
+data class BaseColors(
+    val baseColor1: Color = Color(0xFF2b3d97),
+    val baseColor2: Color = Color(0xFF4f2b97),
+    val baseColor3: Color = Color(0xFF2b7397),
+    val baseColor4: Color = Color(0xFF97852b)
+)
 data class ColorTone(
-    val brandTwilightIndigo50: Color = Color(0xFFDDE2F0),
-    val brandTwilightIndigo100: Color = Color(0xFFCBD3E9),
-    val brandTwilightIndigo200: Color = Color(0xFFA8B4DA),
-    val brandTwilightIndigo300: Color = Color(0xFF8495CA),
-    val brandTwilightIndigo400: Color = Color(0xFF6077BB),
-    val brandTwilightIndigo500: Color = Color(0xFF465DA2),
-    val brandTwilightIndigo600: Color = Color(0xFF36487F),
-    val brandTwilightIndigo700: Color = Color(0xFF27345B),
-    val brandTwilightIndigo800: Color = Color(0xFF182037),
-    val brandTwilightIndigo900: Color = Color(0xFF080B14),
+    val brandTwilightIndigo50: Color = Color(0xFFE3E7F7),
+    val brandTwilightIndigo100: Color = Color(0xFFD0D5F1),
+    val brandTwilightIndigo200: Color = Color(0xFFA8B2E6),
+    val brandTwilightIndigo300: Color = Color(0xFF808FDB),
+    val brandTwilightIndigo400: Color = Color(0xFF586CD0),
+    val brandTwilightIndigo500: Color = Color(0xFF364DBF),
+    val brandTwilightIndigo600: Color = Color(0xFF2B3D97),
+    val brandTwilightIndigo700: Color = Color(0xFF202D6F),
+    val brandTwilightIndigo800: Color = Color(0xFF141D48),
+    val brandTwilightIndigo900: Color = Color(0xFF090D20),
+)
+data class ColorTone2(
+    val brandTwilightIndigo50: Color =  Color(0xFFEAE3F7),
+    val brandTwilightIndigo100: Color = Color(0xFFDBD0F1),
+    val brandTwilightIndigo200: Color = Color(0xFFBDA8E6),
+    val brandTwilightIndigo300: Color = Color(0xFF9E80DB),
+    val brandTwilightIndigo400: Color = Color(0xFF8058D0),
+    val brandTwilightIndigo500: Color = Color(0xFF6436BF),
+    val brandTwilightIndigo600: Color = Color(0xFF4F2B97),
+    val brandTwilightIndigo700: Color = Color(0xFF3A206F),
+    val brandTwilightIndigo800: Color = Color(0xFF251448),
+    val brandTwilightIndigo900: Color = Color(0xFF110920),
+)
+data class ColorTone3(
+    val brandTwilightIndigo50: Color =  Color(0xFFE3F1F7),
+    val brandTwilightIndigo100: Color = Color(0xFFD0E6F1),
+    val brandTwilightIndigo200: Color = Color(0xFFA8D1E6),
+    val brandTwilightIndigo300: Color = Color(0xFF80BDDB),
+    val brandTwilightIndigo400: Color = Color(0xFF58A8D0),
+    val brandTwilightIndigo500: Color = Color(0xFF3691BF),
+    val brandTwilightIndigo600: Color = Color(0xFF2B7397),
+    val brandTwilightIndigo700: Color = Color(0xFF20556F),
+    val brandTwilightIndigo800: Color = Color(0xFF143748),
+    val brandTwilightIndigo900: Color = Color(0xFF091820),
+)
+data class ColorTone4(
+val brandTwilightIndigo50: Color =  Color(0xFFF7F4E3),
+val brandTwilightIndigo100: Color = Color(0xFFF1ECD0),
+val brandTwilightIndigo200: Color = Color(0xFFE6DCA8),
+val brandTwilightIndigo300: Color = Color(0xFFDBCC80),
+val brandTwilightIndigo400: Color = Color(0xFFD0BC58),
+val brandTwilightIndigo500: Color = Color(0xFFBFA836),
+val brandTwilightIndigo600: Color = Color(0xFF97852B),
+val brandTwilightIndigo700: Color = Color(0xFF6F6220),
+val brandTwilightIndigo800: Color = Color(0xFF483F14),
+val brandTwilightIndigo900: Color = Color(0xFF201C09),
 )
 
 data class Lightening(
-    val lightening_1: Color = Color(0xFF27345b),
-    val lightening_2: Color = Color(0xFF344065),
-    val lightening_3: Color = Color(0xFF404c6e),
-    val lightening_4: Color = Color(0xFF4d5878),
-    val lightening_5: Color = Color(0xFF5a6482),
-    val lightening_6: Color = Color(0xFF67708b),
-    val lightening_7: Color = Color(0xFF737c95),
-    val lightening_8: Color = Color(0xFF80889f),
-    val lightening_9: Color = Color(0xFF8d94a8),
-    val lightening_10: Color = Color(0xFF999fb2),
-    val lightening_11: Color = Color(0xFFa6abbb),
-    val lightening_12: Color = Color(0xFFb3b7c5),
-    val lightening_13: Color = Color(0xFFbfc3cf),
-    val lightening_14: Color = Color(0xFFcccfd8),
-    val lightening_15: Color = Color(0xFFd9dbe2),
-    val lightening_16: Color = Color(0xFFe6e7ec),
-    val lightening_17: Color = Color(0xFFf2f3f5),
-    val lightening_18: Color = Color(0xFFffffff),
+    val lightening_1: Color = Color(0xFF2b3d97),
+    val lightening_2: Color = Color(0xFF3b4c9f),
+    val lightening_3: Color = Color(0xFF4c5ba7),
+    val lightening_4: Color = Color(0xFF5c6aaf),
+    val lightening_5: Color = Color(0xFF6c79b7),
+    val lightening_6: Color = Color(0xFF7d88bf),
+    val lightening_7: Color = Color(0xFF8d97c7),
+    val lightening_8: Color = Color(0xFF9da5cf),
+    val lightening_9: Color = Color(0xFFadb4d7),
+    val lightening_10: Color = Color(0xFFbec3df),
+    val lightening_11: Color = Color(0xFFced2e7),
+    val lightening_12: Color = Color(0xFFdee1ef),
+    val lightening_13: Color = Color(0xFFeff0f7),
+    val lightening_14: Color = Color(0xFFffffff),
+
 )
 
 data class Grayeing(
-    val grayeing_1: Color = Color(0xFF27345b),
-    val grayeing_2: Color = Color(0xFF2c385d),
-    val grayeing_3: Color = Color(0xFF313d5f),
-    val grayeing_4: Color = Color(0xFF374162),
-    val grayeing_5: Color = Color(0xFF3c4664),
-    val grayeing_6: Color = Color(0xFF414a66),
-    val grayeing_7: Color = Color(0xFF464f68),
-    val grayeing_8: Color = Color(0xFF4c536a),
-    val grayeing_9: Color = Color(0xFF51586c),
-    val grayeing_10: Color = Color(0xFF565c6f),
-    val grayeing_11: Color = Color(0xFF5b6171),
-    val grayeing_12: Color = Color(0xFF616573),
-    val grayeing_13: Color = Color(0xFF666a75),
-    val grayeing_14: Color = Color(0xFF6b6e77),
-    val grayeing_15: Color = Color(0xFF707379),
-    val grayeing_16: Color = Color(0xFF76777c),
-    val grayeing_17: Color = Color(0xFF7b7c7e),
-    val grayeing_18: Color = Color(0xFF808080),
+    val grayeing_1: Color = Color(0xFF2b3d97),
+    val grayeing_2: Color = Color(0xFF324295),
+    val grayeing_3: Color = Color(0xFF384793),
+    val grayeing_4: Color = Color(0xFF3f4c92),
+    val grayeing_5: Color = Color(0xFF455290),
+    val grayeing_6: Color = Color(0xFF4c578e),
+    val grayeing_7: Color = Color(0xFF525c8c),
+    val grayeing_8: Color = Color(0xFF59618b),
+    val grayeing_9: Color = Color(0xFF5f6689),
+    val grayeing_10: Color = Color(0xFF666b87),
+    val grayeing_11: Color = Color(0xFF6c7185),
+    val grayeing_12: Color = Color(0xFF737684),
+    val grayeing_13: Color = Color(0xFF797b82),
+    val grayeing_14: Color = Color(0xFF808080),
+
 )
 
 data class Darkening(
-    val darkening_1: Color = Color(0xFF27345b),
-    val darkening_2: Color = Color(0xFF253156),
-    val darkening_3: Color = Color(0xFF222e50),
-    val darkening_4: Color = Color(0xFF202b4b),
-    val darkening_5: Color = Color(0xFF1e2846),
-    val darkening_6: Color = Color(0xFF1c2540),
-    val darkening_7: Color = Color(0xFF19223b),
-    val darkening_8: Color = Color(0xFF171f36),
-    val darkening_9: Color = Color(0xFF151c30),
-    val darkening_10: Color = Color(0xFF12182b),
-    val darkening_11: Color = Color(0xFF101525),
-    val darkening_12: Color = Color(0xFF0e1220),
-    val darkening_13: Color = Color(0xFF0b0f1b),
-    val darkening_14: Color = Color(0xFF090c15),
-    val darkening_15: Color = Color(0xFF070910),
-    val darkening_16: Color = Color(0xFF05060b),
-    val darkening_17: Color = Color(0xFF020305),
-    val darkening_18: Color = Color(0xFF000000),
+    val darkening_1: Color = Color(0xFF2b3d97),
+    val darkening_2: Color = Color(0xFF28388b),
+    val darkening_3: Color = Color(0xFF243480),
+    val darkening_4: Color = Color(0xFF212f74),
+    val darkening_5: Color = Color(0xFF1e2a69),
+    val darkening_6: Color = Color(0xFF1a265d),
+    val darkening_7: Color = Color(0xFF172151),
+    val darkening_8: Color = Color(0xFF141c46),
+    val darkening_9: Color = Color(0xFF11173a),
+    val darkening_10: Color = Color(0xFF0d132e),
+    val darkening_11: Color = Color(0xFF0a0e23),
+    val darkening_12: Color = Color(0xFF070917),
+    val darkening_13: Color = Color(0xFF03050c),
+    val darkening_14: Color = Color(0xFF000000),
+
 )
 // ============================================================================
 // 1. Eigene Farb-Datenklasse für zusätzliche Variablen (außerhalb von Material 3)
@@ -111,11 +138,11 @@ data class CustomColors(
 // Erstellt den Speicherort im Compose-Baum
 val LocalCustomColors = staticCompositionLocalOf {
     CustomColors(
-        brandCustom = Color.Unspecified,
-        onBrandCustom = Color.Unspecified,
+        brandCustom = BaseColors().baseColor1,
+        onBrandCustom = BaseColors().baseColor2,
         success = Color.Unspecified,
         successContainer = Color.Unspecified,
-        werner1 = Darkening().darkening_17,
+        werner1 = Darkening().darkening_14,
         werner2 = Darkening().darkening_10
     )
 }
@@ -164,7 +191,7 @@ private fun lightCustomColors() = CustomColors(
     onBrandCustom = Color(0xFFFFFFFF),
     success = Color(0xFF2E7D32),
     successContainer = Color(0xFFE8F5E9),
-    werner1 = Lightening().lightening_17,
+    werner1 = Lightening().lightening_14,
     werner2 = Lightening().lightening_7
 )
 
@@ -175,13 +202,13 @@ private fun darkCustomColors() = CustomColors(
     success = Color(0xFF81C784),
     successContainer = Color(0xFF0C2411),
     werner1 = Darkening().darkening_12,
-    werner2 = Darkening().darkening_17
+    werner2 = Darkening().darkening_14
 )
 
-private fun lightColorScheme(): ColorScheme = androidx.compose.material3.lightColorScheme(
-    primary = Color(0xFF6200EE),
-    onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFEADDFF),
+private fun lightColorScheme(): ColorScheme = lightColorScheme(
+    primary = lightCustomColors().brandCustom,
+    onPrimary = lightCustomColors().onBrandCustom,
+    primaryContainer = lightCustomColors().onBrandCustom,
     onPrimaryContainer = Color(0xFF21005E),
     secondary = Color(0xFF03DAC6),
     onSecondary = Color(0xFF000000),
@@ -201,10 +228,10 @@ private fun lightColorScheme(): ColorScheme = androidx.compose.material3.lightCo
     onSurface = Color(0xFF1C1B1F),
 )
 
-private fun darkColorScheme(): ColorScheme = androidx.compose.material3.darkColorScheme(
-    primary = Color(0xFFD0BCFF),
-    onPrimary = Color(0xFF381E72),
-    primaryContainer = Color(0xFF4F378B),
+private fun darkColorScheme(): ColorScheme = darkColorScheme(
+    primary = darkCustomColors().brandCustom,
+    onPrimary = darkCustomColors().onBrandCustom,
+    primaryContainer = darkCustomColors().onBrandCustom,
     onPrimaryContainer = Color(0xFFEADDFF),
     secondary = Color(0xFFCCC2DC),
     onSecondary = Color(0xFF332D41),
