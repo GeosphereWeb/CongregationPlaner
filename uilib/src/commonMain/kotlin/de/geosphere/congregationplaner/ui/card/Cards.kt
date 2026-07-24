@@ -8,7 +8,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import de.geosphere.congregationplaner.theming.AppColors
 import de.geosphere.congregationplaner.theming.AppDimensions
 
 /**
@@ -17,7 +16,7 @@ import de.geosphere.congregationplaner.theming.AppDimensions
 @Composable
 fun AppCard(
     modifier: Modifier = Modifier,
-    backgroundColor: Color = AppColors.Surface,
+    backgroundColor: Color = Color.Unspecified,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Column(
@@ -38,7 +37,7 @@ fun AppCard(
 @Composable
 fun ElevatedAppCard(
     modifier: Modifier = Modifier,
-    backgroundColor: Color = AppColors.Surface,
+    backgroundColor: Color = Color.Unspecified,
     content: @Composable ColumnScope.() -> Unit
 ) {
     androidx.compose.material3.ElevatedCard(
