@@ -12,30 +12,30 @@ plugins {
 kotlin {
     listOf(
         iosArm64(),
-        iosSimulatorArm64()
+        iosSimulatorArm64(),
     ).forEach { iosTarget ->
         iosTarget.binaries.framework {
             baseName = "Theming"
             isStatic = true
         }
     }
-    
+
     jvm()
-    
+
     js {
         browser()
     }
-    
+
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         browser()
     }
-    
+
     androidLibrary {
         namespace = "de.geosphere.congregationplaner.theming"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
-    
+
         compilerOptions {
             jvmTarget = JvmTarget.JVM_11
         }
@@ -46,18 +46,20 @@ kotlin {
             isIncludeAndroidResources = true
         }
     }
-    
+
     sourceSets {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
+            implementation(libs.androidx.core.ktx)
         }
-        
+
         commonMain.dependencies {
             implementation(libs.compose.ui)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
+
         }
-        
+
         commonTest.dependencies {
             implementation(kotlin("test"))
         }
