@@ -6,6 +6,19 @@ import kotlin.test.assertNotNull
 
 class NavigationItemTest {
     @Test
+    fun testResolveHomeIconUsesFallbackWhenResourceMissing() {
+        val fallback = resolveHomeIcon(emptyMap())
+        assertEquals(NavigationItem.Home.iconRes, fallback)
+    }
+
+    @Test
+    fun testResolveHomeIconUsesResourceWhenAvailable() {
+        val customIcon = NavigationItem.Home.iconRes
+        val resolved = resolveHomeIcon(mapOf("arena.xml" to customIcon))
+        assertEquals(customIcon, resolved)
+    }
+
+    @Test
     fun testHomeNavigationItem() {
         val item = NavigationItem.Home
         assertEquals("Home", item.label)
