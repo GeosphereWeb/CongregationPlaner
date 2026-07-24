@@ -1,12 +1,13 @@
 package de.geosphere.congregationplaner
 
 import congregationplaner.shared.generated.resources.Res
+import congregationplaner.shared.generated.resources.allDrawableResources
 import congregationplaner.shared.generated.resources.dummy
 import org.jetbrains.compose.resources.DrawableResource
 
 enum class NavigationItem(val iconRes: DrawableResource, val label: String, val routeName: String) {
     Home(
-        iconRes = Res.drawable.dummy,
+        iconRes = Res.allDrawableResources.get("arena.xml") ?: Res.drawable.dummy,
         label = "Home",
         routeName = "home",
     ),

@@ -1,11 +1,14 @@
 package de.geosphere.congregationplaner
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -42,6 +45,8 @@ import androidx.compose.ui.unit.dp
 import congregationplaner.shared.generated.resources.Res
 import congregationplaner.shared.generated.resources.dummy
 import de.geosphere.congregationplaner.theming.AppTheme
+import de.geosphere.congregationplaner.theming.customColors
+import de.geosphere.congregationplaner.theming.brushes.backgroundBrush
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 
@@ -227,11 +232,11 @@ fun LoginScreen(
 
 @Composable
 fun DesktopLayout(selectedRoute: String, firebaseStatus: String, onRouteChange: (String) -> Unit) {
-    Row {
+    Row(Modifier.fillMaxSize().background(brush = Brush.backgroundBrush)) {
         // Elegante, schlanke NavigationRail für Desktop
         NavigationRail(
-            modifier = Modifier.width(80.dp),
-            containerColor = MaterialTheme.colorScheme.surface,
+            modifier = Modifier.padding(horizontal = 8.dp),
+//            containerColor = MaterialTheme.colorScheme.surface,
         ) {
             NavigationItem.entries.let { items ->
                 items.forEach { item ->
@@ -240,6 +245,7 @@ fun DesktopLayout(selectedRoute: String, firebaseStatus: String, onRouteChange: 
                             Icon(
                                 painter = painterResource(item.iconRes),
                                 contentDescription = null,
+                                tint = MaterialTheme.customColors.success,
                             )
                         },
                         label = { Text(item.label) },
@@ -251,8 +257,8 @@ fun DesktopLayout(selectedRoute: String, firebaseStatus: String, onRouteChange: 
         }
 
         // Hauptinhalt
-        Scaffold(modifier = Modifier.weight(1f)) {
-            Column(modifier = Modifier.padding(it)) {
+        Scaffold(modifier = Modifier.weight(1f), containerColor = Color.Yellow) {
+            Column(modifier = Modifier.fillMaxSize().padding(it).background(Brush.backgroundBrush)) {
                 Text(firebaseStatus)
                 when (selectedRoute) {
                     "home" -> Text("Home Content")
@@ -304,12 +310,13 @@ fun MobileLayout(selectedRoute: String, firebaseStatus: String, onRouteChange: (
         scrimColor = Color.Black.copy(alpha = 0.32f),
     ) {
         Scaffold {
-            Column(modifier = Modifier.padding(it)) {
-                Text(firebaseStatus)
-                when (selectedRoute) {
-                    "home" -> Text("Home Content")
-                    "settings" -> Text("Settings Content")
-                    else -> Text("Select a navigation item")
+            Box(Modifier.fillMaxSize().background(brush = Brush.backgroundBrush).padding(it)) {
+                Column(modifier = Modifier.padding(it)) {
+                    Text(firebaseStatus)when (selectedRoute) {
+                        "home" -> Text("Home Content")
+                        "settings" -> Text("Settings Content")
+                        else -> Text("Select a navigation item")
+                    }
                 }
             }
         }
