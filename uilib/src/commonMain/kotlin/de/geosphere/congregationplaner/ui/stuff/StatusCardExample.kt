@@ -2,8 +2,10 @@ package de.geosphere.congregationplaner.ui.stuff
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -11,61 +13,74 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.draw.paint
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import de.geosphere.congregationplaner.theming.AppTheme
+import de.geosphere.congregationplaner.theming.AppDimensions
+import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
+import de.geosphere.congregationplaner.theming.ThemePreviews
+import de.geosphere.congregationplaner.theming.brushes.meshPainter
 import de.geosphere.congregationplaner.theming.customColors
 
 // Wichtig: Importieren Sie Ihre Erweiterung, falls Sie in einem anderen Package arbeiten
 // import de.geosphere.congregationplaner.theming.customColors
 
 @Composable
-fun StatusCardExample() {
-    // 1. Card nutzt das offizielle M3-Farbschema (primaryContainer)
+fun StatusCardExample(modifier: Modifier = Modifier) {
+    val meshPainter1 = remember { meshPainter }
+    val btnShape = RoundedCornerShape(AppDimensions.CornerRadiusLarge)
+
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            containerColor = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
         ),
-        modifier = Modifier.padding(16.dp),
+        shape = btnShape,
+        modifier = modifier.padding(16.dp), // Padding außen an der Card
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // Text nutzt M3 Standard-Schriftfarbe (onPrimaryContainer)
-            Text(
-                text = "Kongregations-Planer Info",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
+        // Die Box legt den Hintergrund drunter, ohne das Layout aufzupumpen
+        androidx.compose.foundation.layout.Box(
+            modifier = Modifier.paint(
+                painter = meshPainter1,
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop // Füllt die Box exakt aus
             )
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Kongregations-Planer Info",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
 
-            Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-            // 2. TEXT NUTZT IHRE EIGENE ZUSATZFARBE (brandCustom)
-            Text(
-                text = "Wichtiger Hinweis mit eigener Markenfarbe.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.customColors.brandCustom,
-            )
+                Text(
+                    text = "Wichtiger Hinweis mit eigener Markenfarbe.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.customColors.brandCustom,
+                )
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-            // 3. BUTTON NUTZT IHRE EIGENEN STATUSFARBEN (success & successContainer)
-            Button(
-                onClick = { /* Aktion */ },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.customColors.successContainer,
-                    contentColor = MaterialTheme.customColors.success,
-                ),
-            ) {
-                Text(text = "Aktion erfolgreich bestätigen")
+                Button(
+                    onClick = { /* Aktion */ },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.customColors.successContainer,
+                        contentColor = MaterialTheme.customColors.success,
+                    ),
+                ) {
+                    Text(text = "Aktion erfolgreich bestätigen")
+                }
             }
         }
     }
 }
 
-@Preview
+
+@ThemePreviews
 @Composable
-private fun StatusCardExamplePreview() {
-    AppTheme {
-        StatusCardExample()
-    }
+private fun StatusCardExamplePreview() = PreviewThemeWrapper {
+    StatusCardExample(modifier = Modifier.fillMaxWidth())
 }
