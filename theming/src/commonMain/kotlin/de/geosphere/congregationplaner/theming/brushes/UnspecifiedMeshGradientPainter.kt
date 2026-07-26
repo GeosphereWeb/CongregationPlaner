@@ -1,32 +1,24 @@
 package de.geosphere.congregationplaner.theming.brushes
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.paint
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.MeshGradientPainter
-import androidx.compose.ui.unit.dp
-import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
-import de.geosphere.congregationplaner.theming.ThemePreviews
-
-// rows/columns are PATCH counts: a 4x4 point grid = 3x3 patches.
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.painter.Painter
 
 private val dunkelblau = Color(0xFF141D48)
 private val hellblau = Color(0xFF2b3d97)
 private val tuerkis = Color(0xFF143748)
 private val lia = Color(0xFF3A206F)
 
-public val meshPainterold =
-    MeshGradientPainter(
+class UnspecifiedMeshGradientPainter : Painter() {
+
+    private val internalPainter = MeshGradientPainter(
         rows = 3,
         columns = 3,
-        hasBicubicColor = true, // Catmull-Rom: smooth, iOS-like blend
+        hasBicubicColor = true,
     ) {
-        // setVertex(row, column, position, color) — position is normalized 0..1
         setVertex(0, 0, Offset(0.0000f, 0.0000f), dunkelblau)
         setVertex(0, 1, Offset(0.4229f, 0.0000f), dunkelblau)
         setVertex(0, 2, Offset(0.6257f, 0.0000f), dunkelblau)
@@ -45,18 +37,17 @@ public val meshPainterold =
         setVertex(3, 3, Offset(1.0000f, 1.0000f), dunkelblau)
     }
 
-@Composable
-private fun MulticolorGradientBox(modifier: Modifier = Modifier) {
-    val meshPainter = remember {
-        meshPainterold
+    // Löst das Preview-Problem: Erzwingt keine feste oder unendliche Mindestgröße
+    override val intrinsicSize: Size
+        get() = Size.Unspecified
+
+    override fun DrawScope.onDraw() {
+        // Zeichnet den Mesh-Gradient über die gesamte verfügbare Layout-Größe
+        with(internalPainter) {
+            draw(size)
+        }
     }
-    Box(modifier = modifier.size(600.dp, 250.dp).paint(meshPainter))
 }
 
-@ThemePreviews
-@Composable
-private fun MulticolorGradientBoxPreview() {
-    PreviewThemeWrapper {
-        MulticolorGradientBox()
-    }
-}
+// Singleton-Instanz für die Wiederverwendung (ersetzt dein altes val meshPainter)
+public val meshPainter: Painter = UnspecifiedMeshGradientPainter()

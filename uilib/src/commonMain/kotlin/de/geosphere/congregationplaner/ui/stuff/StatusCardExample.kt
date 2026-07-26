@@ -15,7 +15,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.paint
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.theming.AppDimensions
@@ -23,9 +24,6 @@ import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.theming.brushes.meshPainter
 import de.geosphere.congregationplaner.theming.customColors
-
-// Wichtig: Importieren Sie Ihre Erweiterung, falls Sie in einem anderen Package arbeiten
-// import de.geosphere.congregationplaner.theming.customColors
 
 @Composable
 fun StatusCardExample(modifier: Modifier = Modifier) {
@@ -35,49 +33,49 @@ fun StatusCardExample(modifier: Modifier = Modifier) {
     Card(
         colors = CardDefaults.cardColors(
             containerColor = Color.Transparent,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
         ),
         shape = btnShape,
-        modifier = modifier.padding(16.dp), // Padding außen an der Card
-    ) {
-        // Die Box legt den Hintergrund drunter, ohne das Layout aufzupumpen
-        androidx.compose.foundation.layout.Box(
-            modifier = Modifier.paint(
-                painter = meshPainter1,
-                contentScale = androidx.compose.ui.layout.ContentScale.Crop // Füllt die Box exakt aus
-            )
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "Kongregations-Planer Info",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "Wichtiger Hinweis mit eigener Markenfarbe.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.customColors.brandCustom,
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(
-                    onClick = { /* Aktion */ },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.customColors.successContainer,
-                        contentColor = MaterialTheme.customColors.success,
-                    ),
-                ) {
-                    Text(text = "Aktion erfolgreich bestätigen")
+        modifier = modifier
+            .padding(16.dp)
+            .clip(btnShape) // Verhindert, dass der Hintergrund über die runden Ecken der Card steht
+            .drawBehind {
+                // drawBehind entkoppelt das Zeichnen komplett vom Compose-Layout-Sizing.
+                // Der Gradient nimmt exakt die finale Pixelgröße der Card an.
+                with(meshPainter1) {
+                    draw(size)
                 }
+            },
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Kongregations-Planer Info",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Wichtiger Hinweis mit eigener Markenfarbe.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.customColors.brandCustom,
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = { /* Aktion */ },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.customColors.successContainer,
+                    contentColor = MaterialTheme.customColors.success,
+                ),
+            ) {
+                Text(text = "Aktion erfolgreich bestätigen")
             }
         }
     }
 }
-
 
 @ThemePreviews
 @Composable
