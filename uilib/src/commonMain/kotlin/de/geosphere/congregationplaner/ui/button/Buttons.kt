@@ -1,33 +1,31 @@
-@file: Suppress("MagicNumber")
+@file:Suppress("MagicNumber")
 
 package de.geosphere.congregationplaner.ui.button
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonColors
-import androidx.compose.material3.ButtonShapes
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import de.geosphere.congregationplaner.theming.AppDimensions
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
-import de.geosphere.congregationplaner.theming.brushes.backgroundBrush
 import de.geosphere.congregationplaner.theming.customColors
 
 /**
  * Primary Button Komponente mit MeshGradient Hintergrund
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun PrimaryButtonComposable(
     text: String,
@@ -36,25 +34,35 @@ fun PrimaryButtonComposable(
     enabled: Boolean = true,
 ) {
     val btnShape = RoundedCornerShape(AppDimensions.CornerRadiusLarge)
-    Button(
-        onClick = onClick,
-        shapes = ButtonShapes(
-            shape = btnShape,
-            pressedShape = btnShape,
-        ),
-        colors = ButtonColors(
-            containerColor = Color.Unspecified,
-            contentColor = MaterialTheme.customColors.btnContainerColor,
-            disabledContainerColor = Color.Unspecified,
-            disabledContentColor = MaterialTheme.customColors.btnContainerColor
-        ),
-        modifier = modifier.background(brush = Brush.backgroundBrush, shape = btnShape),
-        enabled = enabled
+    Box(
+        modifier = modifier.clickable(
+            enabled = true,
+            onClick = onClick,
+        ).clip(btnShape).background(Color(0xFF2b3d97)),
     ) {
-        Text(
-            text = text
-        )
+        Box(modifier = Modifier.padding(AppDimensions.PaddingSmall)) {
+            Text(text = text, color = Color(0xFF97852b))
+        }
     }
+//    Button(
+//        onClick = onClick,
+//        shapes = ButtonShapes(
+//            shape = btnShape,
+//            pressedShape = btnShape,
+//        ),
+//        colors = ButtonColors(
+//            containerColor = Color.Unspecified,
+//            contentColor = MaterialTheme.customColors.btnContainerColor,
+//            disabledContainerColor = Color.Unspecified,
+//            disabledContentColor = MaterialTheme.customColors.btnContainerColor
+//        ),
+//        modifier = modifier.background(brush = Brush.backgroundBrush, shape = btnShape),
+//        enabled = enabled
+//    ) {
+//        Text(
+//            text = text
+//        )
+//    }
 }
 
 // /**
@@ -144,7 +152,7 @@ private fun PrimaryButtonComposablePreview() = PreviewThemeWrapper {
         PrimaryButtonComposable(
             text = "Disabled Button",
             onClick = {},
-            enabled = false,
+            enabled = true,
         )
     }
 }
