@@ -44,14 +44,14 @@ fun AppTopBar(
         actions = {
             actions()
         },
-//        colors =
-//        TopAppBarDefaults.topAppBarColors(
-//            containerColor = MaterialTheme.customColors.werner1,
-//            scrolledContainerColor = Color.Unspecified,
-//            navigationIconContentColor = MaterialTheme.customColors.onBrandCustom,
-//            titleContentColor = MaterialTheme.customColors.onBrandCustom,
-//            actionIconContentColor = Color.Unspecified
-//        ),
+        colors =
+        TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.customColors.werner1,
+            scrolledContainerColor = Color.Yellow,
+            navigationIconContentColor = Color.Yellow,
+            titleContentColor = Color.Yellow,
+            actionIconContentColor = Color.Yellow
+        ),
     )
 }
 
@@ -71,10 +71,10 @@ fun SimpleAppTopBar(title: String, modifier: Modifier = Modifier) {
 //        colors =
 //        TopAppBarDefaults.topAppBarColors(
 //            containerColor = MaterialTheme.customColors.werner1,
-//            scrolledContainerColor = Color.Unspecified,
-//            navigationIconContentColor = Color.Unspecified,
+////            scrolledContainerColor = Color.Unspecified,
+////            navigationIconContentColor = Color.Unspecified,
 //            titleContentColor = MaterialTheme.customColors.onBrandCustom,
-//            actionIconContentColor = Color.Unspecified
+////            actionIconContentColor = Color.Unspecified
 //        ),
     )
 }

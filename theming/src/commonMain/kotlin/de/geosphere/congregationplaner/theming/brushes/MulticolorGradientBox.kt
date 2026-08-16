@@ -50,7 +50,7 @@ private fun MulticolorGradientBox(modifier: Modifier = Modifier) {
     val meshPainter = remember {
         meshPainterold
     }
-    Box(modifier = modifier.size(600.dp, 250.dp).paint(meshPainter))
+    Box(modifier = modifier.size(600.dp, 250.dp).paint(painter = meshPainter, alpha = 0.6f))
 }
 
 @ThemePreviews

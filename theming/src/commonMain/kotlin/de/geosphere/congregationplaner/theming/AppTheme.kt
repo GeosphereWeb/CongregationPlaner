@@ -35,13 +35,13 @@ data class CustomColors(
 // Erstellt den Speicherort im Compose-Baum
 val LocalCustomColors = staticCompositionLocalOf {
     CustomColors(
-        brandCustom = BaseColors().baseColor1,
-        onBrandCustom = BaseColors().baseColor2,
+        brandCustom = BaseColors().indigo,
+        onBrandCustom = Lightening().lightening_12,
         success = Color.Unspecified,
         successContainer = Color.Unspecified,
         werner1 = Darkening().darkening_14,
         werner2 = Darkening().darkening_10,
-        btnContainerColor = ColorTone().brandTwilightIndigo700,
+        btnContainerColor = ColorIndigo().shade700,
         btnContentColor = Color.Unspecified,
         btnContainerColorDisabled = Color.Unspecified,
         btnContentColorDisabled = Color.Unspecified
@@ -74,12 +74,13 @@ fun AppTheme(useDarkTheme: Boolean = isSystemInDarkTheme(), content: @Composable
 
     // 1. Stellt Ihre eigenen Farben bereit
     CompositionLocalProvider(LocalCustomColors provides customColors) {
-        // 2. Initialisiert das offizielle Material 3 Theme
-        MaterialTheme(
-            colorScheme = colorScheme,
-            typography = AppTheme.typography(),
-            content = content,
-        )
+//         2. Initialisiert das offizielle Material 3 Theme
+//        MaterialTheme(
+//            colorScheme = colorScheme,
+//            typography = AppTheme.typography(),
+//            content = content,
+//        )
+        content()
     }
 }
 
@@ -94,7 +95,7 @@ private fun lightCustomColors() = CustomColors(
     successContainer = Color(0xFFE8F5E9),
     werner1 = Lightening().lightening_14,
     werner2 = Lightening().lightening_7,
-    btnContainerColor = ColorTone().brandTwilightIndigo100,
+    btnContainerColor = ColorIndigo().shade100,
     btnContentColor = Color.Unspecified,
     btnContainerColorDisabled = Color.Unspecified,
     btnContentColorDisabled = Color.Unspecified
@@ -109,9 +110,9 @@ private fun darkCustomColors() = CustomColors(
     werner1 = Darkening().darkening_12,
     werner2 = Darkening().darkening_14,
     btnContainerColor = Darkening().darkening_10,
-    btnContentColor = ColorTone().brandTwilightIndigo200,
+    btnContentColor = ColorIndigo().shade200,
     btnContainerColorDisabled = Color.Unspecified,
-    btnContentColorDisabled = ColorTone().brandTwilightIndigo200
+    btnContentColorDisabled = ColorIndigo().shade200
 
 )
 

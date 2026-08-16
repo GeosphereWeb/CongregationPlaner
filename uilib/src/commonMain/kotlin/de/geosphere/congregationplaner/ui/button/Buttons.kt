@@ -9,9 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -20,7 +18,7 @@ import androidx.compose.ui.graphics.Color
 import de.geosphere.congregationplaner.theming.AppDimensions
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
-import de.geosphere.congregationplaner.theming.customColors
+import de.geosphere.congregationplaner.ui.shapes.ButtonShape
 
 /**
  * Primary Button Komponente mit MeshGradient Hintergrund
@@ -33,110 +31,17 @@ fun PrimaryButtonComposable(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    val btnShape = RoundedCornerShape(AppDimensions.CornerRadiusLarge)
     Box(
         modifier = modifier.clickable(
-            enabled = true,
+            enabled = enabled,
             onClick = onClick,
-        ).clip(btnShape).background(Color(0xFF2b3d97)),
+        ).clip(shape = ButtonShape()).background(Color(0xFF2b3d97)),
     ) {
         Box(modifier = Modifier.padding(AppDimensions.PaddingSmall)) {
             Text(text = text, color = Color(0xFF97852b))
         }
     }
-//    Button(
-//        onClick = onClick,
-//        shapes = ButtonShapes(
-//            shape = btnShape,
-//            pressedShape = btnShape,
-//        ),
-//        colors = ButtonColors(
-//            containerColor = Color.Unspecified,
-//            contentColor = MaterialTheme.customColors.btnContainerColor,
-//            disabledContainerColor = Color.Unspecified,
-//            disabledContentColor = MaterialTheme.customColors.btnContainerColor
-//        ),
-//        modifier = modifier.background(brush = Brush.backgroundBrush, shape = btnShape),
-//        enabled = enabled
-//    ) {
-//        Text(
-//            text = text
-//        )
-//    }
 }
-
-// /**
-// * Secondary Button Komponente mit MeshGradient Hintergrund
-// */
-// @Composable
-// fun SecondaryButtonComposable(
-//    text: String,
-//    onClick: () -> Unit,
-//    modifier: Modifier = Modifier,
-//    enabled: Boolean = true,
-// ) {
-//    val gradientPainter = remember {
-//        MeshGradientPainter(1, 1) {
-//            setVertex(0, 0, Offset(0f, 0f), Color(0xFF113A99))
-//            setVertex(0, 1, Offset(1f, 0f), Color(0xFF126599))
-//            setVertex(1, 0, Offset(0f, 1f), Color(0xFF131199))
-//            setVertex(1, 1, Offset(1f, 1f), Color(0xFF401199))
-//        }
-//    }
-//
-//    Box(
-//        modifier = modifier
-//            .fillMaxWidth()
-//            .height(AppDimensions.ButtonHeightMedium)
-//            .clip(RoundedCornerShape(AppDimensions.CornerRadiusLarge))
-//            .then(
-//                if (enabled) {
-//                    Modifier.paint(gradientPainter)
-//                } else {
-//                    Modifier.background(AppColors.Secondary.copy(alpha = 0.5f))
-//                },
-//            )
-//            .clickable(enabled = enabled) { onClick() }
-//            .padding(AppDimensions.PaddingSmall),
-//        contentAlignment = Alignment.Center,
-//    ) {
-//        Text(
-//            text = text,
-//            color = AppColors.OnSecondary,
-//            fontWeight = FontWeight.Bold,
-//        )
-//    }
-// }
-//
-// /**
-// * Outlined Button Komponente
-// */
-// @Composable
-// fun OutlinedButton(
-//    text: String,
-//    onClick: () -> Unit,
-//    modifier: Modifier = Modifier,
-//    enabled: Boolean = true,
-// ) {
-//    Box(
-//        modifier = modifier
-//            .fillMaxWidth()
-//            .height(AppDimensions.ButtonHeightMedium)
-//            .background(
-//                color = Color.Transparent,
-//                shape = RoundedCornerShape(AppDimensions.CornerRadiusLarge),
-//            )
-//            .clickable(enabled = enabled) { onClick() }
-//            .padding(AppDimensions.PaddingSmall),
-//        contentAlignment = Alignment.Center,
-//    ) {
-//        Text(
-//            text = text,
-//            color = if (enabled) AppColors.Primary else AppColors.Primary.copy(alpha = 0.5f),
-//            fontWeight = FontWeight.Bold,
-//        )
-//    }
-// }
 
 @ThemePreviews
 @Composable
@@ -148,26 +53,12 @@ private fun PrimaryButtonComposablePreview() = PreviewThemeWrapper {
         PrimaryButtonComposable(
             text = "Primary Button",
             onClick = {},
+            enabled = true,
         )
         PrimaryButtonComposable(
             text = "Disabled Button",
             onClick = {},
-            enabled = true,
+            enabled = false,
         )
     }
 }
-//
-// @Preview
-// @Composable
-// private fun AllButtonsPreview() {
-//    AppTheme {
-//        Column(
-//            modifier = Modifier.padding(AppDimensions.PaddingMedium),
-//            verticalArrangement = Arrangement.spacedBy(AppDimensions.PaddingSmall),
-//        ) {
-//            PrimaryButtonComposable(text = "Primary Button", onClick = {})
-//            SecondaryButtonComposable(text = "Secondary Button", onClick = {})
-//            OutlinedButton(text = "Outlined Button", onClick = {})
-//        }
-//    }
-// }

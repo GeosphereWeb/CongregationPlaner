@@ -7,58 +7,58 @@ import androidx.compose.ui.graphics.Color
  */
 
 data class BaseColors(
-    val baseColor1: Color = Color(0xFF2b3d97),
-    val baseColor2: Color = Color(0xFF4f2b97),
-    val baseColor3: Color = Color(0xFF2b7397),
-    val baseColor4: Color = Color(0xFF97852b)
+    val indigo: Color = Color(0xFF2b3d97),
+    val violett: Color = Color(0xFF4f2b97),
+    val tuerkis: Color = Color(0xFF2b7397),
+    val yellow: Color = Color(0xFF97852b)
 )
-data class ColorTone(
-    val brandTwilightIndigo50: Color = Color(0xFFE3E7F7),
-    val brandTwilightIndigo100: Color = Color(0xFFD0D5F1),
-    val brandTwilightIndigo200: Color = Color(0xFFA8B2E6),
-    val brandTwilightIndigo300: Color = Color(0xFF808FDB),
-    val brandTwilightIndigo400: Color = Color(0xFF586CD0),
-    val brandTwilightIndigo500: Color = Color(0xFF364DBF),
-    val brandTwilightIndigo600: Color = Color(0xFF2B3D97),
-    val brandTwilightIndigo700: Color = Color(0xFF202D6F),
-    val brandTwilightIndigo800: Color = Color(0xFF141D48),
-    val brandTwilightIndigo900: Color = Color(0xFF090D20),
+data class ColorIndigo(
+    val shade50: Color = Color(0xFFE3E7F7),
+    val shade100: Color = Color(0xFFD0D5F1),
+    val shade200: Color = Color(0xFFA8B2E6),
+    val shade300: Color = Color(0xFF808FDB),
+    val shade400: Color = Color(0xFF586CD0),
+    val shade500: Color = Color(0xFF364DBF),
+    val shade600: Color = Color(0xFF2B3D97),
+    val shade700: Color = Color(0xFF202D6F),
+    val shade800: Color = Color(0xFF141D48),
+    val shade900: Color = Color(0xFF090D20),
 )
-data class ColorTone2(
-    val brandTwilightIndigo50: Color =  Color(0xFFEAE3F7),
-    val brandTwilightIndigo100: Color = Color(0xFFDBD0F1),
-    val brandTwilightIndigo200: Color = Color(0xFFBDA8E6),
-    val brandTwilightIndigo300: Color = Color(0xFF9E80DB),
-    val brandTwilightIndigo400: Color = Color(0xFF8058D0),
-    val brandTwilightIndigo500: Color = Color(0xFF6436BF),
-    val brandTwilightIndigo600: Color = Color(0xFF4F2B97),
-    val brandTwilightIndigo700: Color = Color(0xFF3A206F),
-    val brandTwilightIndigo800: Color = Color(0xFF251448),
-    val brandTwilightIndigo900: Color = Color(0xFF110920),
+data class ColorViolett(
+    val shade50: Color = Color(0xFFEAE3F7),
+    val shade100: Color = Color(0xFFDBD0F1),
+    val shade200: Color = Color(0xFFBDA8E6),
+    val shade300: Color = Color(0xFF9E80DB),
+    val shade400: Color = Color(0xFF8058D0),
+    val shade500: Color = Color(0xFF6436BF),
+    val shade600: Color = Color(0xFF4F2B97),
+    val shade700: Color = Color(0xFF3A206F),
+    val shade800: Color = Color(0xFF251448),
+    val shade900: Color = Color(0xFF110920),
 )
-data class ColorTone3(
-    val brandTwilightIndigo50: Color =  Color(0xFFE3F1F7),
-    val brandTwilightIndigo100: Color = Color(0xFFD0E6F1),
-    val brandTwilightIndigo200: Color = Color(0xFFA8D1E6),
-    val brandTwilightIndigo300: Color = Color(0xFF80BDDB),
-    val brandTwilightIndigo400: Color = Color(0xFF58A8D0),
-    val brandTwilightIndigo500: Color = Color(0xFF3691BF),
-    val brandTwilightIndigo600: Color = Color(0xFF2B7397),
-    val brandTwilightIndigo700: Color = Color(0xFF20556F),
-    val brandTwilightIndigo800: Color = Color(0xFF143748),
-    val brandTwilightIndigo900: Color = Color(0xFF091820),
+data class ColorTuerkis(
+    val shade50: Color = Color(0xFFE3F1F7),
+    val shade100: Color = Color(0xFFD0E6F1),
+    val shade200: Color = Color(0xFFA8D1E6),
+    val shade300: Color = Color(0xFF80BDDB),
+    val shade400: Color = Color(0xFF58A8D0),
+    val shade500: Color = Color(0xFF3691BF),
+    val shade600: Color = Color(0xFF2B7397),
+    val shade700: Color = Color(0xFF20556F),
+    val shade800: Color = Color(0xFF143748),
+    val shade900: Color = Color(0xFF091820),
 )
-data class ColorTone4(
-    val brandTwilightIndigo50: Color =  Color(0xFFF7F4E3),
-    val brandTwilightIndigo100: Color = Color(0xFFF1ECD0),
-    val brandTwilightIndigo200: Color = Color(0xFFE6DCA8),
-    val brandTwilightIndigo300: Color = Color(0xFFDBCC80),
-    val brandTwilightIndigo400: Color = Color(0xFFD0BC58),
-    val brandTwilightIndigo500: Color = Color(0xFFBFA836),
-    val brandTwilightIndigo600: Color = Color(0xFF97852B),
-    val brandTwilightIndigo700: Color = Color(0xFF6F6220),
-    val brandTwilightIndigo800: Color = Color(0xFF483F14),
-    val brandTwilightIndigo900: Color = Color(0xFF201C09),
+data class ColorYellow(
+    val shade50: Color = Color(0xFFF7F4E3),
+    val shade100: Color = Color(0xFFF1ECD0),
+    val shade200: Color = Color(0xFFE6DCA8),
+    val shade300: Color = Color(0xFFDBCC80),
+    val shade400: Color = Color(0xFFD0BC58),
+    val shade500: Color = Color(0xFFBFA836),
+    val shade600: Color = Color(0xFF97852B),
+    val shade700: Color = Color(0xFF6F6220),
+    val shade800: Color = Color(0xFF483F14),
+    val shade900: Color = Color(0xFF201C09),
 )
 
 data class Lightening(
@@ -77,7 +77,7 @@ data class Lightening(
     val lightening_13: Color = Color(0xFFeff0f7),
     val lightening_14: Color = Color(0xFFffffff),
 
-    )
+)
 
 data class Grayeing(
     val grayeing_1: Color = Color(0xFF2b3d97),
@@ -95,7 +95,7 @@ data class Grayeing(
     val grayeing_13: Color = Color(0xFF797b82),
     val grayeing_14: Color = Color(0xFF808080),
 
-    )
+)
 
 data class Darkening(
     val darkening_1: Color = Color(0xFF2b3d97),
@@ -113,4 +113,4 @@ data class Darkening(
     val darkening_13: Color = Color(0xFF03050c),
     val darkening_14: Color = Color(0xFF000000),
 
-    )
+)
