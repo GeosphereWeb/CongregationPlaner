@@ -2,22 +2,29 @@
 
 package de.geosphere.congregationplaner.ui.button
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonDefaults.buttonElevation
+import androidx.compose.material3.ButtonElevation
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.theming.AppDimensions
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
+import de.geosphere.congregationplaner.theming.customColors
 import de.geosphere.congregationplaner.ui.shapes.ButtonShape
 
 /**
@@ -25,22 +32,33 @@ import de.geosphere.congregationplaner.ui.shapes.ButtonShape
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
 @Composable
+@Suppress("LongParameterList")
 fun PrimaryButtonComposable(
-    text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    elevation: ButtonElevation? = ButtonDefaults.buttonElevation(),
     enabled: Boolean = true,
+    contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
+    interactionSource: MutableInteractionSource? = null,
+    content: @Composable (RowScope.() -> Unit),
 ) {
-    Box(
-        modifier = modifier.clickable(
-            enabled = enabled,
-            onClick = onClick,
-        ).clip(shape = ButtonShape()).background(Color(0xFF2b3d97)),
-    ) {
-        Box(modifier = Modifier.padding(AppDimensions.PaddingSmall)) {
-            Text(text = text, color = Color(0xFF97852b))
-        }
-    }
+    Button(
+        onClick = onClick,
+        modifier = modifier,
+        shape = ButtonShape(),
+        border = BorderStroke(width = 0.5.dp, color = MaterialTheme.customColors.btnContainerBorderColor),
+        colors = ButtonColors(
+            containerColor = MaterialTheme.customColors.btnContainerColor,
+            contentColor = MaterialTheme.customColors.btnContentColor,
+            disabledContainerColor = MaterialTheme.customColors.btnContainerColorDisabled,
+            disabledContentColor = MaterialTheme.customColors.btnContentColorDisabled,
+        ),
+        elevation = elevation,
+        enabled = enabled,
+        contentPadding = contentPadding,
+        interactionSource = interactionSource,
+        content = content,
+    )
 }
 
 @ThemePreviews
@@ -51,14 +69,16 @@ private fun PrimaryButtonComposablePreview() = PreviewThemeWrapper {
         verticalArrangement = Arrangement.spacedBy(AppDimensions.PaddingSmall),
     ) {
         PrimaryButtonComposable(
-            text = "Primary Button",
             onClick = {},
             enabled = true,
-        )
+        ) {
+            Text("enabled Button")
+        }
         PrimaryButtonComposable(
-            text = "Disabled Button",
             onClick = {},
             enabled = false,
-        )
+        ) {
+            Text("Disabled Button")
+        }
     }
 }

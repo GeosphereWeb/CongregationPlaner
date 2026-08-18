@@ -13,8 +13,6 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
-
-
 // ============================================================================
 // 1. Eigene Farb-Datenklasse für zusätzliche Variablen (außerhalb von Material 3)
 // ============================================================================
@@ -28,6 +26,7 @@ data class CustomColors(
     val werner2: Color,
     val btnContainerColor: Color,
     val btnContentColor: Color,
+    val btnContainerBorderColor: Color,
     val btnContainerColorDisabled: Color,
     val btnContentColorDisabled: Color,
 )
@@ -43,8 +42,9 @@ val LocalCustomColors = staticCompositionLocalOf {
         werner2 = Darkening().darkening_10,
         btnContainerColor = ColorIndigo().shade700,
         btnContentColor = Color.Unspecified,
+        btnContainerBorderColor = Color.Unspecified,
         btnContainerColorDisabled = Color.Unspecified,
-        btnContentColorDisabled = Color.Unspecified
+        btnContentColorDisabled = Color.Unspecified,
     )
 }
 
@@ -89,30 +89,31 @@ fun AppTheme(useDarkTheme: Boolean = isSystemInDarkTheme(), content: @Composable
 // ============================================================================
 
 private fun lightCustomColors() = CustomColors(
-    brandCustom = Color(0xFF3F51B5),
+    brandCustom = BaseColors().indigo,
     onBrandCustom = Color(0xFFFFFFFF),
     success = Color(0xFF2E7D32),
     successContainer = Color(0xFFE8F5E9),
     werner1 = Lightening().lightening_14,
     werner2 = Lightening().lightening_7,
-    btnContainerColor = ColorIndigo().shade100,
-    btnContentColor = Color.Unspecified,
-    btnContainerColorDisabled = Color.Unspecified,
-    btnContentColorDisabled = Color.Unspecified
+    btnContainerColor = Darkening().darkening_6.copy(0.3f),
+    btnContentColor = Darkening().darkening_10,
+    btnContainerBorderColor = Darkening().darkening_6,
+    btnContainerColorDisabled = Darkening().darkening_6.copy(0.1f),
+    btnContentColorDisabled = Lightening().lightening_4,
 )
 
-
 private fun darkCustomColors() = CustomColors(
-    brandCustom = Color(0xFF757DE8),
+    brandCustom = Color.Magenta,
     onBrandCustom = Color(0xFF000000),
     success = Color(0xFF81C784),
     successContainer = Color(0xFF0C2411),
     werner1 = Darkening().darkening_12,
     werner2 = Darkening().darkening_14,
-    btnContainerColor = Darkening().darkening_10,
-    btnContentColor = ColorIndigo().shade200,
-    btnContainerColorDisabled = Color.Unspecified,
-    btnContentColorDisabled = ColorIndigo().shade200
+    btnContainerColor = Lightening().lightening_8.copy(0.3f),
+    btnContentColor = Lightening().lightening_8,
+    btnContainerBorderColor = Lightening().lightening_8.copy(0.6f),
+    btnContainerColorDisabled = Lightening().lightening_8.copy(0.1f),
+    btnContentColorDisabled = Darkening().darkening_4,
 
 )
 
