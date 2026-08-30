@@ -1,14 +1,20 @@
 package de.geosphere.congregationplaner.ui.card
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import de.geosphere.congregationplaner.theming.AppDimensions
+import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
+import de.geosphere.congregationplaner.theming.ThemePreviews
 
 /**
  * App Card Komponente
@@ -40,9 +46,10 @@ fun ElevatedAppCard(
     backgroundColor: Color = Color.Unspecified,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    androidx.compose.material3.ElevatedCard(
+    ElevatedCard(
         modifier = modifier,
-        shape = RoundedCornerShape(AppDimensions.CornerRadiusLarge)
+        shape = RoundedCornerShape(AppDimensions.CornerRadiusLarge),
+        colors = CardDefaults.elevatedCardColors()
     ) {
         Column(
             modifier = Modifier
@@ -50,6 +57,22 @@ fun ElevatedAppCard(
                 .padding(AppDimensions.PaddingMedium)
         ) {
             content()
+        }
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun AppCardPreview() = PreviewThemeWrapper {
+    Column(
+        modifier = Modifier.padding(AppDimensions.PaddingMedium),
+        verticalArrangement = Arrangement.spacedBy(AppDimensions.PaddingSmall),
+    ) {
+       AppCard {
+            Text("This is a simple card")
+        }
+        ElevatedAppCard {
+            Text("This is an elevated card with shadow")
         }
     }
 }

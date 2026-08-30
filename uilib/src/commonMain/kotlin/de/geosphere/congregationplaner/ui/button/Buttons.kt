@@ -36,7 +36,7 @@ import de.geosphere.congregationplaner.ui.shapes.ButtonShape
 fun PrimaryButtonComposable(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    elevation: ButtonElevation? = ButtonDefaults.buttonElevation(),
+    elevation: ButtonElevation? = buttonElevation(),
     enabled: Boolean = true,
     contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
     interactionSource: MutableInteractionSource? = null,
@@ -78,7 +78,7 @@ private fun PrimaryButtonComposablePreview() = PreviewThemeWrapper {
             onClick = {},
             enabled = false,
         ) {
-            Text("Disabled Button")
+            Text("disabled Button")
         }
     }
 }

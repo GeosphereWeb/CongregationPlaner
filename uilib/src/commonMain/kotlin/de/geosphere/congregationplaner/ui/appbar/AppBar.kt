@@ -46,10 +46,10 @@ fun AppTopBar(
         },
         colors =
         TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.customColors.werner1,
-            scrolledContainerColor = Color.Yellow,
-            navigationIconContentColor = Color.Yellow,
-            titleContentColor = Color.Yellow,
+            containerColor = MaterialTheme.customColors.btnContainerColor,
+            scrolledContainerColor = MaterialTheme.customColors.btnContentColorDisabled,
+            navigationIconContentColor = MaterialTheme.customColors.btnContentColor,
+            titleContentColor = MaterialTheme.customColors.btnContentColor,
             actionIconContentColor = Color.Yellow
         ),
     )
