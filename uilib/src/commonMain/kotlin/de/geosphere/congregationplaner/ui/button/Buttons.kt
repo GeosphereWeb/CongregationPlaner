@@ -46,7 +46,16 @@ fun PrimaryButtonComposable(
         onClick = onClick,
         modifier = modifier,
         shape = ButtonShape(),
-        border = BorderStroke(width = 0.5.dp, color = MaterialTheme.customColors.btnContainerBorderColor),
+        border = BorderStroke(
+            width = 0.5.dp,
+            color = if (enabled) {
+                MaterialTheme.customColors.btnContainerBorderColor
+            } else {
+                MaterialTheme.customColors.btnContainerBorderColor.copy(
+                0.18F,
+                )
+            },
+        ),
         colors = ButtonColors(
             containerColor = MaterialTheme.customColors.btnContainerColor,
             contentColor = MaterialTheme.customColors.btnContentColor,
