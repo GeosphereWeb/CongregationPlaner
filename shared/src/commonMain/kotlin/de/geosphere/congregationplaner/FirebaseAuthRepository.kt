@@ -12,6 +12,7 @@ interface FirebaseUser {
 
 interface FirebaseAuthRepository {
     suspend fun signInWithEmailAndPassword(email: String, password: String): FirebaseUser?
+    suspend fun createUserWithEmailAndPassword(email: String, password: String): FirebaseUser?
     suspend fun signOut()
     fun currentUserId(): String?
     fun isSignedIn(): Boolean
@@ -25,6 +26,11 @@ object FirebaseAuthManager {
     suspend fun signInWithEmailAndPassword(email: String, password: String): FirebaseUser? =
         withContext(Dispatchers.Default) {
             service.signInWithEmailAndPassword(email, password)
+        }
+
+    suspend fun createUserWithEmailAndPassword(email: String, password: String): FirebaseUser? =
+        withContext(Dispatchers.Default) {
+            service.createUserWithEmailAndPassword(email, password)
         }
 
     suspend fun signOut() = withContext(Dispatchers.Default) { service.signOut() }
