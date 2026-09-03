@@ -35,6 +35,9 @@ val sonarExclusions = listOf(
     "**/main.kt",
     "**/MainActivity.kt",
     "**/MainViewController.kt",
+    "**/iosMain/**",
+    "**/src/iosMain/**",
+    "shared/src/iosMain/**",
     // Exclude theming and ui modules from coverage
     "theming/**",
     "ui/**"
@@ -182,8 +185,7 @@ gradle.projectsEvaluated {
             val reports = files(
                 "shared/build/reports/kover/report.xml",
                 "androidApp/build/reports/kover/report.xml",
-                "desktopApp/build/reports/kover/report.xml",
-                "webApp/build/reports/kover/report.xml"
+                "desktopApp/build/reports/kover/report.xml"
             )
             inputs.files(reports)
             val outFile = layout.buildDirectory.file("reports/kover/merged/report.xml")

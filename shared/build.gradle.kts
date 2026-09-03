@@ -1,4 +1,3 @@
-import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -31,15 +30,6 @@ kotlin {
 
     jvm()
 
-    js {
-        browser()
-    }
-
-    @OptIn(ExperimentalWasmDsl::class)
-    wasmJs {
-        browser()
-    }
-
     androidLibrary {
         namespace = "de.geosphere.congregationplaner.shared"
         compileSdk =
@@ -64,11 +54,17 @@ kotlin {
 
     sourceSets {
         androidMain.dependencies {
+            implementation("com.google.firebase:firebase-analytics-ktx:22.3.0")
+            implementation("com.google.firebase:firebase-auth-ktx:23.1.0")
             implementation(libs.compose.uiToolingPreview)
+        }
+        jvmMain.dependencies {
+            implementation("com.google.firebase:firebase-admin:9.4.3")
         }
         commonMain.dependencies {
             implementation(projects.theming)
             implementation(projects.uilib)
+            implementation(libs.kotlinx.coroutinesCore)
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
@@ -93,9 +89,6 @@ kotlin {
             dependencies {
                 implementation(libs.mockk)
             }
-        }
-        jsMain.dependencies {
-            implementation(libs.wrappers.browser)
         }
     }
 }
