@@ -1,6 +1,6 @@
 # UI Library Module
 
-Das `ui`-Modul ist eine gemeinsame Kotlin Multiplatform-Bibliothek mit wiederverwendbaren Compose UI-Komponenten für alle Anwendungen (Android, Desktop, Web, iOS).
+Das `ui`-Modul ist eine gemeinsame Kotlin Multiplatform-Bibliothek mit wiederverwendbaren Compose UI-Komponenten für alle Anwendungen (Android, Desktop, iOS).
 
 ## Struktur
 
@@ -115,7 +115,7 @@ Das Modul hängt ab von:
 ```
 ┌─────────────────────────────────────┐
 │      App Modules                    │
-│ (androidApp, desktopApp, webApp)    │
+│ (androidApp, desktopApp, iosApp)   │
 └─────────────┬───────────────────────┘
               │
          ┌────▼─────┐

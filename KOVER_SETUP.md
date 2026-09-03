@@ -5,7 +5,7 @@
 ### 1. **Zentrale Konfigurationsdatei**
    - **Datei:** `gradle/kover.gradle.kts`
    - **Zweck:** Zentrale Verwaltung aller Kover-Konfigurationen
-   - **Importiert in:** Alle Module (shared, androidApp, desktopApp, webApp)
+   - **Importiert in:** Alle Module (shared, androidApp, desktopApp)
 
 ### 2. **Standard-Exclusions aktiviert**
    Die folgenden Patterns werden automatisch von der Coverage ausgeschlossen:
@@ -53,7 +53,6 @@ CongregationPlaner/
 ├── shared/build.gradle.kts           ← apply(from = "kover.gradle.kts")
 ├── androidApp/build.gradle.kts       ← apply(from = "kover.gradle.kts")
 ├── desktopApp/build.gradle.kts       ← apply(from = "kover.gradle.kts")
-├── webApp/build.gradle.kts           ← apply(from = "kover.gradle.kts")
 └── KOVER_SETUP.md                    ← Diese Datei
 ```
 

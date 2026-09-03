@@ -17,3 +17,11 @@ captures
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
 node_modules/
+/androidApp/google-services.json
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+/iosApp/iosApp/GoogleService-Info.plist
