@@ -12,6 +12,8 @@ apply(from = "${rootProject.projectDir}/gradle/kover.gradle.kts")
 dependencies {
     implementation(projects.shared)
 
+    implementation("com.google.firebase:firebase-admin:9.4.3")
+
     implementation(compose.desktop.currentOs)
     implementation(libs.kotlinx.coroutinesSwing)
 
