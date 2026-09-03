@@ -15,6 +15,7 @@ import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,18 +34,28 @@ import org.jetbrains.compose.resources.painterResource
 fun App() {
     AppTheme {
         var selectedRoute by remember { mutableStateOf("home") }
+        var firebaseStatus by remember { mutableStateOf("Firebase wird initialisiert...") }
+
+        LaunchedEffect(Unit) {
+            FirebaseSupport.initialize()
+            firebaseStatus = if (FirebaseSupport.isReady()) {
+                "Firebase verfügbar"
+            } else {
+                "Firebase nicht konfiguriert"
+            }
+        }
 
         // Platform-spezifisches Layout
         if (HostPlatform.isDesktop) {
-            DesktopLayout(selectedRoute) { selectedRoute = it }
+            DesktopLayout(selectedRoute, firebaseStatus) { selectedRoute = it }
         } else {
-            MobileLayout(selectedRoute) { selectedRoute = it }
+            MobileLayout(selectedRoute, firebaseStatus) { selectedRoute = it }
         }
     }
 }
 
 @Composable
-fun DesktopLayout(selectedRoute: String, onRouteChange: (String) -> Unit) {
+fun DesktopLayout(selectedRoute: String, firebaseStatus: String, onRouteChange: (String) -> Unit) {
     Row {
         // Elegante, schlanke NavigationRail für Desktop
         NavigationRail(
@@ -71,6 +82,7 @@ fun DesktopLayout(selectedRoute: String, onRouteChange: (String) -> Unit) {
         // Hauptinhalt
         Scaffold(modifier = Modifier.weight(1f)) {
             Column(modifier = Modifier.padding(it)) {
+                Text(firebaseStatus)
                 when (selectedRoute) {
                     "home" -> Text("Home Content")
                     "settings" -> Text("Settings Content")
@@ -90,7 +102,7 @@ fun DesktopLayout(selectedRoute: String, onRouteChange: (String) -> Unit) {
 }
 
 @Composable
-fun MobileLayout(selectedRoute: String, onRouteChange: (String) -> Unit) {
+fun MobileLayout(selectedRoute: String, firebaseStatus: String, onRouteChange: (String) -> Unit) {
     var drawerOpen by remember { mutableStateOf(false) }
 
     ModalNavigationDrawer(
@@ -122,6 +134,7 @@ fun MobileLayout(selectedRoute: String, onRouteChange: (String) -> Unit) {
     ) {
         Scaffold {
             Column(modifier = Modifier.padding(it)) {
+                Text(firebaseStatus)
                 when (selectedRoute) {
                     "home" -> Text("Home Content")
                     "settings" -> Text("Settings Content")

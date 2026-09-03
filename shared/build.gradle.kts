@@ -65,6 +65,7 @@ kotlin {
     sourceSets {
         androidMain.dependencies {
             implementation("com.google.firebase:firebase-analytics-ktx:22.3.0")
+            implementation("com.google.firebase:firebase-auth-ktx:23.1.0")
             implementation(libs.compose.uiToolingPreview)
         }
         jvmMain.dependencies {
@@ -73,6 +74,7 @@ kotlin {
         commonMain.dependencies {
             implementation(projects.theming)
             implementation(projects.uilib)
+            implementation(libs.kotlinx.coroutinesCore)
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
