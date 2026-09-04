@@ -95,12 +95,20 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
-      # NEUER SCHRITT: Erstellt die google-services.json vor dem Build-Prozess dynamisch aus dem Secret
-      - name: Restore Google Services JSON
+      # AKTUALISIERTER SCHRITT: Stellt BEIDE Firebase-Konfigurationen wieder her
+      - name: Restore Firebase Configuration Files
         env:
-          GOOGLE_SERVICES_SECRET: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+          ANDROID_SECRET: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+          IOS_SECRET: ${{ secrets.IOS_GOOGLE_SERVICES_BASE64 }}
         run: |
-          echo "$GOOGLE_SERVICES_SECRET" | base64 --decode > androidApp/google-services.json
+          # 1. Android-Datei erstellen
+          echo "$ANDROID_SECRET" | base64 --decode > androidApp/google-services.json
+
+          # 2. iOS-Datei erstellen (Pfade ggf. an deine Ordnerstruktur anpassen!)
+          # Meistens liegt sie in: iosApp/iosApp/GoogleService-Info.plist
+          # Wir erstellen sicherheitshalber den Ordner, falls er noch nicht existiert.
+          mkdir -p iosApp/iosApp
+          echo "$IOS_SECRET" | base64 --decode > iosApp/iosApp/GoogleService-Info.plist
 
       - name: Build (assemble)
         run: ./gradlew assemble --no-daemon
