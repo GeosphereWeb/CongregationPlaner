@@ -1,9 +1,11 @@
 package de.geosphere.congregationplaner
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -20,12 +22,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import congregationplaner.shared.generated.resources.Res
 import congregationplaner.shared.generated.resources.dummy
 import de.geosphere.congregationplaner.theming.AppTheme
+import de.geosphere.congregationplaner.theming.customColors
+import de.geosphere.congregationplaner.theming.brushes.backgroundBrush
 import org.jetbrains.compose.resources.painterResource
 
 @Composable
@@ -45,11 +50,11 @@ fun App() {
 
 @Composable
 fun DesktopLayout(selectedRoute: String, onRouteChange: (String) -> Unit) {
-    Row {
+    Row(Modifier.fillMaxSize().background(brush = Brush.backgroundBrush)) {
         // Elegante, schlanke NavigationRail für Desktop
         NavigationRail(
-            modifier = Modifier.width(80.dp),
-            containerColor = MaterialTheme.colorScheme.surface,
+            modifier = Modifier.padding(horizontal = 8.dp),
+//            containerColor = MaterialTheme.colorScheme.surface,
         ) {
             NavigationItem.entries.let { items ->
                 items.forEach { item ->
@@ -58,6 +63,7 @@ fun DesktopLayout(selectedRoute: String, onRouteChange: (String) -> Unit) {
                             Icon(
                                 painter = painterResource(item.iconRes),
                                 contentDescription = null,
+                                tint = MaterialTheme.customColors.success,
                             )
                         },
                         label = { Text(item.label) },
@@ -69,8 +75,8 @@ fun DesktopLayout(selectedRoute: String, onRouteChange: (String) -> Unit) {
         }
 
         // Hauptinhalt
-        Scaffold(modifier = Modifier.weight(1f)) {
-            Column(modifier = Modifier.padding(it)) {
+        Scaffold(modifier = Modifier.weight(1f), containerColor = Color.Yellow) {
+            Column(modifier = Modifier.fillMaxSize().padding(it).background(Brush.backgroundBrush)) {
                 when (selectedRoute) {
                     "home" -> Text("Home Content")
                     "settings" -> Text("Settings Content")
@@ -121,11 +127,13 @@ fun MobileLayout(selectedRoute: String, onRouteChange: (String) -> Unit) {
         scrimColor = Color.Black.copy(alpha = 0.32f),
     ) {
         Scaffold {
-            Column(modifier = Modifier.padding(it)) {
-                when (selectedRoute) {
-                    "home" -> Text("Home Content")
-                    "settings" -> Text("Settings Content")
-                    else -> Text("Select a navigation item")
+            Box(Modifier.fillMaxSize().background(brush = Brush.backgroundBrush).padding(it)) {
+                Column(modifier = Modifier.padding(it)) {
+                    when (selectedRoute) {
+                        "home" -> Text("Home Content")
+                        "settings" -> Text("Settings Content")
+                        else -> Text("Select a navigation item")
+                    }
                 }
             }
         }
