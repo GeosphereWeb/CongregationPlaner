@@ -22,11 +22,18 @@ class FirebaseAuthPlatformService : FirebaseAuthRepository {
 
     override suspend fun createUserWithEmailAndPassword(email: String, password: String): FirebaseUser? =
         withContext(Dispatchers.IO) {
-            performDesktopAuthRequest(
+            val user = performDesktopAuthRequest(
                 endpoint = "accounts:signUp",
                 email = email,
                 password = password,
-            )
+            ) ?: return@withContext null
+
+            val idToken = user.idToken ?: return@withContext user
+            if (sendVerificationEmailRequest(idToken)) {
+                user
+            } else {
+                null
+            }
         }
 
     override suspend fun signOut() {
@@ -83,6 +90,27 @@ class FirebaseAuthPlatformService : FirebaseAuthRepository {
             override val idToken: String? = idToken
         }
         return currentUser
+    }
+
+    private fun sendVerificationEmailRequest(idToken: String): Boolean {
+        val apiKey = resolveDesktopApiKey() ?: return false
+        val body = """
+            {
+              "requestType": "VERIFY_EMAIL",
+              "idToken": "${escapeJson(idToken)}"
+            }
+        """.trimIndent()
+
+        val url = URL("https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=$apiKey")
+        val connection = url.openConnection() as HttpURLConnection
+        connection.requestMethod = "POST"
+        connection.doOutput = true
+        connection.setRequestProperty("Content-Type", "application/json")
+        connection.outputStream.use { stream ->
+            stream.write(body.toByteArray(StandardCharsets.UTF_8))
+        }
+
+        return connection.responseCode in 200..299
     }
 }
 

@@ -21,7 +21,20 @@ class FirebaseAuthPlatformService : FirebaseAuthRepository {
         suspendCancellableCoroutine { continuation ->
             auth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener { task ->
-                    continuation.resume(taskToUser(task))
+                    val user = taskToUser(task)
+                    if (user == null) {
+                        continuation.resume(null)
+                        return@addOnCompleteListener
+                    }
+
+                    auth.currentUser?.sendEmailVerification()
+                        ?.addOnCompleteListener { verificationTask ->
+                            if (verificationTask.isSuccessful) {
+                                continuation.resume(user)
+                            } else {
+                                continuation.resume(null)
+                            }
+                        }
                 }
         }
 

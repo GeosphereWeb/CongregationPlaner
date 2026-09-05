@@ -99,7 +99,7 @@ fun App() {
 
                         if (user != null) {
                             if (authMode == AuthMode.REGISTER) {
-                                infoMessage = "Registrierung erfolgreich. Du kannst dich jetzt anmelden."
+                                infoMessage = "Registrierung erfolgreich. Bitte prüfe dein E-Mail-Postfach und bestätige deine E-Mail-Adresse."
                                 authMode = AuthMode.LOGIN
                                 email = ""
                                 password = ""
