@@ -6,7 +6,7 @@ import kotlin.coroutines.resume
 
 actual fun createFirebaseAuthPlatformService(): FirebaseAuthRepository = FirebaseAuthPlatformService()
 
-actual class FirebaseAuthPlatformService actual constructor() : FirebaseAuthRepository {
+class FirebaseAuthPlatformService : FirebaseAuthRepository {
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 
     override suspend fun signInWithEmailAndPassword(email: String, password: String): FirebaseUser? =

@@ -8,7 +8,7 @@ import java.nio.charset.StandardCharsets
 
 actual fun createFirebaseAuthPlatformService(): FirebaseAuthRepository = FirebaseAuthPlatformService()
 
-actual class FirebaseAuthPlatformService actual constructor() : FirebaseAuthRepository {
+class FirebaseAuthPlatformService : FirebaseAuthRepository {
     private var currentUser: FirebaseUser? = null
 
     override suspend fun signInWithEmailAndPassword(email: String, password: String): FirebaseUser? =

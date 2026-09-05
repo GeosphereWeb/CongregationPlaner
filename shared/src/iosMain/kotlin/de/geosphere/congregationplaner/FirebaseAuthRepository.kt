@@ -2,7 +2,7 @@ package de.geosphere.congregationplaner
 
 actual fun createFirebaseAuthPlatformService(): FirebaseAuthRepository = FirebaseAuthPlatformService()
 
-actual class FirebaseAuthPlatformService actual constructor() : FirebaseAuthRepository {
+class FirebaseAuthPlatformService : FirebaseAuthRepository {
     override suspend fun signInWithEmailAndPassword(email: String, password: String): FirebaseUser? {
         // iOS-Implementierung fehlt noch — Platzhalter (keine Exception)
         return null
