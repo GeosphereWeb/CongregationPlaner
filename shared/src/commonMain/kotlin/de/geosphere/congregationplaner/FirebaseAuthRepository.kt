@@ -18,10 +18,10 @@ interface FirebaseAuthRepository {
     fun isSignedIn(): Boolean
 }
 
-expect class FirebaseAuthPlatformService() : FirebaseAuthRepository
+expect fun createFirebaseAuthPlatformService(): FirebaseAuthRepository
 
 object FirebaseAuthManager {
-    private val service: FirebaseAuthRepository by lazy { FirebaseAuthPlatformService() }
+    private val service: FirebaseAuthRepository by lazy { createFirebaseAuthPlatformService() }
 
     suspend fun signInWithEmailAndPassword(email: String, password: String): FirebaseUser? =
         withContext(Dispatchers.Default) {

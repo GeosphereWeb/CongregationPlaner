@@ -1,4 +1,3 @@
-import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -30,15 +29,6 @@ kotlin {
     }
 
     jvm()
-
-    js {
-        browser()
-    }
-
-    @OptIn(ExperimentalWasmDsl::class)
-    wasmJs {
-        browser()
-    }
 
     androidLibrary {
         namespace = "de.geosphere.congregationplaner.shared"
@@ -99,9 +89,6 @@ kotlin {
             dependencies {
                 implementation(libs.mockk)
             }
-        }
-        jsMain.dependencies {
-            implementation(libs.wrappers.browser)
         }
     }
 }

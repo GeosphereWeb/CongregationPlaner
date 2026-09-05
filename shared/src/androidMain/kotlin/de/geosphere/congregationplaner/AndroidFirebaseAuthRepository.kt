@@ -4,6 +4,8 @@ import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
+actual fun createFirebaseAuthPlatformService(): FirebaseAuthRepository = FirebaseAuthPlatformService()
+
 actual class FirebaseAuthPlatformService actual constructor() : FirebaseAuthRepository {
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 

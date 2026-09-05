@@ -182,8 +182,7 @@ gradle.projectsEvaluated {
             val reports = files(
                 "shared/build/reports/kover/report.xml",
                 "androidApp/build/reports/kover/report.xml",
-                "desktopApp/build/reports/kover/report.xml",
-                "webApp/build/reports/kover/report.xml"
+                "desktopApp/build/reports/kover/report.xml"
             )
             inputs.files(reports)
             val outFile = layout.buildDirectory.file("reports/kover/merged/report.xml")

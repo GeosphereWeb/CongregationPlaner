@@ -6,6 +6,8 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.charset.StandardCharsets
 
+actual fun createFirebaseAuthPlatformService(): FirebaseAuthRepository = FirebaseAuthPlatformService()
+
 actual class FirebaseAuthPlatformService actual constructor() : FirebaseAuthRepository {
     private var currentUser: FirebaseUser? = null
 
