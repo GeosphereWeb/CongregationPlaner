@@ -1,23 +1,16 @@
 package de.geosphere.congregationplaner
 
-import cocoapods.FirebaseCore.FIRApp
-
+// Platform-agnostic stub for iOS builds on non-mac hosts.
+// Replace with real cocoapods FirebaseCore usage when developing on macOS.
 actual class FirebasePlatformSupport() {
     private var initialized: Boolean = false
 
     actual fun initialize() {
-        try {
-            if (FIRApp.defaultApp() == null) {
-                FIRApp.configure()
-            }
-            initialized = FIRApp.defaultApp() != null
-        } catch (t: Throwable) {
-            // iOS Firebase SDK nicht verfügbar oder Fehler bei der Initialisierung
-            initialized = false
-        }
+        // No-op stub: iOS Firebase initialization is performed on macOS using CocoaPods (FIRApp.configure()).
+        initialized = false
     }
 
     actual fun isReady(): Boolean {
-        return FIRApp.defaultApp() != null || initialized
+        return initialized
     }
 }
