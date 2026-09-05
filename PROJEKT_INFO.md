@@ -8,10 +8,10 @@ Dein Projekt ist in verschiedene Module unterteilt, um Code so weit wie möglich
 
 ### 1. `shared` (Das Herzstück)
 Dies ist das wichtigste Modul. Hier liegt die gesamte Geschäftslogik und (dank Compose Multiplatform) auch der Großteil der Benutzeroberfläche.
-*   **`commonMain`**: Hier schreibst du Code, der auf **allen** Plattformen läuft. Er darf keine direkten Android- oder iOS-APIs verwenden.
-*   **`androidMain`, `iosMain`, `jvmMain` (Desktop), `jsMain`, `wasmJsMain`**: Hier liegt Code, der Zugriff auf die jeweilige Plattform benötigt.
+*   **`commonMain`**: Hier schreibst du Code, der auf **allen** unterstützten Plattformen läuft. Er darf keine direkten Android- oder iOS-APIs verwenden.
+*   **`androidMain`, `iosMain`, `jvmMain` (Desktop)**: Hier liegt Code, der Zugriff auf die jeweilige Plattform benötigt.
 
-### 2. Plattform-Wrapper (`androidApp`, `iosApp`, `desktopApp`, `webApp`)
+### 2. Plattform-Wrapper (`androidApp`, `iosApp`, `desktopApp`)
 Diese Module sind oft sehr klein. Sie dienen hauptsächlich als "Starter" für die jeweilige Plattform:
 *   **`androidApp`**: Die klassische Android-App. Sie initialisiert die App und ruft den Code aus dem `shared`-Modul auf.
 *   **`desktopApp`**: Enthält die `main`-Funktion für Windows/macOS/Linux.

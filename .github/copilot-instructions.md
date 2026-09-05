@@ -11,16 +11,11 @@ Purpose: Give Copilot-powered sessions quick, actionable knowledge about buildin
 - Desktop run / hot reload:
   - Hot reload: `./gradlew :desktopApp:hotRun --auto`
   - Run: `./gradlew :desktopApp:run`
-- Web (Compose Multiplatform):
-  - Wasm (modern browsers): `./gradlew :webApp:wasmJsBrowserDevelopmentRun`
-  - JS (legacy): `./gradlew :webApp:jsBrowserDevelopmentRun`
 - iOS: open `iosApp` in Xcode and run from the IDE (shared produces an iOS framework).
 
 Testing (module/target-specific tasks from README):
 - Android host tests: `./gradlew :shared:testAndroidHostTest`
 - JVM/Desktop tests: `./gradlew :shared:jvmTest`
-- JS tests: `./gradlew :shared:jsTest`
-- Wasm tests: `./gradlew :shared:wasmJsTest`
 - iOS simulator tests: `./gradlew :shared:iosSimulatorArm64Test`
 - Coverage: use Kover (Kotlin Kover) for test coverage reporting; run `./gradlew koverReport` and configure the Kover Gradle plugin in the `shared` module.
 
@@ -37,8 +32,8 @@ Lint / checks:
 
 ## High-level architecture
 - This is a Kotlin Multiplatform (KMP) Compose project using Compose Multiplatform:
-  - Modules at repo root: `shared` (KMP library), `androidApp`, `desktopApp`, `webApp`, `iosApp` (Xcode entry). 
-  - `shared` provides `commonMain` plus platform-specific source sets (androidMain, jvmMain, iosMain, jsMain, wasmJs, ...).
+  - Modules at repo root: `shared` (KMP library), `androidApp`, `desktopApp`, and `iosApp` (Xcode entry).
+  - `shared` provides `commonMain` plus platform-specific source sets (androidMain, jvmMain, iosMain, ...).
   - UI is shared via Compose Multiplatform; platform-specific entry points live in each app module.
   - iOS targets produce a static `Shared` framework (configured in `shared`'s build script).
 - Build is Kotlin DSL Gradle (build.gradle.kts) and uses a version catalog at `gradle/libs.versions.toml` (plugins and deps referenced via `libs`/`alias`).
@@ -49,10 +44,9 @@ Lint / checks:
 ## Key conventions and repo-specific patterns
 - Gradle Kotlin DSL + version catalog:
   - Plugins and versions are referenced through `libs` (see `gradle/libs.versions.toml`). Build scripts use `alias(libs.plugins.xxx)`.
-- Source set naming: prefer KMP canonical names (commonMain, androidMain, jvmMain, iosMain, jsMain, wasmJs, etc.). Put platform-specific code into the correct source set.
-- Tests are target-scoped: run the appropriate test task (e.g., `:shared:jvmTest`, `:shared:wasmJsTest`, `:shared:iosSimulatorArm64Test`). Use `--tests` to filter.
+- Source set naming: prefer KMP canonical names (commonMain, androidMain, jvmMain, iosMain, ...).
+- Tests are target-scoped: run the appropriate test task (e.g., `:shared:jvmTest`, `:shared:iosSimulatorArm64Test`). Use `--tests` to filter.
 - Desktop hot reload: `:desktopApp:hotRun --auto` is the supported hot-reload flow for rapid UI iteration.
-- Web builds: prefer the Wasm target for modern browser runs (`wasmJs` tasks) for faster dev feedback; JS target exists for older browsers.
 - iOS integration: `shared` configures iOS frameworks (static) and the `iosApp` stays the Xcode entry point — do not replace the Xcode project when adding iOS code.
 - Android specifics:
   - Namespace is declared in `android` block (e.g., `de.geosphere.congregationplaner`).

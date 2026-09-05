@@ -12,7 +12,6 @@ Kover ist ein Kotlin-Test-Coverage-Tool für Multiplatform-Projekte. Die Konfigu
   - `shared/` (KMP Library)
   - `androidApp/` (Android)
   - `desktopApp/` (Desktop/JVM)
-  - `webApp/` (Web/JS/Wasm)
 
 ## Standard-Exclusions
 
@@ -73,7 +72,7 @@ Folgende Muster werden standardmäßig **ausgeschlossen** von der Coverage:
 Um Exclusions für ein spezifisches Modul hinzuzufügen, erstelle einen `afterEvaluate`-Block in der entsprechenden `build.gradle.kts`:
 
 ```kotlin
-// In desktopApp/build.gradle.kts oder webApp/build.gradle.kts
+// In desktopApp/build.gradle.kts oder einer App-Module-Datei
 afterEvaluate {
     // Zusätzliche Kover-Konfiguration hier
     // (Abhängig von Kover-Version und verfügbarer API)
