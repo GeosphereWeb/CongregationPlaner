@@ -10,6 +10,7 @@ jobs:
   sonar:
     name: SonarCloud Scan
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repository
@@ -25,18 +26,51 @@ jobs:
           java-version: '21'
           cache: gradle
 
+      - name: Create google-services.json
+        env:
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON_BASE64" ]; then
+            echo "GOOGLE_SERVICES_JSON_BASE64 secret is missing; continuing without it"
+          else
+            mkdir -p androidApp
+            echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > androidApp/google-services.json
+          fi
+
+      - name: Create GoogleService-Info.plist
+        env:
+          IOS_GOOGLE_SERVICES_BASE64: ${{ secrets.IOS_GOOGLE_SERVICES_BASE64 }}
+        run: |
+          if [ -z "$IOS_GOOGLE_SERVICES_BASE64" ]; then
+            echo "IOS_GOOGLE_SERVICES_BASE64 secret is missing; continuing without it"
+          else
+            mkdir -p iosApp
+            echo "$IOS_GOOGLE_SERVICES_BASE64" | base64 --decode > iosApp/GoogleService-Info.plist
+          fi
+
       - name: Run tests, coverage and SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           if [ -z "$SONAR_TOKEN" ]; then
-            echo "Required secret SONAR_TOKEN is missing";
-            exit 1;
+            echo "Required secret SONAR_TOKEN is missing"
+            exit 1
           fi
-          # Definitionen aus build.gradle.kts; SONAR_TOKEN aus der Umgebungsvariable.
-          # Tests vor koverXmlReport (Kover misst nur JVM/Android-Tests).
-          # assemble wird von den Test-/Android-Tasks mitgezogen – kein separater Build-Schritt nötig.
-          ./gradlew :shared:jvmTest :shared:testAndroidHostTest koverXmlReport mergeKoverXml sonar --no-daemon --info
+
+          # Schritt 1: Nur die Tests ausführen
+          ./gradlew :shared:jvmTest :shared:testAndroidHostTest --no-daemon --info
+
+          # Schritt 2: Kover-Reports generieren (Hier wird es vermutlich hängen bleiben)
+          ./gradlew koverXmlReport mergeKoverXml --no-daemon --info
+
+          # Schritt 3: Sonar ausführen
+          ./gradlew sonar --no-daemon --info
+
+      - name: Remove generated Firebase files
+        if: always()
+        run: |
+          rm -f androidApp/google-services.json
+          rm -f iosApp/GoogleService-Info.plist
 
       - name: Done
         run: echo "SonarCloud analysis finished"

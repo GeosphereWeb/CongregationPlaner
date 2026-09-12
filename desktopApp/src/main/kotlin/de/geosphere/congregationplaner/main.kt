@@ -10,34 +10,38 @@ import congregationplaner.shared.generated.resources.Res
 import congregationplaner.shared.generated.resources.dummy
 import org.jetbrains.compose.resources.painterResource
 
-fun main() = application {
-    Window(
-        onCloseRequest = ::exitApplication,
-        title = "Congregation Planer",
-        icon = painterResource(Res.drawable.dummy),
-    ) {
-        MenuBar {
-            Menu("Datei") {
-                Item(
-                    "Neu",
-                    onClick = { /* Aktion */ },
-                    icon = painterResource(Res.drawable.dummy)
-                )
-                Item(
-                    "Öffnen",
-                    onClick = { /* Aktion */ },
-                    icon = painterResource(Res.drawable.dummy)
-                )
-                Item("Speichern", onClick = { /* Aktion */ })
-                Separator()
-                Item("Beenden", onClick = ::exitApplication)
+fun main() {
+    FirebaseSupport.initialize()
+
+    application {
+        Window(
+            onCloseRequest = ::exitApplication,
+            title = "Congregation Planer",
+            icon = painterResource(Res.drawable.dummy),
+        ) {
+            MenuBar {
+                Menu("Datei") {
+                    Item(
+                        "Neu",
+                        onClick = { /* Aktion */ },
+                        icon = painterResource(Res.drawable.dummy)
+                    )
+                    Item(
+                        "Öffnen",
+                        onClick = { /* Aktion */ },
+                        icon = painterResource(Res.drawable.dummy)
+                    )
+                    Item("Speichern", onClick = { /* Aktion */ })
+                    Separator()
+                    Item("Beenden", onClick = ::exitApplication)
+                }
+                Menu("Bearbeiten") {
+                    Item("Kopieren", onClick = { /* Aktion */ })
+                    Item("Einfügen", onClick = { /* Aktion */ })
+                }
             }
-            Menu("Bearbeiten") {
-                Item("Kopieren", onClick = { /* Aktion */ })
-                Item("Einfügen", onClick = { /* Aktion */ })
-            }
+            App()
         }
-        App()
     }
 }
 
