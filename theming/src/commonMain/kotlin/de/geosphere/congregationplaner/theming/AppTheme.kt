@@ -60,7 +60,7 @@ val MaterialTheme.customColors: CustomColors
 // 3. Zentrales Konfigurationsobjekt (für Previews oder Unit-Tests)
 // ============================================================================
 object AppTheme {
-    fun colorScheme(isDark: Boolean): ColorScheme = if (isDark) darkColorScheme() else lightColorScheme()
+    fun colorScheme(isDark: Boolean): ColorScheme = if (isDark) createDarkColorScheme() else createLightColorScheme()
     fun typography(): Typography = Typography() // Nutzt M3-Standard oder Ihre 'createTypography()'
 }
 
@@ -117,7 +117,7 @@ private fun darkCustomColors() = CustomColors(
 
 )
 
-private fun lightColorScheme(): ColorScheme = lightColorScheme(
+private fun createLightColorScheme(): ColorScheme = lightColorScheme(
     primary = lightCustomColors().brandCustom,
     onPrimary = lightCustomColors().onBrandCustom,
     primaryContainer = lightCustomColors().onBrandCustom,
@@ -140,7 +140,7 @@ private fun lightColorScheme(): ColorScheme = lightColorScheme(
     onSurface = Color(0xFF1C1B1F),
 )
 
-private fun darkColorScheme(): ColorScheme = darkColorScheme(
+private fun createDarkColorScheme(): ColorScheme = darkColorScheme(
     primary = darkCustomColors().brandCustom,
     onPrimary = darkCustomColors().onBrandCustom,
     primaryContainer = darkCustomColors().onBrandCustom,

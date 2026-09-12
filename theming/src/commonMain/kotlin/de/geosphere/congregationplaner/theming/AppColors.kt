@@ -114,3 +114,16 @@ data class Darkening(
     val darkening_14: Color = Color(0xFF000000),
 
 )
+
+object AppColors {
+    val Primary: Color = BaseColors().indigo
+    val OnPrimary: Color = Lightening().lightening_14
+    val Secondary: Color = Color(0xFF03DAC6)
+    val OnSecondary: Color = Color(0xFF000000)
+    val Tertiary: Color = Color(0xFFFF0266)
+    val Background: Color = Color(0xFFFFFBFE)
+    val OnBackground: Color = Color(0xFF1C1B1F)
+    val Surface: Color = Color(0xFFFFFBFE)
+    val OnSurface: Color = Color(0xFF1C1B1F)
+    val Error: Color = Color(0xFFB3261E)
+}
