@@ -12,6 +12,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
+        FirebaseAndroidContextHolder.context = applicationContext
+        FirebaseSupport.initialize()
+
         setContent {
             App()
         }
