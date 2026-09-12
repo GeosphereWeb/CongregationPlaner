@@ -1,142 +1,93 @@
+@file:Suppress("MagicNumber")
+
 package de.geosphere.congregationplaner.ui.button
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonDefaults.buttonElevation
+import androidx.compose.material3.ButtonElevation
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
-import de.geosphere.congregationplaner.theming.AppColors
+import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.theming.AppDimensions
-import de.geosphere.congregationplaner.theming.AppTheme
+import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
+import de.geosphere.congregationplaner.theming.ThemePreviews
+import de.geosphere.congregationplaner.theming.customColors
+import de.geosphere.congregationplaner.ui.shapes.ButtonShape
 
 /**
- * Primary Button Komponente
+ * Primary Button Komponente mit MeshGradient Hintergrund
  */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
 @Composable
+@Suppress("LongParameterList")
 fun PrimaryButtonComposable(
-    text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    elevation: ButtonElevation? = buttonElevation(),
     enabled: Boolean = true,
+    contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
+    interactionSource: MutableInteractionSource? = null,
+    content: @Composable (RowScope.() -> Unit),
 ) {
-    Box(
-        modifier =
-        modifier
-            .fillMaxWidth()
-            .height(AppDimensions.ButtonHeightMedium)
-            .background(
-                color = if (enabled) AppColors.Primary else AppColors.Primary.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(AppDimensions.CornerRadiusLarge),
-            ).clickable(enabled = enabled) { onClick() }
-            .padding(AppDimensions.PaddingSmall),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = text,
-            color = AppColors.OnPrimary,
-            fontWeight = FontWeight.Bold,
-        )
-    }
+    Button(
+        onClick = onClick,
+        modifier = modifier,
+        shape = ButtonShape(),
+        border = BorderStroke(
+            width = 0.5.dp,
+            color = if (enabled) {
+                MaterialTheme.customColors.btnContainerBorderColor
+            } else {
+                MaterialTheme.customColors.btnContainerBorderColor.copy(
+                0.18F,
+                )
+            },
+        ),
+        colors = ButtonColors(
+            containerColor = MaterialTheme.customColors.btnContainerColor,
+            contentColor = MaterialTheme.customColors.btnContentColor,
+            disabledContainerColor = MaterialTheme.customColors.btnContainerColorDisabled,
+            disabledContentColor = MaterialTheme.customColors.btnContentColorDisabled,
+        ),
+        elevation = elevation,
+        enabled = enabled,
+        contentPadding = contentPadding,
+        interactionSource = interactionSource,
+        content = content,
+    )
 }
 
-/**
- * Secondary Button Komponente
- */
+@ThemePreviews
 @Composable
-fun SecondaryButtonComposable(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-) {
-    Box(
-        modifier =
-        modifier
-            .fillMaxWidth()
-            .height(AppDimensions.ButtonHeightMedium)
-            .background(
-                color = if (enabled) AppColors.Secondary else AppColors.Secondary.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(AppDimensions.CornerRadiusLarge),
-            ).clickable(enabled = enabled) { onClick() }
-            .padding(AppDimensions.PaddingSmall),
-        contentAlignment = Alignment.Center,
+private fun PrimaryButtonComposablePreview() = PreviewThemeWrapper {
+    Column(
+        modifier = Modifier.padding(AppDimensions.PaddingMedium),
+        verticalArrangement = Arrangement.spacedBy(AppDimensions.PaddingSmall),
     ) {
-        Text(
-            text = text,
-            color = AppColors.OnSecondary,
-            fontWeight = FontWeight.Bold,
-        )
-    }
-}
-
-/**
- * Outlined Button Komponente
- */
-@Composable
-fun OutlinedButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
-    Box(
-        modifier =
-        modifier
-            .fillMaxWidth()
-            .height(AppDimensions.ButtonHeightMedium)
-            .background(
-                color = Color.Transparent,
-                shape = RoundedCornerShape(AppDimensions.CornerRadiusLarge),
-            ).clickable(enabled = enabled) { onClick() }
-            .padding(AppDimensions.PaddingSmall),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = text,
-            color = if (enabled) AppColors.Primary else AppColors.Primary.copy(alpha = 0.5f),
-            fontWeight = FontWeight.Bold,
-        )
-    }
-}
-
-@Preview
-@Composable
-private fun PrimaryButtonComposablePreview() {
-    AppTheme {
-        Column(
-            modifier = Modifier.padding(AppDimensions.PaddingMedium),
-            verticalArrangement = Arrangement.spacedBy(AppDimensions.PaddingSmall),
+        PrimaryButtonComposable(
+            onClick = {},
+            enabled = true,
         ) {
-            PrimaryButtonComposable(
-                text = "Primary Button",
-                onClick = {},
-            )
-            PrimaryButtonComposable(
-                text = "Disabled Button",
-                onClick = {},
-                enabled = false,
-            )
+            Text("enabled Button")
         }
-    }
-}
-
-@Preview
-@Composable
-private fun AllButtonsPreview() {
-    AppTheme {
-        Column(
-            modifier = Modifier.padding(AppDimensions.PaddingMedium),
-            verticalArrangement = Arrangement.spacedBy(AppDimensions.PaddingSmall),
+        PrimaryButtonComposable(
+            onClick = {},
+            enabled = false,
         ) {
-            PrimaryButtonComposable(text = "Primary Button", onClick = {})
-            SecondaryButtonComposable(text = "Secondary Button", onClick = {})
-            OutlinedButton(text = "Outlined Button", onClick = {})
+            Text("disabled Button")
         }
     }
 }

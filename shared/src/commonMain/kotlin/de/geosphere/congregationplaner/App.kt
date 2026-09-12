@@ -1,3 +1,5 @@
+@file: Suppress("MatchingDeclarationName")
+
 package de.geosphere.congregationplaner
 
 import androidx.compose.foundation.background
@@ -10,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Button
@@ -37,11 +38,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import congregationplaner.shared.generated.resources.Res
 import congregationplaner.shared.generated.resources.dummy
 import de.geosphere.congregationplaner.theming.AppTheme
+import de.geosphere.congregationplaner.theming.brushes.backgroundBrush
+import de.geosphere.congregationplaner.theming.customColors
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 
@@ -50,6 +52,7 @@ enum class AuthMode {
     REGISTER,
 }
 
+@Suppress("LongMethod")
 @Composable
 fun App() {
     AppTheme {
@@ -99,7 +102,9 @@ fun App() {
 
                         if (user != null) {
                             if (authMode == AuthMode.REGISTER) {
-                                infoMessage = "Registrierung erfolgreich. Bitte prüfe dein E-Mail-Postfach und bestätige deine E-Mail-Adresse."
+                                infoMessage =
+                                    "Registrierung erfolgreich. Bitte prüfe dein E-Mail-Postfach und bestätige " +
+                                    "deine E-Mail-Adresse."
                                 authMode = AuthMode.LOGIN
                                 email = ""
                                 password = ""
@@ -132,6 +137,7 @@ fun App() {
     }
 }
 
+@Suppress("LongMethod", "LongParameterList", "MagicNumber")
 @Composable
 fun LoginScreen(
     email: String,
@@ -146,7 +152,9 @@ fun LoginScreen(
     onLoginClick: () -> Unit,
 ) {
     Box(
-        modifier = Modifier.fillMaxSize().background(brush = Brush.linearGradient(listOf(Color(0xFF0B1220), Color(0xFF1E3A5F)))),
+        modifier = Modifier.fillMaxSize().background(
+            brush = Brush.linearGradient(listOf(Color(0xFF0B1220), Color(0xFF1E3A5F))),
+        ),
         contentAlignment = Alignment.Center,
     ) {
         Card(
@@ -227,11 +235,11 @@ fun LoginScreen(
 
 @Composable
 fun DesktopLayout(selectedRoute: String, firebaseStatus: String, onRouteChange: (String) -> Unit) {
-    Row {
+    Row(Modifier.fillMaxSize().background(brush = Brush.backgroundBrush)) {
         // Elegante, schlanke NavigationRail für Desktop
         NavigationRail(
-            modifier = Modifier.width(80.dp),
-            containerColor = MaterialTheme.colorScheme.surface,
+            modifier = Modifier.padding(horizontal = 8.dp),
+//            containerColor = MaterialTheme.colorScheme.surface,
         ) {
             NavigationItem.entries.let { items ->
                 items.forEach { item ->
@@ -240,6 +248,7 @@ fun DesktopLayout(selectedRoute: String, firebaseStatus: String, onRouteChange: 
                             Icon(
                                 painter = painterResource(item.iconRes),
                                 contentDescription = null,
+                                tint = MaterialTheme.customColors.success,
                             )
                         },
                         label = { Text(item.label) },
@@ -251,20 +260,27 @@ fun DesktopLayout(selectedRoute: String, firebaseStatus: String, onRouteChange: 
         }
 
         // Hauptinhalt
-        Scaffold(modifier = Modifier.weight(1f)) {
-            Column(modifier = Modifier.padding(it)) {
+        Scaffold(modifier = Modifier.weight(1f), containerColor = Color.Yellow) {
+            Column(modifier = Modifier.fillMaxSize().padding(it).background(Brush.backgroundBrush)) {
                 Text(firebaseStatus)
                 when (selectedRoute) {
                     "home" -> Text("Home Content")
+
                     "settings" -> Text("Settings Content")
+
                     "leben_und_dienst" -> Text("leben_und_dienst \n Schätze \n uns verbessern \n leben als christ")
+
                     "planung_wochenende" -> Text("Vortragsplanung und WT Leiter")
+
                     "versammlung_metadata" ->
                         Text(
                             "versammlung_metadata \n versl_name \n vers_kalender mit Zeiten (f. planung)",
                         )
+
                     "dienste" -> Text("Diensteta")
+
                     "userverwaltung" -> Text("userverwaltung")
+
                     else -> Text("Select a navigation item")
                 }
             }
@@ -304,12 +320,14 @@ fun MobileLayout(selectedRoute: String, firebaseStatus: String, onRouteChange: (
         scrimColor = Color.Black.copy(alpha = 0.32f),
     ) {
         Scaffold {
-            Column(modifier = Modifier.padding(it)) {
-                Text(firebaseStatus)
-                when (selectedRoute) {
-                    "home" -> Text("Home Content")
-                    "settings" -> Text("Settings Content")
-                    else -> Text("Select a navigation item")
+            Box(Modifier.fillMaxSize().background(brush = Brush.backgroundBrush).padding(it)) {
+                Column(modifier = Modifier.padding(it)) {
+                    Text(firebaseStatus)
+                    when (selectedRoute) {
+                        "home" -> Text("Home Content")
+                        "settings" -> Text("Settings Content")
+                        else -> Text("Select a navigation item")
+                    }
                 }
             }
         }
