@@ -54,6 +54,41 @@ class JVMFirebaseAuthRepositoryTest {
     }
 
     @Test
+    fun `desktop sign in uses local auth emulator when enabled`() = runBlocking {
+        val previousKey = System.getProperty("FIREBASE_WEB_API_KEY")
+        val previousEmulatorEnabled = System.getProperty("FIREBASE_AUTH_EMULATOR_ENABLED")
+        val previousEmulatorHost = System.getProperty("FIREBASE_AUTH_EMULATOR_HOST")
+        val previousEmulatorPort = System.getProperty("FIREBASE_AUTH_EMULATOR_PORT")
+        System.setProperty("FIREBASE_WEB_API_KEY", "desktop-test-key")
+        System.setProperty("FIREBASE_AUTH_EMULATOR_ENABLED", "true")
+        System.setProperty("FIREBASE_AUTH_EMULATOR_HOST", "localhost")
+        System.setProperty("FIREBASE_AUTH_EMULATOR_PORT", "9099")
+
+        try {
+            val connection = mockConnection(
+                200,
+                """{"localId":"svc-user","email":"svc@example.com","displayName":"Svc User","idToken":"svc-token"}""",
+            )
+
+            val service = FirebaseAuthPlatformService { requestUrl ->
+                assertEquals(
+                    "http://localhost:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=desktop-test-key",
+                    requestUrl,
+                )
+                connection
+            }
+            val user = service.signInWithEmailAndPassword("svc@example.com", "secret")
+
+            assertEquals("svc-user", user?.uid)
+        } finally {
+            restoreSystemProperty("FIREBASE_WEB_API_KEY", previousKey)
+            restoreSystemProperty("FIREBASE_AUTH_EMULATOR_ENABLED", previousEmulatorEnabled)
+            restoreSystemProperty("FIREBASE_AUTH_EMULATOR_HOST", previousEmulatorHost)
+            restoreSystemProperty("FIREBASE_AUTH_EMULATOR_PORT", previousEmulatorPort)
+        }
+    }
+
+    @Test
     fun `desktop sign in returns null when api key is missing`() = runBlocking {
         val previousKey = System.getProperty("FIREBASE_WEB_API_KEY")
         System.clearProperty("FIREBASE_WEB_API_KEY")
