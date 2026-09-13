@@ -5,9 +5,12 @@ import congregationplaner.shared.generated.resources.allDrawableResources
 import congregationplaner.shared.generated.resources.dummy
 import org.jetbrains.compose.resources.DrawableResource
 
+fun resolveHomeIcon(drawableResources: Map<String, DrawableResource> = Res.allDrawableResources): DrawableResource =
+    drawableResources["arena.xml"] ?: Res.drawable.dummy
+
 enum class NavigationItem(val iconRes: DrawableResource, val label: String, val routeName: String) {
     Home(
-        iconRes = Res.allDrawableResources.get("arena.xml") ?: Res.drawable.dummy,
+        iconRes = resolveHomeIcon(),
         label = "Home",
         routeName = "home",
     ),
