@@ -6,8 +6,14 @@ import kotlin.coroutines.resume
 
 actual fun createFirebaseAuthPlatformService(): FirebaseAuthRepository = FirebaseAuthPlatformService()
 
+@Suppress("TopLevelPropertyNaming")
+private const val FIREBASE_AUTH_EMULATOR_HOST = "10.0.2.2"
+private const val FIREBASE_AUTH_EMULATOR_PORT = 9099
+
 class FirebaseAuthPlatformService : FirebaseAuthRepository {
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance().also {
+        it.useEmulator(FIREBASE_AUTH_EMULATOR_HOST, FIREBASE_AUTH_EMULATOR_PORT)
+    }
 
     override suspend fun signInWithEmailAndPassword(email: String, password: String): FirebaseUser? =
         suspendCancellableCoroutine { continuation ->
@@ -46,7 +52,9 @@ class FirebaseAuthPlatformService : FirebaseAuthRepository {
 
     override fun isSignedIn(): Boolean = auth.currentUser != null
 
-    private fun taskToUser(task: com.google.android.gms.tasks.Task<com.google.firebase.auth.AuthResult>): FirebaseUser? {
+    private fun taskToUser(
+        task: com.google.android.gms.tasks.Task<com.google.firebase.auth.AuthResult>,
+    ): FirebaseUser? {
         if (!task.isSuccessful) {
             return null
         }

@@ -58,7 +58,7 @@ class FirebaseAuthPlatformService(
             }
         """.trimIndent()
 
-        val url = "https://identitytoolkit.googleapis.com/v1/$endpoint?key=$apiKey"
+        val url = buildDesktopAuthUrl(endpoint, apiKey)
         val connection = connectionFactory(url)
         connection.requestMethod = "POST"
         connection.doOutput = true
@@ -105,7 +105,7 @@ class FirebaseAuthPlatformService(
             }
         """.trimIndent()
 
-        val url = "https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=$apiKey"
+        val url = buildDesktopAuthUrl("accounts:sendOobCode", apiKey)
         val connection = connectionFactory(url)
         connection.requestMethod = "POST"
         connection.doOutput = true
@@ -116,6 +116,37 @@ class FirebaseAuthPlatformService(
 
         return connection.responseCode in 200..299
     }
+}
+
+private fun buildDesktopAuthUrl(endpoint: String, apiKey: String): String {
+    val baseUrl = if (isFirebaseAuthEmulatorEnabled()) {
+        val host = DesktopEnvLoader.getValue(
+           "FIREBASE_AUTH_EMULATOR_HOST",
+           "firebase.authEmulatorHost",
+        ) ?: "localhost"
+        val port = DesktopEnvLoader.getValue(
+           "FIREBASE_AUTH_EMULATOR_PORT",
+           "firebase.authEmulatorPort",
+        )?.toIntOrNull() ?: 9099
+        "http://$host:$port/identitytoolkit.googleapis.com/v1"
+    } else {
+        "https://identitytoolkit.googleapis.com/v1"
+    }
+    return "$baseUrl/$endpoint?key=$apiKey"
+}
+
+private fun isFirebaseAuthEmulatorEnabled(): Boolean {
+    val explicitEnabled = DesktopEnvLoader.getValue(
+        "FIREBASE_AUTH_EMULATOR_ENABLED",
+        "firebase.authEmulatorEnabled",
+    )
+    if (explicitEnabled != null) {
+        return explicitEnabled.equals("true", ignoreCase = true)
+    }
+
+    val host = DesktopEnvLoader.getValue("FIREBASE_AUTH_EMULATOR_HOST", "firebase.authEmulatorHost")
+    val port = DesktopEnvLoader.getValue("FIREBASE_AUTH_EMULATOR_PORT", "firebase.authEmulatorPort")
+    return !host.isNullOrBlank() || !port.isNullOrBlank()
 }
 
 private fun resolveDesktopApiKey(): String? {

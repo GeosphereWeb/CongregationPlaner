@@ -4,7 +4,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import de.geosphere.congregationplaner.theming.AppColors
+import androidx.compose.ui.graphics.Color
 
 /**
  * Confirm Dialog Komponente
@@ -24,13 +24,13 @@ fun ConfirmDialog(
         title = {
             Text(
                 text = title,
-                color = AppColors.OnBackground,
+                color = Color.Unspecified,
             )
         },
         text = {
             Text(
                 text = message,
-                color = AppColors.OnBackground,
+                color = Color.Unspecified,
             )
         },
         confirmButton = {
@@ -39,7 +39,7 @@ fun ConfirmDialog(
                 content = {
                     Text(
                         text = confirmText,
-                        color = if (isDangerous) AppColors.Error else AppColors.Primary,
+                        color = if (isDangerous) Color.Unspecified else Color.Unspecified,
                     )
                 },
             )
@@ -50,7 +50,7 @@ fun ConfirmDialog(
                 content = {
                     Text(
                         text = dismissText,
-                        color = AppColors.Primary,
+                        color = Color.Unspecified,
                     )
                 },
             )
@@ -73,13 +73,13 @@ fun InfoDialog(
         title = {
             Text(
                 text = title,
-                color = AppColors.OnBackground,
+                color = Color.Unspecified,
             )
         },
         text = {
             Text(
                 text = message,
-                color = AppColors.OnBackground,
+                color = Color.Unspecified,
             )
         },
         confirmButton = {
@@ -88,7 +88,7 @@ fun InfoDialog(
                 content = {
                     Text(
                         text = buttonText,
-                        color = AppColors.Primary,
+                        color = Color.Unspecified,
                     )
                 },
             )

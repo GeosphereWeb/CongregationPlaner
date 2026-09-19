@@ -136,6 +136,7 @@ complexity:
     ignoreDefaultParameters: false
     ignoreDataClasses: true
     ignoreAnnotatedParameter: []
+    ignoreAnnotatedFunctions: ['Composable']
   MethodOverloading:
     active: false
     threshold: 6
@@ -740,7 +741,7 @@ style:
   UnusedPrivateMember:
     active: true
     allowedNames: ''
-    ignoreAnnotated: ['Preview']
+    ignoreAnnotated: ['Preview', 'ThemePreviews']
   UnusedPrivateFunction:
     active: true
     ignoreAnnotated: ['Preview']
