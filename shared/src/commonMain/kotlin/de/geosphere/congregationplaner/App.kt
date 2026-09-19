@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredWidth
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Button
@@ -38,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import congregationplaner.shared.generated.resources.Res
 import congregationplaner.shared.generated.resources.dummy
@@ -158,7 +161,7 @@ fun LoginScreen(
         contentAlignment = Alignment.Center,
     ) {
         Card(
-            modifier = Modifier.fillMaxWidth().padding(24.dp),
+            modifier = Modifier.widthIn(min = 300.dp, max = 500.dp).padding(24.dp),
             shape = RoundedCornerShape(24.dp),
         ) {
             Column(
@@ -333,3 +336,24 @@ fun MobileLayout(selectedRoute: String, firebaseStatus: String, onRouteChange: (
         }
     }
 }
+
+@Preview(name = "Congregation Planer Login")
+@Composable
+fun AppPreview() {
+    AppTheme {
+
+        LoginScreen(
+            email = "demo@congregationplaner.de",
+            password = "Passwort123",
+            firebaseStatus = "Firebase verfügbar",
+            authMode = AuthMode.LOGIN,
+            loginError = null,
+            infoMessage = null,
+            onEmailChange = {},
+            onPasswordChange = {},
+            onToggleMode = {},
+            onLoginClick = {},
+        )
+    }
+}
+
