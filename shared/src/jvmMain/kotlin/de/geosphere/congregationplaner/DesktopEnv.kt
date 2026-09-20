@@ -22,13 +22,10 @@ internal object DesktopEnvLoader {
         val files = mutableListOf<File>()
         searchRoots.forEach { root ->
             files += File(root, ".env")
-            files += File(root, ".env.example")
         }
         files += listOf(
             File(currentDir, ".env"),
-            File(currentDir, ".env.example"),
             File(".env"),
-            File(".env.example"),
         )
 
         files.distinctBy { it.absolutePath }
@@ -50,7 +47,7 @@ internal object DesktopEnvLoader {
                     val key = line.substring(0, index).trim()
                     val value = line.substring(index + 1).trim().removeSurrounding("\"").removeSurrounding("'")
                     if (key.isNotEmpty()) {
-                        values[key] = value
+                        values.putIfAbsent(key, value)
                     }
                 }
             }
