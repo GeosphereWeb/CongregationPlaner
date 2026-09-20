@@ -7,7 +7,8 @@ actual class FirebasePlatformSupport {
 
         if (projectId.isNullOrBlank() && apiKey.isNullOrBlank()) {
             System.err.println(
-                "Firebase Desktop config missing. Please set FIREBASE_WEB_API_KEY and FIREBASE_PROJECT_ID (optional: FIREBASE_DATABASE_URL / FIREBASE_STORAGE_BUCKET).",
+                "Firebase Desktop config missing. Please set FIREBASE_WEB_API_KEY and FIREBASE_PROJECT_ID. " +
+                    "Auth uses the local emulator at ${DesktopEnvLoader.getValue("FIREBASE_AUTH_EMULATOR_HOST") ?: "127.0.0.1:9099"}.",
             )
             return
         }

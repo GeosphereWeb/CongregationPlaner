@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner
 
+import android.util.Log
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.AuthResult
@@ -38,6 +39,7 @@ class AndroidFirebaseAuthRepositoryTest {
     fun `android sign in maps successful auth result into FirebaseUser`() = runBlocking {
         val auth = mockk<FirebaseAuth>()
         val resultTask = mockk<Task<AuthResult>>()
+        val authResult = mockk<AuthResult>()
         val currentUser = mockk<FirebaseUser>()
 
         mockkStatic(FirebaseAuth::class)
@@ -50,6 +52,8 @@ class AndroidFirebaseAuthRepositoryTest {
                 resultTask
             }
             every { resultTask.isSuccessful } returns true
+            every { resultTask.result } returns authResult
+            every { authResult.user } returns currentUser
             every { auth.currentUser } returns currentUser
             every { currentUser.uid } returns "android-user"
             every { currentUser.email } returns "user@example.com"
@@ -74,6 +78,7 @@ class AndroidFirebaseAuthRepositoryTest {
         val auth = mockk<FirebaseAuth>()
         val createTask = mockk<Task<AuthResult>>()
         val verificationTask = mockk<Task<Void>>()
+        val authResult = mockk<AuthResult>()
         val currentUser = mockk<FirebaseUser>()
 
         mockkStatic(FirebaseAuth::class)
@@ -86,6 +91,8 @@ class AndroidFirebaseAuthRepositoryTest {
                 createTask
             }
             every { createTask.isSuccessful } returns true
+            every { createTask.result } returns authResult
+            every { authResult.user } returns currentUser
             every { auth.currentUser } returns currentUser
             every { currentUser.uid } returns "new-android-user"
             every { currentUser.email } returns "new@example.com"
@@ -113,6 +120,7 @@ class AndroidFirebaseAuthRepositoryTest {
         val auth = mockk<FirebaseAuth>()
         val createTask = mockk<Task<AuthResult>>()
         val verificationTask = mockk<Task<Void>>()
+        val authResult = mockk<AuthResult>()
         val currentUser = mockk<FirebaseUser>()
 
         mockkStatic(FirebaseAuth::class)
@@ -125,6 +133,8 @@ class AndroidFirebaseAuthRepositoryTest {
                 createTask
             }
             every { createTask.isSuccessful } returns true
+            every { createTask.result } returns authResult
+            every { authResult.user } returns currentUser
             every { auth.currentUser } returns currentUser
             every { currentUser.uid } returns "new-android-user"
             every { currentUser.email } returns "new@example.com"
@@ -136,6 +146,9 @@ class AndroidFirebaseAuthRepositoryTest {
                 verificationTask
             }
             every { verificationTask.isSuccessful } returns false
+            every { verificationTask.exception } returns null
+            mockkStatic(Log::class)
+            every { Log.e(any(), any(), any<Throwable>()) } returns 0
 
             val service = FirebaseAuthPlatformService()
             val user = service.createUserWithEmailAndPassword("new@example.com", "secret")
@@ -143,6 +156,7 @@ class AndroidFirebaseAuthRepositoryTest {
             assertNull(user)
         } finally {
             unmockkStatic(FirebaseAuth::class)
+            unmockkStatic(Log::class)
         }
     }
 
@@ -168,6 +182,7 @@ class AndroidFirebaseAuthRepositoryTest {
         val resultTask = mockk<Task<AuthResult>>()
 
         mockkStatic(FirebaseAuth::class)
+        mockkStatic(Log::class)
         try {
             every { FirebaseAuth.getInstance() } returns auth
             every { auth.signInWithEmailAndPassword("user@example.com", "secret") } returns resultTask
@@ -177,6 +192,8 @@ class AndroidFirebaseAuthRepositoryTest {
                 resultTask
             }
             every { resultTask.isSuccessful } returns false
+            every { resultTask.exception } returns null
+            every { Log.e(any(), any(), any<Throwable>()) } returns 0
 
             val service = FirebaseAuthPlatformService()
             val user = service.signInWithEmailAndPassword("user@example.com", "secret")
@@ -184,6 +201,7 @@ class AndroidFirebaseAuthRepositoryTest {
             assertNull(user)
         } finally {
             unmockkStatic(FirebaseAuth::class)
+            unmockkStatic(Log::class)
         }
     }
 
@@ -191,6 +209,7 @@ class AndroidFirebaseAuthRepositoryTest {
     fun `android create user returns null when no current user exists after signup`() = runBlocking {
         val auth = mockk<FirebaseAuth>()
         val createTask = mockk<Task<AuthResult>>()
+        val authResult = mockk<AuthResult>()
 
         mockkStatic(FirebaseAuth::class)
         try {
@@ -202,6 +221,8 @@ class AndroidFirebaseAuthRepositoryTest {
                 createTask
             }
             every { createTask.isSuccessful } returns true
+            every { createTask.result } returns authResult
+            every { authResult.user } returns null
             every { auth.currentUser } returns null
 
             val service = FirebaseAuthPlatformService()
