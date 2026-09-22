@@ -58,7 +58,7 @@ class FirebaseAuthPlatformService(
             }
         """.trimIndent()
 
-        val url = "https://identitytoolkit.googleapis.com/v1/$endpoint?key=$apiKey"
+        val url = desktopAuthUrl(endpoint, apiKey)
         val connection = connectionFactory(url)
         connection.requestMethod = "POST"
         connection.doOutput = true
@@ -105,7 +105,7 @@ class FirebaseAuthPlatformService(
             }
         """.trimIndent()
 
-        val url = "https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=$apiKey"
+        val url = desktopAuthUrl("accounts:sendOobCode", apiKey)
         val connection = connectionFactory(url)
         connection.requestMethod = "POST"
         connection.doOutput = true
@@ -117,6 +117,33 @@ class FirebaseAuthPlatformService(
         return connection.responseCode in 200..299
     }
 }
+
+private fun desktopAuthUrl(endpoint: String, apiKey: String): String {
+    val configuredHost = DesktopEnvLoader.getValue(
+        "FIREBASE_AUTH_EMULATOR_HOST",
+        "firebase.authEmulatorHost",
+    ) ?: DEFAULT_FIREBASE_AUTH_EMULATOR_HOST
+    val normalizedHost = configuredHost
+        .removePrefix("http://")
+        .removePrefix("https://")
+        .trimEnd('/')
+        .let { host ->
+            if (':' in host.substringAfterLast('/')) {
+                host
+            } else {
+                val port = DesktopEnvLoader.getValue(
+                    "FIREBASE_AUTH_EMULATOR_PORT",
+                    "firebase.authEmulatorPort",
+                ) ?: DEFAULT_FIREBASE_AUTH_EMULATOR_PORT
+                "$host:$port"
+            }
+        }
+
+    return "http://$normalizedHost/identitytoolkit.googleapis.com/v1/$endpoint?key=$apiKey"
+}
+
+private const val DEFAULT_FIREBASE_AUTH_EMULATOR_HOST = "127.0.0.1:9099"
+private const val DEFAULT_FIREBASE_AUTH_EMULATOR_PORT = "9099"
 
 private fun resolveDesktopApiKey(): String? {
     return DesktopEnvLoader.getValue(
