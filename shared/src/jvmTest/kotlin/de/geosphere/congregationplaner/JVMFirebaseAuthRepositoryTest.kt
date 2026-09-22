@@ -18,17 +18,27 @@ class JVMFirebaseAuthRepositoryTest {
     @Test
     fun `desktop sign in maps successful auth response into FirebaseUser`() = runBlocking {
         val previousKey = System.getProperty("FIREBASE_WEB_API_KEY")
+        val previousHost = System.getProperty("FIREBASE_AUTH_EMULATOR_HOST")
         System.setProperty("FIREBASE_WEB_API_KEY", "desktop-test-key")
+        System.setProperty("FIREBASE_AUTH_EMULATOR_HOST", "localhost:9099")
 
         try {
+            var requestUrl: String? = null
             val connection = mockConnection(
                 200,
                 """{"localId":"svc-user","email":"svc@example.com","displayName":"Svc User","idToken":"svc-token"}""",
             )
 
-            val service = FirebaseAuthPlatformService { _ -> connection }
+            val service = FirebaseAuthPlatformService { url ->
+                requestUrl = url
+                connection
+            }
             val user = service.signInWithEmailAndPassword("svc@example.com", "secret")
 
+            assertEquals(
+                "http://localhost:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=desktop-test-key",
+                requestUrl,
+            )
             assertEquals("svc-user", user?.uid)
             assertEquals("svc@example.com", user?.email)
             assertEquals("Svc User", user?.displayName)
@@ -37,6 +47,7 @@ class JVMFirebaseAuthRepositoryTest {
             assertEquals("svc-user", service.currentUserId())
         } finally {
             restoreSystemProperty("FIREBASE_WEB_API_KEY", previousKey)
+            restoreSystemProperty("FIREBASE_AUTH_EMULATOR_HOST", previousHost)
         }
     }
 

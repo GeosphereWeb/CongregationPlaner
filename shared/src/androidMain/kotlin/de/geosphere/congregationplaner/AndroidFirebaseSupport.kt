@@ -19,4 +19,20 @@ actual class FirebasePlatformSupport {
 
 object FirebaseAndroidContextHolder {
     var context: Context? = null
+
+    var useAuthEmulator: Boolean = false
+        private set
+
+    var authEmulatorHost: String = "10.0.2.2"
+        private set
+
+    fun configure(
+        context: Context,
+        useAuthEmulator: Boolean,
+        authEmulatorHost: String = "10.0.2.2",
+    ) {
+        this.context = context
+        this.useAuthEmulator = useAuthEmulator
+        this.authEmulatorHost = authEmulatorHost
+    }
 }
