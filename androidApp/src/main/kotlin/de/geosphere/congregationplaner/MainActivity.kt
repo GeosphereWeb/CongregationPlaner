@@ -15,6 +15,7 @@ class MainActivity : ComponentActivity() {
 
         FirebaseAndroidContextHolder.configure(
             context = applicationContext,
+            activity = this,
             useAuthEmulator = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0,
             authEmulatorHost = applicationInfo.metaData
                 ?.getString("firebase_auth_emulator_host")
