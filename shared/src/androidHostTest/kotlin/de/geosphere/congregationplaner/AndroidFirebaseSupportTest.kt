@@ -1,9 +1,13 @@
 package de.geosphere.congregationplaner
 
 import com.google.firebase.FirebaseApp
+import android.app.Activity
+import android.content.Context
 import io.mockk.every
+import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
+import kotlin.test.assertEquals
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -52,6 +56,58 @@ class AndroidFirebaseSupportTest {
         } finally {
             FirebaseAndroidContextHolder.context = originalContext
             unmockkStatic(FirebaseApp::class)
+        }
+    }
+
+    @Test
+    fun `android platform support does not initialize an existing firebase app`() {
+        val originalContext = FirebaseAndroidContextHolder.context
+        val app = mockk<FirebaseApp>()
+
+        try {
+            FirebaseAndroidContextHolder.context = mockkContext()
+            mockkStatic(FirebaseApp::class)
+            every { FirebaseApp.getApps(any()) } returns listOf(app)
+
+            FirebasePlatformSupport().initialize()
+
+            assertTrue(FirebasePlatformSupport().isReady())
+        } finally {
+            FirebaseAndroidContextHolder.context = originalContext
+            unmockkStatic(FirebaseApp::class)
+        }
+    }
+
+    @Test
+    fun `android context holder stores configured authentication settings`() {
+        val previousContext = FirebaseAndroidContextHolder.context
+        val previousActivity = FirebaseAndroidContextHolder.activity
+        val previousUseEmulator = FirebaseAndroidContextHolder.useAuthEmulator
+        val previousEmulatorHost = FirebaseAndroidContextHolder.authEmulatorHost
+        val context = mockkContext()
+        val activity = mockk<Activity>(relaxed = true)
+
+        try {
+            FirebaseAndroidContextHolder.configure(
+                context = context,
+                activity = activity,
+                useAuthEmulator = true,
+                authEmulatorHost = "localhost",
+            )
+
+            assertEquals(context, FirebaseAndroidContextHolder.context)
+            assertEquals(activity, FirebaseAndroidContextHolder.activity)
+            assertTrue(FirebaseAndroidContextHolder.useAuthEmulator)
+            assertEquals("localhost", FirebaseAndroidContextHolder.authEmulatorHost)
+        } finally {
+            FirebaseAndroidContextHolder.configure(
+                context = previousContext ?: mockkContext(),
+                activity = previousActivity ?: mockk(relaxed = true),
+                useAuthEmulator = previousUseEmulator,
+                authEmulatorHost = previousEmulatorHost,
+            )
+            FirebaseAndroidContextHolder.context = previousContext
+            FirebaseAndroidContextHolder.activity = previousActivity
         }
     }
 

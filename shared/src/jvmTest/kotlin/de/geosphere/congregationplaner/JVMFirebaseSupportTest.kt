@@ -56,25 +56,43 @@ class JVMFirebaseSupportTest {
             override val idToken: String? = "manager-token"
         }
         val repository = object : FirebaseAuthRepository {
-            override suspend fun signInWithEmailAndPassword(email: String, password: String): FirebaseUser? = expectedUser
-            override suspend fun createUserWithEmailAndPassword(email: String, password: String): FirebaseUser? = expectedUser
-            override suspend fun signOut() = Unit
-            override fun currentUserId(): String? = "manager-user"
-            override fun isSignedIn(): Boolean = true
+            private var signedIn = false
+
+            override suspend fun signInWithEmailAndPassword(email: String, password: String): FirebaseUser? {
+                signedIn = true
+                return expectedUser
+            }
+            override suspend fun createUserWithEmailAndPassword(email: String, password: String): FirebaseUser? {
+                signedIn = true
+                return expectedUser
+            }
+
+            override suspend fun signInWithGoogle(): FirebaseUser? = expectedUser
+            override fun isGoogleSignInAvailable(): Boolean = true
+            override suspend fun signOut() {
+                signedIn = false
+            }
+
+            override fun currentUserId(): String? = if (signedIn) "manager-user" else null
+            override fun isSignedIn(): Boolean = signedIn
         }
 
         try {
             firebaseAuthPlatformServiceFactory = { repository }
             val signedIn = FirebaseAuthManager.signInWithEmailAndPassword("mail@example.com", "pw")
             val created = FirebaseAuthManager.createUserWithEmailAndPassword("mail@example.com", "pw")
+            val googleUser = FirebaseAuthManager.signInWithGoogle()
 
             assertEquals("manager-user", signedIn?.uid)
             assertEquals("manager-user", created?.uid)
+            assertEquals("manager-user", googleUser?.uid)
+            assertTrue(FirebaseAuthManager.isGoogleSignInAvailable())
             assertEquals("manager-user", FirebaseAuthManager.currentUserId())
             assertTrue(FirebaseAuthManager.isSignedIn())
 
             FirebaseAuthManager.signOut()
-            assertTrue(FirebaseAuthManager.isSignedIn())
+            assertNull(FirebaseAuthManager.currentUserId())
+            assertFalse(FirebaseAuthManager.isSignedIn())
         } finally {
             firebaseAuthPlatformServiceFactory = previousFactory
         }
