@@ -4,6 +4,7 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class FirebaseRepositoryContractTest {
@@ -20,6 +21,20 @@ class FirebaseRepositoryContractTest {
         assertEquals("user@example.com", user.email)
         assertEquals("User Name", user.displayName)
         assertEquals("token-123", user.idToken)
+    }
+
+    @Test
+    fun `repository defaults google sign in to unavailable`() = runBlocking {
+        val repository = object : FirebaseAuthRepository {
+            override suspend fun signInWithEmailAndPassword(email: String, password: String): FirebaseUser? = null
+            override suspend fun createUserWithEmailAndPassword(email: String, password: String): FirebaseUser? = null
+            override suspend fun signOut() = Unit
+            override fun currentUserId(): String? = null
+            override fun isSignedIn(): Boolean = false
+        }
+
+        assertNull(repository.signInWithGoogle())
+        assertFalse(repository.isGoogleSignInAvailable())
     }
 
     @Test
