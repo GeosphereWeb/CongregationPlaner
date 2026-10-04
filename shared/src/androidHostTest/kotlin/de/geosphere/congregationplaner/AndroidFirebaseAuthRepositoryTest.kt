@@ -76,6 +76,40 @@ class AndroidFirebaseAuthRepositoryTest {
     }
 
     @Test
+    fun `android sign in falls back to current firebase user when auth result has no user`() = runBlocking {
+        val auth = mockk<FirebaseAuth>()
+        val resultTask = mockk<Task<AuthResult>>()
+        val authResult = mockk<AuthResult>()
+        val currentUser = mockk<FirebaseUser>()
+
+        mockkStatic(FirebaseAuth::class)
+        try {
+            every { FirebaseAuth.getInstance() } returns auth
+            every { auth.signInWithEmailAndPassword("user@example.com", "secret") } returns resultTask
+            every { resultTask.addOnCompleteListener(any<OnCompleteListener<AuthResult>>()) } answers {
+                firstArg<OnCompleteListener<AuthResult>>().onComplete(resultTask)
+                resultTask
+            }
+            every { resultTask.isSuccessful } returns true
+            every { resultTask.result } returns authResult
+            every { authResult.user } returns null
+            every { auth.currentUser } returns currentUser
+            every { currentUser.uid } returns "current-user"
+            every { currentUser.email } returns "user@example.com"
+            every { currentUser.displayName } returns "Current User"
+
+            val user = FirebaseAuthPlatformService()
+                .signInWithEmailAndPassword("user@example.com", "secret")
+
+            assertEquals("current-user", user?.uid)
+            assertEquals("user@example.com", user?.email)
+            assertEquals("Current User", user?.displayName)
+        } finally {
+            unmockkStatic(FirebaseAuth::class)
+        }
+    }
+
+    @Test
     fun `android create user succeeds when verification email succeeds`() = runBlocking {
         val auth = mockk<FirebaseAuth>()
         val createTask = mockk<Task<AuthResult>>()
@@ -114,6 +148,74 @@ class AndroidFirebaseAuthRepositoryTest {
             assertEquals("new@example.com", user?.email)
         } finally {
             unmockkStatic(FirebaseAuth::class)
+        }
+    }
+
+    @Test
+    fun `android create user falls back to current firebase user when auth result has no user`() = runBlocking {
+        val auth = mockk<FirebaseAuth>()
+        val createTask = mockk<Task<AuthResult>>()
+        val verificationTask = mockk<Task<Void>>()
+        val authResult = mockk<AuthResult>()
+        val currentUser = mockk<FirebaseUser>()
+
+        mockkStatic(FirebaseAuth::class)
+        try {
+            every { FirebaseAuth.getInstance() } returns auth
+            every { auth.createUserWithEmailAndPassword("new@example.com", "secret") } returns createTask
+            every { createTask.addOnCompleteListener(any<OnCompleteListener<AuthResult>>()) } answers {
+                firstArg<OnCompleteListener<AuthResult>>().onComplete(createTask)
+                createTask
+            }
+            every { createTask.isSuccessful } returns true
+            every { createTask.result } returns authResult
+            every { authResult.user } returns null
+            every { auth.currentUser } returns currentUser
+            every { currentUser.uid } returns "new-current-user"
+            every { currentUser.email } returns "new@example.com"
+            every { currentUser.displayName } returns "New User"
+            every { currentUser.sendEmailVerification() } returns verificationTask
+            every { verificationTask.addOnCompleteListener(any<OnCompleteListener<Void>>()) } answers {
+                firstArg<OnCompleteListener<Void>>().onComplete(verificationTask)
+                verificationTask
+            }
+            every { verificationTask.isSuccessful } returns true
+
+            val user = FirebaseAuthPlatformService()
+                .createUserWithEmailAndPassword("new@example.com", "secret")
+
+            assertEquals("new-current-user", user?.uid)
+            assertEquals("new@example.com", user?.email)
+        } finally {
+            unmockkStatic(FirebaseAuth::class)
+        }
+    }
+
+    @Test
+    fun `android create user returns null when account creation task fails`() = runBlocking {
+        val auth = mockk<FirebaseAuth>()
+        val createTask = mockk<Task<AuthResult>>()
+
+        mockkStatic(FirebaseAuth::class)
+        mockkStatic(Log::class)
+        try {
+            every { FirebaseAuth.getInstance() } returns auth
+            every { auth.createUserWithEmailAndPassword("new@example.com", "secret") } returns createTask
+            every { createTask.addOnCompleteListener(any<OnCompleteListener<AuthResult>>()) } answers {
+                firstArg<OnCompleteListener<AuthResult>>().onComplete(createTask)
+                createTask
+            }
+            every { createTask.isSuccessful } returns false
+            every { createTask.exception } returns null
+            every { Log.e(any(), any(), any<Throwable>()) } returns 0
+
+            val user = FirebaseAuthPlatformService()
+                .createUserWithEmailAndPassword("new@example.com", "secret")
+
+            assertNull(user)
+        } finally {
+            unmockkStatic(FirebaseAuth::class)
+            unmockkStatic(Log::class)
         }
     }
 
