@@ -60,8 +60,8 @@ jobs:
           # Schritt 1: Nur die Tests ausführen
           ./gradlew :shared:jvmTest :shared:testAndroidHostTest --no-daemon --info
 
-          # Schritt 2: Kover-Reports generieren (Hier wird es vermutlich hängen bleiben)
-          ./gradlew koverXmlReport mergeKoverXml --no-daemon --info
+          # Schritt 2: Modulberichte getrennt erzeugen; Sonar importiert sie direkt.
+          ./gradlew :shared:koverXmlReport :androidApp:koverXmlReport :desktopApp:koverXmlReport --no-daemon --info
 
           # Schritt 3: Sonar ausführen
           ./gradlew sonar --no-daemon --info
