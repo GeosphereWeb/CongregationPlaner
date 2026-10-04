@@ -1,4 +1,4 @@
-package de.geosphere.congregationplaner
+package de.geosphere.congregationplaner.auth
 
 import java.io.File
 
