@@ -33,26 +33,30 @@ internal object DesktopEnvLoader {
 
     fun load(): Map<String, String> {
         val values = linkedMapOf<String, String>()
-        candidateFiles.forEach { file ->
-            if (file.exists() && file.isFile) {
-                file.readLines().forEach { rawLine ->
-                    val line = rawLine.trim()
-                    if (line.isEmpty() || line.startsWith("#")) {
-                        return@forEach
-                    }
-                    val index = line.indexOf('=')
-                    if (index <= 0) {
-                        return@forEach
-                    }
-                    val key = line.substring(0, index).trim()
-                    val value = line.substring(index + 1).trim().removeSurrounding("\"").removeSurrounding("'")
-                    if (key.isNotEmpty()) {
-                        values.putIfAbsent(key, value)
-                    }
-                }
-            }
-        }
+        candidateFiles.forEach { file -> loadFile(file, values) }
         return values
+    }
+
+    private fun loadFile(file: File, values: MutableMap<String, String>) {
+        if (!file.isFile) return
+
+        file.forEachLine { rawLine ->
+            parseEntry(rawLine)?.let { (key, value) -> values.putIfAbsent(key, value) }
+        }
+    }
+
+    private fun parseEntry(rawLine: String): Pair<String, String>? {
+        val line = rawLine.trim()
+        if (line.isEmpty() || line.startsWith("#")) return null
+
+        val separator = line.indexOf('=')
+        if (separator <= 0) return null
+
+        val key = line.substring(0, separator).trim()
+        if (key.isEmpty()) return null
+
+        val value = line.substring(separator + 1).trim().removeSurrounding("\"").removeSurrounding("'")
+        return key to value
     }
 
     fun getValue(vararg keys: String): String? {
