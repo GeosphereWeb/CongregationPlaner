@@ -8,6 +8,7 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import congregationplaner.shared.generated.resources.Res
 import congregationplaner.shared.generated.resources.dummy
+import de.geosphere.congregationplaner.auth.FirebaseSupport
 import org.jetbrains.compose.resources.painterResource
 
 fun main() {
