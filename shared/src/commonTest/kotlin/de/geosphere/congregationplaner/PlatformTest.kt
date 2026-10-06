@@ -2,7 +2,6 @@ package de.geosphere.congregationplaner
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class PlatformTest {
@@ -25,5 +24,4 @@ class PlatformTest {
             "HostPlatform.isDesktop should match current platform's isDesktop",
         )
     }
-
 }

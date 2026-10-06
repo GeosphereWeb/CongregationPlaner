@@ -1,4 +1,4 @@
-package de.geosphere.congregationplaner
+package de.geosphere.congregationplaner.auth
 
 import io.mockk.Runs
 import io.mockk.every
@@ -70,7 +70,9 @@ class JVMFirebaseAuthRepositoryTest {
         System.clearProperty("FIREBASE_WEB_API_KEY")
 
         try {
-            val service = FirebaseAuthPlatformService { _ -> error("should not be called") }
+            val service = FirebaseAuthPlatformService(apiKeyProvider = { null }) {
+                error("should not be called")
+            }
             assertNull(service.signInWithEmailAndPassword("svc@example.com", "secret"))
         } finally {
             restoreSystemProperty("FIREBASE_WEB_API_KEY", previousKey)
@@ -93,6 +95,37 @@ class JVMFirebaseAuthRepositoryTest {
         } finally {
             restoreSystemProperty("FIREBASE_WEB_API_KEY", previousKey)
         }
+    }
+
+    @Test
+    fun `desktop auth helpers normalize emulator urls and escaped json strings`() {
+        assertEquals(
+            "http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signIn?key=key",
+            buildDesktopAuthUrl("accounts:signIn", "key", null, null),
+        )
+        assertEquals(
+            "http://auth.local:9199/identitytoolkit.googleapis.com/v1/accounts:signIn?key=key",
+            buildDesktopAuthUrl("accounts:signIn", "key", "https://auth.local/", "9199"),
+        )
+        assertEquals(
+            "http://auth.local:9099/identitytoolkit.googleapis.com/v1/accounts:signIn?key=key",
+            buildDesktopAuthUrl("accounts:signIn", "key", "auth.local:9099", null),
+        )
+
+        val value = "backslash\\ quote\" newline\n carriage\r tab\t"
+        val json = """{"value":"${escapeJson(value)}"}"""
+        assertEquals(value, extractJsonString(json, "value"))
+        assertNull(extractJsonString("""{"other":"value"}""", "value"))
+    }
+
+    @Test
+    fun `desktop auth rejects successful response without local user id`() = runBlocking {
+        val service = FirebaseAuthPlatformService(
+            apiKeyProvider = { "test-key" },
+            connectionFactory = { mockConnection(200, """{"email":"user@example.com"}""") },
+        )
+
+        assertNull(service.signInWithEmailAndPassword("user@example.com", "secret"))
     }
 
     @Test
@@ -204,7 +237,8 @@ class JVMFirebaseAuthRepositoryTest {
 
         val responseBytes = (body ?: "").toByteArray(StandardCharsets.UTF_8)
         every { connection.inputStream } returns ByteArrayInputStream(responseBytes)
-        every { connection.errorStream } returns if (status in 200..299) null else ByteArrayInputStream("error".toByteArray(StandardCharsets.UTF_8))
+        every { connection.errorStream } returns
+            if (status in 200..299) null else ByteArrayInputStream("error".toByteArray(StandardCharsets.UTF_8))
         return connection
     }
 

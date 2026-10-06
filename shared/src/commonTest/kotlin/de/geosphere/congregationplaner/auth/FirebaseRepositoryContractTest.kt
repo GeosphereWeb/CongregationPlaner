@@ -1,4 +1,4 @@
-package de.geosphere.congregationplaner
+package de.geosphere.congregationplaner.auth
 
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -37,6 +37,8 @@ class FirebaseRepositoryContractTest {
             override fun isSignedIn(): Boolean = signedIn
         }
 
+        assertEquals(null, repository.signInWithGoogle())
+        assertFalse(repository.isGoogleSignInAvailable())
         assertEquals("user-42", repository.currentUserId())
         assertTrue(repository.isSignedIn())
 

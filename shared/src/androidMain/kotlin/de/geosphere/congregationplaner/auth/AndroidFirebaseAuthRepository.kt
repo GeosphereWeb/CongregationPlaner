@@ -1,7 +1,14 @@
-package de.geosphere.congregationplaner
+package de.geosphere.congregationplaner.auth
 
 import android.util.Log
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialException
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
@@ -57,6 +64,54 @@ class FirebaseAuthPlatformService : FirebaseAuthRepository {
                 }
         }
 
+    override suspend fun signInWithGoogle(): FirebaseUser? {
+        val activity = FirebaseAndroidContextHolder.activity ?: return null
+        val clientIdResource = activity.resources.getIdentifier(
+            "default_web_client_id",
+            "string",
+            activity.packageName,
+        )
+        if (clientIdResource == 0) {
+            Log.e("FirebaseAuth", "Google Sign-In client ID is missing from google-services.json")
+            return null
+        }
+
+        return try {
+            val googleIdOption = GetGoogleIdOption.Builder()
+                .setFilterByAuthorizedAccounts(false)
+                .setServerClientId(activity.getString(clientIdResource))
+                .setAutoSelectEnabled(false)
+                .build()
+            val request = GetCredentialRequest.Builder()
+                .addCredentialOption(googleIdOption)
+                .build()
+            val credential = CredentialManager
+                .create(activity)
+                .getCredential(activity, request)
+                .credential
+            val googleCredential = GoogleIdTokenCredential.createFrom(credential.data)
+            val firebaseCredential = GoogleAuthProvider.getCredential(googleCredential.idToken, null)
+
+            suspendCancellableCoroutine { continuation ->
+                auth.signInWithCredential(firebaseCredential)
+                    .addOnCompleteListener { task ->
+                        if (!task.isSuccessful) {
+                            logAuthFailure("signInWithGoogle", task.exception)
+                        }
+                        continuation.resume(taskToUser(task))
+                    }
+            }
+        } catch (exception: GetCredentialException) {
+            logAuthFailure("signInWithGoogle", exception)
+            null
+        } catch (exception: GoogleIdTokenParsingException) {
+            logAuthFailure("signInWithGoogle", exception)
+            null
+        }
+    }
+
+    override fun isGoogleSignInAvailable(): Boolean = FirebaseAndroidContextHolder.activity != null
+
     override suspend fun signOut() {
         auth.signOut()
     }
@@ -65,7 +120,9 @@ class FirebaseAuthPlatformService : FirebaseAuthRepository {
 
     override fun isSignedIn(): Boolean = auth.currentUser != null
 
-    private fun taskToUser(task: com.google.android.gms.tasks.Task<com.google.firebase.auth.AuthResult>): FirebaseUser? {
+    private fun taskToUser(
+        task: com.google.android.gms.tasks.Task<com.google.firebase.auth.AuthResult>,
+    ): FirebaseUser? {
         if (!task.isSuccessful) {
             return null
         }

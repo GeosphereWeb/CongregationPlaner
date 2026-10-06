@@ -123,9 +123,16 @@ sonar {
         property("sonar.sources", collectKotlinSourceDirs(includeTests = false))
         property("sonar.tests", collectKotlinSourceDirs(includeTests = true))
 
-        // Verheiratung: SonarCloud den Pfad zum Kover-XML geben
-        // Wir nutzen hier einen relativen Pfad vom Root aus
-        property("sonar.coverage.jacoco.xmlReportPaths", "build/reports/kover/merged/report.xml")
+        // Import module reports directly so Android/KMP source coverage is not lost
+        // while merging reports from modules with overlapping source file names.
+        property(
+            "sonar.coverage.jacoco.xmlReportPaths",
+            listOf(
+                "shared/build/reports/kover/report.xml",
+                "androidApp/build/reports/kover/report.xml",
+                "desktopApp/build/reports/kover/report.xml",
+            ).joinToString(","),
+        )
 
         // Nutze die zentrale Liste für Coverage Exclusions auch am Root
         property("sonar.coverage.exclusions", sonarExclusions.joinToString(","))
@@ -169,8 +176,12 @@ gradle.projectsEvaluated {
             }
         }
 
-        // Make sonar depend on the official merged task
-        tasks.named("sonar") { dependsOn("koverMergedXmlReport") }
+        // Generate each module report before Sonar imports coverage.
+        tasks.named("sonar") {
+            subprojects.forEach { sp ->
+                sp.tasks.findByName("koverXmlReport")?.let { dependsOn(it) }
+            }
+        }
     } else {
         // Fallback: create a simple merger similar to the previous implementation
         tasks.register("mergeKoverXml") {
@@ -207,8 +218,12 @@ gradle.projectsEvaluated {
             }
         }
 
-        // Ensure Sonar runs after the fallback merged Kover report is generated
-        tasks.named("sonar") { dependsOn("mergeKoverXml") }
+        // Generate each module report before Sonar imports coverage.
+        tasks.named("sonar") {
+            subprojects.forEach { sp ->
+                sp.tasks.findByName("koverXmlReport")?.let { dependsOn(it) }
+            }
+        }
     }
 }
 
