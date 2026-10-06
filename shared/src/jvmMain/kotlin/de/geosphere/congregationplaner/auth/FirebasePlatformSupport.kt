@@ -19,5 +19,9 @@ actual class FirebasePlatformSupport {
         // Initializing FirebaseApp here is not required and would fail without service-account credentials.
     }
 
-    actual fun isReady(): Boolean = !DesktopEnv.getValue("FIREBASE_WEB_API_KEY", "firebase.webApiKey").isNullOrBlank()
+    actual fun isReady(): Boolean = isDesktopFirebaseReady(
+        DesktopEnv.getValue("FIREBASE_WEB_API_KEY", "firebase.webApiKey"),
+    )
 }
+
+internal fun isDesktopFirebaseReady(apiKey: String?): Boolean = !apiKey.isNullOrBlank()

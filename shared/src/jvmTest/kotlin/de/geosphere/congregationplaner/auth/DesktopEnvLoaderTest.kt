@@ -74,8 +74,22 @@ class DesktopEnvLoaderTest {
             System.clearProperty("FIREBASE_PROJECT_ID")
             System.clearProperty("firebase.projectId")
 
-            assertNull(DesktopEnv.getValue("FIREBASE_WEB_API_KEY", "firebase.webApiKey"))
-            assertNull(DesktopEnv.getValue("FIREBASE_PROJECT_ID", "firebase.projectId"))
+            assertNull(
+                DesktopEnv.findValue(
+                    arrayOf("FIREBASE_WEB_API_KEY", "firebase.webApiKey"),
+                    emptyMap(),
+                    emptyMap(),
+                    emptyMap(),
+                ),
+            )
+            assertNull(
+                DesktopEnv.findValue(
+                    arrayOf("FIREBASE_PROJECT_ID", "firebase.projectId"),
+                    emptyMap(),
+                    emptyMap(),
+                    emptyMap(),
+                ),
+            )
         } finally {
             restoreSystemProperty("FIREBASE_WEB_API_KEY", previousWeb)
             restoreSystemProperty("firebase.webApiKey", previousWebDot)

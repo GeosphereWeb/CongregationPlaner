@@ -70,7 +70,9 @@ class JVMFirebaseAuthRepositoryTest {
         System.clearProperty("FIREBASE_WEB_API_KEY")
 
         try {
-            val service = FirebaseAuthPlatformService { _ -> error("should not be called") }
+            val service = FirebaseAuthPlatformService(apiKeyProvider = { null }) {
+                error("should not be called")
+            }
             assertNull(service.signInWithEmailAndPassword("svc@example.com", "secret"))
         } finally {
             restoreSystemProperty("FIREBASE_WEB_API_KEY", previousKey)
