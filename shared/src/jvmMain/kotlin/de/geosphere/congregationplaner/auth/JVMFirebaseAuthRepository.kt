@@ -120,11 +120,19 @@ class FirebaseAuthPlatformService(
 }
 
 private fun desktopAuthUrl(endpoint: String, apiKey: String): String {
-    val configuredHost = DesktopEnv.getValue(
-        "FIREBASE_AUTH_EMULATOR_HOST",
-        "firebase.authEmulatorHost",
-    ) ?: DEFAULT_FIREBASE_AUTH_EMULATOR_HOST
-    val normalizedHost = configuredHost
+    val configuredHost = DesktopEnv.getValue("FIREBASE_AUTH_EMULATOR_HOST", "firebase.authEmulatorHost")
+    val configuredPort = DesktopEnv.getValue("FIREBASE_AUTH_EMULATOR_PORT", "firebase.authEmulatorPort")
+    return buildDesktopAuthUrl(endpoint, apiKey, configuredHost, configuredPort)
+}
+
+internal fun buildDesktopAuthUrl(
+    endpoint: String,
+    apiKey: String,
+    configuredHost: String?,
+    configuredPort: String?,
+): String {
+    val host = configuredHost ?: DEFAULT_FIREBASE_AUTH_EMULATOR_HOST
+    val normalizedHost = host
         .removePrefix("http://")
         .removePrefix("https://")
         .trimEnd('/')
@@ -132,10 +140,7 @@ private fun desktopAuthUrl(endpoint: String, apiKey: String): String {
             if (':' in host.substringAfterLast('/')) {
                 host
             } else {
-                val port = DesktopEnv.getValue(
-                    "FIREBASE_AUTH_EMULATOR_PORT",
-                    "firebase.authEmulatorPort",
-                ) ?: DEFAULT_FIREBASE_AUTH_EMULATOR_PORT
+                val port = configuredPort ?: DEFAULT_FIREBASE_AUTH_EMULATOR_PORT
                 "$host:$port"
             }
         }
@@ -153,14 +158,14 @@ private fun resolveDesktopApiKey(): String? = DesktopEnv.getValue(
     "firebase.apiKey",
 )
 
-private fun escapeJson(value: String): String = value
+internal fun escapeJson(value: String): String = value
     .replace("\\", "\\\\")
     .replace("\"", "\\\"")
     .replace("\n", "\\n")
     .replace("\r", "\\r")
     .replace("\t", "\\t")
 
-private fun extractJsonString(json: String, key: String): String? {
+internal fun extractJsonString(json: String, key: String): String? {
     val pattern = Regex("\"${Regex.escape(key)}\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"")
     return pattern.find(json)?.groupValues?.getOrNull(1)?.let { raw ->
         raw.replace("\\\"", "\"")
