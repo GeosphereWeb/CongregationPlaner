@@ -1,4 +1,4 @@
-package de.geosphere.congregationplaner
+package de.geosphere.congregationplaner.auth
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets
 actual fun createFirebaseAuthPlatformService(): FirebaseAuthRepository = FirebaseAuthPlatformService()
 
 class FirebaseAuthPlatformService(
+    private val apiKeyProvider: () -> String? = ::resolveDesktopApiKey,
     private val connectionFactory: (String) -> HttpURLConnection = { requestUrl ->
         URL(requestUrl).openConnection() as HttpURLConnection
     },
@@ -49,7 +50,7 @@ class FirebaseAuthPlatformService(
     override fun isSignedIn(): Boolean = currentUser != null
 
     private fun performDesktopAuthRequest(endpoint: String, email: String, password: String): FirebaseUser? {
-        val apiKey = resolveDesktopApiKey() ?: return null
+        val apiKey = apiKeyProvider() ?: return null
         val body = """
             {
               "email": "${escapeJson(email)}",
@@ -97,7 +98,7 @@ class FirebaseAuthPlatformService(
     }
 
     private fun sendVerificationEmailRequest(idToken: String): Boolean {
-        val apiKey = resolveDesktopApiKey() ?: return false
+        val apiKey = apiKeyProvider() ?: return false
         val body = """
             {
               "requestType": "VERIFY_EMAIL",
@@ -119,11 +120,19 @@ class FirebaseAuthPlatformService(
 }
 
 private fun desktopAuthUrl(endpoint: String, apiKey: String): String {
-    val configuredHost = DesktopEnvLoader.getValue(
-        "FIREBASE_AUTH_EMULATOR_HOST",
-        "firebase.authEmulatorHost",
-    ) ?: DEFAULT_FIREBASE_AUTH_EMULATOR_HOST
-    val normalizedHost = configuredHost
+    val configuredHost = DesktopEnv.getValue("FIREBASE_AUTH_EMULATOR_HOST", "firebase.authEmulatorHost")
+    val configuredPort = DesktopEnv.getValue("FIREBASE_AUTH_EMULATOR_PORT", "firebase.authEmulatorPort")
+    return buildDesktopAuthUrl(endpoint, apiKey, configuredHost, configuredPort)
+}
+
+internal fun buildDesktopAuthUrl(
+    endpoint: String,
+    apiKey: String,
+    configuredHost: String?,
+    configuredPort: String?,
+): String {
+    val host = configuredHost ?: DEFAULT_FIREBASE_AUTH_EMULATOR_HOST
+    val normalizedHost = host
         .removePrefix("http://")
         .removePrefix("https://")
         .trimEnd('/')
@@ -131,10 +140,7 @@ private fun desktopAuthUrl(endpoint: String, apiKey: String): String {
             if (':' in host.substringAfterLast('/')) {
                 host
             } else {
-                val port = DesktopEnvLoader.getValue(
-                    "FIREBASE_AUTH_EMULATOR_PORT",
-                    "firebase.authEmulatorPort",
-                ) ?: DEFAULT_FIREBASE_AUTH_EMULATOR_PORT
+                val port = configuredPort ?: DEFAULT_FIREBASE_AUTH_EMULATOR_PORT
                 "$host:$port"
             }
         }
@@ -145,24 +151,21 @@ private fun desktopAuthUrl(endpoint: String, apiKey: String): String {
 private const val DEFAULT_FIREBASE_AUTH_EMULATOR_HOST = "127.0.0.1:9099"
 private const val DEFAULT_FIREBASE_AUTH_EMULATOR_PORT = "9099"
 
-private fun resolveDesktopApiKey(): String? {
-    return DesktopEnvLoader.getValue(
-        "FIREBASE_WEB_API_KEY",
-        "firebase.webApiKey",
-        "FIREBASE_API_KEY",
-        "firebase.apiKey",
-    )
-}
+private fun resolveDesktopApiKey(): String? = DesktopEnv.getValue(
+    "FIREBASE_WEB_API_KEY",
+    "firebase.webApiKey",
+    "FIREBASE_API_KEY",
+    "firebase.apiKey",
+)
 
-private fun escapeJson(value: String): String =
-    value
-        .replace("\\", "\\\\")
-        .replace("\"", "\\\"")
-        .replace("\n", "\\n")
-        .replace("\r", "\\r")
-        .replace("\t", "\\t")
+internal fun escapeJson(value: String): String = value
+    .replace("\\", "\\\\")
+    .replace("\"", "\\\"")
+    .replace("\n", "\\n")
+    .replace("\r", "\\r")
+    .replace("\t", "\\t")
 
-private fun extractJsonString(json: String, key: String): String? {
+internal fun extractJsonString(json: String, key: String): String? {
     val pattern = Regex("\"${Regex.escape(key)}\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"")
     return pattern.find(json)?.groupValues?.getOrNull(1)?.let { raw ->
         raw.replace("\\\"", "\"")

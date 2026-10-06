@@ -1,4 +1,4 @@
-package de.geosphere.congregationplaner
+package de.geosphere.congregationplaner.auth
 
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -29,21 +29,32 @@ class JVMFirebaseSupportTest {
 
     @Test
     fun `desktop platform support stays unready when api key is missing`() {
-        val previousValue = System.getProperty("FIREBASE_WEB_API_KEY")
-        val previousDotValue = System.getProperty("firebase.webApiKey")
+        assertFalse(isDesktopFirebaseReady(null))
+    }
 
-        try {
-            System.clearProperty("FIREBASE_WEB_API_KEY")
-            System.clearProperty("firebase.webApiKey")
+    @Test
+    fun `desktop platform initialization reports missing config and emulator fallback`() {
+        val messages = mutableListOf<String>()
 
-            val support = FirebasePlatformSupport()
-            support.initialize()
+        initializeDesktopFirebase(
+            projectId = null,
+            apiKey = " ",
+            emulatorHost = null,
+            logError = messages::add,
+        )
 
-            assertFalse(support.isReady())
-        } finally {
-            restoreSystemProperty("FIREBASE_WEB_API_KEY", previousValue)
-            restoreSystemProperty("firebase.webApiKey", previousDotValue)
-        }
+        assertEquals(1, messages.size)
+        assertTrue(messages.single().contains("127.0.0.1:9099"))
+    }
+
+    @Test
+    fun `desktop platform initialization accepts either project id or api key`() {
+        val messages = mutableListOf<String>()
+
+        initializeDesktopFirebase("project-id", null, "emulator:9099", messages::add)
+        initializeDesktopFirebase(null, "api-key", "emulator:9099", messages::add)
+
+        assertTrue(messages.isEmpty())
     }
 
     @Test
@@ -56,8 +67,10 @@ class JVMFirebaseSupportTest {
             override val idToken: String? = "manager-token"
         }
         val repository = object : FirebaseAuthRepository {
-            override suspend fun signInWithEmailAndPassword(email: String, password: String): FirebaseUser? = expectedUser
-            override suspend fun createUserWithEmailAndPassword(email: String, password: String): FirebaseUser? = expectedUser
+            override suspend fun signInWithEmailAndPassword(email: String, password: String): FirebaseUser? =
+                expectedUser
+            override suspend fun createUserWithEmailAndPassword(email: String, password: String): FirebaseUser? =
+                expectedUser
             override suspend fun signOut() = Unit
             override fun currentUserId(): String? = "manager-user"
             override fun isSignedIn(): Boolean = true
@@ -70,6 +83,8 @@ class JVMFirebaseSupportTest {
 
             assertEquals("manager-user", signedIn?.uid)
             assertEquals("manager-user", created?.uid)
+            assertNull(FirebaseAuthManager.signInWithGoogle())
+            assertFalse(FirebaseAuthManager.isGoogleSignInAvailable())
             assertEquals("manager-user", FirebaseAuthManager.currentUserId())
             assertTrue(FirebaseAuthManager.isSignedIn())
 

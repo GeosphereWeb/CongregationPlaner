@@ -1,4 +1,4 @@
-package de.geosphere.congregationplaner
+package de.geosphere.congregationplaner.auth
 
 expect class FirebasePlatformSupport() {
     fun initialize()

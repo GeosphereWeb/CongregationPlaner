@@ -1,5 +1,7 @@
 package de.geosphere.congregationplaner
 
+import de.geosphere.congregationplaner.auth.FirebaseAndroidContextHolder
+import de.geosphere.congregationplaner.auth.FirebasePlatformSupport
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

@@ -1,6 +1,6 @@
 @file:Suppress("ktlint:standard:filename")
 
-package de.geosphere.congregationplaner
+package de.geosphere.congregationplaner.auth
 
 // Platform-agnostic stub for iOS builds on non-mac hosts.
 // Replace with real cocoapods FirebaseCore usage when developing on macOS.

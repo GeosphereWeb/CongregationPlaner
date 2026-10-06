@@ -1,9 +1,11 @@
-package de.geosphere.congregationplaner
+package de.geosphere.congregationplaner.auth
 
 import java.io.File
+import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class DesktopEnvLoaderTest {
     @Test
@@ -19,8 +21,8 @@ class DesktopEnvLoaderTest {
             System.setProperty("FIREBASE_PROJECT_ID", "explicit-project")
             System.setProperty("firebase.projectId", "fallback-project")
 
-            assertEquals("explicit-web-key", DesktopEnvLoader.getValue("FIREBASE_WEB_API_KEY", "firebase.webApiKey"))
-            assertEquals("explicit-project", DesktopEnvLoader.getValue("FIREBASE_PROJECT_ID", "firebase.projectId"))
+            assertEquals("explicit-web-key", DesktopEnv.getValue("FIREBASE_WEB_API_KEY", "firebase.webApiKey"))
+            assertEquals("explicit-project", DesktopEnv.getValue("FIREBASE_PROJECT_ID", "firebase.projectId"))
         } finally {
             restoreSystemProperty("FIREBASE_WEB_API_KEY", previousWeb)
             restoreSystemProperty("firebase.webApiKey", previousWebDot)
@@ -45,7 +47,7 @@ class DesktopEnvLoaderTest {
                     "VALID_KEY=value\n",
             )
 
-            val loaded = DesktopEnvLoader.load()
+            val loaded = DesktopEnv.load()
 
             assertEquals("quoted-web-key", loaded["FIREBASE_WEB_API_KEY"])
             assertEquals("quoted-project", loaded["firebase.projectId"])
@@ -74,13 +76,77 @@ class DesktopEnvLoaderTest {
             System.clearProperty("FIREBASE_PROJECT_ID")
             System.clearProperty("firebase.projectId")
 
-            assertNull(DesktopEnvLoader.getValue("FIREBASE_WEB_API_KEY", "firebase.webApiKey"))
-            assertNull(DesktopEnvLoader.getValue("FIREBASE_PROJECT_ID", "firebase.projectId"))
+            assertNull(
+                DesktopEnv.findValue(
+                    arrayOf("FIREBASE_WEB_API_KEY", "firebase.webApiKey"),
+                    emptyMap(),
+                    emptyMap(),
+                    emptyMap(),
+                ),
+            )
+            assertNull(
+                DesktopEnv.findValue(
+                    arrayOf("FIREBASE_PROJECT_ID", "firebase.projectId"),
+                    emptyMap(),
+                    emptyMap(),
+                    emptyMap(),
+                ),
+            )
         } finally {
             restoreSystemProperty("FIREBASE_WEB_API_KEY", previousWeb)
             restoreSystemProperty("firebase.webApiKey", previousWebDot)
             restoreSystemProperty("FIREBASE_PROJECT_ID", previousProject)
             restoreSystemProperty("firebase.projectId", previousProjectDot)
+        }
+    }
+
+    @Test
+    fun `desktop env loader resolves values by source priority and dot notation`() {
+        assertEquals(
+            "environment",
+            DesktopEnv.findValue(
+                arrayOf("CONFIG_KEY"),
+                environment = mapOf("CONFIG_KEY" to "environment"),
+                properties = mapOf("CONFIG_KEY" to "property"),
+                loaded = mapOf("CONFIG_KEY" to "file"),
+            ),
+        )
+        assertEquals(
+            "property",
+            DesktopEnv.findValue(
+                arrayOf("CONFIG_KEY"),
+                environment = mapOf("CONFIG_KEY" to " "),
+                properties = mapOf("CONFIG_KEY" to "property"),
+                loaded = mapOf("CONFIG_KEY" to "file"),
+            ),
+        )
+        assertEquals(
+            "from-file",
+            DesktopEnv.findValue(
+                arrayOf("CONFIG_KEY"),
+                environment = emptyMap(),
+                properties = emptyMap(),
+                loaded = mapOf("CONFIG.KEY" to "from-file"),
+            ),
+        )
+    }
+
+    @Test
+    fun `desktop env loader ignores invalid entries and non-files`() {
+        assertNull(DesktopEnv.parseEntry("  "))
+        assertNull(DesktopEnv.parseEntry(" # comment"))
+        assertNull(DesktopEnv.parseEntry("missing separator"))
+        assertNull(DesktopEnv.parseEntry(" =empty key"))
+        assertEquals("VALUE" to "value", DesktopEnv.parseEntry(" VALUE = value "))
+
+        val values = mutableMapOf("EXISTING" to "first")
+        val directory = Files.createTempDirectory("desktop-env-test").toFile()
+        try {
+            DesktopEnv.loadFile(directory, values)
+            assertTrue(values.isEmpty().not())
+            assertEquals("first", values["EXISTING"])
+        } finally {
+            directory.deleteRecursively()
         }
     }
 

@@ -1,5 +1,6 @@
-package de.geosphere.congregationplaner
+package de.geosphere.congregationplaner.auth
 
+import android.app.Activity
 import android.content.Context
 import com.google.firebase.FirebaseApp
 
@@ -19,6 +20,7 @@ actual class FirebasePlatformSupport {
 
 object FirebaseAndroidContextHolder {
     var context: Context? = null
+    var activity: Activity? = null
 
     var useAuthEmulator: Boolean = false
         private set
@@ -28,10 +30,12 @@ object FirebaseAndroidContextHolder {
 
     fun configure(
         context: Context,
+        activity: Activity,
         useAuthEmulator: Boolean,
         authEmulatorHost: String = "10.0.2.2",
     ) {
         this.context = context
+        this.activity = activity
         this.useAuthEmulator = useAuthEmulator
         this.authEmulatorHost = authEmulatorHost
     }

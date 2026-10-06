@@ -1,4 +1,4 @@
-package de.geosphere.congregationplaner
+package de.geosphere.congregationplaner.auth
 
 actual fun createFirebaseAuthPlatformService(): FirebaseAuthRepository = FirebaseAuthPlatformService()
 

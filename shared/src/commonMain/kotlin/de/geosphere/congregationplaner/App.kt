@@ -37,10 +37,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import congregationplaner.shared.generated.resources.Res
 import congregationplaner.shared.generated.resources.dummy
+import de.geosphere.congregationplaner.auth.FirebaseAuthManager
+import de.geosphere.congregationplaner.auth.FirebaseSupport
 import de.geosphere.congregationplaner.theming.AppTheme
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
@@ -99,7 +100,8 @@ fun App() {
 
                         if (user != null) {
                             if (authMode == AuthMode.REGISTER) {
-                                infoMessage = "Registrierung erfolgreich. Bitte prüfe dein E-Mail-Postfach und bestätige deine E-Mail-Adresse."
+                                infoMessage =
+                                    "Registrierung erfolgreich. Bitte prüfe dein E-Mail-Postfach und bestätige deine E-Mail-Adresse."
                                 authMode = AuthMode.LOGIN
                                 email = ""
                                 password = ""
@@ -119,15 +121,55 @@ fun App() {
                         }
                     }
                 },
+                onGoogleClick = {
+                    scope.launch {
+                        loginError = null
+                        val user = FirebaseAuthManager.signInWithGoogle()
+                        if (user != null) {
+                            isAuthenticated = true
+                            selectedRoute = "home"
+                            email = ""
+                            password = ""
+                        } else {
+                            loginError = "Google-Anmeldung fehlgeschlagen oder wurde abgebrochen."
+                        }
+                    }
+                },
             )
             return@AppTheme
         }
 
         // Platform-spezifisches Layout
         if (HostPlatform.isDesktop) {
-            DesktopLayout(selectedRoute, firebaseStatus) { selectedRoute = it }
+            DesktopLayout(
+                selectedRoute = selectedRoute,
+                firebaseStatus = firebaseStatus,
+                onRouteChange = { selectedRoute = it },
+                onSignOut = {
+                    scope.launch {
+                        FirebaseAuthManager.signOut()
+                        isAuthenticated = false
+                        authMode = AuthMode.LOGIN
+                        loginError = null
+                        infoMessage = null
+                    }
+                },
+            )
         } else {
-            MobileLayout(selectedRoute, firebaseStatus) { selectedRoute = it }
+            MobileLayout(
+                selectedRoute = selectedRoute,
+                firebaseStatus = firebaseStatus,
+                onRouteChange = { selectedRoute = it },
+                onSignOut = {
+                    scope.launch {
+                        FirebaseAuthManager.signOut()
+                        isAuthenticated = false
+                        authMode = AuthMode.LOGIN
+                        loginError = null
+                        infoMessage = null
+                    }
+                },
+            )
         }
     }
 }
@@ -144,9 +186,12 @@ fun LoginScreen(
     onPasswordChange: (String) -> Unit,
     onToggleMode: () -> Unit,
     onLoginClick: () -> Unit,
+    onGoogleClick: () -> Unit,
 ) {
     Box(
-        modifier = Modifier.fillMaxSize().background(brush = Brush.linearGradient(listOf(Color(0xFF0B1220), Color(0xFF1E3A5F)))),
+        modifier = Modifier.fillMaxSize().background(
+            brush = Brush.linearGradient(listOf(Color(0xFF0B1220), Color(0xFF1E3A5F))),
+        ),
         contentAlignment = Alignment.Center,
     ) {
         Card(
@@ -212,6 +257,18 @@ fun LoginScreen(
                     Text(if (authMode == AuthMode.LOGIN) "Anmelden" else "Konto erstellen")
                 }
 
+                Text(
+                    text = "oder",
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                )
+
+                Button(
+                    onClick = onGoogleClick,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Mit Google fortfahren")
+                }
+
                 Button(
                     onClick = onToggleMode,
                     modifier = Modifier.fillMaxWidth(),
@@ -226,7 +283,12 @@ fun LoginScreen(
 }
 
 @Composable
-fun DesktopLayout(selectedRoute: String, firebaseStatus: String, onRouteChange: (String) -> Unit) {
+fun DesktopLayout(
+    selectedRoute: String,
+    firebaseStatus: String,
+    onRouteChange: (String) -> Unit,
+    onSignOut: () -> Unit,
+) {
     Row {
         // Elegante, schlanke NavigationRail für Desktop
         NavigationRail(
@@ -247,6 +309,9 @@ fun DesktopLayout(selectedRoute: String, firebaseStatus: String, onRouteChange: 
                         onClick = { onRouteChange(item.routeName) },
                     )
                 }
+            }
+            Button(onClick = onSignOut) {
+                Text("Abmelden")
             }
         }
 
@@ -273,7 +338,12 @@ fun DesktopLayout(selectedRoute: String, firebaseStatus: String, onRouteChange: 
 }
 
 @Composable
-fun MobileLayout(selectedRoute: String, firebaseStatus: String, onRouteChange: (String) -> Unit) {
+fun MobileLayout(
+    selectedRoute: String,
+    firebaseStatus: String,
+    onRouteChange: (String) -> Unit,
+    onSignOut: () -> Unit,
+) {
     var drawerOpen by remember { mutableStateOf(false) }
 
     ModalNavigationDrawer(
@@ -298,6 +368,12 @@ fun MobileLayout(selectedRoute: String, firebaseStatus: String, onRouteChange: (
                             },
                         )
                     }
+                }
+                Button(
+                    onClick = onSignOut,
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                ) {
+                    Text("Abmelden")
                 }
             }
         },

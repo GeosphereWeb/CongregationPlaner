@@ -7,6 +7,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
+import de.geosphere.congregationplaner.auth.FirebaseAndroidContextHolder
+import de.geosphere.congregationplaner.auth.FirebaseSupport
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -15,6 +17,7 @@ class MainActivity : ComponentActivity() {
 
         FirebaseAndroidContextHolder.configure(
             context = applicationContext,
+            activity = this,
             useAuthEmulator = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0,
             authEmulatorHost = applicationInfo.metaData
                 ?.getString("firebase_auth_emulator_host")
