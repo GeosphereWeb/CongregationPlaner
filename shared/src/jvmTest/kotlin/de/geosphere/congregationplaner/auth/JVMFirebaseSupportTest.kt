@@ -56,8 +56,10 @@ class JVMFirebaseSupportTest {
             override val idToken: String? = "manager-token"
         }
         val repository = object : FirebaseAuthRepository {
-            override suspend fun signInWithEmailAndPassword(email: String, password: String): FirebaseUser? = expectedUser
-            override suspend fun createUserWithEmailAndPassword(email: String, password: String): FirebaseUser? = expectedUser
+            override suspend fun signInWithEmailAndPassword(email: String, password: String): FirebaseUser? =
+                expectedUser
+            override suspend fun createUserWithEmailAndPassword(email: String, password: String): FirebaseUser? =
+                expectedUser
             override suspend fun signOut() = Unit
             override fun currentUserId(): String? = "manager-user"
             override fun isSignedIn(): Boolean = true

@@ -37,10 +37,8 @@ object FirebaseAuthManager {
             service.createUserWithEmailAndPassword(email, password)
         }
 
-    suspend fun signInWithGoogle(): FirebaseUser? {
-        return withContext(Dispatchers.Default) {
-            service.signInWithGoogle()
-        }
+    suspend fun signInWithGoogle(): FirebaseUser? = withContext(Dispatchers.Default) {
+        service.signInWithGoogle()
     }
 
     fun isGoogleSignInAvailable(): Boolean = service.isGoogleSignInAvailable()

@@ -110,9 +110,7 @@ class FirebaseAuthPlatformService : FirebaseAuthRepository {
         }
     }
 
-    override fun isGoogleSignInAvailable(): Boolean {
-        return FirebaseAndroidContextHolder.activity != null
-    }
+    override fun isGoogleSignInAvailable(): Boolean = FirebaseAndroidContextHolder.activity != null
 
     override suspend fun signOut() {
         auth.signOut()
@@ -122,7 +120,9 @@ class FirebaseAuthPlatformService : FirebaseAuthRepository {
 
     override fun isSignedIn(): Boolean = auth.currentUser != null
 
-    private fun taskToUser(task: com.google.android.gms.tasks.Task<com.google.firebase.auth.AuthResult>): FirebaseUser? {
+    private fun taskToUser(
+        task: com.google.android.gms.tasks.Task<com.google.firebase.auth.AuthResult>,
+    ): FirebaseUser? {
         if (!task.isSuccessful) {
             return null
         }

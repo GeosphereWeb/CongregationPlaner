@@ -119,7 +119,7 @@ class FirebaseAuthPlatformService(
 }
 
 private fun desktopAuthUrl(endpoint: String, apiKey: String): String {
-    val configuredHost = DesktopEnvLoader.getValue(
+    val configuredHost = DesktopEnv.getValue(
         "FIREBASE_AUTH_EMULATOR_HOST",
         "firebase.authEmulatorHost",
     ) ?: DEFAULT_FIREBASE_AUTH_EMULATOR_HOST
@@ -131,7 +131,7 @@ private fun desktopAuthUrl(endpoint: String, apiKey: String): String {
             if (':' in host.substringAfterLast('/')) {
                 host
             } else {
-                val port = DesktopEnvLoader.getValue(
+                val port = DesktopEnv.getValue(
                     "FIREBASE_AUTH_EMULATOR_PORT",
                     "firebase.authEmulatorPort",
                 ) ?: DEFAULT_FIREBASE_AUTH_EMULATOR_PORT
@@ -145,22 +145,19 @@ private fun desktopAuthUrl(endpoint: String, apiKey: String): String {
 private const val DEFAULT_FIREBASE_AUTH_EMULATOR_HOST = "127.0.0.1:9099"
 private const val DEFAULT_FIREBASE_AUTH_EMULATOR_PORT = "9099"
 
-private fun resolveDesktopApiKey(): String? {
-    return DesktopEnvLoader.getValue(
-        "FIREBASE_WEB_API_KEY",
-        "firebase.webApiKey",
-        "FIREBASE_API_KEY",
-        "firebase.apiKey",
-    )
-}
+private fun resolveDesktopApiKey(): String? = DesktopEnv.getValue(
+    "FIREBASE_WEB_API_KEY",
+    "firebase.webApiKey",
+    "FIREBASE_API_KEY",
+    "firebase.apiKey",
+)
 
-private fun escapeJson(value: String): String =
-    value
-        .replace("\\", "\\\\")
-        .replace("\"", "\\\"")
-        .replace("\n", "\\n")
-        .replace("\r", "\\r")
-        .replace("\t", "\\t")
+private fun escapeJson(value: String): String = value
+    .replace("\\", "\\\\")
+    .replace("\"", "\\\"")
+    .replace("\n", "\\n")
+    .replace("\r", "\\r")
+    .replace("\t", "\\t")
 
 private fun extractJsonString(json: String, key: String): String? {
     val pattern = Regex("\"${Regex.escape(key)}\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"")

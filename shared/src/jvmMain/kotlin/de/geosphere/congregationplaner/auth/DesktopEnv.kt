@@ -2,14 +2,16 @@ package de.geosphere.congregationplaner.auth
 
 import java.io.File
 
-internal object DesktopEnvLoader {
+internal object DesktopEnv {
     private val candidateFiles by lazy {
         val currentDir = File(System.getProperty("user.dir") ?: ".").absoluteFile
         val searchRoots = linkedSetOf<File>()
         var dir = currentDir
         while (dir != null) {
             searchRoots += dir
-            if (File(dir, "settings.gradle.kts").exists() || File(dir, "build.gradle.kts").exists() || File(
+            if (File(dir, "settings.gradle.kts").exists() ||
+                File(dir, "build.gradle.kts").exists() ||
+                File(
                     dir,
                     ".git",
                 ).exists()
