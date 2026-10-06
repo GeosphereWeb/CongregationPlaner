@@ -122,12 +122,12 @@ class FirebaseAuthPlatformService(
 private fun buildDesktopAuthUrl(endpoint: String, apiKey: String): String {
     val baseUrl = if (isFirebaseAuthEmulatorEnabled()) {
         val host = DesktopEnv.getValue(
-           "FIREBASE_AUTH_EMULATOR_HOST",
-           "firebase.authEmulatorHost",
+            "FIREBASE_AUTH_EMULATOR_HOST",
+            "firebase.authEmulatorHost",
         ) ?: "localhost"
         val port = DesktopEnv.getValue(
-           "FIREBASE_AUTH_EMULATOR_PORT",
-           "firebase.authEmulatorPort",
+            "FIREBASE_AUTH_EMULATOR_PORT",
+            "firebase.authEmulatorPort",
         )?.toIntOrNull() ?: 9099
         "http://$host:$port/identitytoolkit.googleapis.com/v1"
     } else {
