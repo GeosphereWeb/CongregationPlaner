@@ -204,7 +204,8 @@ class JVMFirebaseAuthRepositoryTest {
 
         val responseBytes = (body ?: "").toByteArray(StandardCharsets.UTF_8)
         every { connection.inputStream } returns ByteArrayInputStream(responseBytes)
-        every { connection.errorStream } returns if (status in 200..299) null else ByteArrayInputStream("error".toByteArray(StandardCharsets.UTF_8))
+        every { connection.errorStream } returns
+            if (status in 200..299) null else ByteArrayInputStream("error".toByteArray(StandardCharsets.UTF_8))
         return connection
     }
 

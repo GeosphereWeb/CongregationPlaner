@@ -19,8 +19,8 @@ class DesktopEnvLoaderTest {
             System.setProperty("FIREBASE_PROJECT_ID", "explicit-project")
             System.setProperty("firebase.projectId", "fallback-project")
 
-            assertEquals("explicit-web-key", DesktopEnvLoader.getValue("FIREBASE_WEB_API_KEY", "firebase.webApiKey"))
-            assertEquals("explicit-project", DesktopEnvLoader.getValue("FIREBASE_PROJECT_ID", "firebase.projectId"))
+            assertEquals("explicit-web-key", DesktopEnv.getValue("FIREBASE_WEB_API_KEY", "firebase.webApiKey"))
+            assertEquals("explicit-project", DesktopEnv.getValue("FIREBASE_PROJECT_ID", "firebase.projectId"))
         } finally {
             restoreSystemProperty("FIREBASE_WEB_API_KEY", previousWeb)
             restoreSystemProperty("firebase.webApiKey", previousWebDot)
@@ -45,7 +45,7 @@ class DesktopEnvLoaderTest {
                     "VALID_KEY=value\n",
             )
 
-            val loaded = DesktopEnvLoader.load()
+            val loaded = DesktopEnv.load()
 
             assertEquals("quoted-web-key", loaded["FIREBASE_WEB_API_KEY"])
             assertEquals("quoted-project", loaded["firebase.projectId"])
@@ -74,8 +74,8 @@ class DesktopEnvLoaderTest {
             System.clearProperty("FIREBASE_PROJECT_ID")
             System.clearProperty("firebase.projectId")
 
-            assertNull(DesktopEnvLoader.getValue("FIREBASE_WEB_API_KEY", "firebase.webApiKey"))
-            assertNull(DesktopEnvLoader.getValue("FIREBASE_PROJECT_ID", "firebase.projectId"))
+            assertNull(DesktopEnv.getValue("FIREBASE_WEB_API_KEY", "firebase.webApiKey"))
+            assertNull(DesktopEnv.getValue("FIREBASE_PROJECT_ID", "firebase.projectId"))
         } finally {
             restoreSystemProperty("FIREBASE_WEB_API_KEY", previousWeb)
             restoreSystemProperty("firebase.webApiKey", previousWebDot)

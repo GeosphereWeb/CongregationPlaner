@@ -100,7 +100,8 @@ fun App() {
 
                         if (user != null) {
                             if (authMode == AuthMode.REGISTER) {
-                                infoMessage = "Registrierung erfolgreich. Bitte prüfe dein E-Mail-Postfach und bestätige deine E-Mail-Adresse."
+                                infoMessage =
+                                    "Registrierung erfolgreich. Bitte prüfe dein E-Mail-Postfach und bestätige deine E-Mail-Adresse."
                                 authMode = AuthMode.LOGIN
                                 email = ""
                                 password = ""
@@ -188,7 +189,9 @@ fun LoginScreen(
     onGoogleClick: () -> Unit,
 ) {
     Box(
-        modifier = Modifier.fillMaxSize().background(brush = Brush.linearGradient(listOf(Color(0xFF0B1220), Color(0xFF1E3A5F)))),
+        modifier = Modifier.fillMaxSize().background(
+            brush = Brush.linearGradient(listOf(Color(0xFF0B1220), Color(0xFF1E3A5F))),
+        ),
         contentAlignment = Alignment.Center,
     ) {
         Card(
