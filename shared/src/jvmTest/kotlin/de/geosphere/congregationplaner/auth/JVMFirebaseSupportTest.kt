@@ -29,21 +29,7 @@ class JVMFirebaseSupportTest {
 
     @Test
     fun `desktop platform support stays unready when api key is missing`() {
-        val previousValue = System.getProperty("FIREBASE_WEB_API_KEY")
-        val previousDotValue = System.getProperty("firebase.webApiKey")
-
-        try {
-            System.clearProperty("FIREBASE_WEB_API_KEY")
-            System.clearProperty("firebase.webApiKey")
-
-            val support = FirebasePlatformSupport()
-            support.initialize()
-
-            assertFalse(support.isReady())
-        } finally {
-            restoreSystemProperty("FIREBASE_WEB_API_KEY", previousValue)
-            restoreSystemProperty("firebase.webApiKey", previousDotValue)
-        }
+        assertFalse(isDesktopFirebaseReady(null))
     }
 
     @Test

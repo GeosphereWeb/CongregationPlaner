@@ -62,12 +62,22 @@ internal object DesktopEnv {
     }
 
     fun getValue(vararg keys: String): String? {
+        val environment = keys.mapNotNull { key -> System.getenv(key)?.let { key to it } }.toMap()
+        val properties = keys.mapNotNull { key -> System.getProperty(key)?.let { key to it } }.toMap()
+        return findValue(keys, environment, properties, load())
+    }
+
+    internal fun findValue(
+        keys: Array<out String>,
+        environment: Map<String, String>,
+        properties: Map<String, String>,
+        loaded: Map<String, String>,
+    ): String? {
         keys.forEach { key ->
-            System.getenv(key)?.takeIf { it.isNotBlank() }?.let { return it }
-            System.getProperty(key)?.takeIf { it.isNotBlank() }?.let { return it }
+            environment[key]?.takeIf { it.isNotBlank() }?.let { return it }
+            properties[key]?.takeIf { it.isNotBlank() }?.let { return it }
         }
 
-        val loaded = load()
         keys.forEach { key ->
             loaded[key]?.takeIf { it.isNotBlank() }?.let { return it }
             loaded[key.replace("_", ".")]?.takeIf { it.isNotBlank() }?.let { return it }

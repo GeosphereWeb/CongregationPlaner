@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets
 actual fun createFirebaseAuthPlatformService(): FirebaseAuthRepository = FirebaseAuthPlatformService()
 
 class FirebaseAuthPlatformService(
+    private val apiKeyProvider: () -> String? = ::resolveDesktopApiKey,
     private val connectionFactory: (String) -> HttpURLConnection = { requestUrl ->
         URL(requestUrl).openConnection() as HttpURLConnection
     },
@@ -49,7 +50,7 @@ class FirebaseAuthPlatformService(
     override fun isSignedIn(): Boolean = currentUser != null
 
     private fun performDesktopAuthRequest(endpoint: String, email: String, password: String): FirebaseUser? {
-        val apiKey = resolveDesktopApiKey() ?: return null
+        val apiKey = apiKeyProvider() ?: return null
         val body = """
             {
               "email": "${escapeJson(email)}",
@@ -97,7 +98,7 @@ class FirebaseAuthPlatformService(
     }
 
     private fun sendVerificationEmailRequest(idToken: String): Boolean {
-        val apiKey = resolveDesktopApiKey() ?: return false
+        val apiKey = apiKeyProvider() ?: return false
         val body = """
             {
               "requestType": "VERIFY_EMAIL",
