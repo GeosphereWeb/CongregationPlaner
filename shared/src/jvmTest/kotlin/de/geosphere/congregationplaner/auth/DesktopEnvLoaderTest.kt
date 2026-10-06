@@ -1,9 +1,11 @@
 package de.geosphere.congregationplaner.auth
 
 import java.io.File
+import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class DesktopEnvLoaderTest {
     @Test
@@ -95,6 +97,56 @@ class DesktopEnvLoaderTest {
             restoreSystemProperty("firebase.webApiKey", previousWebDot)
             restoreSystemProperty("FIREBASE_PROJECT_ID", previousProject)
             restoreSystemProperty("firebase.projectId", previousProjectDot)
+        }
+    }
+
+    @Test
+    fun `desktop env loader resolves values by source priority and dot notation`() {
+        assertEquals(
+            "environment",
+            DesktopEnv.findValue(
+                arrayOf("CONFIG_KEY"),
+                environment = mapOf("CONFIG_KEY" to "environment"),
+                properties = mapOf("CONFIG_KEY" to "property"),
+                loaded = mapOf("CONFIG_KEY" to "file"),
+            ),
+        )
+        assertEquals(
+            "property",
+            DesktopEnv.findValue(
+                arrayOf("CONFIG_KEY"),
+                environment = mapOf("CONFIG_KEY" to " "),
+                properties = mapOf("CONFIG_KEY" to "property"),
+                loaded = mapOf("CONFIG_KEY" to "file"),
+            ),
+        )
+        assertEquals(
+            "from-file",
+            DesktopEnv.findValue(
+                arrayOf("CONFIG_KEY"),
+                environment = emptyMap(),
+                properties = emptyMap(),
+                loaded = mapOf("CONFIG.KEY" to "from-file"),
+            ),
+        )
+    }
+
+    @Test
+    fun `desktop env loader ignores invalid entries and non-files`() {
+        assertNull(DesktopEnv.parseEntry("  "))
+        assertNull(DesktopEnv.parseEntry(" # comment"))
+        assertNull(DesktopEnv.parseEntry("missing separator"))
+        assertNull(DesktopEnv.parseEntry(" =empty key"))
+        assertEquals("VALUE" to "value", DesktopEnv.parseEntry(" VALUE = value "))
+
+        val values = mutableMapOf("EXISTING" to "first")
+        val directory = Files.createTempDirectory("desktop-env-test").toFile()
+        try {
+            DesktopEnv.loadFile(directory, values)
+            assertTrue(values.isEmpty().not())
+            assertEquals("first", values["EXISTING"])
+        } finally {
+            directory.deleteRecursively()
         }
     }
 

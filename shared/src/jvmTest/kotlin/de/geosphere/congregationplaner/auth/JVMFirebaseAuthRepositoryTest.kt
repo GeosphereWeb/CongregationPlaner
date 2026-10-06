@@ -98,6 +98,37 @@ class JVMFirebaseAuthRepositoryTest {
     }
 
     @Test
+    fun `desktop auth helpers normalize emulator urls and escaped json strings`() {
+        assertEquals(
+            "http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signIn?key=key",
+            buildDesktopAuthUrl("accounts:signIn", "key", null, null),
+        )
+        assertEquals(
+            "http://auth.local:9199/identitytoolkit.googleapis.com/v1/accounts:signIn?key=key",
+            buildDesktopAuthUrl("accounts:signIn", "key", "https://auth.local/", "9199"),
+        )
+        assertEquals(
+            "http://auth.local:9099/identitytoolkit.googleapis.com/v1/accounts:signIn?key=key",
+            buildDesktopAuthUrl("accounts:signIn", "key", "auth.local:9099", null),
+        )
+
+        val value = "backslash\\ quote\" newline\n carriage\r tab\t"
+        val json = """{"value":"${escapeJson(value)}"}"""
+        assertEquals(value, extractJsonString(json, "value"))
+        assertNull(extractJsonString("""{"other":"value"}""", "value"))
+    }
+
+    @Test
+    fun `desktop auth rejects successful response without local user id`() = runBlocking {
+        val service = FirebaseAuthPlatformService(
+            apiKeyProvider = { "test-key" },
+            connectionFactory = { mockConnection(200, """{"email":"user@example.com"}""") },
+        )
+
+        assertNull(service.signInWithEmailAndPassword("user@example.com", "secret"))
+    }
+
+    @Test
     fun `desktop create user returns user without verification when no id token is returned`() = runBlocking {
         val previousKey = System.getProperty("FIREBASE_WEB_API_KEY")
         System.setProperty("FIREBASE_WEB_API_KEY", "desktop-test-key")

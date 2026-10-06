@@ -1,5 +1,7 @@
 package de.geosphere.congregationplaner.auth
 
+import android.app.Activity
+import android.content.Context
 import android.util.Log
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.android.gms.tasks.Task
@@ -157,6 +159,108 @@ class AndroidFirebaseAuthRepositoryTest {
         } finally {
             unmockkStatic(FirebaseAuth::class)
             unmockkStatic(Log::class)
+        }
+    }
+
+    @Test
+    fun `android create user returns null and logs when auth task fails`() = runBlocking {
+        val auth = mockk<FirebaseAuth>()
+        val createTask = mockk<Task<AuthResult>>()
+
+        mockkStatic(FirebaseAuth::class)
+        mockkStatic(Log::class)
+        try {
+            every { FirebaseAuth.getInstance() } returns auth
+            every { auth.createUserWithEmailAndPassword("new@example.com", "secret") } returns createTask
+            every { createTask.addOnCompleteListener(any<OnCompleteListener<AuthResult>>()) } answers {
+                firstArg<OnCompleteListener<AuthResult>>().onComplete(createTask)
+                createTask
+            }
+            every { createTask.isSuccessful } returns false
+            every { createTask.exception } returns null
+            every { Log.e(any(), any(), any<Throwable>()) } returns 0
+
+            assertNull(FirebaseAuthPlatformService().createUserWithEmailAndPassword("new@example.com", "secret"))
+        } finally {
+            unmockkStatic(FirebaseAuth::class)
+            unmockkStatic(Log::class)
+        }
+    }
+
+    @Test
+    fun `android create user skips email verification when using auth emulator`() = runBlocking {
+        val auth = mockk<FirebaseAuth>()
+        val createTask = mockk<Task<AuthResult>>()
+        val authResult = mockk<AuthResult>()
+        val user = mockk<FirebaseUser>()
+        val previousContext = FirebaseAndroidContextHolder.context
+        val previousActivity = FirebaseAndroidContextHolder.activity
+        val previousUseEmulator = FirebaseAndroidContextHolder.useAuthEmulator
+        val previousHost = FirebaseAndroidContextHolder.authEmulatorHost
+        val context = mockk<Context>(relaxed = true)
+        val activity = mockk<Activity>(relaxed = true)
+
+        FirebaseAndroidContextHolder.configure(context, activity, true, "auth.local")
+        mockkStatic(FirebaseAuth::class)
+        try {
+            every { FirebaseAuth.getInstance() } returns auth
+            every { auth.useEmulator("auth.local", 9099) } just Runs
+            every { auth.createUserWithEmailAndPassword("new@example.com", "secret") } returns createTask
+            every { createTask.addOnCompleteListener(any<OnCompleteListener<AuthResult>>()) } answers {
+                firstArg<OnCompleteListener<AuthResult>>().onComplete(createTask)
+                createTask
+            }
+            every { createTask.isSuccessful } returns true
+            every { createTask.result } returns authResult
+            every { authResult.user } returns user
+            every { user.uid } returns "emulator-user"
+            every { user.email } returns "new@example.com"
+            every { user.displayName } returns null
+
+            val created = FirebaseAuthPlatformService().createUserWithEmailAndPassword("new@example.com", "secret")
+
+            assertEquals("emulator-user", created?.uid)
+        } finally {
+            unmockkStatic(FirebaseAuth::class)
+            FirebaseAndroidContextHolder.configure(
+                previousContext ?: mockk(relaxed = true),
+                previousActivity ?: mockk(relaxed = true),
+                previousUseEmulator,
+                previousHost,
+            )
+            FirebaseAndroidContextHolder.context = previousContext
+            FirebaseAndroidContextHolder.activity = previousActivity
+        }
+    }
+
+    @Test
+    fun `android google sign in reports unavailable without activity or client id`() = runBlocking {
+        val previousContext = FirebaseAndroidContextHolder.context
+        val previousActivity = FirebaseAndroidContextHolder.activity
+        val auth = mockk<FirebaseAuth>()
+        val activity = mockk<Activity>(relaxed = true)
+
+        try {
+            FirebaseAndroidContextHolder.activity = null
+            mockkStatic(FirebaseAuth::class)
+            every { FirebaseAuth.getInstance() } returns auth
+
+            val service = FirebaseAuthPlatformService()
+            assertFalse(service.isGoogleSignInAvailable())
+            assertNull(service.signInWithGoogle())
+
+            FirebaseAndroidContextHolder.activity = activity
+            every { activity.resources.getIdentifier(any(), any(), any()) } returns 0
+            mockkStatic(Log::class)
+            every { Log.e(any(), any()) } returns 0
+
+            assertTrue(service.isGoogleSignInAvailable())
+            assertNull(service.signInWithGoogle())
+        } finally {
+            unmockkStatic(FirebaseAuth::class)
+            unmockkStatic(Log::class)
+            FirebaseAndroidContextHolder.context = previousContext
+            FirebaseAndroidContextHolder.activity = previousActivity
         }
     }
 

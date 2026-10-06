@@ -39,7 +39,7 @@ internal object DesktopEnv {
         return values
     }
 
-    private fun loadFile(file: File, values: MutableMap<String, String>) {
+    internal fun loadFile(file: File, values: MutableMap<String, String>) {
         if (!file.isFile) return
 
         file.forEachLine { rawLine ->
@@ -47,7 +47,7 @@ internal object DesktopEnv {
         }
     }
 
-    private fun parseEntry(rawLine: String): Pair<String, String>? {
+    internal fun parseEntry(rawLine: String): Pair<String, String>? {
         val line = rawLine.trim()
         if (line.isEmpty() || line.startsWith("#")) return null
 

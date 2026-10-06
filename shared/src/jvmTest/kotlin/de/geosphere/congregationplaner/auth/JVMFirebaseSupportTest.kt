@@ -33,6 +33,31 @@ class JVMFirebaseSupportTest {
     }
 
     @Test
+    fun `desktop platform initialization reports missing config and emulator fallback`() {
+        val messages = mutableListOf<String>()
+
+        initializeDesktopFirebase(
+            projectId = null,
+            apiKey = " ",
+            emulatorHost = null,
+            logError = messages::add,
+        )
+
+        assertEquals(1, messages.size)
+        assertTrue(messages.single().contains("127.0.0.1:9099"))
+    }
+
+    @Test
+    fun `desktop platform initialization accepts either project id or api key`() {
+        val messages = mutableListOf<String>()
+
+        initializeDesktopFirebase("project-id", null, "emulator:9099", messages::add)
+        initializeDesktopFirebase(null, "api-key", "emulator:9099", messages::add)
+
+        assertTrue(messages.isEmpty())
+    }
+
+    @Test
     fun `firebase auth manager delegates to injected platform service`() = runBlocking {
         val previousFactory = firebaseAuthPlatformServiceFactory
         val expectedUser = object : FirebaseUser {
@@ -58,6 +83,8 @@ class JVMFirebaseSupportTest {
 
             assertEquals("manager-user", signedIn?.uid)
             assertEquals("manager-user", created?.uid)
+            assertNull(FirebaseAuthManager.signInWithGoogle())
+            assertFalse(FirebaseAuthManager.isGoogleSignInAvailable())
             assertEquals("manager-user", FirebaseAuthManager.currentUserId())
             assertTrue(FirebaseAuthManager.isSignedIn())
 
