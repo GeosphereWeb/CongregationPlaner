@@ -29,10 +29,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,107 +41,42 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import congregationplaner.shared.generated.resources.Res
 import congregationplaner.shared.generated.resources.dummy
-import de.geosphere.congregationplaner.auth.FirebaseAuthManager
-import de.geosphere.congregationplaner.auth.FirebaseSupport
 import de.geosphere.congregationplaner.theming.AppTheme
 import de.geosphere.congregationplaner.theming.brushes.backgroundBrush
 import de.geosphere.congregationplaner.theming.customColors
-import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
-
-enum class AuthMode {
-    LOGIN,
-    REGISTER,
-}
 
 @Suppress("LongMethod")
 @Composable
 fun App() {
     AppTheme {
+        val authViewModel = viewModel { AuthViewModel() }
+        val authState by authViewModel.uiState.collectAsState()
         var selectedRoute by remember { mutableStateOf("home") }
-        var firebaseStatus by remember { mutableStateOf("Firebase wird initialisiert...") }
-        var isAuthenticated by remember { mutableStateOf(FirebaseAuthManager.isSignedIn()) }
-        var authMode by remember { mutableStateOf(AuthMode.LOGIN) }
-        var loginError by remember { mutableStateOf<String?>(null) }
-        var infoMessage by remember { mutableStateOf<String?>(null) }
-        var email by remember { mutableStateOf("") }
-        var password by remember { mutableStateOf("") }
-        val scope = rememberCoroutineScope()
 
-        LaunchedEffect(Unit) {
-            FirebaseSupport.initialize()
-            isAuthenticated = FirebaseAuthManager.isSignedIn()
-            firebaseStatus = if (FirebaseSupport.isReady()) {
-                "Firebase verfügbar"
-            } else {
-                "Firebase nicht konfiguriert"
+        LaunchedEffect(authState.isAuthenticated) {
+            if (authState.isAuthenticated) {
+                selectedRoute = "home"
             }
         }
 
-        if (!isAuthenticated) {
+        if (!authState.isAuthenticated) {
             LoginScreen(
-                email = email,
-                password = password,
-                firebaseStatus = firebaseStatus,
-                authMode = authMode,
-                loginError = loginError,
-                infoMessage = infoMessage,
-                onEmailChange = { email = it },
-                onPasswordChange = { password = it },
-                onToggleMode = {
-                    authMode = if (authMode == AuthMode.LOGIN) AuthMode.REGISTER else AuthMode.LOGIN
-                    loginError = null
-                    infoMessage = null
-                },
-                onLoginClick = {
-                    scope.launch {
-                        loginError = null
-                        val user = if (authMode == AuthMode.REGISTER) {
-                            FirebaseAuthManager.createUserWithEmailAndPassword(email.trim(), password)
-                        } else {
-                            FirebaseAuthManager.signInWithEmailAndPassword(email.trim(), password)
-                        }
-
-                        if (user != null) {
-                            if (authMode == AuthMode.REGISTER) {
-                                infoMessage =
-                                    "Registrierung erfolgreich. Bitte prüfe dein E-Mail-Postfach und bestätige " +
-                                    "deine E-Mail-Adresse."
-                                authMode = AuthMode.LOGIN
-                                email = ""
-                                password = ""
-                            } else {
-                                isAuthenticated = true
-                                selectedRoute = "home"
-                                email = ""
-                                password = ""
-                            }
-                        } else {
-                            val failureMessage = if (authMode == AuthMode.REGISTER) {
-                                "Registrierung fehlgeschlagen. Bitte prüfe deine Eingaben."
-                            } else {
-                                "Login fehlgeschlagen. Bitte E-Mail und Passwort prüfen."
-                            }
-                            loginError = failureMessage
-                        }
-                    }
-                },
-                onGoogleClick = {
-                    scope.launch {
-                        loginError = null
-                        val user = FirebaseAuthManager.signInWithGoogle()
-                        if (user != null) {
-                            isAuthenticated = true
-                            selectedRoute = "home"
-                            email = ""
-                            password = ""
-                        } else {
-                            loginError = "Google-Anmeldung fehlgeschlagen oder wurde abgebrochen."
-                        }
-                    }
-                },
+                email = authState.email,
+                password = authState.password,
+                firebaseStatus = authState.firebaseStatus,
+                authMode = authState.authMode,
+                loginError = authState.loginError,
+                infoMessage = authState.infoMessage,
+                isLoading = authState.isLoading,
+                onEmailChange = authViewModel::updateEmail,
+                onPasswordChange = authViewModel::updatePassword,
+                onToggleMode = authViewModel::toggleAuthMode,
+                onLoginClick = authViewModel::authenticate,
+                onGoogleClick = authViewModel::signInWithGoogle,
             )
             return@AppTheme
         }
@@ -150,32 +85,16 @@ fun App() {
         if (HostPlatform.isDesktop) {
             DesktopLayout(
                 selectedRoute = selectedRoute,
-                firebaseStatus = firebaseStatus,
+                firebaseStatus = authState.firebaseStatus,
                 onRouteChange = { selectedRoute = it },
-                onSignOut = {
-                    scope.launch {
-                        FirebaseAuthManager.signOut()
-                        isAuthenticated = false
-                        authMode = AuthMode.LOGIN
-                        loginError = null
-                        infoMessage = null
-                    }
-                },
+                onSignOut = authViewModel::signOut,
             )
         } else {
             MobileLayout(
                 selectedRoute = selectedRoute,
-                firebaseStatus = firebaseStatus,
+                firebaseStatus = authState.firebaseStatus,
                 onRouteChange = { selectedRoute = it },
-                onSignOut = {
-                    scope.launch {
-                        FirebaseAuthManager.signOut()
-                        isAuthenticated = false
-                        authMode = AuthMode.LOGIN
-                        loginError = null
-                        infoMessage = null
-                    }
-                },
+                onSignOut = authViewModel::signOut,
             )
         }
     }
@@ -190,6 +109,7 @@ fun LoginScreen(
     authMode: AuthMode,
     loginError: String?,
     infoMessage: String?,
+    isLoading: Boolean,
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onToggleMode: () -> Unit,
@@ -261,8 +181,15 @@ fun LoginScreen(
                 Button(
                     onClick = onLoginClick,
                     modifier = Modifier.fillMaxWidth().height(48.dp),
+                    enabled = !isLoading,
                 ) {
-                    Text(if (authMode == AuthMode.LOGIN) "Anmelden" else "Konto erstellen")
+                    Text(
+                        when {
+                            isLoading -> "Bitte warten..."
+                            authMode == AuthMode.LOGIN -> "Anmelden"
+                            else -> "Konto erstellen"
+                        },
+                    )
                 }
 
                 Text(
@@ -273,6 +200,7 @@ fun LoginScreen(
                 Button(
                     onClick = onGoogleClick,
                     modifier = Modifier.fillMaxWidth(),
+                    enabled = !isLoading,
                 ) {
                     Text("Mit Google fortfahren")
                 }
@@ -280,6 +208,7 @@ fun LoginScreen(
                 Button(
                     onClick = onToggleMode,
                     modifier = Modifier.fillMaxWidth(),
+                    enabled = !isLoading,
                 ) {
                     Text(
                         if (authMode == AuthMode.LOGIN) "Neues Konto erstellen" else "Bereits registriert? Anmelden",
@@ -434,6 +363,7 @@ fun AppPreview() {
             authMode = AuthMode.LOGIN,
             loginError = null,
             infoMessage = null,
+            isLoading = false,
             onEmailChange = {},
             onPasswordChange = {},
             onToggleMode = {},

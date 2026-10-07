@@ -24,28 +24,28 @@ expect fun createFirebaseAuthPlatformService(): FirebaseAuthRepository
 
 internal var firebaseAuthPlatformServiceFactory: () -> FirebaseAuthRepository = { createFirebaseAuthPlatformService() }
 
-object FirebaseAuthManager {
+object FirebaseAuthManager : FirebaseAuthRepository {
     private val service: FirebaseAuthRepository by lazy { firebaseAuthPlatformServiceFactory() }
 
-    suspend fun signInWithEmailAndPassword(email: String, password: String): FirebaseUser? =
+    override suspend fun signInWithEmailAndPassword(email: String, password: String): FirebaseUser? =
         withContext(Dispatchers.Default) {
             service.signInWithEmailAndPassword(email, password)
         }
 
-    suspend fun createUserWithEmailAndPassword(email: String, password: String): FirebaseUser? =
+    override suspend fun createUserWithEmailAndPassword(email: String, password: String): FirebaseUser? =
         withContext(Dispatchers.Default) {
             service.createUserWithEmailAndPassword(email, password)
         }
 
-    suspend fun signInWithGoogle(): FirebaseUser? = withContext(Dispatchers.Default) {
+    override suspend fun signInWithGoogle(): FirebaseUser? = withContext(Dispatchers.Default) {
         service.signInWithGoogle()
     }
 
-    fun isGoogleSignInAvailable(): Boolean = service.isGoogleSignInAvailable()
+    override fun isGoogleSignInAvailable(): Boolean = service.isGoogleSignInAvailable()
 
-    suspend fun signOut() = withContext(Dispatchers.Default) { service.signOut() }
+    override suspend fun signOut() = withContext(Dispatchers.Default) { service.signOut() }
 
-    fun currentUserId(): String? = service.currentUserId()
+    override fun currentUserId(): String? = service.currentUserId()
 
-    fun isSignedIn(): Boolean = service.isSignedIn()
+    override fun isSignedIn(): Boolean = service.isSignedIn()
 }

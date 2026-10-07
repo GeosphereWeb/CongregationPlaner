@@ -8,8 +8,6 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import congregationplaner.shared.generated.resources.Res
 import congregationplaner.shared.generated.resources.dummy
-import de.geosphere.congregationplaner.AuthMode
-import de.geosphere.congregationplaner.LoginScreen
 import de.geosphere.congregationplaner.auth.FirebaseSupport
 import de.geosphere.congregationplaner.theming.AppTheme
 import org.jetbrains.compose.resources.painterResource
@@ -28,12 +26,12 @@ fun main() {
                     Item(
                         "Neu",
                         onClick = { /* Aktion */ },
-                        icon = painterResource(Res.drawable.dummy)
+                        icon = painterResource(Res.drawable.dummy),
                     )
                     Item(
                         "Öffnen",
                         onClick = { /* Aktion */ },
-                        icon = painterResource(Res.drawable.dummy)
+                        icon = painterResource(Res.drawable.dummy),
                     )
                     Item("Speichern", onClick = { /* Aktion */ })
                     Separator()
@@ -60,6 +58,7 @@ fun LoginScreenDesktopPreview() {
             authMode = AuthMode.LOGIN,
             loginError = null,
             infoMessage = null,
+            isLoading = false,
             onEmailChange = {},
             onPasswordChange = {},
             onToggleMode = {},
