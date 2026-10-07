@@ -121,3 +121,65 @@ Checklist beim Hinzufügen eines Repositories:
 
 Hinweis:
 Diese Konventionen folgen den bestehenden KMP‑ und Metro‑Patterns im Projekt. Bei Abweichungen kurz kommentieren und begründen.
+
+Beispiel Dateistruktur (ASCII-Baum) — KMP‑orientiert:
+
+repo-root/
+├─ README.md                         # Projektübersicht, Run/Build Hinweise
+├─ settings.gradle.kts               # Gradle Settings (Module)
+├─ gradle/
+│  └─ wrapper/
+├─ gradle.properties
+├─ gradle/libs.versions.toml         # Version Catalog
+├─ shared/                           # KMP shared module (Kotlin Multiplatform)
+│  ├─ build.gradle.kts               # shared module build logic (targets, dependencies)
+│  ├─ src/
+│  │  ├─ commonMain/
+│  │  │  ├─ kotlin/
+│  │  │  │  └─ de/geosphere/congregationplaner/│  │  │  │     ├─ domain/
+│  │  │  │     │  ├─ model/            # Domain‑Modelle (PLATFORM‑UNABHÄNGIG)
+│  │  │  │     │  ├─ repository/       # Interfaces (UserRepository.kt)
+│  │  │  │     │  └─ usecase/          # UseCases (GetUserUseCase.kt)
+│  │  │  │     ├─ data/                # DTOs, shared mappers (platform‑agnostic impls)
+│  │  │  │     │  ├─ repository/       # Impl stubs or multiplatform impls
+│  │  │  │     │  └─ mappers/
+│  │  │  │     └─ di/                  # Metro DI‑Graph config (shared bindings)
+│  │  │  └─ resources/
+│  │  ├─ commonTest/                  # Unit tests for domain and UseCases (kotlin.test)
+│  │  ├─ androidMain/                  # Android‑konkrete Implementierungen (Room, Android APIs)
+│  │  ├─ androidTest/
+│  │  ├─ jvmMain/                      # Desktop/JVM specific code (if needed)
+│  │  ├─ jvmTest/
+│  │  ├─ iosMain/                      # iOS specific adapters (bridging to Shared framework)
+│  │  ├─ iosSimulatorArm64Main/
+│  │  └─ iosArm64Main/
+│  └─ sql/                            # Optional: SQLDelight .sq files or migrations (if used)
+├─ androidApp/                        # Android application module
+│  ├─ build.gradle.kts
+│  └─ src/main/
+│     ├─ AndroidManifest.xml
+│     └─ java|kotlin/                 # Android entrypoint, DI platform bindings, DB (Room) setup
+├─ desktopApp/                        # Desktop entry (JVM) using Compose Multiplatform
+│  └─ src/main/
+├─ iosApp/                            # Xcode project — uses shared framework produced by shared module
+│  └─ iosApp.xcodeproj
+└─ .github/
+   ├─ COPILOT_INSTRUCTIONS.md         # Diese Datei — Copilot Instruktionen (standard location)
+   └─ workflows/                      # GitHub Actions if present
+
+Erklärung & Hinweise:
+- shared/src/commonMain: Nur plattformunabhängige Domänenlogik, Interfaces und UseCases. Keine Android/iOS APIs.
+- shared/src/*Main (platform sourceSets): Platform‑konkrete DataSources/Adapters leben hier (Room adapters, SQLDelight drivers, HTTP clients if platform specific).
+- DI: Metro shared bindings in shared/src/commonMain/kotlin/.../di; platform bindings in shared/src/androidMain/.../di or in androidApp module when required.
+- DB: SQLDelight common .sq files can live in shared/sql; drivers/config in platform sourceSets. Room implementations live in androidMain.
+- Tests: commonTest for UseCases/Domain; platform tests (androidTest/jvmTest/iosTest) for integration and DB tests.
+
+Kurzanleitung (erweiterte Steps beim Hinzufügen eines Repositories):
+1. Domain: Add interface in shared/src/commonMain/kotlin/.../domain/repository/YourRepo.kt.
+2. UseCases: Add in domain/usecase/ and unit test in commonTest.
+3. Data: Implement repository in shared/src/commonMain/data if multiplatform possible or in platform sourceSet (androidMain) for Room/Platform DB; add mappers in data/mappers.
+4. SQL: Put SQLDelight schema in shared/sql when using SQLDelight; implement driver in platform sourceSets.
+5. DI: Provide ContributesBinding/Provides in shared (common) and platform modules for platform implementations.
+6. Tests: Unit tests in commonTest; integration DB tests in platform test tasks.
+
+Dieses Baum‑Layout macht es für Copilot leichter, korrekte Pfade vorzuschlagen und Änderungen konsistent vorzunehmen.
