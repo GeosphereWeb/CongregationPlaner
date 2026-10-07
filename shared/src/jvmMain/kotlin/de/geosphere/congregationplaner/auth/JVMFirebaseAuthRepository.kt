@@ -59,7 +59,7 @@ class FirebaseAuthPlatformService(
             }
         """.trimIndent()
 
-        val url = desktopAuthUrl(endpoint, apiKey)
+        val url = buildDesktopAuthUrl(endpoint, apiKey)
         val connection = connectionFactory(url)
         connection.requestMethod = "POST"
         connection.doOutput = true
@@ -106,7 +106,7 @@ class FirebaseAuthPlatformService(
             }
         """.trimIndent()
 
-        val url = desktopAuthUrl("accounts:sendOobCode", apiKey)
+        val url = buildDesktopAuthUrl("accounts:sendOobCode", apiKey)
         val connection = connectionFactory(url)
         connection.requestMethod = "POST"
         connection.doOutput = true
@@ -119,10 +119,28 @@ class FirebaseAuthPlatformService(
     }
 }
 
-private fun desktopAuthUrl(endpoint: String, apiKey: String): String {
+private fun buildDesktopAuthUrl(endpoint: String, apiKey: String): String {
+    if (!isFirebaseAuthEmulatorEnabled()) {
+        return "https://identitytoolkit.googleapis.com/v1/$endpoint?key=$apiKey"
+    }
+
     val configuredHost = DesktopEnv.getValue("FIREBASE_AUTH_EMULATOR_HOST", "firebase.authEmulatorHost")
     val configuredPort = DesktopEnv.getValue("FIREBASE_AUTH_EMULATOR_PORT", "firebase.authEmulatorPort")
     return buildDesktopAuthUrl(endpoint, apiKey, configuredHost, configuredPort)
+}
+
+private fun isFirebaseAuthEmulatorEnabled(): Boolean {
+    val explicitEnabled = DesktopEnv.getValue(
+        "FIREBASE_AUTH_EMULATOR_ENABLED",
+        "firebase.authEmulatorEnabled",
+    )
+    if (explicitEnabled != null) {
+        return explicitEnabled.equals("true", ignoreCase = true)
+    }
+
+    val host = DesktopEnv.getValue("FIREBASE_AUTH_EMULATOR_HOST", "firebase.authEmulatorHost")
+    val port = DesktopEnv.getValue("FIREBASE_AUTH_EMULATOR_PORT", "firebase.authEmulatorPort")
+    return !host.isNullOrBlank() || !port.isNullOrBlank()
 }
 
 internal fun buildDesktopAuthUrl(

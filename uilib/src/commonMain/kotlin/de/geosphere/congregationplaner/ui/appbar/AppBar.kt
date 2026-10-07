@@ -3,11 +3,15 @@ package de.geosphere.congregationplaner.ui.appbar
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import de.geosphere.congregationplaner.theming.AppColors
+import androidx.compose.ui.graphics.Color
+import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
+import de.geosphere.congregationplaner.theming.ThemePreviews
+import de.geosphere.congregationplaner.theming.customColors
 
 /**
  * App TopBar Komponente
@@ -24,29 +28,30 @@ fun AppTopBar(
         title = {
             Text(
                 text = title,
-                color = AppColors.OnPrimary,
             )
         },
         modifier = modifier,
         navigationIcon =
-            if (onNavigationClick != null) {
-                {
-                    IconButton(onClick = onNavigationClick) {
-                        Text("<") // Simple back button
-                    }
+        if (onNavigationClick != null) {
+            {
+                IconButton(onClick = onNavigationClick) {
+                    Text("<") // Simple back button
                 }
-            } else {
-                {}
-            },
+            }
+        } else {
+            {}
+        },
         actions = {
             actions()
         },
         colors =
-            TopAppBarDefaults.centerAlignedTopAppBarColors(
-                containerColor = AppColors.Primary,
-                titleContentColor = AppColors.OnPrimary,
-                navigationIconContentColor = AppColors.OnPrimary,
-            ),
+        TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.customColors.btnContainerColor,
+            scrolledContainerColor = MaterialTheme.customColors.btnContentColorDisabled,
+            navigationIconContentColor = MaterialTheme.customColors.btnContentColor,
+            titleContentColor = MaterialTheme.customColors.btnContentColor,
+            actionIconContentColor = Color.Yellow
+        ),
     )
 }
 
@@ -60,14 +65,28 @@ fun SimpleAppTopBar(title: String, modifier: Modifier = Modifier) {
         title = {
             Text(
                 text = title,
-                color = AppColors.OnPrimary,
             )
         },
         modifier = modifier,
-        colors =
-            TopAppBarDefaults.centerAlignedTopAppBarColors(
-                containerColor = AppColors.Primary,
-                titleContentColor = AppColors.OnPrimary,
-            ),
+//        colors =
+//        TopAppBarDefaults.topAppBarColors(
+//            containerColor = MaterialTheme.customColors.werner1,
+////            scrolledContainerColor = Color.Unspecified,
+////            navigationIconContentColor = Color.Unspecified,
+//            titleContentColor = MaterialTheme.customColors.onBrandCustom,
+////            actionIconContentColor = Color.Unspecified
+//        ),
     )
+}
+
+@ThemePreviews
+@Composable
+private fun WernerPreview() = PreviewThemeWrapper {
+    AppTopBar(title = "AppBar", onNavigationClick = {})
+}
+
+@ThemePreviews
+@Composable
+private fun Werner2Preview() = PreviewThemeWrapper {
+    SimpleAppTopBar(title = "AppBar")
 }
