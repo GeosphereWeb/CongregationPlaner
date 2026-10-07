@@ -353,6 +353,19 @@ fun DesktopLayout(
     }
 }
 
+@Preview(name = "Desktop Layout", widthDp = 1280, heightDp = 800)
+@Composable
+fun DesktopLayoutPreview() {
+    AppTheme {
+        DesktopLayout(
+            selectedRoute = "home",
+            firebaseStatus = "Firebase verfügbar",
+            onRouteChange = {},
+            onSignOut = {},
+        )
+    }
+}
+
 @Composable
 fun MobileLayout(
     selectedRoute: String,
