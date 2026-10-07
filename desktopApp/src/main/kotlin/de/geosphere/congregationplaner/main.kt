@@ -8,7 +8,10 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import congregationplaner.shared.generated.resources.Res
 import congregationplaner.shared.generated.resources.dummy
+import de.geosphere.congregationplaner.AuthMode
+import de.geosphere.congregationplaner.LoginScreen
 import de.geosphere.congregationplaner.auth.FirebaseSupport
+import de.geosphere.congregationplaner.theming.AppTheme
 import org.jetbrains.compose.resources.painterResource
 
 fun main() {
@@ -47,7 +50,21 @@ fun main() {
 }
 
 @Composable
-@Preview(device = Devices.DESKTOP)
-fun werner() {
-    App()
+@Preview(name = "Login Screen (Desktop)", device = Devices.DESKTOP)
+fun LoginScreenDesktopPreview() {
+    AppTheme {
+        LoginScreen(
+            email = "demo@congregationplaner.de",
+            password = "Passwort123",
+            firebaseStatus = "Firebase verfügbar",
+            authMode = AuthMode.LOGIN,
+            loginError = null,
+            infoMessage = null,
+            onEmailChange = {},
+            onPasswordChange = {},
+            onToggleMode = {},
+            onLoginClick = {},
+            onGoogleClick = {},
+        )
+    }
 }

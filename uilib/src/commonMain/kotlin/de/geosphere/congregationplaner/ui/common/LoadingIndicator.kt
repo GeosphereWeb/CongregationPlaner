@@ -6,7 +6,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import de.geosphere.congregationplaner.theming.AppColors
+import androidx.compose.ui.graphics.Color
+
 import de.geosphere.congregationplaner.theming.AppDimensions
 
 /**
@@ -22,7 +23,7 @@ fun LoadingIndicator(
     ) {
         CircularProgressIndicator(
             modifier = Modifier.size(AppDimensions.IconSizeLarge),
-            color = AppColors.Primary,
+            color = Color.Unspecified,
             strokeWidth = AppDimensions.PaddingXSmall
         )
     }

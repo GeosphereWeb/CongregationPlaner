@@ -11,6 +11,7 @@ apply(from = "${rootProject.projectDir}/gradle/kover.gradle.kts")
 
 dependencies {
     implementation(projects.shared)
+    implementation(projects.theming)
 
     implementation("com.google.firebase:firebase-admin:9.4.3")
 
