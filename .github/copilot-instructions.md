@@ -72,3 +72,52 @@ Lint / checks:
 ---
 
 Keep suggestions focused on using the Gradle wrapper, target-specific tasks, and Compose Multiplatform patterns above. When proposing changes that touch build scripts, prefer minimal edits that follow the existing `libs`/version-catalog and source-set structure.
+
+---
+
+Repository/DB Integration — Interface & UseCase Pattern (Konventionen)
+
+Zweck:
+Wenn eine Repository‑ oder Datenbankanbindung erforderlich ist, sind Interfaces (Repository/DataSource) und eine UseCase‑Schicht verpflichtend. Das trennt Domäne und Infrastruktur, verbessert Testbarkeit und macht DI explizit.
+
+Schichten & Dateistruktur (empfohlen):
+- domain: Interfaces (Repository), Domain‑Modelle, UseCases
+  - Pfadbeispiel: shared/src/commonMain/kotlin/de/geosphere/congregationplaner/domain/
+- data: Implementierungen, Mappers, DataSources (DB/Network)
+  - Pfadbeispiel: shared/src/commonMain/kotlin/de/geosphere/congregationplaner/data/
+- di: Metro‑Bindings im shared‑Module (DI‑Graph)
+- presentation: ViewModels, State, Konsumenten der UseCases
+
+Benennung & Signaturen:
+- Repository Interface: suffix ‚Repository‘, z. B. UserRepository.
+- Bevorzuge suspend‑Funktionen für einzelne Abfragen und Flow für Streams:
+  - suspend fun getUser(id: String): Result<User>
+  - fun observeUsers(): Flow<List<User>>
+- UseCase: Klassen im domain/usecase‑Package, operator fun invoke(...) für einfachen Aufruf.
+
+Implementierung & Mapping:
+- Data‑Layer enthält konkrete DataSources (Room, SQLDelight, Retrofit).
+- DTO ↔ Domain Mapping zentral in data/mappers.
+- Platform‑konkrete Implementierungen können in platform‑sourceSets liegen und per DI gebunden werden.
+
+Dependency Injection (Metro):
+- Registriere Interface → Implementation Bindings in shared DI‑Graph.
+- Platform‑spezifische DataSources in platform sourceSets bereitstellen und in Graph injizieren.
+
+Tests:
+- UseCases mit Fake/Mock Repository unit‑testen (keine Platformabhängigkeit).
+- Mapper/Repository Integrationstests in passenden Gradle‑Targets (z. B. :shared:jvmTest oder :shared:testAndroidHostTest).
+
+Fehlerbehandlung & Rückgabekonventionen:
+- Standardisiere auf ein Rückgabe‑Pattern (z. B. kotlin.Result, Either, oder Resource/NetworkResult). Ein Projektweit einheitliches Pattern dokumentieren.
+
+Checklist beim Hinzufügen eines Repositories:
+1. Interface im domain‑Package anlegen.
+2. UseCases definieren (domain/usecase).
+3. Implementierung und Mappers in data hinzufügen.
+4. DI‑Bindings in Metro konfigurieren.
+5. Unit‑Tests für UseCases/Mapper schreiben.
+6. Optional: Integrations‑Tests für DB/Network in platform‑Zielen.
+
+Hinweis:
+Diese Konventionen folgen den bestehenden KMP‑ und Metro‑Patterns im Projekt. Bei Abweichungen kurz kommentieren und begründen.
