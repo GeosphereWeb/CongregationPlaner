@@ -45,9 +45,12 @@ import congregationplaner.shared.generated.resources.Res
 import congregationplaner.shared.generated.resources.dummy
 import de.geosphere.congregationplaner.auth.FirebaseAuthManager
 import de.geosphere.congregationplaner.auth.FirebaseSupport
+import de.geosphere.congregationplaner.congregation.di.CongregationMetadataGraph
+import de.geosphere.congregationplaner.congregation.presentation.CongregationMetadataScreen
 import de.geosphere.congregationplaner.theming.AppTheme
 import de.geosphere.congregationplaner.theming.brushes.backgroundBrush
 import de.geosphere.congregationplaner.theming.customColors
+import dev.zacsweers.metro.createGraph
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 
@@ -337,10 +340,7 @@ fun DesktopLayout(
 
                     "planung_wochenende" -> Text("Vortragsplanung und WT Leiter")
 
-                    "versammlung_metadata" ->
-                        Text(
-                            "versammlung_metadata \n versl_name \n vers_kalender mit Zeiten (f. planung)",
-                        )
+                    "versammlung_metadata" -> CongregationMetadataRoute()
 
                     "dienste" -> Text("Diensteta")
 
@@ -351,6 +351,12 @@ fun DesktopLayout(
             }
         }
     }
+}
+
+@Composable
+private fun CongregationMetadataRoute() {
+    val viewModel = remember { createGraph<CongregationMetadataGraph>().congregationMetadataViewModel }
+    CongregationMetadataScreen(viewModel)
 }
 
 @Preview(name = "Desktop Layout", widthDp = 1280, heightDp = 800)
@@ -415,6 +421,7 @@ fun MobileLayout(
                     when (selectedRoute) {
                         "home" -> Text("Home Content")
                         "settings" -> Text("Settings Content")
+                        "versammlung_metadata" -> CongregationMetadataRoute()
                         else -> Text("Select a navigation item")
                     }
                 }

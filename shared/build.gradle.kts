@@ -54,6 +54,7 @@ kotlin {
 
     sourceSets {
         androidMain.dependencies {
+            implementation(libs.firebase.firestore)
             implementation("com.google.firebase:firebase-analytics-ktx:22.3.0")
             implementation("com.google.firebase:firebase-auth-ktx:23.1.0")
             implementation("androidx.credentials:credentials:1.5.0")
@@ -62,6 +63,7 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
         }
         jvmMain.dependencies {
+            implementation(libs.gson)
             implementation("com.google.firebase:firebase-admin:9.4.3")
         }
         commonMain.dependencies {

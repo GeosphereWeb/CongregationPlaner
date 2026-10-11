@@ -23,6 +23,8 @@ kover = "0.9.9"
 kotest = "6.2.4"
 mockk = "1.14.11"
 turbine = "1.2.1"
+firebase-firestore = "27.0.0"
+gson = "2.11.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -49,6 +51,8 @@ kotest-assertions = { module = "io.kotest:kotest-assertions-core", version.ref =
 kotest-framework = { module = "io.kotest:kotest-framework-engine", version.ref = "kotest" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
+firebase-firestore = { module = "com.google.firebase:firebase-firestore", version.ref = "firebase-firestore" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
