@@ -7,4 +7,6 @@ interface CongregationMetadataRepository {
     fun observeAll(): Flow<List<CongregationMetadata>>
 
     suspend fun save(congregation: CongregationMetadata): Result<CongregationMetadata>
+
+    suspend fun delete(congregationId: String): Result<Unit>
 }

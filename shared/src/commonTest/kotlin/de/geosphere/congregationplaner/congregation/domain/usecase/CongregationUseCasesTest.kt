@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.LocalTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -23,10 +24,10 @@ class CongregationUseCasesTest {
         val expected = CongregationMetadata(
             id = "609a",
             name = "Berlin",
-            midweekMeetingTime = "19:00",
-            midweekMeetingWeekday = "Mittwoch",
-            weekendMeetingTime = "10:00",
-            weekendMeetingWeekday = "Sonntag",
+            midweekMeetingTime = LocalTime(19, 0),
+            midweekMeetingWeekday = 3,
+            weekendMeetingTime = LocalTime(10, 0),
+            weekendMeetingWeekday = 7,
         )
         val repository = FakeCongregationMetadataRepository(emptyList())
 
@@ -34,9 +35,20 @@ class CongregationUseCasesTest {
         assertEquals(expected, repository.savedCongregation)
     }
 
+    @Test
+    fun `delete use case delegates congregation id to repository`() = runBlocking {
+        val repository = FakeCongregationMetadataRepository(emptyList())
+
+        assertEquals(Unit, DeleteCongregationUseCase(repository)("609a").getOrThrow())
+        assertEquals("609a", repository.deletedCongregationId)
+    }
+
     private class FakeCongregationMetadataRepository(private val congregations: List<CongregationMetadata>) :
         CongregationMetadataRepository {
         var savedCongregation: CongregationMetadata? = null
+            private set
+
+        var deletedCongregationId: String? = null
             private set
 
         override fun observeAll(): Flow<List<CongregationMetadata>> = flowOf(congregations)
@@ -44,6 +56,11 @@ class CongregationUseCasesTest {
         override suspend fun save(congregation: CongregationMetadata): Result<CongregationMetadata> {
             savedCongregation = congregation
             return Result.success(congregation)
+        }
+
+        override suspend fun delete(congregationId: String): Result<Unit> {
+            deletedCongregationId = congregationId
+            return Result.success(Unit)
         }
     }
 }

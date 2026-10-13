@@ -18,4 +18,7 @@ fun unavailableCongregationMetadataRepository(platform: String): CongregationMet
 
         override suspend fun save(congregation: CongregationMetadata): Result<CongregationMetadata> =
             Result.failure(UnsupportedOperationException("Firestore is not configured for $platform."))
+
+        override suspend fun delete(congregationId: String): Result<Unit> =
+            Result.failure(UnsupportedOperationException("Firestore is not configured for $platform."))
     }

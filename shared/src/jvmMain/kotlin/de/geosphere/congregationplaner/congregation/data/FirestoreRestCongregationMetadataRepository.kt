@@ -6,6 +6,7 @@ import de.geosphere.congregationplaner.auth.DesktopEnv
 import de.geosphere.congregationplaner.auth.FirebaseAuthManager
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
 import de.geosphere.congregationplaner.congregation.domain.repository.CongregationMetadataRepository
+import kotlinx.datetime.LocalTime
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
@@ -59,6 +60,18 @@ internal class FirestoreRestCongregationMetadataRepository(
         Result.failure(exception)
     }
 
+    override suspend fun delete(congregationId: String): Result<Unit> = try {
+        require(congregationId.isNotBlank()) { "A congregation ID is required to delete a congregation." }
+        withContext(Dispatchers.IO) {
+            request("DELETE", documentUrl(congregationId))
+        }
+        Result.success(Unit)
+    } catch (exception: CancellationException) {
+        throw exception
+    } catch (exception: Exception) {
+        Result.failure(exception)
+    }
+
     private fun fetchAll(): List<CongregationMetadata> {
         val response = request("GET", "${collectionUrl()}?pageSize=1000")
         val documents = JsonParser.parseString(response).asJsonObject.getAsJsonArray("documents") ?: return emptyList()
@@ -70,10 +83,10 @@ internal class FirestoreRestCongregationMetadataRepository(
             CongregationMetadata(
                 id = documentName.substringAfterLast('/'),
                 name = fields.stringField("name"),
-                midweekMeetingTime = fields.stringField("midweek_meeting_time"),
-                midweekMeetingWeekday = fields.stringField("midweek_meeting_weekday"),
-                weekendMeetingTime = fields.stringField("weekend_meeting_time"),
-                weekendMeetingWeekday = fields.stringField("weekend_meeting_weekday"),
+                midweekMeetingTime = fields.timeField("midweek_meeting_time"),
+                midweekMeetingWeekday = fields.intField("midweek_meeting_weekday"),
+                weekendMeetingTime = fields.timeField("weekend_meeting_time"),
+                weekendMeetingWeekday = fields.intField("weekend_meeting_weekday"),
             )
         }
     }
@@ -85,11 +98,11 @@ internal class FirestoreRestCongregationMetadataRepository(
             .timeout(Duration.ofSeconds(10))
             .header("Authorization", "Bearer $token")
             .apply {
-                if (body == null) {
+                if (method == "GET") {
                     GET()
                 } else {
-                    header("Content-Type", "application/json")
-                    method(method, HttpRequest.BodyPublishers.ofString(body))
+                    if (body != null) header("Content-Type", "application/json")
+                    method(method, body?.let(HttpRequest.BodyPublishers::ofString) ?: HttpRequest.BodyPublishers.noBody())
                 }
             }.build()
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
@@ -124,15 +137,19 @@ internal class FirestoreRestCongregationMetadataRepository(
     private fun CongregationMetadata.toFirestoreJson(): String {
         val fields = JsonObject()
         fields.add("name", firestoreString(name))
-        fields.add("midweek_meeting_time", firestoreString(midweekMeetingTime))
-        fields.add("midweek_meeting_weekday", firestoreString(midweekMeetingWeekday))
-        fields.add("weekend_meeting_time", firestoreString(weekendMeetingTime))
-        fields.add("weekend_meeting_weekday", firestoreString(weekendMeetingWeekday))
+        fields.add("midweek_meeting_time", firestoreString(midweekMeetingTime.toString()))
+        fields.add("midweek_meeting_weekday", firestoreInteger(midweekMeetingWeekday))
+        fields.add("weekend_meeting_time", firestoreString(weekendMeetingTime.toString()))
+        fields.add("weekend_meeting_weekday", firestoreInteger(weekendMeetingWeekday))
         return JsonObject().apply { add("fields", fields) }.toString()
     }
 
     private fun firestoreString(value: String): JsonObject = JsonObject().apply {
         addProperty("stringValue", value)
+    }
+
+    private fun firestoreInteger(value: Int): JsonObject = JsonObject().apply {
+        addProperty("integerValue", value)
     }
 
     private fun JsonObject.stringField(name: String): String {
@@ -141,6 +158,28 @@ internal class FirestoreRestCongregationMetadataRepository(
             throw IllegalArgumentException("Firestore field '$name' must be a string.")
         }
         return value.asJsonObject.get("stringValue").asString
+    }
+
+    private fun JsonObject.intField(name: String): Int {
+        val value = get(name) ?: return 1
+        val integer = value.asJsonObject.takeIf { it.has("integerValue") }
+            ?.get("integerValue")?.asString?.toIntOrNull()
+            ?: throw IllegalArgumentException(
+                "Firestore field '$name' must be an integer from 1 (Monday) to 7 (Sunday).",
+            )
+        require(integer in 1..7) {
+            "Firestore field '$name' must be an integer from 1 (Monday) to 7 (Sunday)."
+        }
+        return integer
+    }
+
+    private fun JsonObject.timeField(name: String): LocalTime {
+        val value = stringField(name)
+        return try {
+            LocalTime.parse(value)
+        } catch (exception: IllegalArgumentException) {
+            throw IllegalArgumentException("Firestore field '$name' must be an ISO time string such as '19:00'.", exception)
+        }
     }
 
     private fun documentId(response: String): String {
