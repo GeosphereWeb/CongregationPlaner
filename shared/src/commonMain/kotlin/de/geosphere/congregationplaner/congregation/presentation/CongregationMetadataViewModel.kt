@@ -88,7 +88,7 @@ class CongregationMetadataViewModel(
                         }
                         state.copy(
                             congregations = congregations,
-                            editor = null,
+                            editor = savedCongregation,
                             isSaving = false,
                             errorMessage = null,
                         )
