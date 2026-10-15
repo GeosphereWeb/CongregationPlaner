@@ -5,6 +5,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
+import de.geosphere.congregationplaner.theming.ThemePreviews
 
 /**
  * Confirm Dialog Komponente
@@ -93,5 +95,27 @@ fun InfoDialog(
                 },
             )
         },
+    )
+}
+
+@ThemePreviews
+@Composable
+private fun ConfirmDialogPreview() = PreviewThemeWrapper {
+    ConfirmDialog(
+        title = "Versammlung löschen?",
+        message = "Diese Versammlung wird dauerhaft gelöscht.",
+        onConfirm = {},
+        onDismiss = {},
+        isDangerous = true,
+    )
+}
+
+@ThemePreviews
+@Composable
+private fun InfoDialogPreview() = PreviewThemeWrapper {
+    InfoDialog(
+        title = "Änderungen gespeichert",
+        message = "Die Versammlungsdaten wurden erfolgreich gespeichert.",
+        onDismiss = {},
     )
 }

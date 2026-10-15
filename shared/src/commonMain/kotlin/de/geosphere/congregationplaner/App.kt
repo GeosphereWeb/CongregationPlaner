@@ -45,12 +45,10 @@ import congregationplaner.shared.generated.resources.Res
 import congregationplaner.shared.generated.resources.dummy
 import de.geosphere.congregationplaner.auth.FirebaseAuthManager
 import de.geosphere.congregationplaner.auth.FirebaseSupport
-import de.geosphere.congregationplaner.congregation.di.CongregationMetadataGraph
-import de.geosphere.congregationplaner.congregation.presentation.CongregationMetadataScreen
+import de.geosphere.congregationplaner.congregation.presentation.CongregationMetadataRoute
 import de.geosphere.congregationplaner.theming.AppTheme
 import de.geosphere.congregationplaner.theming.brushes.backgroundBrush
 import de.geosphere.congregationplaner.theming.customColors
-import dev.zacsweers.metro.createGraph
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 
@@ -353,12 +351,6 @@ fun DesktopLayout(
     }
 }
 
-@Composable
-private fun CongregationMetadataRoute() {
-    val viewModel = remember { createGraph<CongregationMetadataGraph>().congregationMetadataViewModel }
-    CongregationMetadataScreen(viewModel)
-}
-
 @Preview(name = "Desktop Layout", widthDp = 1280, heightDp = 800)
 @Composable
 fun DesktopLayoutPreview() {
@@ -446,6 +438,19 @@ fun AppPreview() {
             onToggleMode = {},
             onLoginClick = {},
             onGoogleClick = { },
+        )
+    }
+}
+
+@Preview(name = "Mobile Layout", widthDp = 400, heightDp = 850)
+@Composable
+fun MobileLayoutPreview() {
+    AppTheme {
+        MobileLayout(
+            selectedRoute = "home",
+            firebaseStatus = "Firebase verfügbar",
+            onRouteChange = {},
+            onSignOut = {},
         )
     }
 }
