@@ -5,6 +5,9 @@ import de.geosphere.congregationplaner.congregation.domain.repository.Congregati
 import de.geosphere.congregationplaner.congregation.domain.usecase.DeleteCongregationUseCase
 import de.geosphere.congregationplaner.congregation.domain.usecase.ObserveCongregationsUseCase
 import de.geosphere.congregationplaner.congregation.domain.usecase.SaveCongregationUseCase
+import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.UserRole
+import de.geosphere.congregationplaner.user.domain.permission.CongregationPermissionPolicy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -23,6 +26,8 @@ import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CongregationMetadataViewModelTest {
+    private val admin = AppUser(uid = "admin", approved = true, role = UserRole.ADMIN)
+    private val planer = AppUser(uid = "planer", approved = true, role = UserRole.SPEAKING_PLANER)
     private val berlin = CongregationMetadata(id = "609a", name = "Berlin")
     private val hamburg = CongregationMetadata(id = "610b", name = "Hamburg")
 
@@ -40,12 +45,17 @@ class CongregationMetadataViewModelTest {
     }
 
     @Test
-    fun `loads congregations`() {
-        val state = createViewModel().uiState.value
+    fun `loads congregations and denies everything without current user`() {
+        val viewModel = createViewModel()
 
+        val state = viewModel.uiState.value
         assertEquals(listOf(berlin, hamburg), state.congregations)
         assertFalse(state.isLoading)
-        assertNull(state.errorMessage)
+        assertEquals(CongregationPermissions(), state.permissions)
+
+        viewModel.createCongregation()
+        assertNull(viewModel.uiState.value.editor)
+        assertEquals(MISSING_PERMISSION, viewModel.uiState.value.errorMessage)
     }
 
     @Test
@@ -59,11 +69,12 @@ class CongregationMetadataViewModelTest {
     }
 
     @Test
-    fun `creates and saves a new congregation`() {
-        val viewModel = createViewModel()
+    fun `admin creates and saves a new congregation`() {
+        val viewModel = createViewModel(admin)
+        assertEquals(CongregationPermissions(canCreate = true, canManage = true), viewModel.uiState.value.permissions)
 
         viewModel.createCongregation()
-        assertEquals(CongregationMetadata(), viewModel.uiState.value.editor)
+        assertTrue(viewModel.uiState.value.permissions.canEditSelection)
 
         viewModel.saveCongregation()
         assertEquals("Bitte gib einen Versammlungsnamen ein.", viewModel.uiState.value.errorMessage)
@@ -80,8 +91,8 @@ class CongregationMetadataViewModelTest {
     }
 
     @Test
-    fun `updates an existing congregation in place`() {
-        val viewModel = createViewModel()
+    fun `admin updates an existing congregation in place`() {
+        val viewModel = createViewModel(admin)
 
         viewModel.editCongregation(berlin)
         viewModel.updateEditor(berlin.copy(name = "Berlin-Mitte"))
@@ -92,7 +103,7 @@ class CongregationMetadataViewModelTest {
 
     @Test
     fun `save without editor does nothing`() {
-        val viewModel = createViewModel()
+        val viewModel = createViewModel(admin)
 
         viewModel.saveCongregation()
 
@@ -102,7 +113,7 @@ class CongregationMetadataViewModelTest {
     @Test
     fun `save failure is shown to the user`() {
         repository.saveResult = Result.failure(IllegalStateException("permission denied"))
-        val viewModel = createViewModel()
+        val viewModel = createViewModel(admin)
 
         viewModel.editCongregation(berlin)
         viewModel.saveCongregation()
@@ -112,8 +123,41 @@ class CongregationMetadataViewModelTest {
     }
 
     @Test
-    fun `deletes congregation and clears selection`() {
-        val viewModel = createViewModel()
+    fun `non admin may view but not modify congregations`() {
+        val viewModel = createViewModel(planer)
+
+        viewModel.editCongregation(berlin)
+        assertEquals(berlin, viewModel.uiState.value.editor)
+        assertFalse(viewModel.uiState.value.permissions.canEditSelection)
+
+        viewModel.updateEditor(berlin.copy(name = "Hack"))
+        assertEquals(berlin, viewModel.uiState.value.editor)
+
+        viewModel.saveCongregation()
+        assertEquals(MISSING_PERMISSION, viewModel.uiState.value.errorMessage)
+
+        viewModel.deleteCongregation(berlin)
+        assertEquals(MISSING_PERMISSION, viewModel.uiState.value.errorMessage)
+        assertTrue(repository.saved.isEmpty())
+        assertTrue(repository.deletedIds.isEmpty())
+    }
+
+    @Test
+    fun `permissions follow user changes`() {
+        val viewModel = createViewModel(admin)
+        viewModel.editCongregation(berlin)
+        assertTrue(viewModel.uiState.value.permissions.canEditSelection)
+
+        viewModel.onCurrentUserChanged(planer)
+        assertEquals(CongregationPermissions(), viewModel.uiState.value.permissions)
+
+        viewModel.onCurrentUserChanged(null)
+        assertEquals(CongregationPermissions(), viewModel.uiState.value.permissions)
+    }
+
+    @Test
+    fun `admin deletes congregation and selection is cleared`() {
+        val viewModel = createViewModel(admin)
         viewModel.editCongregation(berlin)
 
         viewModel.deleteCongregation(berlin)
@@ -127,7 +171,7 @@ class CongregationMetadataViewModelTest {
 
     @Test
     fun `delete keeps other selection`() {
-        val viewModel = createViewModel()
+        val viewModel = createViewModel(admin)
         viewModel.editCongregation(hamburg)
 
         viewModel.deleteCongregation(berlin)
@@ -138,7 +182,7 @@ class CongregationMetadataViewModelTest {
     @Test
     fun `delete ignores unsaved congregations and reports failures`() {
         repository.deleteResult = Result.failure(IllegalStateException("not found"))
-        val viewModel = createViewModel()
+        val viewModel = createViewModel(admin)
 
         viewModel.deleteCongregation(CongregationMetadata(name = "Neu"))
         assertTrue(repository.deletedIds.isEmpty())
@@ -150,7 +194,7 @@ class CongregationMetadataViewModelTest {
 
     @Test
     fun `cancel editing clears editor and error`() {
-        val viewModel = createViewModel()
+        val viewModel = createViewModel(admin)
         viewModel.createCongregation()
         viewModel.saveCongregation()
 
@@ -158,13 +202,15 @@ class CongregationMetadataViewModelTest {
 
         assertNull(viewModel.uiState.value.editor)
         assertNull(viewModel.uiState.value.errorMessage)
+        assertFalse(viewModel.uiState.value.permissions.canEditSelection)
     }
 
-    private fun createViewModel() = CongregationMetadataViewModel(
+    private fun createViewModel(user: AppUser? = null) = CongregationMetadataViewModel(
         ObserveCongregationsUseCase(repository),
         SaveCongregationUseCase(repository),
         DeleteCongregationUseCase(repository),
-    )
+        CongregationPermissionPolicy(),
+    ).also { viewModel -> user?.let(viewModel::onCurrentUserChanged) }
 
     private class FakeCongregationRepository(congregations: List<CongregationMetadata>) :
         CongregationMetadataRepository {
@@ -188,5 +234,9 @@ class CongregationMetadataViewModelTest {
             deletedIds += congregationId
             return deleteResult
         }
+    }
+
+    private companion object {
+        const val MISSING_PERMISSION = "Dafür fehlt dir die Berechtigung."
     }
 }
