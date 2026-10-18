@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.flow
 expect fun createCongregationMetadataRepository(): CongregationMetadataRepository
 
 internal const val CONGREGATION_COLLECTION_PATH =
-    "region/EMEA/subregion/europe/country/germany/Kreis/609a/congregation"
+    "region/EMEA/subregion/europe/branch/central-europe/circuit/609a/congregation"
 
 fun unavailableCongregationMetadataRepository(platform: String): CongregationMetadataRepository =
     object : CongregationMetadataRepository {
