@@ -85,6 +85,7 @@ kotlin {
             implementation(libs.kotest.assertions)
             implementation(libs.kotest.framework)
             implementation(libs.turbine)
+            implementation(libs.kotlinx.coroutinesTest)
         }
         val jvmTest by getting {
             dependencies {
