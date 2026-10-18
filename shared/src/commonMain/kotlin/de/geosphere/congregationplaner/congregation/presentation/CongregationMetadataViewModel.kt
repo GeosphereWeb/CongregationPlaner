@@ -6,12 +6,21 @@ import de.geosphere.congregationplaner.congregation.domain.model.CongregationMet
 import de.geosphere.congregationplaner.congregation.domain.usecase.DeleteCongregationUseCase
 import de.geosphere.congregationplaner.congregation.domain.usecase.ObserveCongregationsUseCase
 import de.geosphere.congregationplaner.congregation.domain.usecase.SaveCongregationUseCase
+import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.permission.CongregationPermissionPolicy
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+/** Aus der [CongregationPermissionPolicy] abgeleitete UI-Berechtigungen; standardmäßig ist alles verboten. */
+data class CongregationPermissions(
+    val canCreate: Boolean = false,
+    val canManage: Boolean = false,
+    val canEditSelection: Boolean = false,
+)
 
 data class CongregationMetadataUiState(
     val congregations: List<CongregationMetadata> = emptyList(),
@@ -20,6 +29,7 @@ data class CongregationMetadataUiState(
     val isSaving: Boolean = false,
     val isDeleting: Boolean = false,
     val errorMessage: String? = null,
+    val permissions: CongregationPermissions = CongregationPermissions(),
 )
 
 @Inject
@@ -27,57 +37,76 @@ class CongregationMetadataViewModel(
     private val observeCongregations: ObserveCongregationsUseCase,
     private val saveCongregation: SaveCongregationUseCase,
     private val deleteCongregationUseCase: DeleteCongregationUseCase,
+    private val permissionPolicy: CongregationPermissionPolicy,
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(CongregationMetadataUiState())
     val uiState = mutableUiState.asStateFlow()
+
+    private var currentUser: AppUser? = null
 
     init {
         viewModelScope.launch {
             observeCongregations()
                 .catch { exception ->
-                    mutableUiState.update {
+                    updateState {
                         it.copy(
                             isLoading = false,
                             errorMessage = exception.message ?: "Versammlungen konnten nicht geladen werden.",
                         )
                     }
                 }.collect { congregations ->
-                    mutableUiState.update {
+                    updateState {
                         it.copy(congregations = congregations, isLoading = false, errorMessage = null)
                     }
                 }
         }
     }
 
+    fun onCurrentUserChanged(user: AppUser?) {
+        currentUser = user
+        updateState { it }
+    }
+
     fun createCongregation() {
-        mutableUiState.update { it.copy(editor = CongregationMetadata(), errorMessage = null) }
+        val user = currentUser
+        if (user == null || !permissionPolicy.canCreate(user)) {
+            updateState { it.copy(errorMessage = MISSING_PERMISSION_MESSAGE) }
+            return
+        }
+        updateState { it.copy(editor = CongregationMetadata(), errorMessage = null) }
     }
 
     fun editCongregation(congregation: CongregationMetadata) {
-        mutableUiState.update { it.copy(editor = congregation, errorMessage = null) }
+        updateState { it.copy(editor = congregation, errorMessage = null) }
     }
 
     fun updateEditor(congregation: CongregationMetadata) {
-        mutableUiState.update { it.copy(editor = congregation, errorMessage = null) }
+        if (!mutableUiState.value.permissions.canEditSelection) return
+        updateState { it.copy(editor = congregation, errorMessage = null) }
     }
 
     fun cancelEditing() {
-        mutableUiState.update { it.copy(editor = null, errorMessage = null) }
+        updateState { it.copy(editor = null, errorMessage = null) }
     }
 
     fun saveCongregation() {
         if (mutableUiState.value.isSaving || mutableUiState.value.isDeleting) return
         val congregation = mutableUiState.value.editor ?: return
+        val user = currentUser
+        if (user == null || !canModify(user, congregation)) {
+            updateState { it.copy(errorMessage = MISSING_PERMISSION_MESSAGE) }
+            return
+        }
         if (congregation.name.isBlank()) {
-            mutableUiState.update { it.copy(errorMessage = "Bitte gib einen Versammlungsnamen ein.") }
+            updateState { it.copy(errorMessage = "Bitte gib einen Versammlungsnamen ein.") }
             return
         }
 
-        mutableUiState.update { it.copy(isSaving = true, errorMessage = null) }
+        updateState { it.copy(isSaving = true, errorMessage = null) }
         viewModelScope.launch {
             saveCongregation(congregation.copy(name = congregation.name.trim()))
                 .onSuccess { savedCongregation ->
-                    mutableUiState.update { state ->
+                    updateState { state ->
                         val existingIndex = state.congregations.indexOfFirst { it.id == savedCongregation.id }
                         val congregations = if (existingIndex == -1) {
                             state.congregations + savedCongregation
@@ -94,7 +123,7 @@ class CongregationMetadataViewModel(
                         )
                     }
                 }.onFailure { exception ->
-                    mutableUiState.update {
+                    updateState {
                         it.copy(
                             isSaving = false,
                             errorMessage = exception.message ?: "Versammlung konnte nicht gespeichert werden.",
@@ -106,12 +135,17 @@ class CongregationMetadataViewModel(
 
     fun deleteCongregation(congregation: CongregationMetadata) {
         if (congregation.id.isBlank() || mutableUiState.value.isDeleting || mutableUiState.value.isSaving) return
+        val user = currentUser
+        if (user == null || !permissionPolicy.canDelete(user, congregation)) {
+            updateState { it.copy(errorMessage = MISSING_PERMISSION_MESSAGE) }
+            return
+        }
 
-        mutableUiState.update { it.copy(isDeleting = true, errorMessage = null) }
+        updateState { it.copy(isDeleting = true, errorMessage = null) }
         viewModelScope.launch {
             deleteCongregationUseCase(congregation.id)
                 .onSuccess {
-                    mutableUiState.update {
+                    updateState {
                         it.copy(
                             congregations = it.congregations.filterNot { item -> item.id == congregation.id },
                             editor = it.editor?.takeUnless { editor -> editor.id == congregation.id },
@@ -120,7 +154,7 @@ class CongregationMetadataViewModel(
                         )
                     }
                 }.onFailure { exception ->
-                    mutableUiState.update {
+                    updateState {
                         it.copy(
                             isDeleting = false,
                             errorMessage = exception.message ?: "Versammlung konnte nicht gelöscht werden.",
@@ -128,5 +162,32 @@ class CongregationMetadataViewModel(
                     }
                 }
         }
+    }
+
+    // Berechtigungen werden bei jeder Zustandsänderung neu abgeleitet, damit sie zu Nutzer und Auswahl passen.
+    private fun updateState(transform: (CongregationMetadataUiState) -> CongregationMetadataUiState) {
+        mutableUiState.update { state ->
+            val newState = transform(state)
+            newState.copy(permissions = permissionsFor(newState.editor))
+        }
+    }
+
+    private fun permissionsFor(editor: CongregationMetadata?): CongregationPermissions {
+        val user = currentUser ?: return CongregationPermissions()
+        return CongregationPermissions(
+            canCreate = permissionPolicy.canCreate(user),
+            canManage = permissionPolicy.canManageGeneral(user),
+            canEditSelection = editor?.let { canModify(user, it) } ?: false,
+        )
+    }
+
+    private fun canModify(user: AppUser, congregation: CongregationMetadata): Boolean = if (congregation.id.isBlank()) {
+        permissionPolicy.canCreate(user)
+    } else {
+        permissionPolicy.canEdit(user, congregation)
+    }
+
+    private companion object {
+        const val MISSING_PERMISSION_MESSAGE = "Dafür fehlt dir die Berechtigung."
     }
 }
