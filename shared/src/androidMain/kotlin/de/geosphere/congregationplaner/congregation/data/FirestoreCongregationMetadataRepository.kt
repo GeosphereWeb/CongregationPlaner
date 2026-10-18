@@ -3,7 +3,7 @@ package de.geosphere.congregationplaner.congregation.data
 import android.util.Log
 import com.google.android.gms.tasks.Task
 import com.google.firebase.firestore.FirebaseFirestore
-import de.geosphere.congregationplaner.auth.FirebaseAndroidContextHolder
+import de.geosphere.congregationplaner.auth.AndroidFirestoreProvider
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
 import de.geosphere.congregationplaner.congregation.domain.repository.CongregationMetadataRepository
 import kotlinx.datetime.LocalTime
@@ -15,13 +15,8 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-actual fun createCongregationMetadataRepository(): CongregationMetadataRepository {
-    val firestore = FirebaseFirestore.getInstance()
-    if (FirebaseAndroidContextHolder.useAuthEmulator) {
-        firestore.useEmulator(FirebaseAndroidContextHolder.authEmulatorHost, FIRESTORE_EMULATOR_PORT)
-    }
-    return FirestoreCongregationMetadataRepository(firestore)
-}
+actual fun createCongregationMetadataRepository(): CongregationMetadataRepository =
+    FirestoreCongregationMetadataRepository(AndroidFirestoreProvider.firestore)
 
 internal class FirestoreCongregationMetadataRepository(private val firestore: FirebaseFirestore) :
     CongregationMetadataRepository {
@@ -145,5 +140,4 @@ private suspend fun <T> Task<T>.awaitResult(): T = suspendCancellableCoroutine {
     }
 }
 
-private const val FIRESTORE_EMULATOR_PORT = 8080
 private const val FIRESTORE_LOG_TAG = "FirebaseFirestore"

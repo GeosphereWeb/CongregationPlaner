@@ -46,6 +46,7 @@ class JVMFirebaseAuthRepositoryTest {
             assertTrue(service.isSignedIn())
             assertEquals("svc-user", service.currentUserId())
             assertEquals("svc-token", service.currentUserIdToken())
+            assertEquals("svc-user", service.currentUser()?.uid)
         } finally {
             restoreSystemProperty("FIREBASE_WEB_API_KEY", previousKey)
             restoreSystemProperty("FIREBASE_AUTH_EMULATOR_HOST", previousHost)

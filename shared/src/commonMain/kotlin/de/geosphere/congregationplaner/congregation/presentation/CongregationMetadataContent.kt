@@ -44,11 +44,13 @@ internal fun CongregationMetadataContent(
 
     Column(modifier = modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Versammlung Metadaten", style = MaterialTheme.typography.headlineSmall)
-        Button(
-            onClick = onCreate,
-            enabled = !state.isLoading && !state.isDeleting && !state.isSaving,
-        ) {
-            Text("Versammlung hinzufügen")
+        if (state.permissions.canCreate) {
+            Button(
+                onClick = onCreate,
+                enabled = !state.isLoading && !state.isDeleting && !state.isSaving,
+            ) {
+                Text("Versammlung hinzufügen")
+            }
         }
 
         state.errorMessage?.let { message ->
@@ -73,6 +75,7 @@ internal fun CongregationMetadataContent(
                         onSelect = onSelect,
                         onDelete = { congregationToDelete = it },
                         actionsEnabled = !state.isDeleting && !state.isSaving,
+                        canDelete = state.permissions.canManage,
                     )
 
                     Column(
@@ -82,6 +85,7 @@ internal fun CongregationMetadataContent(
                     ) {
                         CongregationDetail(
                             congregation = state.editor,
+                            canEdit = state.permissions.canEditSelection,
                             isSaving = state.isSaving,
                             isBusy = state.isSaving || state.isDeleting,
                             onChange = onUpdate,
@@ -98,6 +102,7 @@ internal fun CongregationMetadataContent(
                     onSelect = onSelect,
                     onDelete = { congregationToDelete = it },
                     actionsEnabled = !state.isDeleting && !state.isSaving,
+                    canDelete = state.permissions.canManage,
                 )
             } else {
                 Column(
@@ -114,8 +119,9 @@ internal fun CongregationMetadataContent(
                         modifier = Modifier.fillMaxWidth().weight(1f)
                             .verticalScroll(rememberScrollState()),
                     ) {
-                        CongregationEditor(
+                        CongregationDetail(
                             congregation = editor,
+                            canEdit = state.permissions.canEditSelection,
                             isSaving = state.isSaving,
                             isBusy = state.isSaving || state.isDeleting,
                             onChange = onUpdate,
@@ -166,6 +172,7 @@ private fun CongregationMetadataScreenPreview() = PreviewThemeWrapper {
             congregations = previewCongregations,
             editor = previewCongregations.first(),
             isLoading = false,
+            permissions = CongregationPermissions(canCreate = true, canManage = true, canEditSelection = true),
         ),
         onCreate = {},
         onSelect = {},
@@ -184,6 +191,7 @@ private fun CongregationMetadataDesktopPreview() = AppTheme {
             congregations = previewCongregations,
             editor = previewCongregations.first(),
             isLoading = false,
+            permissions = CongregationPermissions(canCreate = true, canManage = true, canEditSelection = true),
         ),
         onCreate = {},
         onSelect = {},

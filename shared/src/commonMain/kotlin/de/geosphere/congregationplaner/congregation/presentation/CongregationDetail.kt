@@ -1,5 +1,7 @@
 package de.geosphere.congregationplaner.congregation.presentation
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
@@ -16,6 +18,7 @@ import de.geosphere.congregationplaner.theming.ThemePreviews
 @Suppress("LongParameterList")
 internal fun CongregationDetail(
     congregation: CongregationMetadata?,
+    canEdit: Boolean,
     isSaving: Boolean,
     isBusy: Boolean,
     onChange: (CongregationMetadata) -> Unit,
@@ -30,6 +33,8 @@ internal fun CongregationDetail(
                 style = MaterialTheme.typography.bodyLarge,
             )
         }
+    } else if (!canEdit) {
+        CongregationSummary(congregation)
     } else {
         CongregationEditor(
             congregation = congregation,
@@ -42,11 +47,47 @@ internal fun CongregationDetail(
     }
 }
 
+@Composable
+private fun CongregationSummary(congregation: CongregationMetadata) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(congregation.name, style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Unter der Woche: ${weekdayName(congregation.midweekMeetingWeekday)} " +
+                    "${congregation.midweekMeetingTime}",
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Text(
+                "Wochenende: ${weekdayName(congregation.weekendMeetingWeekday)} ${congregation.weekendMeetingTime}",
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        }
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun CongregationDetailReadOnlyPreview() = PreviewThemeWrapper {
+    CongregationDetail(
+        congregation = previewCongregations.first(),
+        canEdit = false,
+        isSaving = false,
+        isBusy = false,
+        onChange = {},
+        onSave = {},
+        onCancel = {},
+    )
+}
+
 @ThemePreviews
 @Composable
 private fun CongregationDetailPreview() = PreviewThemeWrapper {
     CongregationDetail(
         congregation = previewCongregations.first(),
+        canEdit = true,
         isSaving = false,
         isBusy = false,
         onChange = {},

@@ -29,6 +29,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,6 +50,12 @@ import de.geosphere.congregationplaner.congregation.presentation.CongregationMet
 import de.geosphere.congregationplaner.theming.AppTheme
 import de.geosphere.congregationplaner.theming.brushes.backgroundBrush
 import de.geosphere.congregationplaner.theming.customColors
+import de.geosphere.congregationplaner.user.di.UserAccessGraph
+import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.UserAccessState
+import de.geosphere.congregationplaner.user.domain.model.UserRole
+import de.geosphere.congregationplaner.user.presentation.UserAccessGateScreen
+import dev.zacsweers.metro.createGraph
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 
@@ -70,6 +77,7 @@ fun App() {
         var email by remember { mutableStateOf("") }
         var password by remember { mutableStateOf("") }
         val scope = rememberCoroutineScope()
+        val userAccessViewModel = remember { createGraph<UserAccessGraph>().userAccessViewModel }
 
         LaunchedEffect(Unit) {
             FirebaseSupport.initialize()
@@ -78,6 +86,20 @@ fun App() {
                 "Firebase verfügbar"
             } else {
                 "Firebase nicht konfiguriert"
+            }
+        }
+
+        LaunchedEffect(isAuthenticated) {
+            if (!isAuthenticated) {
+                userAccessViewModel.onSignedOut()
+                return@LaunchedEffect
+            }
+            val authUser = FirebaseAuthManager.currentUser()
+            if (authUser != null) {
+                userAccessViewModel.onSignedIn(authUser)
+            } else {
+                FirebaseAuthManager.signOut()
+                isAuthenticated = false
             }
         }
 
@@ -147,36 +169,55 @@ fun App() {
             return@AppTheme
         }
 
+        val signOut: () -> Unit = {
+            scope.launch {
+                FirebaseAuthManager.signOut()
+                isAuthenticated = false
+                authMode = AuthMode.LOGIN
+                loginError = null
+                infoMessage = null
+            }
+        }
+
+        // Erst nach erteilter Freigabe ist die App nutzbar; Rollen steuern die sichtbaren Bereiche.
+        val accessState by userAccessViewModel.accessState.collectAsState()
+        val currentUser = (accessState as? UserAccessState.Authorized)?.user
+        if (currentUser == null) {
+            UserAccessGateScreen(
+                state = accessState,
+                onRefresh = userAccessViewModel::refresh,
+                onSignOut = signOut,
+            )
+            return@AppTheme
+        }
+
+        val navigationItems = remember(currentUser) {
+            NavigationItem.entries.filter { item ->
+                item != NavigationItem.Usererwaltung || userAccessViewModel.canManageUsers(currentUser)
+            }
+        }
+        LaunchedEffect(navigationItems, selectedRoute) {
+            if (navigationItems.none { it.routeName == selectedRoute }) selectedRoute = NavigationItem.Home.routeName
+        }
+
         // Platform-spezifisches Layout
         if (HostPlatform.isDesktop) {
             DesktopLayout(
                 selectedRoute = selectedRoute,
                 firebaseStatus = firebaseStatus,
+                currentUser = currentUser,
+                navigationItems = navigationItems,
                 onRouteChange = { selectedRoute = it },
-                onSignOut = {
-                    scope.launch {
-                        FirebaseAuthManager.signOut()
-                        isAuthenticated = false
-                        authMode = AuthMode.LOGIN
-                        loginError = null
-                        infoMessage = null
-                    }
-                },
+                onSignOut = signOut,
             )
         } else {
             MobileLayout(
                 selectedRoute = selectedRoute,
                 firebaseStatus = firebaseStatus,
+                currentUser = currentUser,
+                navigationItems = navigationItems,
                 onRouteChange = { selectedRoute = it },
-                onSignOut = {
-                    scope.launch {
-                        FirebaseAuthManager.signOut()
-                        isAuthenticated = false
-                        authMode = AuthMode.LOGIN
-                        loginError = null
-                        infoMessage = null
-                    }
-                },
+                onSignOut = signOut,
             )
         }
     }
@@ -292,9 +333,12 @@ fun LoginScreen(
 }
 
 @Composable
+@Suppress("LongParameterList")
 fun DesktopLayout(
     selectedRoute: String,
     firebaseStatus: String,
+    currentUser: AppUser,
+    navigationItems: List<NavigationItem>,
     onRouteChange: (String) -> Unit,
     onSignOut: () -> Unit,
 ) {
@@ -304,7 +348,7 @@ fun DesktopLayout(
             modifier = Modifier.padding(horizontal = 8.dp),
 //            containerColor = MaterialTheme.colorScheme.surface,
         ) {
-            NavigationItem.entries.let { items ->
+            navigationItems.let { items ->
                 items.forEach { item ->
                     NavigationRailItem(
                         icon = {
@@ -338,7 +382,7 @@ fun DesktopLayout(
 
                     "planung_wochenende" -> Text("Vortragsplanung und WT Leiter")
 
-                    "versammlung_metadata" -> CongregationMetadataRoute()
+                    "versammlung_metadata" -> CongregationMetadataRoute(currentUser)
 
                     "dienste" -> Text("Diensteta")
 
@@ -358,6 +402,8 @@ fun DesktopLayoutPreview() {
         DesktopLayout(
             selectedRoute = "home",
             firebaseStatus = "Firebase verfügbar",
+            currentUser = previewAdmin,
+            navigationItems = NavigationItem.entries,
             onRouteChange = {},
             onSignOut = {},
         )
@@ -365,9 +411,12 @@ fun DesktopLayoutPreview() {
 }
 
 @Composable
+@Suppress("LongParameterList")
 fun MobileLayout(
     selectedRoute: String,
     firebaseStatus: String,
+    currentUser: AppUser,
+    navigationItems: List<NavigationItem>,
     onRouteChange: (String) -> Unit,
     onSignOut: () -> Unit,
 ) {
@@ -378,7 +427,7 @@ fun MobileLayout(
             ModalDrawerSheet {
                 Text("Congregation Planer", modifier = Modifier.padding(16.dp))
                 HorizontalDivider()
-                NavigationItem.entries.let { items ->
+                navigationItems.let { items ->
                     items.forEach { item ->
                         NavigationDrawerItem(
                             icon = {
@@ -413,7 +462,7 @@ fun MobileLayout(
                     when (selectedRoute) {
                         "home" -> Text("Home Content")
                         "settings" -> Text("Settings Content")
-                        "versammlung_metadata" -> CongregationMetadataRoute()
+                        "versammlung_metadata" -> CongregationMetadataRoute(currentUser)
                         else -> Text("Select a navigation item")
                     }
                 }
@@ -449,8 +498,18 @@ fun MobileLayoutPreview() {
         MobileLayout(
             selectedRoute = "home",
             firebaseStatus = "Firebase verfügbar",
+            currentUser = previewAdmin,
+            navigationItems = NavigationItem.entries,
             onRouteChange = {},
             onSignOut = {},
         )
     }
 }
+
+private val previewAdmin = AppUser(
+    uid = "preview-admin",
+    email = "admin@congregationplaner.de",
+    displayName = "Admin",
+    approved = true,
+    role = UserRole.ADMIN,
+)

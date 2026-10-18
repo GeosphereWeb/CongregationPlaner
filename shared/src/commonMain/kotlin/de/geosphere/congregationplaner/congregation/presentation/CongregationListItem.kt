@@ -19,12 +19,14 @@ import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 
 @Composable
+@Suppress("LongParameterList")
 internal fun CongregationListItem(
     congregation: CongregationMetadata,
     selected: Boolean,
     onSelect: () -> Unit,
     onDelete: () -> Unit,
     actionsEnabled: Boolean,
+    canDelete: Boolean,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onSelect),
@@ -46,9 +48,11 @@ internal fun CongregationListItem(
                     "${weekdayName(congregation.weekendMeetingWeekday)} ${congregation.weekendMeetingTime}",
                 style = MaterialTheme.typography.bodyMedium,
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = onDelete, enabled = actionsEnabled) {
-                    Text("Löschen", color = MaterialTheme.colorScheme.error)
+            if (canDelete) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = onDelete, enabled = actionsEnabled) {
+                        Text("Löschen", color = MaterialTheme.colorScheme.error)
+                    }
                 }
             }
         }
@@ -64,5 +68,6 @@ private fun CongregationListItemPreview() = PreviewThemeWrapper {
         onSelect = {},
         onDelete = {},
         actionsEnabled = true,
+        canDelete = true,
     )
 }
