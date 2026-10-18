@@ -67,7 +67,7 @@ internal fun MeetingTimeInput(label: String, time: LocalTime, onTimeChange: (Loc
     }
 }
 
-private fun LocalTime.toInputValue(): String =
+internal fun LocalTime.toInputValue(): String =
     "${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}"
 
 @ThemePreviews

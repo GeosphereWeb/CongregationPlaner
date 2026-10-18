@@ -40,6 +40,7 @@ class FirebaseRepositoryContractTest {
         assertEquals(null, repository.signInWithGoogle())
         assertFalse(repository.isGoogleSignInAvailable())
         assertEquals("user-42", repository.currentUserId())
+        assertEquals(null, repository.currentUserIdToken())
         assertTrue(repository.isSignedIn())
 
         repository.signOut()

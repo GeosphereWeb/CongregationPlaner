@@ -23,7 +23,7 @@ actual fun createCongregationMetadataRepository(): CongregationMetadataRepositor
     return FirestoreCongregationMetadataRepository(firestore)
 }
 
-private class FirestoreCongregationMetadataRepository(private val firestore: FirebaseFirestore) :
+internal class FirestoreCongregationMetadataRepository(private val firestore: FirebaseFirestore) :
     CongregationMetadataRepository {
     override fun observeAll(): Flow<List<CongregationMetadata>> = callbackFlow {
         val registration = firestore.collection(CONGREGATION_COLLECTION_PATH)
