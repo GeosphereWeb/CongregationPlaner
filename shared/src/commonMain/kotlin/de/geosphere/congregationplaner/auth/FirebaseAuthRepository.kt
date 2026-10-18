@@ -17,6 +17,7 @@ interface FirebaseAuthRepository {
     fun isGoogleSignInAvailable(): Boolean = false
     suspend fun signOut()
     fun currentUserId(): String?
+    fun currentUserIdToken(): String? = null
     fun isSignedIn(): Boolean
 }
 
@@ -46,6 +47,8 @@ object FirebaseAuthManager {
     suspend fun signOut() = withContext(Dispatchers.Default) { service.signOut() }
 
     fun currentUserId(): String? = service.currentUserId()
+
+    fun currentUserIdToken(): String? = service.currentUserIdToken()
 
     fun isSignedIn(): Boolean = service.isSignedIn()
 }

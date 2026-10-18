@@ -136,7 +136,6 @@ complexity:
     ignoreDefaultParameters: false
     ignoreDataClasses: true
     ignoreAnnotatedParameter: []
-    ignoreAnnotatedFunctions: ['Composable']
   MethodOverloading:
     active: false
     threshold: 6
