@@ -118,6 +118,8 @@ class FirebaseAuthPlatformService : FirebaseAuthRepository {
 
     override fun currentUserId(): String? = auth.currentUser?.uid
 
+    override fun currentUser(): FirebaseUser? = auth.currentUser?.toFirebaseUser()
+
     override fun isSignedIn(): Boolean = auth.currentUser != null
 
     private fun taskToUser(
@@ -128,6 +130,11 @@ class FirebaseAuthPlatformService : FirebaseAuthRepository {
         }
 
         val user = task.result?.user ?: auth.currentUser ?: return null
+        return user.toFirebaseUser()
+    }
+
+    private fun com.google.firebase.auth.FirebaseUser.toFirebaseUser(): FirebaseUser {
+        val user = this
         return object : FirebaseUser {
             override val uid: String = user.uid
             override val email: String? = user.email

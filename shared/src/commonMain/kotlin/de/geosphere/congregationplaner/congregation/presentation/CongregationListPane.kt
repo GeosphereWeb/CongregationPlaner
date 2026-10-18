@@ -23,6 +23,7 @@ internal fun CongregationListPane(
     onSelect: (CongregationMetadata) -> Unit,
     onDelete: (CongregationMetadata) -> Unit,
     actionsEnabled: Boolean,
+    canDelete: Boolean,
 ) {
     Column(modifier = modifier) {
         LazyColumn(
@@ -44,6 +45,7 @@ internal fun CongregationListPane(
                         onSelect = { onSelect(congregation) },
                         onDelete = { onDelete(congregation) },
                         actionsEnabled = actionsEnabled,
+                        canDelete = canDelete,
                     )
                 }
             }
@@ -60,5 +62,6 @@ private fun CongregationListPanePreview() = PreviewThemeWrapper {
         onSelect = {},
         onDelete = {},
         actionsEnabled = true,
+        canDelete = true,
     )
 }
