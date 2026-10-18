@@ -47,6 +47,8 @@ class FirebaseAuthPlatformService(
 
     override fun currentUserId(): String? = currentUser?.uid
 
+    override fun currentUserIdToken(): String? = currentUser?.idToken
+
     override fun isSignedIn(): Boolean = currentUser != null
 
     private fun performDesktopAuthRequest(endpoint: String, email: String, password: String): FirebaseUser? {

@@ -20,7 +20,9 @@ val koverExclusions = listOf(
     "de.geosphere.congregationplaner.Greeting",
     "de.geosphere.congregationplaner.MainKt",
     "de.geosphere.congregationplaner.MainActivity",
-    "de.geosphere.congregationplaner.MainViewControllerKt"
+    "de.geosphere.congregationplaner.MainViewControllerKt",
+    // Reine Vorschaudaten für @Preview-Composables
+    "*PreviewDataKt",
 )
 
 val koverAnnotationExclusions = listOf(
@@ -38,6 +40,8 @@ val sonarExclusions = listOf(
     "**/iosMain/**",
     "**/src/iosMain/**",
     "shared/src/iosMain/**",
+    // Reine Vorschaudaten für @Preview-Composables
+    "**/*PreviewData.kt",
     // Exclude theming and ui modules from coverage
     "theming/**",
     "ui/**"
