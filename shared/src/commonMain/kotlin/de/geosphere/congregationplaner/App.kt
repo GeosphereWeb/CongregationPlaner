@@ -45,6 +45,7 @@ import congregationplaner.shared.generated.resources.Res
 import congregationplaner.shared.generated.resources.dummy
 import de.geosphere.congregationplaner.auth.FirebaseAuthManager
 import de.geosphere.congregationplaner.auth.FirebaseSupport
+import de.geosphere.congregationplaner.congregation.presentation.CongregationMetadataRoute
 import de.geosphere.congregationplaner.theming.AppTheme
 import de.geosphere.congregationplaner.theming.brushes.backgroundBrush
 import de.geosphere.congregationplaner.theming.customColors
@@ -337,10 +338,7 @@ fun DesktopLayout(
 
                     "planung_wochenende" -> Text("Vortragsplanung und WT Leiter")
 
-                    "versammlung_metadata" ->
-                        Text(
-                            "versammlung_metadata \n versl_name \n vers_kalender mit Zeiten (f. planung)",
-                        )
+                    "versammlung_metadata" -> CongregationMetadataRoute()
 
                     "dienste" -> Text("Diensteta")
 
@@ -415,6 +413,7 @@ fun MobileLayout(
                     when (selectedRoute) {
                         "home" -> Text("Home Content")
                         "settings" -> Text("Settings Content")
+                        "versammlung_metadata" -> CongregationMetadataRoute()
                         else -> Text("Select a navigation item")
                     }
                 }
@@ -439,6 +438,19 @@ fun AppPreview() {
             onToggleMode = {},
             onLoginClick = {},
             onGoogleClick = { },
+        )
+    }
+}
+
+@Preview(name = "Mobile Layout", widthDp = 400, heightDp = 850)
+@Composable
+fun MobileLayoutPreview() {
+    AppTheme {
+        MobileLayout(
+            selectedRoute = "home",
+            firebaseStatus = "Firebase verfügbar",
+            onRouteChange = {},
+            onSignOut = {},
         )
     }
 }
