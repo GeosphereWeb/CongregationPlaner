@@ -47,6 +47,8 @@ class FirebaseAuthPlatformService(
 
     override fun currentUserId(): String? = currentUser?.uid
 
+    override fun currentUser(): FirebaseUser? = currentUser
+
     override fun currentUserIdToken(): String? = currentUser?.idToken
 
     override fun isSignedIn(): Boolean = currentUser != null
