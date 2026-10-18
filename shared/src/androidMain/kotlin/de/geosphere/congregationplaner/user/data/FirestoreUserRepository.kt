@@ -20,7 +20,7 @@ import kotlin.coroutines.resumeWithException
 
 actual fun createUserRepository(): UserRepository = FirestoreUserRepository(AndroidFirestoreProvider.firestore)
 
-private class FirestoreUserRepository(private val firestore: FirebaseFirestore) : UserRepository {
+internal class FirestoreUserRepository(private val firestore: FirebaseFirestore) : UserRepository {
     override suspend fun getOrCreateUser(authUser: FirebaseUser): Result<AppUser> = try {
         val document = firestore.collection(USERS_COLLECTION_PATH).document(authUser.uid)
         // Source.SERVER umgeht den Cache, damit Freigaben und Rollen sofort wirksam werden.
