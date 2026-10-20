@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner.firestore
 
+import com.google.gson.JsonArray
 import com.google.gson.JsonNull
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
@@ -24,21 +25,22 @@ import java.time.Duration
 /**
  * Gemeinsamer Zugriff der Desktop-Repositories auf die Firestore-REST-API des Emulators.
  *
- * @param signInRequiredMessage Fehlermeldung, falls kein ID-Token vorhanden ist.
+ * @param signInRequiredMessage Fehlermeldung, falls kein ID-Token vorhanden ist; `null` erlaubt
+ *   Anfragen ohne Anmeldung (z. B. für die Organisationsstruktur vor dem Login).
  */
 internal class FirestoreRestClient(
     private val httpClient: HttpClient,
     private val idTokenProvider: () -> String?,
-    private val signInRequiredMessage: String,
+    private val signInRequiredMessage: String?,
 ) {
     /** Sendet die Anfrage und liefert den Body; Antworten außerhalb von 2xx werfen [FirestoreHttpException]. */
     fun request(method: String, url: String, body: String? = null): String {
         val token = idTokenProvider()?.takeIf(String::isNotBlank)
-            ?: throw IllegalStateException(signInRequiredMessage)
+        if (token == null && signInRequiredMessage != null) throw IllegalStateException(signInRequiredMessage)
         val request = HttpRequest.newBuilder(URI(url))
             .timeout(Duration.ofSeconds(10))
-            .header("Authorization", "Bearer $token")
             .apply {
+                if (token != null) header("Authorization", "Bearer $token")
                 if (method == "GET") {
                     GET()
                 } else {
@@ -60,7 +62,9 @@ internal class FirestoreRestClient(
         if (exception.status == HTTP_NOT_FOUND) null else throw exception
     }
 
-    fun collectionUrl(collectionPath: String): String = "${firestoreDocumentsUrl()}/$collectionPath"
+    // Die Pfadsegmente werden einzeln kodiert, die Schrägstriche dazwischen bleiben erhalten.
+    fun collectionUrl(collectionPath: String): String =
+        "${firestoreDocumentsUrl()}/${collectionPath.split('/').joinToString("/", transform = ::encode)}"
 
     fun documentUrl(collectionPath: String, id: String): String = "${collectionUrl(collectionPath)}/${encode(id)}"
 
@@ -126,6 +130,18 @@ internal fun firestoreBoolean(value: Boolean): JsonObject = JsonObject().apply {
 
 internal fun JsonObject.optionalStringField(name: String): String? =
     get(name)?.takeIf { it.isJsonObject }?.asJsonObject?.get("stringValue")?.asString
+
+internal fun firestoreStringArray(values: List<String>): JsonObject = JsonObject().apply {
+    val array = JsonArray().apply { values.forEach { add(firestoreString(it)) } }
+    add("arrayValue", JsonObject().apply { add("values", array) })
+}
+
+internal fun JsonObject.stringArrayField(name: String): List<String?> =
+    get(name)?.takeIf { it.isJsonObject }?.asJsonObject
+        ?.getAsJsonObject("arrayValue")
+        ?.getAsJsonArray("values")
+        ?.map { it.asJsonObject.get("stringValue")?.asString }
+        .orEmpty()
 
 internal fun JsonObject.booleanField(name: String): Boolean =
     get(name)?.takeIf { it.isJsonObject }?.asJsonObject?.get("booleanValue")?.asBoolean ?: false
