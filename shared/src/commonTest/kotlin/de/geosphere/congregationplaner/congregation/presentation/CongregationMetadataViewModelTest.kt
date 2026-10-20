@@ -26,8 +26,8 @@ import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CongregationMetadataViewModelTest {
-    private val admin = AppUser(uid = "admin", approved = true, role = UserRole.ADMIN)
-    private val planer = AppUser(uid = "planer", approved = true, role = UserRole.SPEAKING_PLANER)
+    private val admin = AppUser(uid = "admin", approved = true, isGlobalAdmin = true)
+    private val planer = AppUser(uid = "planer", approved = true, role = UserRole.CONGREGATION_ADMIN)
     private val berlin = CongregationMetadata(id = "609a", name = "Berlin")
     private val hamburg = CongregationMetadata(id = "610b", name = "Hamburg")
 

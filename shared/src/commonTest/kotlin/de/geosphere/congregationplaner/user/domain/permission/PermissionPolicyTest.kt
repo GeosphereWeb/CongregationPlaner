@@ -2,6 +2,7 @@ package de.geosphere.congregationplaner.user.domain.permission
 
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.UserPermission
 import de.geosphere.congregationplaner.user.domain.model.UserRole
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -14,8 +15,8 @@ class PermissionPolicyTest {
     private val congregation = CongregationMetadata(id = "609a", name = "Berlin")
 
     @Test
-    fun `approved admin may manage congregations and users`() {
-        val admin = AppUser(uid = "1", approved = true, role = UserRole.ADMIN)
+    fun `global admin may manage congregations and users`() {
+        val admin = AppUser(uid = "1", isGlobalAdmin = true)
 
         assertTrue(congregationPolicy.canCreate(admin))
         assertTrue(congregationPolicy.canEdit(admin, congregation))
@@ -25,33 +26,39 @@ class PermissionPolicyTest {
     }
 
     @Test
-    fun `unapproved admin gets no permissions`() {
-        val admin = AppUser(uid = "1", approved = false, role = UserRole.ADMIN)
+    fun `approved congregation admin may manage users but not congregations`() {
+        val admin = AppUser(uid = "1", approved = true, role = UserRole.CONGREGATION_ADMIN)
 
+        assertTrue(userPolicy.canManageUsers(admin))
         assertFalse(congregationPolicy.canCreate(admin))
         assertFalse(congregationPolicy.canEdit(admin, congregation))
         assertFalse(congregationPolicy.canDelete(admin, congregation))
         assertFalse(congregationPolicy.canManageGeneral(admin))
-        assertFalse(userPolicy.canManageUsers(admin))
     }
 
     @Test
-    fun `non admin roles may not modify congregations or manage users`() {
-        listOf(UserRole.SPEAKING_PLANER, UserRole.SPEAKING_ASSISTANT, UserRole.NONE).forEach { role ->
-            val user = AppUser(uid = "2", approved = true, role = role)
+    fun `unapproved congregation admin and other roles may not manage users`() {
+        val users = listOf(AppUser(uid = "1", approved = false, role = UserRole.CONGREGATION_ADMIN)) +
+            listOf(UserRole.MEMBER, UserRole.NONE).map { role -> AppUser(uid = "2", approved = true, role = role) }
 
-            assertFalse(congregationPolicy.canCreate(user), "canCreate for $role")
-            assertFalse(congregationPolicy.canEdit(user, congregation), "canEdit for $role")
-            assertFalse(congregationPolicy.canDelete(user, congregation), "canDelete for $role")
-            assertFalse(congregationPolicy.canManageGeneral(user), "canManageGeneral for $role")
-            assertFalse(userPolicy.canManageUsers(user), "canManageUsers for $role")
-        }
+        users.forEach { user -> assertFalse(userPolicy.canManageUsers(user), "canManageUsers for $user") }
     }
 
     @Test
-    fun `unknown role values map to NONE`() {
-        assertEquals(UserRole.ADMIN, UserRole.fromValue("ADMIN"))
-        assertEquals(UserRole.NONE, UserRole.fromValue("SUPER_ADMIN"))
+    fun `admins may edit other members but not themselves`() {
+        val admin = AppUser(uid = "1", approved = true, role = UserRole.CONGREGATION_ADMIN)
+        val member = AppUser(uid = "2", approved = true)
+
+        assertTrue(userPolicy.canEditMember(admin, member))
+        assertFalse(userPolicy.canEditMember(admin, admin))
+        assertFalse(userPolicy.canEditMember(member, admin))
+    }
+
+    @Test
+    fun `unknown role and permission values are denied`() {
+        assertEquals(UserRole.CONGREGATION_ADMIN, UserRole.fromValue("CONGREGATION_ADMIN"))
+        assertEquals(UserRole.NONE, UserRole.fromValue("ADMIN"))
         assertEquals(UserRole.NONE, UserRole.fromValue(null))
+        assertEquals(setOf(UserPermission.DUMMY), UserPermission.fromValues(listOf("DUMMY", "SUPERUSER", null)))
     }
 }

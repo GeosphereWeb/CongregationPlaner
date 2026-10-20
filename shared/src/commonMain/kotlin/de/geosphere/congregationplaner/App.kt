@@ -48,6 +48,9 @@ import de.geosphere.congregationplaner.auth.FirebaseAuthManager
 import de.geosphere.congregationplaner.auth.FirebaseSupport
 import de.geosphere.congregationplaner.circuit.presentation.CircuitRoute
 import de.geosphere.congregationplaner.congregation.presentation.CongregationMetadataRoute
+import de.geosphere.congregationplaner.organization.InviteLinkInbox
+import de.geosphere.congregationplaner.organization.di.OrganizationGraph
+import de.geosphere.congregationplaner.organization.presentation.CongregationSelector
 import de.geosphere.congregationplaner.theming.AppTheme
 import de.geosphere.congregationplaner.theming.brushes.backgroundBrush
 import de.geosphere.congregationplaner.theming.customColors
@@ -56,6 +59,7 @@ import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.UserAccessState
 import de.geosphere.congregationplaner.user.domain.model.UserRole
 import de.geosphere.congregationplaner.user.presentation.UserAccessGateScreen
+import de.geosphere.congregationplaner.user.presentation.UserManagementRoute
 import dev.zacsweers.metro.createGraph
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
@@ -79,6 +83,10 @@ fun App() {
         var password by remember { mutableStateOf("") }
         val scope = rememberCoroutineScope()
         val userAccessViewModel = remember { createGraph<UserAccessGraph>().userAccessViewModel }
+        val selectionViewModel = remember { createGraph<OrganizationGraph>().congregationSelectionViewModel }
+        val selectionState by selectionViewModel.uiState.collectAsState()
+        val selectedCongregation = selectionState.selected?.ref
+        val pendingInviteLink by InviteLinkInbox.pendingLink.collectAsState()
 
         LaunchedEffect(Unit) {
             FirebaseSupport.initialize()
@@ -90,14 +98,22 @@ fun App() {
             }
         }
 
-        LaunchedEffect(isAuthenticated) {
+        // Ein Einladungslink, mit dem die App gestartet wurde, wählt die Versammlung vor.
+        LaunchedEffect(pendingInviteLink) {
+            val link = pendingInviteLink ?: return@LaunchedEffect
+            selectionViewModel.applyInviteLink(link)
+            InviteLinkInbox.consume()
+        }
+
+        // Die Nutzerdaten liegen unterhalb der Versammlung; ohne gewählte Versammlung gibt es keinen Zugriff.
+        LaunchedEffect(isAuthenticated, selectedCongregation) {
             if (!isAuthenticated) {
                 userAccessViewModel.onSignedOut()
                 return@LaunchedEffect
             }
             val authUser = FirebaseAuthManager.currentUser()
             if (authUser != null) {
-                userAccessViewModel.onSignedIn(authUser)
+                userAccessViewModel.onSignedIn(authUser, selectedCongregation)
             } else {
                 FirebaseAuthManager.signOut()
                 isAuthenticated = false
@@ -112,6 +128,8 @@ fun App() {
                 authMode = authMode,
                 loginError = loginError,
                 infoMessage = infoMessage,
+                canSignIn = selectedCongregation != null,
+                congregationSelector = { CongregationSelector(selectionViewModel, selectionState) },
                 onEmailChange = { email = it },
                 onPasswordChange = { password = it },
                 onToggleMode = {
@@ -180,6 +198,14 @@ fun App() {
             }
         }
 
+        // Wer schon angemeldet ist, aber (noch) keine Versammlung gewählt hat, wählt sie hier.
+        if (selectedCongregation == null) {
+            CongregationRequiredScreen(onSignOut = signOut) {
+                CongregationSelector(selectionViewModel, selectionState)
+            }
+            return@AppTheme
+        }
+
         // Erst nach erteilter Freigabe ist die App nutzbar; Rollen steuern die sichtbaren Bereiche.
         val accessState by userAccessViewModel.accessState.collectAsState()
         val currentUser = (accessState as? UserAccessState.Authorized)?.user
@@ -187,6 +213,7 @@ fun App() {
             UserAccessGateScreen(
                 state = accessState,
                 onRefresh = userAccessViewModel::refresh,
+                onChangeCongregation = selectionViewModel::clearSelection,
                 onSignOut = signOut,
             )
             return@AppTheme
@@ -238,6 +265,8 @@ fun LoginScreen(
     onToggleMode: () -> Unit,
     onLoginClick: () -> Unit,
     onGoogleClick: () -> Unit,
+    canSignIn: Boolean = true,
+    congregationSelector: @Composable () -> Unit = {},
 ) {
     Box(
         modifier = Modifier.fillMaxSize().background(
@@ -258,6 +287,8 @@ fun LoginScreen(
                     style = MaterialTheme.typography.headlineMedium,
                 )
                 Text(text = firebaseStatus)
+
+                congregationSelector()
 
                 val title = if (authMode == AuthMode.LOGIN) "Anmeldung" else "Konto erstellen"
                 Text(title)
@@ -303,6 +334,7 @@ fun LoginScreen(
 
                 Button(
                     onClick = onLoginClick,
+                    enabled = canSignIn,
                     modifier = Modifier.fillMaxWidth().height(48.dp),
                 ) {
                     Text(if (authMode == AuthMode.LOGIN) "Anmelden" else "Konto erstellen")
@@ -315,6 +347,7 @@ fun LoginScreen(
 
                 Button(
                     onClick = onGoogleClick,
+                    enabled = canSignIn,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text("Mit Google fortfahren")
@@ -327,6 +360,31 @@ fun LoginScreen(
                     Text(
                         if (authMode == AuthMode.LOGIN) "Neues Konto erstellen" else "Bereits registriert? Anmelden",
                     )
+                }
+            }
+        }
+    }
+}
+
+/** Für bereits angemeldete Nutzer, deren Versammlung noch nicht feststeht (z. B. nach einem Update). */
+@Composable
+private fun CongregationRequiredScreen(onSignOut: () -> Unit, selector: @Composable () -> Unit) {
+    Box(
+        modifier = Modifier.fillMaxSize().background(brush = Brush.backgroundBrush),
+        contentAlignment = Alignment.Center,
+    ) {
+        Card(
+            modifier = Modifier.widthIn(min = 300.dp, max = 500.dp).padding(24.dp),
+            shape = RoundedCornerShape(24.dp),
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Text("Versammlung wählen", style = MaterialTheme.typography.headlineSmall)
+                selector()
+                Button(onClick = onSignOut, modifier = Modifier.fillMaxWidth()) {
+                    Text("Abmelden")
                 }
             }
         }
@@ -389,7 +447,7 @@ fun DesktopLayout(
 
                     "dienste" -> Text("Diensteta")
 
-                    "userverwaltung" -> Text("userverwaltung")
+                    "userverwaltung" -> UserManagementRoute(currentUser)
 
                     else -> Text("Select a navigation item")
                 }
@@ -467,6 +525,7 @@ fun MobileLayout(
                         "settings" -> Text("Settings Content")
                         "circuit" -> CircuitRoute(currentUser)
                         "versammlung_metadata" -> CongregationMetadataRoute(currentUser)
+                        "userverwaltung" -> UserManagementRoute(currentUser)
                         else -> Text("Select a navigation item")
                     }
                 }
@@ -515,5 +574,6 @@ private val previewAdmin = AppUser(
     email = "admin@congregationplaner.de",
     displayName = "Admin",
     approved = true,
-    role = UserRole.ADMIN,
+    role = UserRole.CONGREGATION_ADMIN,
+    isGlobalAdmin = true,
 )

@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner
 
+import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -9,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import de.geosphere.congregationplaner.auth.FirebaseAndroidContextHolder
 import de.geosphere.congregationplaner.auth.FirebaseSupport
+import de.geosphere.congregationplaner.organization.InviteLinkInbox
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -25,10 +27,16 @@ class MainActivity : ComponentActivity() {
                 ?: "10.0.2.2",
         )
         FirebaseSupport.initialize()
+        InviteLinkInbox.deliver(intent?.dataString)
 
         setContent {
             App()
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        InviteLinkInbox.deliver(intent.dataString)
     }
 }
 
