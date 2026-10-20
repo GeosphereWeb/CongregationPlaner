@@ -51,6 +51,14 @@ class NavigationItemTest {
     }
 
     @Test
+    fun testKreiseNavigationItem() {
+        val item = NavigationItem.Kreise
+        assertEquals("Kreise", item.label)
+        assertEquals("circuit", item.routeName)
+        assertNotNull(item.iconRes)
+    }
+
+    @Test
     fun testVersammlungNavigationItem() {
         val item = NavigationItem.Versammlung
         assertEquals("Versammlung Metadaten", item.label)
@@ -77,7 +85,7 @@ class NavigationItemTest {
     @Test
     fun testAllNavigationItemsCount() {
         val items = NavigationItem.entries
-        assertEquals(7, items.size)
+        assertEquals(8, items.size)
     }
 
     @Test
@@ -89,6 +97,7 @@ class NavigationItemTest {
         assertEquals(true, names.contains("Settings"))
         assertEquals(true, names.contains("PlanungUnterDerWoche"))
         assertEquals(true, names.contains("PlanungUnterWochenende"))
+        assertEquals(true, names.contains("Kreise"))
         assertEquals(true, names.contains("Versammlung"))
         assertEquals(true, names.contains("Dienste"))
         assertEquals(true, names.contains("Usererwaltung"))
