@@ -1,6 +1,8 @@
 package de.geosphere.congregationplaner.data
 
 import de.geosphere.congregationplaner.auth.FirebaseUser
+import de.geosphere.congregationplaner.circuit.data.unavailableCircuitRepository
+import de.geosphere.congregationplaner.circuit.domain.model.Circuit
 import de.geosphere.congregationplaner.congregation.data.unavailableCongregationMetadataRepository
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
 import de.geosphere.congregationplaner.user.data.unavailableUserRepository
@@ -36,6 +38,16 @@ class UnavailableRepositoriesTest {
         assertIs<UnsupportedOperationException>(
             repository.save(CongregationMetadata(name = "Berlin")).exceptionOrNull(),
         )
+        assertIs<UnsupportedOperationException>(repository.delete("609a").exceptionOrNull())
+        assertFailsWith<UnsupportedOperationException> { repository.observeAll().first() }
+    }
+
+    @Test
+    fun `unavailable circuit repository reports the platform`(): Unit = runBlocking {
+        val repository = unavailableCircuitRepository("iOS")
+
+        assertIs<UnsupportedOperationException>(repository.create(Circuit(id = "609a")).exceptionOrNull())
+        assertIs<UnsupportedOperationException>(repository.update(Circuit(id = "609a")).exceptionOrNull())
         assertIs<UnsupportedOperationException>(repository.delete("609a").exceptionOrNull())
         assertFailsWith<UnsupportedOperationException> { repository.observeAll().first() }
     }
