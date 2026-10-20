@@ -10,7 +10,10 @@ sealed interface UserAccessState {
     /** Es ist kein Nutzer angemeldet. */
     data object Unauthenticated : UserAccessState
 
-    /** Der Nutzer ist angemeldet, aber noch nicht für die App freigegeben. */
+    /** Der Nutzer ist angemeldet, hat aber noch keine Versammlung gewählt. */
+    data object CongregationRequired : UserAccessState
+
+    /** Der Nutzer ist angemeldet, aber vom Versammlungsadmin noch nicht freigegeben. */
     data class NeedsApproval(val user: AppUser) : UserAccessState
 
     /** Der Nutzer ist angemeldet und freigegeben. */

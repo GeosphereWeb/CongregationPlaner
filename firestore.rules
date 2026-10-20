@@ -1,0 +1,169 @@
+rules_version = '2';
+
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: admins
+// Document ID: Firebase Auth UID
+// Fields: none required. The existence of the document marks a global
+//   administrator. Documents are created manually (Firebase console / Admin SDK).
+//
+// Organization hierarchy (readable WITHOUT sign-in so that a user can pick the
+// congregation on the login screen; only the documents of the hierarchy are
+// public, not their other subcollections):
+//   region/{regionId}
+//     subregion/{subregionId}
+//       branch/{branchId}
+//         circuit/{circuitId}          - name: string, overseer_name: string
+//           congregation/{congId}      - name: string, meeting times/weekdays
+//
+// Collection: region/.../congregation/{congId}/members
+// Document ID: Firebase Auth UID of the member
+// Fields:
+//   - email: string | null (required, immutable) - copied from the auth token
+//   - displayName: string | null (required, immutable, <= 200 chars)
+//   - approved: bool (required) - set by the congregation admin
+//   - role: string (required, 'CONGREGATION_ADMIN' | 'MEMBER')
+//   - permissions: list<string> (required, values from ['DUMMY'])
+//
+// ===============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isGlobalAdmin() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Approved congregation admin of exactly this congregation.
+    function isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) {
+      let memberPath = /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/circuit/$(circuitId)/congregation/$(congId)/members/$(request.auth.uid);
+      return isAuthenticated() &&
+        exists(memberPath) &&
+        get(memberPath).data.approved == true &&
+        get(memberPath).data.role == 'CONGREGATION_ADMIN';
+    }
+
+    function isValidRole(role) {
+      return role in ['CONGREGATION_ADMIN', 'MEMBER'];
+    }
+
+    function isValidPermissions(permissions) {
+      return permissions is list &&
+        permissions.size() <= 10 &&
+        permissions.toSet().hasOnly(['DUMMY']);
+    }
+
+    function isNullableString(value, maxLen) {
+      return value == null || (value is string && value.size() <= maxLen);
+    }
+
+    // Validator for every member document after create or update.
+    function isValidMember(data) {
+      return data.keys().hasOnly(['email', 'displayName', 'approved', 'role', 'permissions']) &&
+        data.keys().hasAll(['email', 'displayName', 'approved', 'role', 'permissions']) &&
+        isNullableString(data.email, 320) &&
+        isNullableString(data.displayName, 200) &&
+        data.approved is bool &&
+        isValidRole(data.role) &&
+        isValidPermissions(data.permissions);
+    }
+
+    // A user may only register themselves: unapproved, plain member, default permission,
+    // with the e-mail address from their auth token.
+    function isValidSelfRegistration(uid) {
+      let data = request.resource.data;
+      return isAuthenticated() &&
+        request.auth.uid == uid &&
+        isValidMember(data) &&
+        data.approved == false &&
+        data.role == 'MEMBER' &&
+        data.permissions == ['DUMMY'] &&
+        data.email == request.auth.token.get('email', null);
+    }
+
+    // Admins may only change access fields; e-mail and name stay as registered.
+    function onlyAccessFieldsChanged() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['approved', 'role', 'permissions']);
+    }
+
+    // ===============================================================
+    // Global administrators
+    // ===============================================================
+
+    match /admins/{uid} {
+      // Each user may check whether they are a global admin; nobody may write via the client.
+      allow get: if isAuthenticated() && request.auth.uid == uid;
+      allow list, write: if false;
+    }
+
+    // ===============================================================
+    // Organization hierarchy
+    // ===============================================================
+
+    match /region/{regionId} {
+      allow read: if true;
+      allow write: if isGlobalAdmin();
+
+      match /subregion/{subregionId} {
+        allow read: if true;
+        allow write: if isGlobalAdmin();
+
+        match /branch/{branchId} {
+          allow read: if true;
+          allow write: if isGlobalAdmin();
+
+          match /circuit/{circuitId} {
+            allow read: if true;
+            allow write: if isGlobalAdmin();
+
+            match /congregation/{congId} {
+              allow read: if true;
+              allow write: if isGlobalAdmin();
+
+              // ---------------------------------------------------------
+              // Members of a congregation
+              // ---------------------------------------------------------
+              match /members/{uid} {
+                allow get: if isAuthenticated() && (
+                  request.auth.uid == uid ||
+                  isGlobalAdmin() ||
+                  isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId)
+                );
+
+                allow list: if isGlobalAdmin() ||
+                  isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId);
+
+                allow create: if isValidSelfRegistration(uid);
+
+                // Admins cannot change their own membership, so nobody locks themselves out.
+                allow update: if isAuthenticated() &&
+                  request.auth.uid != uid &&
+                  (isGlobalAdmin() || isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId)) &&
+                  onlyAccessFieldsChanged() &&
+                  isValidMember(request.resource.data);
+
+                allow delete: if isAuthenticated() && (
+                  request.auth.uid == uid ||
+                  isGlobalAdmin() ||
+                  isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId)
+                );
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

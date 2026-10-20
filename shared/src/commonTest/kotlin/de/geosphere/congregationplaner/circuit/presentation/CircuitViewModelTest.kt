@@ -28,8 +28,8 @@ import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CircuitViewModelTest {
-    private val admin = AppUser(uid = "admin", approved = true, role = UserRole.ADMIN)
-    private val planer = AppUser(uid = "planer", approved = true, role = UserRole.SPEAKING_PLANER)
+    private val admin = AppUser(uid = "admin", approved = true, isGlobalAdmin = true)
+    private val planer = AppUser(uid = "planer", approved = true, role = UserRole.CONGREGATION_ADMIN)
     private val north = Circuit(id = "609a", name = "Nord")
     private val south = Circuit(id = "610b", name = "Süd")
 

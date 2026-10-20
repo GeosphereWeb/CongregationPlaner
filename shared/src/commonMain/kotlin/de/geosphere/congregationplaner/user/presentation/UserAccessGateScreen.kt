@@ -30,7 +30,12 @@ import de.geosphere.congregationplaner.user.domain.model.UserAccessState
  * Wird angezeigt, solange ein angemeldeter Nutzer (noch) keinen Zugriff auf die App hat.
  */
 @Composable
-internal fun UserAccessGateScreen(state: UserAccessState, onRefresh: () -> Unit, onSignOut: () -> Unit) {
+internal fun UserAccessGateScreen(
+    state: UserAccessState,
+    onRefresh: () -> Unit,
+    onChangeCongregation: () -> Unit,
+    onSignOut: () -> Unit,
+) {
     Box(
         modifier = Modifier.fillMaxSize().background(brush = Brush.backgroundBrush),
         contentAlignment = Alignment.Center,
@@ -38,15 +43,17 @@ internal fun UserAccessGateScreen(state: UserAccessState, onRefresh: () -> Unit,
         when (state) {
             UserAccessState.Loading,
             UserAccessState.Unauthenticated,
+            UserAccessState.CongregationRequired,
             is UserAccessState.Authorized,
             -> CircularProgressIndicator()
 
             is UserAccessState.NeedsApproval -> GateCard(
                 title = "Freigabe ausstehend",
                 message = "Dein Konto ${state.user.email.orEmpty()} wurde angelegt, ist aber noch nicht " +
-                    "freigegeben. Bitte wende dich an einen Administrator.",
+                    "freigegeben. Bitte wende dich an den Admin deiner Versammlung.",
                 primaryAction = "Status prüfen",
                 onPrimaryAction = onRefresh,
+                onChangeCongregation = onChangeCongregation,
                 onSignOut = onSignOut,
             )
 
@@ -55,6 +62,7 @@ internal fun UserAccessGateScreen(state: UserAccessState, onRefresh: () -> Unit,
                 message = state.message,
                 primaryAction = "Erneut versuchen",
                 onPrimaryAction = onRefresh,
+                onChangeCongregation = onChangeCongregation,
                 onSignOut = onSignOut,
             )
         }
@@ -68,6 +76,7 @@ private fun GateCard(
     message: String,
     primaryAction: String,
     onPrimaryAction: () -> Unit,
+    onChangeCongregation: () -> Unit,
     onSignOut: () -> Unit,
 ) {
     Card(
@@ -83,6 +92,9 @@ private fun GateCard(
             Button(onClick = onPrimaryAction, modifier = Modifier.fillMaxWidth()) {
                 Text(primaryAction)
             }
+            TextButton(onClick = onChangeCongregation, modifier = Modifier.fillMaxWidth()) {
+                Text("Andere Versammlung wählen")
+            }
             TextButton(onClick = onSignOut, modifier = Modifier.fillMaxWidth()) {
                 Text("Abmelden")
             }
@@ -96,6 +108,7 @@ private fun UserAccessGateNeedsApprovalPreview() = PreviewThemeWrapper {
     UserAccessGateScreen(
         state = UserAccessState.NeedsApproval(AppUser(uid = "1", email = "neu@congregationplaner.de")),
         onRefresh = {},
+        onChangeCongregation = {},
         onSignOut = {},
     )
 }
@@ -106,6 +119,7 @@ private fun UserAccessGateErrorPreview() = PreviewThemeWrapper {
     UserAccessGateScreen(
         state = UserAccessState.Error("Firestore is not configured for iOS."),
         onRefresh = {},
+        onChangeCongregation = {},
         onSignOut = {},
     )
 }
