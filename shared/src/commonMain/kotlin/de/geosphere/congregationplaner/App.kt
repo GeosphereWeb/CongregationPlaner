@@ -46,6 +46,7 @@ import congregationplaner.shared.generated.resources.Res
 import congregationplaner.shared.generated.resources.dummy
 import de.geosphere.congregationplaner.auth.FirebaseAuthManager
 import de.geosphere.congregationplaner.auth.FirebaseSupport
+import de.geosphere.congregationplaner.circuit.presentation.CircuitRoute
 import de.geosphere.congregationplaner.congregation.presentation.CongregationMetadataRoute
 import de.geosphere.congregationplaner.theming.AppTheme
 import de.geosphere.congregationplaner.theming.brushes.backgroundBrush
@@ -382,6 +383,8 @@ fun DesktopLayout(
 
                     "planung_wochenende" -> Text("Vortragsplanung und WT Leiter")
 
+                    "circuit" -> CircuitRoute(currentUser)
+
                     "versammlung_metadata" -> CongregationMetadataRoute(currentUser)
 
                     "dienste" -> Text("Diensteta")
@@ -462,6 +465,7 @@ fun MobileLayout(
                     when (selectedRoute) {
                         "home" -> Text("Home Content")
                         "settings" -> Text("Settings Content")
+                        "circuit" -> CircuitRoute(currentUser)
                         "versammlung_metadata" -> CongregationMetadataRoute(currentUser)
                         else -> Text("Select a navigation item")
                     }
