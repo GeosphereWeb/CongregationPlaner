@@ -1,6 +1,7 @@
 package de.geosphere.congregationplaner.user.domain.usecase
 
 import de.geosphere.congregationplaner.auth.FirebaseUser
+import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.UserAccessState
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
@@ -14,24 +15,30 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
 /**
- * Ermittelt den [UserAccessState] für den angemeldeten Firebase-Nutzer und hält ihn aktuell,
- * sodass Freigaben und Rollenänderungen ohne erneute Anmeldung wirksam werden.
+ * Ermittelt den [UserAccessState] für den angemeldeten Firebase-Nutzer in der gewählten Versammlung und
+ * hält ihn aktuell, sodass Freigaben und Rollenänderungen ohne erneute Anmeldung wirksam werden.
  */
 @Inject
 class ObserveUserAccessUseCase(private val userRepository: UserRepository) {
-    operator fun invoke(authUser: FirebaseUser?): Flow<UserAccessState> {
+    operator fun invoke(authUser: FirebaseUser?, congregation: CongregationRef?): Flow<UserAccessState> {
         if (authUser == null) return flowOf(UserAccessState.Unauthenticated)
+        if (congregation == null) return flowOf(UserAccessState.CongregationRequired)
 
         return flow {
             emit(UserAccessState.Loading)
-            val user = userRepository.getOrCreateUser(authUser).getOrElse { exception ->
+            val isGlobalAdmin = userRepository.isGlobalAdmin(authUser.uid).getOrElse { exception ->
                 emit(UserAccessState.Error(exception.message ?: DEFAULT_ERROR_MESSAGE))
                 return@flow
             }
-            emit(user.toAccessState())
+            val user = userRepository.getOrCreateUser(authUser, congregation).getOrElse { exception ->
+                emit(UserAccessState.Error(exception.message ?: DEFAULT_ERROR_MESSAGE))
+                return@flow
+            }
+            emit(user.copy(isGlobalAdmin = isGlobalAdmin).toAccessState())
             emitAll(
-                userRepository.observeUser(authUser.uid).map { observed ->
-                    observed?.toAccessState() ?: UserAccessState.Error(MISSING_USER_MESSAGE)
+                userRepository.observeUser(congregation, authUser.uid).map { observed ->
+                    observed?.copy(isGlobalAdmin = isGlobalAdmin)?.toAccessState()
+                        ?: UserAccessState.Error(MISSING_USER_MESSAGE)
                 },
             )
         }.catch { exception ->
@@ -40,7 +47,8 @@ class ObserveUserAccessUseCase(private val userRepository: UserRepository) {
         }
     }
 
-    private fun AppUser.toAccessState(): UserAccessState = if (approved) {
+    // Globale Admins brauchen keine Freigabe durch den Versammlungsadmin.
+    private fun AppUser.toAccessState(): UserAccessState = if (approved || isGlobalAdmin) {
         UserAccessState.Authorized(this)
     } else {
         UserAccessState.NeedsApproval(this)

@@ -7,13 +7,16 @@ import com.google.firebase.firestore.EventListener
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.Source
 import de.geosphere.congregationplaner.auth.FirebaseUser
+import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.testing.assertFailure
 import de.geosphere.congregationplaner.testing.failedTask
 import de.geosphere.congregationplaner.testing.successTask
 import de.geosphere.congregationplaner.testing.withMockedLog
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.UserPermission
 import de.geosphere.congregationplaner.user.domain.model.UserRole
 import io.mockk.every
 import io.mockk.mockk
@@ -26,15 +29,19 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class FirestoreUserRepositoryTest {
     private val firestore = mockk<FirebaseFirestore>()
     private val collection = mockk<CollectionReference>()
     private val document = mockk<DocumentReference>()
+    private val adminDocument = mockk<DocumentReference>()
     private val registration = mockk<ListenerRegistration>(relaxed = true)
     private val repository = FirestoreUserRepository(firestore)
+    private val congregation = CongregationRef("EMEA", "europe", "central-europe", "609a", "berlin")
 
     private val authUser = object : FirebaseUser {
         override val uid: String = "uid-1"
@@ -44,31 +51,52 @@ class FirestoreUserRepositoryTest {
     }
 
     init {
-        every { firestore.collection(USERS_COLLECTION_PATH) } returns collection
+        every { firestore.collection(congregation.membersPath) } returns collection
         every { collection.document("uid-1") } returns document
+        every { firestore.collection(ADMINS_COLLECTION_PATH) } returns mockk {
+            every { document("uid-1") } returns adminDocument
+        }
     }
 
     @Test
-    fun `getOrCreateUser reads existing user from server`() = runBlocking {
-        every { document.get(Source.SERVER) } returns successTask(userSnapshot(approved = true, role = "ADMIN"))
+    fun `getOrCreateUser reads existing member from server`() = runBlocking {
+        every { document.get(Source.SERVER) } returns successTask(
+            memberSnapshot(approved = true, role = "CONGREGATION_ADMIN", permissions = listOf("DUMMY", "UNKNOWN", 1)),
+        )
 
         assertEquals(
-            AppUser("uid-1", "user@example.com", "User", approved = true, role = UserRole.ADMIN),
-            repository.getOrCreateUser(authUser).getOrThrow(),
+            AppUser(
+                "uid-1",
+                "user@example.com",
+                "User",
+                approved = true,
+                role = UserRole.CONGREGATION_ADMIN,
+                permissions = setOf(UserPermission.DUMMY),
+                congregation = congregation,
+            ),
+            repository.getOrCreateUser(authUser, congregation).getOrThrow(),
         )
     }
 
     @Test
-    fun `getOrCreateUser creates unapproved user when document is missing`() = runBlocking {
+    fun `getOrCreateUser creates unapproved member when document is missing`() = runBlocking {
         val missing = mockk<DocumentSnapshot> { every { exists() } returns false }
         val fields = slot<Any>()
         every { document.get(Source.SERVER) } returns successTask(missing)
         every { document.set(capture(fields)) } returns successTask<Void?>(null)
 
-        val user = repository.getOrCreateUser(authUser).getOrThrow()
+        val user = repository.getOrCreateUser(authUser, congregation).getOrThrow()
 
         assertEquals(
-            AppUser("uid-1", "user@example.com", "User", approved = false, role = UserRole.SPEAKING_ASSISTANT),
+            AppUser(
+                "uid-1",
+                "user@example.com",
+                "User",
+                approved = false,
+                role = UserRole.MEMBER,
+                permissions = setOf(UserPermission.DUMMY),
+                congregation = congregation,
+            ),
             user,
         )
         assertEquals(
@@ -76,7 +104,8 @@ class FirestoreUserRepositoryTest {
                 "email" to "user@example.com",
                 "displayName" to "User",
                 "approved" to false,
-                "role" to "SPEAKING_ASSISTANT",
+                "role" to "MEMBER",
+                "permissions" to listOf("DUMMY"),
             ),
             fields.captured,
         )
@@ -87,16 +116,32 @@ class FirestoreUserRepositoryTest {
         val error = IllegalStateException("offline")
         every { document.get(Source.SERVER) } returns failedTask(error)
 
-        runBlocking { assertFailure(error, repository.getOrCreateUser(authUser)) }
+        runBlocking { assertFailure(error, repository.getOrCreateUser(authUser, congregation)) }
     }
 
     @Test
-    fun `observeUser emits mapped user and removes listener`() = runBlocking {
-        emitSnapshot(userSnapshot(approved = null, role = null), null)
+    fun `isGlobalAdmin checks the admins document`() = runBlocking {
+        every { adminDocument.get(Source.SERVER) } returns successTask(mockk { every { exists() } returns true })
+        assertTrue(repository.isGlobalAdmin("uid-1").getOrThrow())
+
+        every { adminDocument.get(Source.SERVER) } returns successTask(mockk { every { exists() } returns false })
+        assertFalse(repository.isGlobalAdmin("uid-1").getOrThrow())
+    }
+
+    @Test
+    fun `observeUser emits mapped member and removes listener`() = runBlocking {
+        emitSnapshot(memberSnapshot(approved = null, role = null, permissions = null), null)
 
         assertEquals(
-            AppUser("uid-1", "user@example.com", "User", approved = false, role = UserRole.NONE),
-            repository.observeUser("uid-1").first(),
+            AppUser(
+                "uid-1",
+                "user@example.com",
+                "User",
+                approved = false,
+                role = UserRole.NONE,
+                congregation = congregation,
+            ),
+            repository.observeUser(congregation, "uid-1").first(),
         )
         verify { registration.remove() }
     }
@@ -104,16 +149,18 @@ class FirestoreUserRepositoryTest {
     @Test
     fun `observeUser emits null for missing documents`() = runBlocking {
         emitSnapshot(null, null)
-        assertNull(repository.observeUser("uid-1").first())
+        assertNull(repository.observeUser(congregation, "uid-1").first())
 
         emitSnapshot(mockk { every { exists() } returns false }, null)
-        assertNull(repository.observeUser("uid-1").first())
+        assertNull(repository.observeUser(congregation, "uid-1").first())
     }
 
     @Test
     fun `observeUser fails for listener errors and unparsable documents`(): Unit = withMockedLog {
         emitSnapshot(null, mockk<FirebaseFirestoreException>(relaxed = true))
-        runBlocking { assertFailsWith<FirebaseFirestoreException> { repository.observeUser("uid-1").first() } }
+        runBlocking {
+            assertFailsWith<FirebaseFirestoreException> { repository.observeUser(congregation, "uid-1").first() }
+        }
 
         val broken = mockk<DocumentSnapshot> {
             every { exists() } returns true
@@ -121,7 +168,52 @@ class FirestoreUserRepositoryTest {
             every { getString("email") } throws RuntimeException("Field 'email' is not a String")
         }
         emitSnapshot(broken, null)
-        runBlocking { assertFailsWith<RuntimeException> { repository.observeUser("uid-1").first() } }
+        runBlocking { assertFailsWith<RuntimeException> { repository.observeUser(congregation, "uid-1").first() } }
+    }
+
+    @Test
+    fun `observeMembers emits mapped members and fails for listener errors`(): Unit = withMockedLog {
+        val listener = slot<EventListener<QuerySnapshot>>()
+        val snapshot = mockk<QuerySnapshot> {
+            every { documents } returns listOf(memberSnapshot(approved = true, role = "MEMBER", permissions = null))
+        }
+        every { collection.addSnapshotListener(capture(listener)) } answers {
+            listener.captured.onEvent(snapshot, null)
+            registration
+        }
+        runBlocking {
+            assertEquals(listOf("uid-1"), repository.observeMembers(congregation).first().map { it.uid })
+        }
+
+        every { collection.addSnapshotListener(capture(listener)) } answers {
+            listener.captured.onEvent(null, mockk<FirebaseFirestoreException>(relaxed = true))
+            registration
+        }
+        runBlocking { assertFailsWith<FirebaseFirestoreException> { repository.observeMembers(congregation).first() } }
+    }
+
+    @Test
+    fun `updateMember writes only access fields`() = runBlocking {
+        val fields = slot<Map<String, Any>>()
+        every { document.update(capture(fields)) } returns successTask<Void?>(null)
+        val member = AppUser(uid = "uid-1", email = "ignored", approved = true, role = UserRole.CONGREGATION_ADMIN)
+
+        assertEquals(member, repository.updateMember(congregation, member).getOrThrow())
+        assertEquals(
+            mapOf("approved" to true, "role" to "CONGREGATION_ADMIN", "permissions" to emptyList<String>()),
+            fields.captured,
+        )
+    }
+
+    @Test
+    fun `removeMember deletes the member document and reports failures`() = withMockedLog {
+        every { document.delete() } returns successTask<Void?>(null)
+        runBlocking { repository.removeMember(congregation, "uid-1").getOrThrow() }
+        verify { document.delete() }
+
+        val error = IllegalStateException("permission-denied")
+        every { document.delete() } returns failedTask(error)
+        runBlocking { assertFailure(error, repository.removeMember(congregation, "uid-1")) }
     }
 
     @Test
@@ -143,12 +235,13 @@ class FirestoreUserRepositoryTest {
         }
     }
 
-    private fun userSnapshot(approved: Boolean?, role: String?): DocumentSnapshot = mockk {
+    private fun memberSnapshot(approved: Boolean?, role: String?, permissions: List<Any>?): DocumentSnapshot = mockk {
         every { exists() } returns true
         every { id } returns "uid-1"
         every { getString("email") } returns "user@example.com"
         every { getString("displayName") } returns "User"
         every { getBoolean("approved") } returns approved
         every { getString("role") } returns role
+        every { this@mockk.get("permissions") } returns permissions
     }
 }

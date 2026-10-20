@@ -11,11 +11,14 @@ import congregationplaner.shared.generated.resources.dummy
 import de.geosphere.congregationplaner.AuthMode
 import de.geosphere.congregationplaner.LoginScreen
 import de.geosphere.congregationplaner.auth.FirebaseSupport
+import de.geosphere.congregationplaner.organization.InviteLinkInbox
 import de.geosphere.congregationplaner.theming.AppTheme
 import org.jetbrains.compose.resources.painterResource
 
-fun main() {
+fun main(args: Array<String>) {
     FirebaseSupport.initialize()
+    // Ein Einladungslink kann als Startargument übergeben werden.
+    InviteLinkInbox.deliver(args.firstOrNull())
 
     application {
         Window(

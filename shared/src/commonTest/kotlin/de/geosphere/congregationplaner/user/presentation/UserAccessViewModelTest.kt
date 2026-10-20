@@ -1,16 +1,15 @@
 package de.geosphere.congregationplaner.user.presentation
 
-import de.geosphere.congregationplaner.auth.FirebaseUser
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.UserAccessState
 import de.geosphere.congregationplaner.user.domain.model.UserRole
 import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
-import de.geosphere.congregationplaner.user.domain.repository.UserRepository
 import de.geosphere.congregationplaner.user.domain.usecase.ObserveUserAccessUseCase
+import de.geosphere.congregationplaner.user.testing.FakeUserRepository
+import de.geosphere.congregationplaner.user.testing.testAuthUser
+import de.geosphere.congregationplaner.user.testing.testCongregation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -23,12 +22,7 @@ import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class UserAccessViewModelTest {
-    private val authUser = object : FirebaseUser {
-        override val uid: String = "uid-1"
-        override val email: String? = "user@example.com"
-        override val displayName: String? = null
-        override val idToken: String? = null
-    }
+    private val authUser = testAuthUser()
     private val pending = AppUser(uid = "uid-1", approved = false)
 
     private lateinit var repository: FakeUserRepository
@@ -59,11 +53,20 @@ class UserAccessViewModelTest {
     }
 
     @Test
-    fun `signed in user follows approval changes`() {
-        viewModel.onSignedIn(authUser)
-        assertEquals(UserAccessState.NeedsApproval(pending), viewModel.accessState.value)
+    fun `signed in user without congregation must select one`() {
+        viewModel.onSignedIn(authUser, null)
 
-        val approved = pending.copy(approved = true, role = UserRole.ADMIN)
+        assertEquals(UserAccessState.CongregationRequired, viewModel.accessState.value)
+        assertEquals(0, repository.loadCount)
+    }
+
+    @Test
+    fun `signed in user follows approval changes in the selected congregation`() {
+        viewModel.onSignedIn(authUser, testCongregation)
+        assertEquals(UserAccessState.NeedsApproval(pending), viewModel.accessState.value)
+        assertEquals(testCongregation, repository.requestedCongregation)
+
+        val approved = pending.copy(approved = true, role = UserRole.CONGREGATION_ADMIN)
         repository.user.value = approved
         assertEquals(UserAccessState.Authorized(approved), viewModel.accessState.value)
     }
@@ -73,7 +76,7 @@ class UserAccessViewModelTest {
         viewModel.refresh()
         assertEquals(0, repository.loadCount)
 
-        viewModel.onSignedIn(authUser)
+        viewModel.onSignedIn(authUser, testCongregation)
         viewModel.refresh()
         assertEquals(2, repository.loadCount)
 
@@ -84,19 +87,7 @@ class UserAccessViewModelTest {
 
     @Test
     fun `user management permission is delegated to policy`() {
-        assertTrue(viewModel.canManageUsers(AppUser(approved = true, role = UserRole.ADMIN)))
-        assertFalse(viewModel.canManageUsers(AppUser(approved = true, role = UserRole.SPEAKING_PLANER)))
-    }
-
-    private class FakeUserRepository(initial: AppUser) : UserRepository {
-        val user = MutableStateFlow<AppUser?>(initial)
-        var loadCount = 0
-
-        override suspend fun getOrCreateUser(authUser: FirebaseUser): Result<AppUser> {
-            loadCount++
-            return Result.success(checkNotNull(user.value))
-        }
-
-        override fun observeUser(uid: String): Flow<AppUser?> = user
+        assertTrue(viewModel.canManageUsers(AppUser(approved = true, role = UserRole.CONGREGATION_ADMIN)))
+        assertFalse(viewModel.canManageUsers(AppUser(approved = true, role = UserRole.MEMBER)))
     }
 }
