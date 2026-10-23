@@ -51,15 +51,17 @@ class UserManagementViewModelTest {
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         repository = FakeUserRepository(members = listOf(admin, pending))
-        viewModel = UserManagementViewModel(
-            ObserveMembersUseCase(repository),
-            UpdateMemberUseCase(repository),
-            CreateMemberWithoutAccountUseCase(repository),
-            UpdateMemberProfileUseCase(repository),
-            RemoveMemberUseCase(repository),
-            UserPermissionPolicy(),
-        )
+        viewModel = createViewModel()
     }
+
+    private fun createViewModel() = UserManagementViewModel(
+        ObserveMembersUseCase(repository),
+        UpdateMemberUseCase(repository),
+        CreateMemberWithoutAccountUseCase(repository),
+        UpdateMemberProfileUseCase(repository),
+        RemoveMemberUseCase(repository),
+        UserPermissionPolicy(),
+    )
 
     @AfterTest
     fun tearDown() {
@@ -149,6 +151,31 @@ class UserManagementViewModelTest {
     }
 
     @Test
+    fun `removing the selected member closes its details`() {
+        viewModel.onCurrentUserChanged(admin)
+        viewModel.editProfile(pending)
+
+        viewModel.removeMember(pending)
+
+        assertNull(viewModel.uiState.value.editor)
+        assertFalse(viewModel.uiState.value.hasDetail)
+    }
+
+    @Test
+    fun `removing another member keeps the selection`() {
+        val other = pending.copy(uid = "andere", email = "andere@example.com")
+        repository = FakeUserRepository(members = listOf(admin, pending, other))
+        viewModel = createViewModel()
+        viewModel.onCurrentUserChanged(admin)
+        viewModel.editProfile(other)
+
+        viewModel.removeMember(pending)
+
+        assertEquals(other, viewModel.uiState.value.editor?.member)
+        assertTrue(viewModel.uiState.value.hasDetail)
+    }
+
+    @Test
     fun `failures are reported and release the member`() {
         viewModel.onCurrentUserChanged(admin)
         repository.updateResult = Result.failure(IllegalStateException("permission-denied"))
@@ -187,9 +214,10 @@ class UserManagementViewModelTest {
         assertFalse(created.hasAccount)
         assertEquals("Lena Muster", created.label)
         val state = viewModel.uiState.value
-        assertNull(state.editor)
         assertFalse(state.isSaving)
         assertTrue(created in state.members)
+        assertEquals(created, state.editor?.member)
+        assertFalse(state.editor!!.isDirty)
     }
 
     @Test
@@ -214,6 +242,41 @@ class UserManagementViewModelTest {
     }
 
     @Test
+    fun `editor is dirty only after a change and discard keeps the member selected`() {
+        viewModel.onCurrentUserChanged(admin)
+        viewModel.editProfile(pending)
+        assertFalse(viewModel.uiState.value.editor!!.isDirty)
+
+        viewModel.updateEditor(MemberProfile(mobilePhone = "0170"))
+        assertTrue(viewModel.uiState.value.editor!!.isDirty)
+
+        viewModel.discardChanges()
+        val editor = viewModel.uiState.value.editor!!
+        assertEquals(pending, editor.member)
+        assertEquals(pending.profile, editor.profile)
+        assertFalse(editor.isDirty)
+    }
+
+    @Test
+    fun `discard changes without editor does nothing`() {
+        viewModel.onCurrentUserChanged(admin)
+
+        viewModel.discardChanges()
+
+        assertNull(viewModel.uiState.value.editor)
+    }
+
+    @Test
+    fun `discard changes closes a new person`() {
+        viewModel.onCurrentUserChanged(admin)
+        viewModel.addMemberWithoutAccount()
+
+        viewModel.discardChanges()
+
+        assertNull(viewModel.uiState.value.editor)
+    }
+
+    @Test
     fun `admin edits profiles including the own one`() {
         viewModel.onCurrentUserChanged(admin)
         val profile = MemberProfile(lastName = "Admin", firstName = "Anna", category = MemberCategory.SISTER)
@@ -225,7 +288,8 @@ class UserManagementViewModelTest {
         assertEquals(listOf(admin.copy(profile = profile)), repository.updatedProfiles)
         val state = viewModel.uiState.value
         assertEquals(admin.copy(profile = profile), state.members.single { it.uid == admin.uid })
-        assertNull(state.editor)
+        assertEquals(admin.copy(profile = profile), state.editor?.member)
+        assertFalse(state.editor!!.isDirty)
         assertTrue(state.busyMemberIds.isEmpty())
     }
 

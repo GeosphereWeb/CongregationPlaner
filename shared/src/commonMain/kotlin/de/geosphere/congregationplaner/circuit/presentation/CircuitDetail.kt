@@ -40,6 +40,7 @@ internal fun CircuitDetail(
             editor = editor,
             isSaving = isSaving,
             isBusy = isBusy,
+            isDirty = editor.isDirty,
             onChange = onChange,
             onSave = onSave,
             onCancel = onCancel,

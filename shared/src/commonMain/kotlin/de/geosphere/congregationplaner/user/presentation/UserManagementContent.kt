@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner.user.presentation
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -27,8 +28,6 @@ import androidx.compose.material3.adaptive.layout.AnimatedPane
 import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffold
 import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
 import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
-import androidx.compose.material3.adaptive.layout.ThreePaneScaffoldDestinationItem
-import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -41,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
+import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.user.domain.model.AppUser
@@ -64,6 +64,7 @@ internal data class UserManagementActions(
     val onEditorChange: (MemberProfile) -> Unit = {},
     val onSaveProfile: () -> Unit = {},
     val onCancelEditing: () -> Unit = {},
+    val onDiscardChanges: () -> Unit = {},
     val onDismissError: () -> Unit = {},
 )
 
@@ -85,6 +86,7 @@ fun UserManagementScreen(viewModel: UserManagementViewModel, modifier: Modifier 
             onEditorChange = viewModel::updateEditor,
             onSaveProfile = viewModel::saveProfile,
             onCancelEditing = viewModel::cancelEditing,
+            onDiscardChanges = viewModel::discardChanges,
             onDismissError = viewModel::dismissError,
         ),
     )
@@ -99,23 +101,9 @@ internal fun UserManagementContent(
     modifier: Modifier = Modifier,
 ) {
     val editor = state.editor
-    val navigator = rememberListDetailPaneScaffoldNavigator<Nothing>(
-        initialDestinationHistory = listOf(ThreePaneScaffoldDestinationItem(ListDetailPaneScaffoldRole.List)),
-    )
-    val hasEditor = editor != null
-    LaunchedEffect(hasEditor) {
-        if (hasEditor) {
-            navigator.navigateTo(ListDetailPaneScaffoldRole.Detail)
-        } else if (navigator.currentDestination?.pane == ListDetailPaneScaffoldRole.Detail) {
-            navigator.navigateBack()
-        }
-    }
-    // System-Zurück im Scaffold bedeutet: Bearbeitung abbrechen
-    LaunchedEffect(navigator.currentDestination?.pane) {
-        if (navigator.currentDestination?.pane == ListDetailPaneScaffoldRole.List && hasEditor) {
-            actions.onCancelEditing()
-        }
-    }
+    val navigator = rememberListDetailNavigation(state, onClose = actions.onCancelEditing)
+    val singlePane = navigator.scaffoldDirective.maxHorizontalPartitions == 1
+    val onCancelEditing = if (singlePane) actions.onCancelEditing else actions.onDiscardChanges
 
     Column(modifier = modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Userverwaltung", style = MaterialTheme.typography.headlineSmall)
@@ -148,7 +136,7 @@ internal fun UserManagementContent(
                     ) {
                         state.inviteLink?.let { link -> item { InviteLinkCard(link) } }
                         item {
-                            OutlinedButton(onClick = actions.onAddMemberWithoutAccount, enabled = editor == null) {
+                            OutlinedButton(onClick = actions.onAddMemberWithoutAccount, enabled = !state.isSaving) {
                                 Text("Person ohne Konto hinzufügen")
                             }
                         }
@@ -161,7 +149,8 @@ internal fun UserManagementContent(
                                 member = member,
                                 isCurrentUser = member.uid == state.currentUserId,
                                 enabled = actions.canEdit(member) && !isBusy,
-                                canEditProfile = actions.canEditProfile(member) && !isBusy && editor == null,
+                                selected = editor?.member?.uid == member.uid,
+                                canSelect = actions.canEditProfile(member) && !isBusy,
                                 actions = actions,
                             )
                         }
@@ -183,9 +172,10 @@ internal fun UserManagementContent(
                             MemberEditor(
                                 editor = editor,
                                 isSaving = state.isSaving,
+                                isDirty = editor.isDirty,
                                 onChange = actions.onEditorChange,
                                 onSave = actions.onSaveProfile,
-                                onCancel = actions.onCancelEditing,
+                                onCancel = onCancelEditing,
                             )
                         } else {
                             Text("Wähle ein Mitglied zum Bearbeiten aus.")
@@ -245,17 +235,18 @@ private fun MemberCard(
     member: AppUser,
     isCurrentUser: Boolean,
     enabled: Boolean,
-    canEditProfile: Boolean,
+    selected: Boolean,
+    canSelect: Boolean,
     actions: UserManagementActions,
 ) {
     val isPending = member.hasAccount && !member.approved
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable(enabled = canSelect) { actions.onEditProfile(member) },
         colors = CardDefaults.cardColors(
-            containerColor = if (isPending) {
-                MaterialTheme.colorScheme.secondaryContainer
-            } else {
-                MaterialTheme.colorScheme.surface
+            containerColor = when {
+                selected -> MaterialTheme.colorScheme.secondaryContainer
+                isPending -> MaterialTheme.colorScheme.tertiaryContainer
+                else -> MaterialTheme.colorScheme.surface
             },
         ),
     ) {
@@ -286,9 +277,6 @@ private fun MemberCard(
                 AccessSettings(member, enabled, actions)
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (canEditProfile) {
-                    TextButton(onClick = { actions.onEditProfile(member) }) { Text("Angaben bearbeiten") }
-                }
                 if (enabled) {
                     TextButton(onClick = { actions.onRemove(member) }) {
                         Text("Aus der Versammlung entfernen", color = MaterialTheme.colorScheme.error)

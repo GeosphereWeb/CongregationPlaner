@@ -205,6 +205,66 @@ class CongregationMetadataViewModelTest {
         assertFalse(viewModel.uiState.value.permissions.canEditSelection)
     }
 
+    @Test
+    fun `editor is dirty only after a change and clean again after saving`() {
+        val viewModel = createViewModel(admin)
+
+        viewModel.editCongregation(berlin)
+        assertFalse(viewModel.uiState.value.isEditorDirty)
+
+        viewModel.updateEditor(berlin.copy(name = "Berlin-Mitte"))
+        assertTrue(viewModel.uiState.value.isEditorDirty)
+
+        viewModel.saveCongregation()
+        assertFalse(viewModel.uiState.value.isEditorDirty)
+    }
+
+    @Test
+    fun `discard changes keeps the selected congregation but resets edits`() {
+        val viewModel = createViewModel(admin)
+        viewModel.editCongregation(berlin)
+        viewModel.updateEditor(berlin.copy(name = "Berlin-Mitte"))
+
+        viewModel.discardChanges()
+
+        assertEquals(berlin, viewModel.uiState.value.editor)
+        assertFalse(viewModel.uiState.value.isEditorDirty)
+    }
+
+    @Test
+    fun `detail is open exactly while an editor exists`() {
+        val viewModel = createViewModel(admin)
+        assertFalse(viewModel.uiState.value.hasDetail)
+
+        viewModel.editCongregation(berlin)
+        assertTrue(viewModel.uiState.value.hasDetail)
+
+        viewModel.discardChanges()
+        assertTrue(viewModel.uiState.value.hasDetail)
+
+        viewModel.cancelEditing()
+        assertFalse(viewModel.uiState.value.hasDetail)
+    }
+
+    @Test
+    fun `discard changes without editor does nothing`() {
+        val viewModel = createViewModel(admin)
+
+        viewModel.discardChanges()
+
+        assertNull(viewModel.uiState.value.editor)
+    }
+
+    @Test
+    fun `discard changes closes a new congregation`() {
+        val viewModel = createViewModel(admin)
+        viewModel.createCongregation()
+
+        viewModel.discardChanges()
+
+        assertNull(viewModel.uiState.value.editor)
+    }
+
     private fun createViewModel(user: AppUser? = null) = CongregationMetadataViewModel(
         ObserveCongregationsUseCase(repository),
         SaveCongregationUseCase(repository),
