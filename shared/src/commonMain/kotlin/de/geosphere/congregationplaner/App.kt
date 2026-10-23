@@ -7,15 +7,19 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
@@ -132,6 +136,7 @@ fun App() {
                 loginError = loginError,
                 infoMessage = infoMessage,
                 canSignIn = selectedCongregation != null,
+                showCredentials = selectedCongregation != null && !selectionState.isPicking,
                 congregationSelector = { CongregationSelector(selectionViewModel, selectionState) },
                 onEmailChange = { email = it },
                 onPasswordChange = { password = it },
@@ -269,13 +274,15 @@ fun LoginScreen(
     onLoginClick: () -> Unit,
     onGoogleClick: () -> Unit,
     canSignIn: Boolean = true,
+    showCredentials: Boolean = true,
     congregationSelector: @Composable () -> Unit = {},
 ) {
-    Box(
+    Column(
         modifier = Modifier.fillMaxSize().background(
             brush = Brush.linearGradient(listOf(Color(0xFF0B1220), Color(0xFF1E3A5F))),
-        ),
-        contentAlignment = Alignment.Center,
+        ).verticalScroll(rememberScrollState()).imePadding(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
         Card(
             modifier = Modifier.widthIn(min = 300.dp, max = 500.dp).padding(24.dp),
@@ -292,86 +299,19 @@ fun LoginScreen(
                 Text(text = firebaseStatus)
 
                 congregationSelector()
-
-                val title = if (authMode == AuthMode.LOGIN) "Anmeldung" else "Konto erstellen"
-                Text(title)
-
-                Text("E-Mail")
-                BasicTextField(
-                    value = email,
-                    onValueChange = onEmailChange,
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(
-                        capitalization = KeyboardCapitalization.None,
-                        autoCorrectEnabled = false,
-                        keyboardType = KeyboardType.Email,
-                    ),
-                    modifier = Modifier.fillMaxWidth().height(48.dp).border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outline,
-                        shape = RoundedCornerShape(12.dp),
-                    ).padding(horizontal = 12.dp, vertical = 10.dp),
-                )
-
-                Text("Passwort")
-                BasicTextField(
-                    value = password,
-                    onValueChange = onPasswordChange,
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(
-                        capitalization = KeyboardCapitalization.None,
-                        autoCorrectEnabled = false,
-                        keyboardType = KeyboardType.Password,
-                    ),
-                    modifier = Modifier.fillMaxWidth().height(48.dp).border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outline,
-                        shape = RoundedCornerShape(12.dp),
-                    ).padding(horizontal = 12.dp, vertical = 10.dp),
-                    visualTransformation = PasswordVisualTransformation(),
-                )
-
-                if (loginError != null) {
-                    Text(
-                        text = loginError,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
-
-                if (infoMessage != null) {
-                    Text(
-                        text = infoMessage,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-
-                Button(
-                    onClick = onLoginClick,
-                    enabled = canSignIn,
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                ) {
-                    Text(if (authMode == AuthMode.LOGIN) "Anmelden" else "Konto erstellen")
-                }
-
-                Text(
-                    text = "oder",
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                )
-
-                Button(
-                    onClick = onGoogleClick,
-                    enabled = canSignIn,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text("Mit Google fortfahren")
-                }
-
-                Button(
-                    onClick = onToggleMode,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        if (authMode == AuthMode.LOGIN) "Neues Konto erstellen" else "Bereits registriert? Anmelden",
+                if (showCredentials) {
+                    CredentialsForm(
+                        email = email,
+                        password = password,
+                        authMode = authMode,
+                        loginError = loginError,
+                        infoMessage = infoMessage,
+                        canSignIn = canSignIn,
+                        onEmailChange = onEmailChange,
+                        onPasswordChange = onPasswordChange,
+                        onToggleMode = onToggleMode,
+                        onLoginClick = onLoginClick,
+                        onGoogleClick = onGoogleClick,
                     )
                 }
             }
@@ -379,12 +319,113 @@ fun LoginScreen(
     }
 }
 
+/** Zweiter Schritt der Anmeldung: Zugangsdaten, sobald die Versammlung feststeht. */
+@Suppress("LongMethod", "LongParameterList", "MagicNumber")
+@Composable
+private fun ColumnScope.CredentialsForm(
+    email: String,
+    password: String,
+    authMode: AuthMode,
+    loginError: String?,
+    infoMessage: String?,
+    canSignIn: Boolean,
+    onEmailChange: (String) -> Unit,
+    onPasswordChange: (String) -> Unit,
+    onToggleMode: () -> Unit,
+    onLoginClick: () -> Unit,
+    onGoogleClick: () -> Unit,
+) {
+    val title = if (authMode == AuthMode.LOGIN) "Anmeldung" else "Konto erstellen"
+    Text(title)
+
+    Text("E-Mail")
+    BasicTextField(
+        value = email,
+        onValueChange = onEmailChange,
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(
+            capitalization = KeyboardCapitalization.None,
+            autoCorrectEnabled = false,
+            keyboardType = KeyboardType.Email,
+        ),
+        modifier = Modifier.fillMaxWidth().height(48.dp).border(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outline,
+            shape = RoundedCornerShape(12.dp),
+        ).padding(horizontal = 12.dp, vertical = 10.dp),
+    )
+
+    Text("Passwort")
+    BasicTextField(
+        value = password,
+        onValueChange = onPasswordChange,
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(
+            capitalization = KeyboardCapitalization.None,
+            autoCorrectEnabled = false,
+            keyboardType = KeyboardType.Password,
+        ),
+        modifier = Modifier.fillMaxWidth().height(48.dp).border(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outline,
+            shape = RoundedCornerShape(12.dp),
+        ).padding(horizontal = 12.dp, vertical = 10.dp),
+        visualTransformation = PasswordVisualTransformation(),
+    )
+
+    if (loginError != null) {
+        Text(
+            text = loginError,
+            color = MaterialTheme.colorScheme.error,
+        )
+    }
+
+    if (infoMessage != null) {
+        Text(
+            text = infoMessage,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
+
+    Button(
+        onClick = onLoginClick,
+        enabled = canSignIn,
+        modifier = Modifier.fillMaxWidth().height(48.dp),
+    ) {
+        Text(if (authMode == AuthMode.LOGIN) "Anmelden" else "Konto erstellen")
+    }
+
+    Text(
+        text = "oder",
+        modifier = Modifier.align(Alignment.CenterHorizontally),
+    )
+
+    Button(
+        onClick = onGoogleClick,
+        enabled = canSignIn,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text("Mit Google fortfahren")
+    }
+
+    Button(
+        onClick = onToggleMode,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            if (authMode == AuthMode.LOGIN) "Neues Konto erstellen" else "Bereits registriert? Anmelden",
+        )
+    }
+}
+
 /** Für bereits angemeldete Nutzer, deren Versammlung noch nicht feststeht (z. B. nach einem Update). */
 @Composable
 private fun CongregationRequiredScreen(onSignOut: () -> Unit, selector: @Composable () -> Unit) {
-    Box(
-        modifier = Modifier.fillMaxSize().background(brush = Brush.backgroundBrush),
-        contentAlignment = Alignment.Center,
+    Column(
+        modifier = Modifier.fillMaxSize().background(brush = Brush.backgroundBrush)
+            .verticalScroll(rememberScrollState()).imePadding(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
         Card(
             modifier = Modifier.widthIn(min = 300.dp, max = 500.dp).padding(24.dp),
