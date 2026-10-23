@@ -5,7 +5,9 @@ import de.geosphere.congregationplaner.organization.data.KeyValueCongregationSel
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class CongregationRefTest {
     private val ref = CongregationRef("EMEA", "europe", "central-europe", "609a", "berlin")
@@ -23,10 +25,31 @@ class CongregationRefTest {
     }
 
     @Test
-    fun `invite links and plain paths round trip`() {
-        assertEquals("congregationplaner://join/$path", ref.toInviteLink())
-        assertEquals(ref, CongregationRef.parse(ref.toInviteLink()))
-        assertEquals(ref, CongregationRef.parse("  /$path/ "))
+    fun `invite links are encrypted and round trip`() {
+        val link = ref.toInviteLink()
+
+        assertTrue(link.startsWith(CongregationRef.INVITE_LINK_PREFIX))
+        val token = link.removePrefix(CongregationRef.INVITE_LINK_PREFIX)
+        listOf("EMEA", "berlin", "region").forEach { part ->
+            assertFalse(part in token, "link must not reveal '$part'")
+        }
+        assertEquals(ref, CongregationRef.parse(link))
+        assertEquals(ref, CongregationRef.parse("  $token  "))
+        val hamburg = ref.copy(congregationId = "hamburg")
+        assertEquals(hamburg, CongregationRef.parse(hamburg.toInviteLink()))
+        assertEquals(ref, CongregationRef.fromDocumentPath("  /$path/ "))
+    }
+
+    @Test
+    fun `plain paths and tampered links are rejected`() {
+        val link = ref.toInviteLink()
+        val tampered = link.dropLast(2) + if (link.endsWith("AA")) "BB" else "AA"
+
+        assertNull(CongregationRef.parse(path))
+        assertNull(CongregationRef.parse("  /$path/ "))
+        assertNull(CongregationRef.parse("congregationplaner://join/$path"))
+        assertNull(CongregationRef.parse(tampered))
+        assertNull(CongregationRef.parse("${CongregationRef.INVITE_LINK_PREFIX}kein-gueltiger-link"))
     }
 
     @Test
@@ -39,7 +62,7 @@ class CongregationRefTest {
             "region/EMEA/subregion/europe/branch/central-europe/circuit/609a/congregation/..",
             "region/EMEA/subregion/europe/branch/central-europe/circuit/609a/congregation/ber lin",
             "region//subregion/europe/branch/central-europe/circuit/609a/congregation/berlin",
-        ).forEach { input -> assertNull(CongregationRef.parse(input), "parse($input)") }
+        ).forEach { input -> assertNull(CongregationRef.fromDocumentPath(input), "fromDocumentPath($input)") }
         assertNull(CongregationRef.fromIds(listOf("EMEA", "europe")))
     }
 
