@@ -92,6 +92,16 @@ class CongregationSelectionViewModel(
         mutableUiState.update { it.copy(inviteLinkInput = input, errorMessage = null) }
     }
 
+    /** Übernimmt einen Einladungslink aus der Zwischenablage; ohne Text gibt es eine Fehlermeldung. */
+    fun pasteInviteLink(clipboardText: String?) {
+        if (clipboardText.isNullOrBlank()) {
+            mutableUiState.update { it.copy(errorMessage = EMPTY_CLIPBOARD_MESSAGE) }
+            return
+        }
+        onInviteLinkChanged(clipboardText)
+        applyInviteLink(clipboardText)
+    }
+
     /** Übernimmt die Versammlung aus einem Einladungslink, nachdem geprüft wurde, dass es sie gibt. */
     fun applyInviteLink(link: String = mutableUiState.value.inviteLinkInput) {
         val ref = CongregationRef.parse(link)
@@ -180,6 +190,7 @@ class CongregationSelectionViewModel(
 
     private companion object {
         const val INVALID_LINK_MESSAGE = "Der Einladungslink ist ungültig."
+        const val EMPTY_CLIPBOARD_MESSAGE = "Die Zwischenablage enthält keinen Text."
         const val UNKNOWN_LINK_MESSAGE = "Die Versammlung aus dem Einladungslink wurde nicht gefunden."
     }
 }
