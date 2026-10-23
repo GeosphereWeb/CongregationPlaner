@@ -24,6 +24,7 @@ internal fun CongregationEditor(
     congregation: CongregationMetadata,
     isSaving: Boolean,
     isBusy: Boolean,
+    isDirty: Boolean,
     onChange: (CongregationMetadata) -> Unit,
     onSave: () -> Unit,
     onCancel: () -> Unit,
@@ -65,7 +66,7 @@ internal fun CongregationEditor(
                 onTimeChange = { onChange(congregation.copy(weekendMeetingTime = it)) },
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onSave, enabled = !isBusy) {
+                Button(onClick = onSave, enabled = !isBusy && isDirty) {
                     Text(if (isSaving) "Speichert …" else "Speichern")
                 }
                 TextButton(onClick = onCancel, enabled = !isBusy) {
@@ -83,6 +84,7 @@ private fun CongregationEditorPreview() = PreviewThemeWrapper {
         congregation = previewCongregations.first(),
         isSaving = false,
         isBusy = false,
+        isDirty = true,
         onChange = {},
         onSave = {},
         onCancel = {},

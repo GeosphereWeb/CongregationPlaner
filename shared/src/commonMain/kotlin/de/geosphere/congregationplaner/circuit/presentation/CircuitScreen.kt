@@ -17,6 +17,7 @@ fun CircuitScreen(viewModel: CircuitViewModel, modifier: Modifier = Modifier) {
         onUpdate = viewModel::updateEditor,
         onSave = viewModel::saveCircuit,
         onCancel = viewModel::cancelEditing,
+        onDiscard = viewModel::discardChanges,
         onDelete = viewModel::deleteCircuit,
     )
 }

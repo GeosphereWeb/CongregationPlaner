@@ -7,6 +7,7 @@ import de.geosphere.congregationplaner.circuit.domain.usecase.CreateCircuitUseCa
 import de.geosphere.congregationplaner.circuit.domain.usecase.DeleteCircuitUseCase
 import de.geosphere.congregationplaner.circuit.domain.usecase.ObserveCircuitsUseCase
 import de.geosphere.congregationplaner.circuit.domain.usecase.UpdateCircuitUseCase
+import de.geosphere.congregationplaner.presentation.components.ListDetailState
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.permission.CircuitPermissionPolicy
 import dev.zacsweers.metro.Inject
@@ -27,17 +28,21 @@ data class CircuitPermissions(
  * Der gerade bearbeitete Kreis. Da die Kreisnummer fachlich vergeben wird, lässt sich ein neuer Kreis
  * nicht an einer leeren ID erkennen; [isNew] steuert daher Anlegen vs. Aktualisieren.
  */
-data class CircuitEditorState(val circuit: Circuit, val isNew: Boolean)
+data class CircuitEditorState(val circuit: Circuit, val isNew: Boolean, val original: Circuit = circuit) {
+    val isDirty: Boolean get() = circuit != original
+}
 
 data class CircuitUiState(
     val circuits: List<Circuit> = emptyList(),
     val editor: CircuitEditorState? = null,
     val isLoading: Boolean = true,
-    val isSaving: Boolean = false,
+    override val isSaving: Boolean = false,
     val isDeleting: Boolean = false,
-    val errorMessage: String? = null,
+    override val errorMessage: String? = null,
     val permissions: CircuitPermissions = CircuitPermissions(),
-)
+) : ListDetailState {
+    override val hasDetail: Boolean get() = editor != null
+}
 
 @Inject
 class CircuitViewModel(
@@ -93,6 +98,14 @@ class CircuitViewModel(
 
     fun cancelEditing() {
         updateState { it.copy(editor = null, errorMessage = null) }
+    }
+
+    /** Verwirft Änderungen, lässt aber den ausgewählten Kreis geöffnet; ein neuer, ungespeicherter Kreis wird geschlossen. */
+    fun discardChanges() {
+        updateState { state ->
+            val editor = state.editor?.takeUnless { it.isNew }?.let { it.copy(circuit = it.original) }
+            state.copy(editor = editor, errorMessage = null)
+        }
     }
 
     fun saveCircuit() {
