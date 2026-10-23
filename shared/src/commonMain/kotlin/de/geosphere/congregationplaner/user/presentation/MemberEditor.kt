@@ -31,6 +31,7 @@ import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 internal fun MemberEditor(
     editor: MemberEditorState,
     isSaving: Boolean,
+    isDirty: Boolean,
     onChange: (MemberProfile) -> Unit,
     onSave: () -> Unit,
     onCancel: () -> Unit,
@@ -94,7 +95,7 @@ internal fun MemberEditor(
                 keyboardType = KeyboardType.Phone,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onSave, enabled = !isSaving) {
+                Button(onClick = onSave, enabled = !isSaving && isDirty) {
                     Text(if (isSaving) "Speichert …" else "Speichern")
                 }
                 TextButton(onClick = onCancel, enabled = !isSaving) {
@@ -146,6 +147,7 @@ private fun MemberEditorPreview() = PreviewThemeWrapper {
             member = AppUser(uid = "1", email = "max@example.com"),
         ),
         isSaving = false,
+        isDirty = true,
         onChange = {},
         onSave = {},
         onCancel = {},

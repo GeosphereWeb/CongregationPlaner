@@ -24,6 +24,7 @@ internal fun CircuitEditor(
     editor: CircuitEditorState,
     isSaving: Boolean,
     isBusy: Boolean,
+    isDirty: Boolean,
     onChange: (Circuit) -> Unit,
     onSave: () -> Unit,
     onCancel: () -> Unit,
@@ -70,7 +71,7 @@ internal fun CircuitEditor(
                 singleLine = true,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onSave, enabled = !isBusy) {
+                Button(onClick = onSave, enabled = !isBusy && isDirty) {
                     Text(if (isSaving) "Speichert …" else "Speichern")
                 }
                 TextButton(onClick = onCancel, enabled = !isBusy) {
@@ -88,6 +89,7 @@ private fun CircuitEditorPreview() = PreviewThemeWrapper {
         editor = CircuitEditorState(previewCircuits.first(), isNew = false),
         isSaving = false,
         isBusy = false,
+        isDirty = true,
         onChange = {},
         onSave = {},
         onCancel = {},

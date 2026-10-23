@@ -206,6 +206,65 @@ class CircuitViewModelTest {
         assertFalse(viewModel.uiState.value.permissions.canEditSelection)
     }
 
+    @Test
+    fun `editor is dirty only after a change and clean again after saving`() {
+        val viewModel = createViewModel(admin)
+
+        viewModel.editCircuit(north)
+        assertFalse(viewModel.uiState.value.editor!!.isDirty)
+
+        viewModel.updateEditor(north.copy(name = "Nord-Ost"))
+        assertTrue(viewModel.uiState.value.editor!!.isDirty)
+
+        viewModel.saveCircuit()
+        assertFalse(viewModel.uiState.value.editor!!.isDirty)
+    }
+
+    @Test
+    fun `discard changes keeps the selected circuit but resets edits`() {
+        val viewModel = createViewModel(admin)
+        viewModel.editCircuit(north)
+        viewModel.updateEditor(north.copy(name = "Nord-Ost"))
+
+        viewModel.discardChanges()
+
+        assertEquals(CircuitEditorState(north, isNew = false), viewModel.uiState.value.editor)
+    }
+
+    @Test
+    fun `detail is open exactly while an editor exists`() {
+        val viewModel = createViewModel(admin)
+        assertFalse(viewModel.uiState.value.hasDetail)
+
+        viewModel.editCircuit(north)
+        assertTrue(viewModel.uiState.value.hasDetail)
+
+        viewModel.discardChanges()
+        assertTrue(viewModel.uiState.value.hasDetail)
+
+        viewModel.cancelEditing()
+        assertFalse(viewModel.uiState.value.hasDetail)
+    }
+
+    @Test
+    fun `discard changes without editor does nothing`() {
+        val viewModel = createViewModel(admin)
+
+        viewModel.discardChanges()
+
+        assertNull(viewModel.uiState.value.editor)
+    }
+
+    @Test
+    fun `discard changes closes a new circuit`() {
+        val viewModel = createViewModel(admin)
+        viewModel.createCircuit()
+
+        viewModel.discardChanges()
+
+        assertNull(viewModel.uiState.value.editor)
+    }
+
     private fun createViewModel(user: AppUser? = null) = CircuitViewModel(
         ObserveCircuitsUseCase(repository),
         CreateCircuitUseCase(repository),

@@ -3,6 +3,7 @@ package de.geosphere.congregationplaner.user.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
+import de.geosphere.congregationplaner.presentation.components.ListDetailState
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.UserPermission
@@ -22,8 +23,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** Die gerade bearbeiteten persönlichen Angaben; [member] ist `null`, solange eine neue Person ohne Konto entsteht. */
-data class MemberEditorState(val profile: MemberProfile = MemberProfile(), val member: AppUser? = null) {
+data class MemberEditorState(
+    val profile: MemberProfile = MemberProfile(),
+    val member: AppUser? = null,
+    val original: MemberProfile = profile,
+) {
     val isNew: Boolean get() = member == null
+    val isDirty: Boolean get() = profile != original
 }
 
 data class UserManagementUiState(
@@ -33,11 +39,13 @@ data class UserManagementUiState(
     val isLoading: Boolean = true,
     /** Mitglieder, für die gerade eine Änderung gespeichert wird. */
     val busyMemberIds: Set<String> = emptySet(),
-    val errorMessage: String? = null,
+    override val errorMessage: String? = null,
     val canManage: Boolean = false,
     val editor: MemberEditorState? = null,
-    val isSaving: Boolean = false,
-)
+    override val isSaving: Boolean = false,
+) : ListDetailState {
+    override val hasDetail: Boolean get() = editor != null
+}
 
 /** Verwaltung der Mitglieder der Versammlung des angemeldeten Versammlungsadmins. */
 @Inject
@@ -136,6 +144,15 @@ class UserManagementViewModel(
         mutableUiState.update { it.copy(editor = null, errorMessage = null) }
     }
 
+    /** Verwirft Änderungen, lässt aber das ausgewählte Mitglied offen; eine neue, ungespeicherte Person wird geschlossen. */
+    fun discardChanges() {
+        if (mutableUiState.value.isSaving) return
+        mutableUiState.update { state ->
+            val editor = state.editor?.takeUnless { it.isNew }?.let { it.copy(profile = it.original) }
+            state.copy(editor = editor, errorMessage = null)
+        }
+    }
+
     fun saveProfile() {
         val state = mutableUiState.value
         val editor = state.editor ?: return
@@ -161,7 +178,7 @@ class UserManagementViewModel(
                     }
                     current.copy(
                         members = members,
-                        editor = null,
+                        editor = MemberEditorState(saved.profile, saved),
                         isSaving = false,
                         busyMemberIds = current.busyMemberIds - saved.uid,
                     )
@@ -200,6 +217,7 @@ class UserManagementViewModel(
                     mutableUiState.update { state ->
                         state.copy(
                             members = state.members.filterNot { it.uid == member.uid },
+                            editor = state.editor?.takeUnless { it.member?.uid == member.uid },
                             busyMemberIds = state.busyMemberIds - member.uid,
                         )
                     }

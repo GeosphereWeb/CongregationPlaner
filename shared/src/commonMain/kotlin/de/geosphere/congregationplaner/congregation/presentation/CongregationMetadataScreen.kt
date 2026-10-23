@@ -17,6 +17,7 @@ fun CongregationMetadataScreen(viewModel: CongregationMetadataViewModel, modifie
         onUpdate = viewModel::updateEditor,
         onSave = viewModel::saveCongregation,
         onCancel = viewModel::cancelEditing,
+        onDiscard = viewModel::discardChanges,
         onDelete = viewModel::deleteCongregation,
     )
 }

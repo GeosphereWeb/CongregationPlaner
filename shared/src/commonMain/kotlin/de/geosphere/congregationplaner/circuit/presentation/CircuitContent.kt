@@ -18,10 +18,7 @@ import androidx.compose.material3.adaptive.layout.AnimatedPane
 import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffold
 import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
 import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
-import androidx.compose.material3.adaptive.layout.ThreePaneScaffoldDestinationItem
-import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.circuit.domain.model.Circuit
+import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.theming.AppTheme
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
@@ -45,27 +43,16 @@ internal fun CircuitContent(
     onUpdate: (Circuit) -> Unit,
     onSave: () -> Unit,
     onCancel: () -> Unit,
+    onDiscard: () -> Unit,
     onDelete: (Circuit) -> Unit,
 ) {
     var circuitToDelete by remember { mutableStateOf<Circuit?>(null) }
     val isBusy = state.isSaving || state.isDeleting
     val selectedId = state.editor?.takeUnless { it.isNew }?.circuit?.id
 
-    val navigator = rememberListDetailPaneScaffoldNavigator<Nothing>(
-        initialDestinationHistory = listOf(ThreePaneScaffoldDestinationItem(ListDetailPaneScaffoldRole.List)),
-    )
-    val hasEditor = state.editor != null
-    LaunchedEffect(hasEditor) {
-        if (hasEditor) {
-            navigator.navigateTo(ListDetailPaneScaffoldRole.Detail)
-        } else if (navigator.currentDestination?.pane == ListDetailPaneScaffoldRole.Detail) {
-            navigator.navigateBack()
-        }
-    }
-    // System-Zurück im Scaffold bedeutet: Bearbeitung abbrechen
-    LaunchedEffect(navigator.currentDestination?.pane) {
-        if (navigator.currentDestination?.pane == ListDetailPaneScaffoldRole.List && hasEditor) onCancel()
-    }
+    val navigator = rememberListDetailNavigation(state, onClose = onCancel)
+    val singlePane = navigator.scaffoldDirective.maxHorizontalPartitions == 1
+    val onCancelEditing = if (singlePane) onCancel else onDiscard
 
     Column(modifier = modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Kreise", style = MaterialTheme.typography.headlineSmall)
@@ -117,7 +104,7 @@ internal fun CircuitContent(
                                 isBusy = isBusy,
                                 onChange = onUpdate,
                                 onSave = onSave,
-                                onCancel = onCancel,
+                                onCancel = onCancelEditing,
                             )
                         }
                     }
@@ -175,6 +162,7 @@ private fun CircuitScreenPreview() = PreviewThemeWrapper {
         onUpdate = {},
         onSave = {},
         onCancel = {},
+        onDiscard = {},
         onDelete = {},
     )
 }
@@ -189,6 +177,7 @@ private fun CircuitDesktopPreview() = AppTheme {
         onUpdate = {},
         onSave = {},
         onCancel = {},
+        onDiscard = {},
         onDelete = {},
     )
 }
