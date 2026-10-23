@@ -3,6 +3,7 @@ package de.geosphere.congregationplaner.user.testing
 import de.geosphere.congregationplaner.auth.FirebaseUser
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,14 +25,18 @@ internal class FakeUserRepository(user: AppUser? = null, members: List<AppUser> 
 
     var getOrCreateResult: Result<AppUser>? = null
     var globalAdminResult: Result<Boolean> = Result.success(false)
+    var createResult: Result<Unit> = Result.success(Unit)
     var updateResult: Result<Unit> = Result.success(Unit)
+    var updateProfileResult: Result<Unit> = Result.success(Unit)
     var removeResult: Result<Unit> = Result.success(Unit)
 
     var loadCount = 0
         private set
     var requestedCongregation: CongregationRef? = null
         private set
+    val createdMembers = mutableListOf<AppUser>()
     val updatedMembers = mutableListOf<AppUser>()
+    val updatedProfiles = mutableListOf<AppUser>()
     val removedUids = mutableListOf<String>()
 
     override suspend fun getOrCreateUser(authUser: FirebaseUser, congregation: CongregationRef): Result<AppUser> {
@@ -49,9 +54,29 @@ internal class FakeUserRepository(user: AppUser? = null, members: List<AppUser> 
         return members
     }
 
+    override suspend fun createMemberWithoutAccount(
+        congregation: CongregationRef,
+        profile: MemberProfile,
+    ): Result<AppUser> = createResult.map {
+        val member = AppUser(
+            uid = "created-${createdMembers.size + 1}",
+            congregation = congregation,
+            hasAccount = false,
+            profile = profile,
+        )
+        createdMembers += member
+        member
+    }
+
     override suspend fun updateMember(congregation: CongregationRef, member: AppUser): Result<AppUser> =
         updateResult.map {
             updatedMembers += member
+            member
+        }
+
+    override suspend fun updateMemberProfile(congregation: CongregationRef, member: AppUser): Result<AppUser> =
+        updateProfileResult.map {
+            updatedProfiles += member
             member
         }
 

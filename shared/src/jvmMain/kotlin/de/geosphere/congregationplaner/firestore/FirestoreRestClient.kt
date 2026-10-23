@@ -143,8 +143,10 @@ internal fun JsonObject.stringArrayField(name: String): List<String?> =
         ?.map { it.asJsonObject.get("stringValue")?.asString }
         .orEmpty()
 
-internal fun JsonObject.booleanField(name: String): Boolean =
-    get(name)?.takeIf { it.isJsonObject }?.asJsonObject?.get("booleanValue")?.asBoolean ?: false
+internal fun JsonObject.booleanField(name: String): Boolean = optionalBooleanField(name) ?: false
+
+internal fun JsonObject.optionalBooleanField(name: String): Boolean? =
+    get(name)?.takeIf { it.isJsonObject }?.asJsonObject?.get("booleanValue")?.asBoolean
 
 internal fun firestoreFields(fields: JsonObject): String = JsonObject().apply { add("fields", fields) }.toString()
 

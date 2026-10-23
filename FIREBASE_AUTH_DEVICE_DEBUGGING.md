@@ -1,4 +1,4 @@
-# Firebase Auth auf einem echten Android-Gerät
+# Firebase Auth und Firestore auf einem echten Android-Gerät
 
 ## Erkenntnis
 
@@ -21,7 +21,12 @@ debuggbaren Build. Die Host-Adresse wird aus dem Debug-Manifest gelesen:
 `127.0.0.1` bezeichnet immer das Gerät, auf dem die Verbindung aufgebaut wird.
 Auf dem echten Android-Gerät zeigt die Adresse deshalb auf das Gerät selbst und
 nicht auf den Entwicklungsrechner, auf dem der Firebase Auth Emulator auf Port
-`9099` läuft.
+`9099` und der Firestore Emulator auf Port `8080` laufen.
+
+Der Firestore Emulator verwendet denselben Host wie der Auth Emulator
+(`firebase_auth_emulator_host`). Ohne Weiterleitung von Port `8080` gelingt zwar
+unter Umständen die Anmeldung, aber Firestore-Zugriffe (Mitglieder,
+Versammlungen, Organisation) schlagen auf dem Gerät fehl.
 
 Die Diagnose wurde im Android-Debugger auf dem Gerät `samsung SM-S928B`
 bestätigt. Der Log zeigt außerdem:
@@ -36,11 +41,22 @@ Die einfachste Lösung ist eine ADB-Portweiterleitung:
 
 ```text
 adb reverse tcp:9099 tcp:9099
+adb reverse tcp:8080 tcp:8080
 ```
 
-Dadurch wird der Port `9099` des Geräts auf den Port `9099` des
-Entwicklungsrechners weitergeleitet. Die bestehende Konfiguration mit
-`127.0.0.1` kann dann unverändert bleiben.
+Dadurch werden die Ports `9099` (Auth) und `8080` (Firestore) des Geräts auf die
+gleichen Ports des Entwicklungsrechners weitergeleitet. Die bestehende
+Konfiguration mit `127.0.0.1` kann dann unverändert bleiben.
+
+Sind mehrere Geräte verbunden (zum Beispiel ein echtes Gerät und ein
+Android-Emulator), muss das Ziel angegeben werden:
+
+```text
+adb -s <Seriennummer> reverse tcp:9099 tcp:9099
+adb -s <Seriennummer> reverse tcp:8080 tcp:8080
+```
+
+Die Seriennummern zeigt `adb devices`.
 
 Die Weiterleitung muss nach einer neuen ADB-Verbindung oder gegebenenfalls nach
 einem Neustart des Geräts erneut gesetzt werden. Mit folgendem Befehl kann sie
@@ -49,6 +65,8 @@ kontrolliert werden:
 ```text
 adb reverse --list
 ```
+
+Die Ausgabe muss Einträge für `tcp:9099` und `tcp:8080` enthalten.
 
 ## Alternative Lösung über das lokale Netzwerk
 
@@ -65,8 +83,10 @@ Dafür müssen folgende Voraussetzungen erfüllt sein:
 
 - Das Android-Gerät und der Entwicklungsrechner befinden sich im selben
   Netzwerk.
-- Der Firebase Emulator lauscht auf einer von außen erreichbaren Adresse.
-- Die Windows-Firewall erlaubt eingehende Verbindungen auf Port `9099`.
+- Der Firebase Emulator (Auth und Firestore) lauscht auf einer von außen
+  erreichbaren Adresse, in `firebase.json` zum Beispiel `"host": "0.0.0.0"`.
+- Die Windows-Firewall erlaubt eingehende Verbindungen auf die Ports `9099` und
+  `8080`.
 - Die IP-Adresse ist im Debug-Manifest korrekt eingetragen.
 
 ## Plattformabhängige Adressen
@@ -79,4 +99,12 @@ Dafür müssen folgende Voraussetzungen erfüllt sein:
 | Release-Build | Kein Auth Emulator, direkt Firebase |
 
 Die Emulator-Nutzung sollte weiterhin auf Debug-Builds beschränkt bleiben.
-Release-Builds müssen direkt gegen Firebase Authentication laufen.
+Release-Builds müssen direkt gegen Firebase Authentication und Firestore laufen.
+
+## Typische Fehler
+
+| Symptom | Ursache |
+| --- | --- |
+| `Failed to connect to /127.0.0.1:9099` | `adb reverse tcp:9099 tcp:9099` fehlt oder der Auth Emulator läuft nicht. |
+| Anmeldung klappt, Listen bleiben leer oder Firestore meldet Fehler | `adb reverse tcp:8080 tcp:8080` fehlt oder der Firestore Emulator läuft nicht. |
+| `The password is invalid or the user does not have a password` | Der Emulator ist erreichbar, kennt die Kombination aber nicht (`INVALID_LOGIN_CREDENTIALS`). Das Konto unter `http://localhost:4000/auth` prüfen. Die Meldung erscheint auch, wenn das Konto nicht existiert. |
