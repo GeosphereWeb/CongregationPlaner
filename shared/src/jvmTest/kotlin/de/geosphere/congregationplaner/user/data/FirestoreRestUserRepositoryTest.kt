@@ -7,6 +7,9 @@ import de.geosphere.congregationplaner.testing.FakeFirestoreRestServer.FakeRespo
 import de.geosphere.congregationplaner.testing.FakeFirestoreRestServer.RecordedRequest
 import de.geosphere.congregationplaner.testing.withFirestoreRestConfig
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.Appointment
+import de.geosphere.congregationplaner.user.domain.model.MemberCategory
+import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.UserPermission
 import de.geosphere.congregationplaner.user.domain.model.UserRole
 import kotlinx.coroutines.flow.first
@@ -85,7 +88,65 @@ class FirestoreRestUserRepositoryTest {
             assertTrue(create.body.contains(""""role":{"stringValue":"MEMBER"}"""))
             assertTrue(create.body.contains(""""permissions":{"arrayValue":{"values":[{"stringValue":"DUMMY"}]}}"""))
             assertTrue(create.body.contains(""""displayName":{"nullValue":null}"""))
+            assertTrue(create.body.contains(""""hasAccount":{"booleanValue":true}"""))
+            assertTrue(create.body.contains(""""category":{"nullValue":null}"""))
+            assertTrue(create.body.contains(""""appointment":{"stringValue":"NONE"}"""))
+            assertTrue(create.body.contains(""""lastName":{"stringValue":""}"""))
         }
+
+    @Test
+    fun `observeUser maps profile fields and the account flag`() = runWithServer({
+        FakeResponse(
+            200,
+            """{"name":"x/members/uid-1","fields":{
+                "hasAccount":{"booleanValue":false},
+                "lastName":{"stringValue":"Muster"},
+                "firstName":{"stringValue":"Max"},
+                "category":{"stringValue":"BROTHER"},
+                "baptized":{"booleanValue":true},
+                "appointment":{"stringValue":"ELDER"},
+                "mobilePhone":{"stringValue":"0170 123"},
+                "landlinePhone":{"stringValue":"030 456"}}}""",
+        )
+    }) { _, repository ->
+        val user = repository.observeUser(congregation, "uid-1").first()
+
+        assertFalse(checkNotNull(user).hasAccount)
+        assertEquals(
+            MemberProfile(
+                lastName = "Muster",
+                firstName = "Max",
+                category = MemberCategory.BROTHER,
+                baptized = true,
+                appointment = Appointment.ELDER,
+                mobilePhone = "0170 123",
+                landlinePhone = "030 456",
+            ),
+            user.profile,
+        )
+    }
+
+    @Test
+    fun `createMemberWithoutAccount lets firestore generate the id`() = runWithServer({ request ->
+        val fields = request.body.substringAfter("\"fields\":")
+        FakeResponse(200, """{"name":"x/members/generated-1","fields":$fields""")
+    }) { server, repository ->
+        val profile = MemberProfile(lastName = "Muster", firstName = "Lena", category = MemberCategory.CHILD)
+
+        val member = repository.createMemberWithoutAccount(congregation, profile).getOrThrow()
+
+        assertEquals(
+            AppUser(uid = "generated-1", congregation = congregation, hasAccount = false, profile = profile),
+            member,
+        )
+        val request = server.requests.single()
+        assertEquals("POST", request.method)
+        assertEquals(membersPath, request.path)
+        assertNull(request.query)
+        assertTrue(request.body.contains(""""hasAccount":{"booleanValue":false}"""))
+        assertTrue(request.body.contains(""""permissions":{"arrayValue":{"values":[]}}"""))
+        assertTrue(request.body.contains(""""email":{"nullValue":null}"""))
+    }
 
     @Test
     fun `getOrCreateUser returns failure for http errors, missing names and missing sign in`() {
@@ -167,6 +228,31 @@ class FirestoreRestUserRepositoryTest {
         )
         assertFalse(request.body.contains("email"))
         assertTrue(request.body.contains(""""permissions":{"arrayValue":{"values":[]}}"""))
+    }
+
+    @Test
+    fun `updateMemberProfile patches only profile fields of an existing member`() = runWithServer({
+        FakeResponse(200, "{}")
+    }) { server, repository ->
+        val member = AppUser(
+            uid = "uid-1",
+            approved = true,
+            profile = MemberProfile(lastName = "Muster", category = MemberCategory.SISTER, mobilePhone = "0170"),
+        )
+
+        assertEquals(member, repository.updateMemberProfile(congregation, member).getOrThrow())
+
+        val request = server.requests.single()
+        assertEquals("PATCH", request.method)
+        assertEquals("$membersPath/uid-1", request.path)
+        assertEquals(
+            listOf("lastName", "firstName", "category", "baptized", "appointment", "mobilePhone", "landlinePhone")
+                .joinToString("&") { "updateMask.fieldPaths=$it" } + "&currentDocument.exists=true",
+            request.query,
+        )
+        assertFalse(request.body.contains("approved"))
+        assertTrue(request.body.contains(""""category":{"stringValue":"SISTER"}"""))
+        assertTrue(request.body.contains(""""mobilePhone":{"stringValue":"0170"}"""))
     }
 
     @Test

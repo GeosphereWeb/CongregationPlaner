@@ -16,6 +16,9 @@ import de.geosphere.congregationplaner.testing.failedTask
 import de.geosphere.congregationplaner.testing.successTask
 import de.geosphere.congregationplaner.testing.withMockedLog
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.Appointment
+import de.geosphere.congregationplaner.user.domain.model.MemberCategory
+import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.UserPermission
 import de.geosphere.congregationplaner.user.domain.model.UserRole
 import io.mockk.every
@@ -106,9 +109,110 @@ class FirestoreUserRepositoryTest {
                 "approved" to false,
                 "role" to "MEMBER",
                 "permissions" to listOf("DUMMY"),
+                "hasAccount" to true,
+            ) + defaultProfileFields,
+            fields.captured,
+        )
+    }
+
+    @Test
+    fun `getOrCreateUser maps profile fields and the account flag`() = runBlocking {
+        every { document.get(Source.SERVER) } returns successTask(
+            memberSnapshot(
+                approved = true,
+                role = "MEMBER",
+                permissions = null,
+                profile = mapOf(
+                    "lastName" to "Muster",
+                    "firstName" to "Max",
+                    "category" to "BROTHER",
+                    "baptized" to true,
+                    "appointment" to "MINISTERIAL_SERVANT",
+                    "mobilePhone" to "0170 123",
+                    "landlinePhone" to "030 456",
+                    "hasAccount" to false,
+                ),
+            ),
+        )
+
+        val user = repository.getOrCreateUser(authUser, congregation).getOrThrow()
+
+        assertFalse(user.hasAccount)
+        assertEquals(
+            MemberProfile(
+                lastName = "Muster",
+                firstName = "Max",
+                category = MemberCategory.BROTHER,
+                baptized = true,
+                appointment = Appointment.MINISTERIAL_SERVANT,
+                mobilePhone = "0170 123",
+                landlinePhone = "030 456",
+            ),
+            user.profile,
+        )
+    }
+
+    @Test
+    fun `createMemberWithoutAccount stores a person with generated id and without access`() = runBlocking {
+        val generated = mockk<DocumentReference>()
+        val fields = slot<Any>()
+        every { collection.document() } returns generated
+        every { generated.id } returns "generated-1"
+        every { generated.set(capture(fields)) } returns successTask<Void?>(null)
+        val profile = MemberProfile(lastName = "Muster", firstName = "Lena", category = MemberCategory.CHILD)
+
+        val member = repository.createMemberWithoutAccount(congregation, profile).getOrThrow()
+
+        assertEquals(
+            AppUser(
+                uid = "generated-1",
+                approved = false,
+                role = UserRole.MEMBER,
+                congregation = congregation,
+                hasAccount = false,
+                profile = profile,
+            ),
+            member,
+        )
+        assertEquals(
+            mapOf(
+                "email" to null,
+                "displayName" to null,
+                "approved" to false,
+                "role" to "MEMBER",
+                "permissions" to emptyList<String>(),
+                "hasAccount" to false,
+            ) + defaultProfileFields + mapOf("lastName" to "Muster", "firstName" to "Lena", "category" to "CHILD"),
+            fields.captured,
+        )
+    }
+
+    @Test
+    fun `updateMemberProfile writes only profile fields`() = withMockedLog {
+        val fields = slot<Map<String, Any?>>()
+        every { document.update(capture(fields)) } returns successTask<Void?>(null)
+        val profile = MemberProfile(
+            lastName = "Muster",
+            category = MemberCategory.BROTHER,
+            baptized = true,
+            appointment = Appointment.ELDER,
+        )
+        val member = AppUser(uid = "uid-1", approved = true, profile = profile)
+
+        runBlocking { assertEquals(member, repository.updateMemberProfile(congregation, member).getOrThrow()) }
+        assertEquals(
+            defaultProfileFields + mapOf(
+                "lastName" to "Muster",
+                "category" to "BROTHER",
+                "baptized" to true,
+                "appointment" to "ELDER",
             ),
             fields.captured,
         )
+
+        val error = IllegalStateException("not-found")
+        every { document.update(any<Map<String, Any?>>()) } returns failedTask(error)
+        runBlocking { assertFailure(error, repository.updateMemberProfile(congregation, member)) }
     }
 
     @Test
@@ -235,13 +339,31 @@ class FirestoreUserRepositoryTest {
         }
     }
 
-    private fun memberSnapshot(approved: Boolean?, role: String?, permissions: List<Any>?): DocumentSnapshot = mockk {
+    private fun memberSnapshot(
+        approved: Boolean?,
+        role: String?,
+        permissions: List<Any>?,
+        profile: Map<String, Any> = emptyMap(),
+    ): DocumentSnapshot = mockk {
         every { exists() } returns true
         every { id } returns "uid-1"
+        // Später definierte, konkretere Stubs haben in MockK Vorrang vor diesen Profil-Defaults.
+        every { getString(any()) } answers { profile[firstArg()] as? String }
+        every { getBoolean(any()) } answers { profile[firstArg()] as? Boolean }
+        every { this@mockk.get("permissions") } returns permissions
         every { getString("email") } returns "user@example.com"
         every { getString("displayName") } returns "User"
-        every { getBoolean("approved") } returns approved
         every { getString("role") } returns role
-        every { this@mockk.get("permissions") } returns permissions
+        every { getBoolean("approved") } returns approved
     }
+
+    private val defaultProfileFields = mapOf(
+        "lastName" to "",
+        "firstName" to "",
+        "category" to null,
+        "baptized" to false,
+        "appointment" to "NONE",
+        "mobilePhone" to "",
+        "landlinePhone" to "",
+    )
 }

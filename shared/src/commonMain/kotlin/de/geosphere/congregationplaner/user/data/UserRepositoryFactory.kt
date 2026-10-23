@@ -3,6 +3,7 @@ package de.geosphere.congregationplaner.user.data
 import de.geosphere.congregationplaner.auth.FirebaseUser
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.UserPermission
 import de.geosphere.congregationplaner.user.domain.model.UserRole
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
@@ -14,7 +15,10 @@ expect fun createUserRepository(): UserRepository
 /** Globale Administratoren; das Dokument `admins/{uid}` wird manuell (z. B. in der Firebase-Konsole) angelegt. */
 internal const val ADMINS_COLLECTION_PATH = "admins"
 
-/** Neue Mitglieder starten ohne Freigabe als einfaches Mitglied mit den Standardberechtigungen. */
+/**
+ * Neue Mitglieder starten ohne Freigabe als einfaches Mitglied mit den Standardberechtigungen; die persönlichen
+ * Angaben pflegt anschließend der Admin.
+ */
 internal fun FirebaseUser.toNewAppUser(congregation: CongregationRef): AppUser = AppUser(
     uid = uid,
     email = email,
@@ -23,6 +27,17 @@ internal fun FirebaseUser.toNewAppUser(congregation: CongregationRef): AppUser =
     role = UserRole.MEMBER,
     permissions = UserPermission.defaults,
     congregation = congregation,
+)
+
+/** Personen ohne Konto haben nie Zugang zur App. */
+internal fun MemberProfile.toNewMemberWithoutAccount(uid: String, congregation: CongregationRef): AppUser = AppUser(
+    uid = uid,
+    approved = false,
+    role = UserRole.MEMBER,
+    permissions = emptySet(),
+    congregation = congregation,
+    hasAccount = false,
+    profile = this,
 )
 
 fun unavailableUserRepository(platform: String): UserRepository = object : UserRepository {
@@ -42,7 +57,15 @@ fun unavailableUserRepository(platform: String): UserRepository = object : UserR
         throw UnsupportedOperationException("Firestore is not configured for $platform.")
     }
 
+    override suspend fun createMemberWithoutAccount(
+        congregation: CongregationRef,
+        profile: MemberProfile,
+    ): Result<AppUser> = unavailable()
+
     override suspend fun updateMember(congregation: CongregationRef, member: AppUser): Result<AppUser> = unavailable()
+
+    override suspend fun updateMemberProfile(congregation: CongregationRef, member: AppUser): Result<AppUser> =
+        unavailable()
 
     override suspend fun removeMember(congregation: CongregationRef, uid: String): Result<Unit> = unavailable()
 }
