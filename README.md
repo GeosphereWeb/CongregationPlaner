@@ -64,7 +64,7 @@ Weiterführende Doku:
 - [KOVER_SETUP.md](KOVER_SETUP.md) – Coverage-Konfiguration
 - [FIREBASE_AUTH_DEVICE_DEBUGGING.md](FIREBASE_AUTH_DEVICE_DEBUGGING.md) – Auth-Emulator auf echten Geräten
   (Kurzfassung im README-Abschnitt [Lokaler Firebase-Emulator](#-lokaler-firebase-emulator-inkl-echtes-android-gerät))
-- [.github/COPILOT_INSTRUCTIONS.md](.github/COPILOT_INSTRUCTIONS.md) – Architektur- & Coding-Richtlinien
+- [CLAUDE.md](CLAUDE.md) – Architektur- & Coding-Richtlinien
 
 ## 🚀 Einrichtung
 
