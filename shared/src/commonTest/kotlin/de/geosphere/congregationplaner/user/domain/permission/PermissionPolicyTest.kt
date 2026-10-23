@@ -55,6 +55,18 @@ class PermissionPolicyTest {
     }
 
     @Test
+    fun `admins maintain profiles including their own and record members without account`() {
+        val admin = AppUser(uid = "1", approved = true, role = UserRole.CONGREGATION_ADMIN)
+        val member = AppUser(uid = "2", approved = true)
+
+        assertTrue(userPolicy.canEditProfile(admin, member))
+        assertTrue(userPolicy.canEditProfile(admin, admin))
+        assertTrue(userPolicy.canCreateMemberWithoutAccount(admin))
+        assertFalse(userPolicy.canEditProfile(member, member))
+        assertFalse(userPolicy.canCreateMemberWithoutAccount(member))
+    }
+
+    @Test
     fun `unknown role and permission values are denied`() {
         assertEquals(UserRole.CONGREGATION_ADMIN, UserRole.fromValue("CONGREGATION_ADMIN"))
         assertEquals(UserRole.NONE, UserRole.fromValue("ADMIN"))

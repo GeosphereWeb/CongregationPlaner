@@ -11,6 +11,9 @@ import de.geosphere.congregationplaner.firestore.observeDocuments
 import de.geosphere.congregationplaner.firestore.runFirestoreCatching
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.Appointment
+import de.geosphere.congregationplaner.user.domain.model.MemberCategory
+import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.UserPermission
 import de.geosphere.congregationplaner.user.domain.model.UserRole
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
@@ -65,11 +68,31 @@ internal class FirestoreUserRepository(private val firestore: FirebaseFirestore)
     override fun observeMembers(congregation: CongregationRef): Flow<List<AppUser>> =
         observeDocuments(firestore.collection(congregation.membersPath), "member") { toDomain(it, congregation) }
 
+    override suspend fun createMemberWithoutAccount(
+        congregation: CongregationRef,
+        profile: MemberProfile,
+    ): Result<AppUser> = runFirestoreCatching("create member without account") {
+        // document() ohne Pfad vergibt eine zufällige ID, die nie mit einer Firebase-UID kollidiert.
+        val document = firestore.collection(congregation.membersPath).document()
+        profile.toNewMemberWithoutAccount(document.id, congregation).also { member ->
+            document.set(member.toFirestoreFields()).awaitResult()
+        }
+    }
+
     override suspend fun updateMember(congregation: CongregationRef, member: AppUser): Result<AppUser> =
         runFirestoreCatching("update member") {
             firestore.collection(congregation.membersPath)
                 .document(member.uid)
                 .update(member.toAccessFields())
+                .awaitResult()
+            member
+        }
+
+    override suspend fun updateMemberProfile(congregation: CongregationRef, member: AppUser): Result<AppUser> =
+        runFirestoreCatching("update member profile") {
+            firestore.collection(congregation.membersPath)
+                .document(member.uid)
+                .update(member.profile.toFirestoreFields())
                 .awaitResult()
             member
         }
@@ -88,15 +111,36 @@ private fun toDomain(document: DocumentSnapshot, congregation: CongregationRef):
     role = UserRole.fromValue(document.getString("role")),
     permissions = UserPermission.fromValues((document.get("permissions") as? List<*>).orEmpty().map { it as? String }),
     congregation = congregation,
+    hasAccount = document.getBoolean("hasAccount") ?: true,
+    profile = MemberProfile(
+        lastName = document.getString("lastName").orEmpty(),
+        firstName = document.getString("firstName").orEmpty(),
+        category = MemberCategory.fromValue(document.getString("category")),
+        baptized = document.getBoolean("baptized") ?: false,
+        appointment = Appointment.fromValue(document.getString("appointment")),
+        mobilePhone = document.getString("mobilePhone").orEmpty(),
+        landlinePhone = document.getString("landlinePhone").orEmpty(),
+    ),
 )
 
 private fun AppUser.toFirestoreFields(): Map<String, Any?> = mapOf(
     "email" to email,
     "displayName" to displayName,
-) + toAccessFields()
+    "hasAccount" to hasAccount,
+) + toAccessFields() + profile.toFirestoreFields()
 
 private fun AppUser.toAccessFields(): Map<String, Any> = mapOf(
     "approved" to approved,
     "role" to role.name,
     "permissions" to permissions.map { it.name }.sorted(),
+)
+
+private fun MemberProfile.toFirestoreFields(): Map<String, Any?> = mapOf(
+    "lastName" to lastName,
+    "firstName" to firstName,
+    "category" to category?.name,
+    "baptized" to baptized,
+    "appointment" to appointment.name,
+    "mobilePhone" to mobilePhone,
+    "landlinePhone" to landlinePhone,
 )
