@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -32,8 +33,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
@@ -43,6 +49,7 @@ import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.UserPermission
 import de.geosphere.congregationplaner.user.domain.model.UserRole
+import kotlinx.coroutines.delay
 
 /** Callbacks der Userverwaltung; gebündelt, damit die Composables überschaubare Signaturen behalten. */
 internal data class UserManagementActions(
@@ -199,10 +206,39 @@ private fun InviteLinkCard(link: String) {
                 "Neue Nutzer können diesen Link im Login einfügen, um deine Versammlung auszuwählen.",
                 style = MaterialTheme.typography.bodySmall,
             )
-            SelectionContainer { Text(link, style = MaterialTheme.typography.bodyMedium) }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                SelectionContainer(modifier = Modifier.weight(1f)) {
+                    Text(link, style = MaterialTheme.typography.bodyMedium)
+                }
+                CopyLinkButton(link)
+            }
         }
     }
 }
+
+// Das plattformübergreifende Setzen von Text gibt es nur über den LocalClipboardManager; ClipEntry ist plattformspezifisch.
+@Suppress("DEPRECATION")
+@Composable
+private fun CopyLinkButton(link: String) {
+    val clipboardManager = LocalClipboardManager.current
+    var copied by remember(link) { mutableStateOf(false) }
+    LaunchedEffect(copied) {
+        if (copied) {
+            delay(COPIED_FEEDBACK_MILLIS)
+            copied = false
+        }
+    }
+    Button(
+        onClick = {
+            clipboardManager.setText(AnnotatedString(link))
+            copied = true
+        },
+    ) {
+        Text(if (copied) "Kopiert" else "Link kopieren")
+    }
+}
+
+private const val COPIED_FEEDBACK_MILLIS = 2_000L
 
 @Composable
 private fun MemberCard(

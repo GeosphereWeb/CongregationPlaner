@@ -57,4 +57,4 @@ Numbers are sequential and permanent. Never reuse or renumber an existing ADR, e
 
 <!-- Add one line per ADR, newest last: - [ADR-0001: Title](0001-title.md) — Status -->
 
-_No ADRs recorded yet._
+- [ADR-0001: Einladungslinks mit AES-GCM verschlüsseln](0001-encrypt-invite-links-with-aes-gcm.md) — Accepted

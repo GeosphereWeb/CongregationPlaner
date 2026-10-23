@@ -25,7 +25,7 @@ fun createCongregationSelectionStore(): CongregationSelectionStore =
 
 internal class KeyValueCongregationSelectionStore(private val storage: KeyValueStorage) : CongregationSelectionStore {
     override fun load(): SelectedCongregation? {
-        val ref = storage.getString(KEY_PATH)?.let(CongregationRef::parse) ?: return null
+        val ref = storage.getString(KEY_PATH)?.let(CongregationRef::fromDocumentPath) ?: return null
         return SelectedCongregation(ref, storage.getString(KEY_NAME).orEmpty())
     }
 
