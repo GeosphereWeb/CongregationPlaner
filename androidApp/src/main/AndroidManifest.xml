@@ -19,7 +19,7 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Einladungslinks des Versammlungsadmins: congregationplaner://join/region/.../congregation/{id} -->
+            <!-- Einladungslinks des Versammlungsadmins: congregationplaner://join/{verschlüsselter Pfad} -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 

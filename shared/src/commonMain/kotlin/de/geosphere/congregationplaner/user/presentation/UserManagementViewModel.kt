@@ -56,6 +56,8 @@ class UserManagementViewModel(
     private var observeJob: Job? = null
     private var observedCongregation: CongregationRef? = null
     private var observing = false
+    private var inviteLinkCongregation: CongregationRef? = null
+    private var cachedInviteLink: String? = null
 
     fun onCurrentUserChanged(user: AppUser) {
         currentUser = user
@@ -65,7 +67,7 @@ class UserManagementViewModel(
         mutableUiState.update {
             it.copy(
                 currentUserId = user.uid,
-                inviteLink = congregation?.toInviteLink(),
+                inviteLink = inviteLinkFor(congregation),
                 canManage = canManage,
                 editor = it.editor?.takeIf { canManage },
             )
@@ -89,6 +91,15 @@ class UserManagementViewModel(
                     mutableUiState.update { it.copy(members = members, isLoading = false) }
                 }
         }
+    }
+
+    // Der Link ist bei jedem Verschlüsseln ein anderer; er wird gemerkt, damit die Anzeige nicht springt.
+    private fun inviteLinkFor(congregation: CongregationRef?): String? {
+        if (congregation != inviteLinkCongregation) {
+            inviteLinkCongregation = congregation
+            cachedInviteLink = congregation?.toInviteLink()
+        }
+        return cachedInviteLink
     }
 
     fun canEdit(member: AppUser): Boolean = currentUser?.let { permissionPolicy.canEditMember(it, member) } ?: false
