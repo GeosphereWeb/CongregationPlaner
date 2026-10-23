@@ -63,6 +63,7 @@ Weiterführende Doku:
 - [theming/README.md](theming/README.md) und [uilib/README.md](uilib/README.md) – Module im Detail
 - [KOVER_SETUP.md](KOVER_SETUP.md) – Coverage-Konfiguration
 - [FIREBASE_AUTH_DEVICE_DEBUGGING.md](FIREBASE_AUTH_DEVICE_DEBUGGING.md) – Auth-Emulator auf echten Geräten
+  (Kurzfassung im README-Abschnitt [Lokaler Firebase-Emulator](#-lokaler-firebase-emulator-inkl-echtes-android-gerät))
 - [.github/COPILOT_INSTRUCTIONS.md](.github/COPILOT_INSTRUCTIONS.md) – Architektur- & Coding-Richtlinien
 
 ## 🚀 Einrichtung
@@ -107,6 +108,108 @@ wiederhergestellt (Base64 erzeugen: `base64 -w 0 < datei`).
 
 > Die Berechtigungsprüfung in der App ersetzt **keine** Firestore Security Rules – diese müssen die Regeln
 > serverseitig ebenfalls durchsetzen.
+
+## 🔥 Lokaler Firebase-Emulator (inkl. echtes Android-Gerät)
+
+Debug-Builds der Android-App sprechen nicht mit dem echten Firebase-Projekt, sondern mit dem lokalen
+**Firebase Emulator** auf dem Entwicklungsrechner:
+
+| Dienst         | Port   | Verwendung                              |
+|----------------|--------|-----------------------------------------|
+| Authentication | `9099` | Anmeldung & Registrierung               |
+| Firestore      | `8080` | Mitglieder, Versammlungen, Organisation |
+| Emulator-UI    | `4000` | Konten und Dokumente ansehen/bearbeiten |
+
+Release-Builds nutzen immer direkt Firebase, der Emulator wird nur in debuggbaren Builds aktiviert.
+
+### 1. Emulator starten
+
+Voraussetzung: [Firebase CLI](https://firebase.google.com/docs/cli) (`npm install -g firebase-tools`) und ein
+Ordner mit `firebase.json`, in dem Auth (`9099`) und Firestore (`8080`) konfiguriert sind. Dort:
+
+```bash
+firebase emulators:start --only auth,firestore --import ./emulator-data --export-on-exit
+```
+
+`--import` und `--export-on-exit` sorgen dafür, dass Auth-Konten **und** Firestore-Daten einen Neustart überleben.
+Ohne diese Optionen sind nach jedem Neustart alle Konten und Daten weg, und der Login schlägt fehl.
+
+### 2. Android-Emulator (AVD) oder physisches Gerät verbinden
+
+Die Debug-App erwartet den Emulator unter `127.0.0.1` (siehe `androidApp/src/debug/AndroidManifest.xml`,
+`firebase_auth_emulator_host`). Auf einem Android-Gerät bedeutet `127.0.0.1` aber **das Gerät selbst**, nicht den
+Rechner. Deshalb müssen die Ports per ADB vom Gerät zum Rechner weitergeleitet werden:
+
+1. **USB-Debugging aktivieren:** Entwickleroptionen freischalten (7× auf die *Build-Nummer* tippen), dann
+   *Entwickleroptionen → USB-Debugging* einschalten.
+2. **Gerät per USB anschließen** und die Debugging-Abfrage am Gerät bestätigen.
+3. **Verbindung prüfen:** das Gerät muss als `device` erscheinen (nicht als `unauthorized`):
+
+   ```bash
+   adb devices
+   ```
+
+4. **Ports weiterleiten:** beide Befehle sind nötig, sonst klappt zwar der Login, aber nicht der Firestore-Zugriff:
+
+   ```bash
+   adb reverse tcp:9099 tcp:9099   # Auth
+   adb reverse tcp:8080 tcp:8080   # Firestore
+   ```
+
+5. **Kontrollieren:**
+
+   ```bash
+   adb reverse --list
+   ```
+
+   Erwartet werden Einträge für `tcp:9099` und `tcp:8080`.
+6. **Debug-App starten.** Im Logcat (Filter `FirebaseAuth`) steht dann
+   `using auth emulator true at 127.0.0.1:9099`.
+
+Wichtig dabei:
+
+- `adb reverse` gilt **nur bis zum Trennen des Kabels, Neustart des Geräts oder von `adb`**. Danach beide Befehle
+  erneut ausführen.
+- Sind mehrere Geräte verbunden (Gerät **und** AVD), das Ziel mit `-s <Seriennummer>` angeben:
+  `adb -s <Seriennummer> reverse tcp:9099 tcp:9099` (Seriennummern zeigt `adb devices`).
+- Der AVD braucht mit `127.0.0.1` im Manifest dieselben `adb reverse`-Befehle, alternativ erreicht er den Rechner
+  über `10.0.2.2`.
+
+| Ausführungsumgebung            | Host im Manifest                      |
+|--------------------------------|---------------------------------------|
+| Android-Emulator (AVD)         | `10.0.2.2` (oder `adb reverse`)       |
+| Echtes Gerät mit `adb reverse` | `127.0.0.1` (Standard im Repo)        |
+| Echtes Gerät über WLAN/LAN     | IP-Adresse des Rechners (siehe unten) |
+
+**Alternative ohne Kabel (WLAN):** `firebase_auth_emulator_host` im Debug-Manifest auf die IP des Rechners setzen,
+im `firebase.json` bei `auth` und `firestore` `"host": "0.0.0.0"` eintragen, Gerät und Rechner ins selbe Netz
+bringen und in der Windows-Firewall eingehende Verbindungen auf `9099` und `8080` erlauben. Die Emulatoren sind dann
+im ganzen Netz erreichbar – nur in vertrauenswürdigen Netzen verwenden.
+Weitere Hintergründe: [FIREBASE_AUTH_DEVICE_DEBUGGING.md](FIREBASE_AUTH_DEVICE_DEBUGGING.md).
+
+### 3. Ersten Admin anlegen
+
+Die App legt aus Sicherheitsgründen **keinen** Admin an. Neue Nutzer starten immer mit `role = MEMBER` und
+`approved = false`, und Admins können ihre eigene Freigabe nicht ändern. Der erste Admin wird deshalb einmalig von
+Hand eingetragen:
+
+1. In der App registrieren und die Versammlung wählen. Dabei entsteht das Dokument
+   `region/…/congregation/{id}/members/{uid}`.
+2. In der Emulator-UI (`http://localhost:4000/firestore`) dieses Dokument öffnen und `approved` auf `true` sowie
+   `role` auf `CONGREGATION_ADMIN` setzen.
+3. In der App ab- und wieder anmelden. Ab jetzt können weitere Mitglieder in der Userverwaltung freigegeben werden.
+
+Alternativ macht ein Dokument `admins/{uid}` (UID aus *Authentication* in der Emulator-UI) jemanden zum globalen Admin.
+
+### Fehlersuche
+
+| Symptom                                                                                         | Ursache / Lösung |
+|-------------------------------------------------------------------------------------------------|------------------|
+| `Failed to connect to /127.0.0.1:9099`                                                          | `adb reverse` fehlt oder ist verloren gegangen, oder der Emulator läuft nicht. |
+| Login klappt, aber Listen bleiben leer / Firestore-Fehler                                       | `adb reverse tcp:8080 tcp:8080` fehlt oder der Firestore-Emulator läuft nicht. |
+| „Login fehlgeschlagen“, Logcat: `The password is invalid or the user does not have a password`  | Der Emulator ist erreichbar, kennt die Kombination aber nicht (`INVALID_LOGIN_CREDENTIALS`). Konto unter `http://localhost:4000/auth` prüfen, neu registrieren oder Passwort dort neu setzen. Auch bei nicht existierendem Konto kommt diese Meldung. |
+| Nutzer erscheint nicht in der Mitgliederliste                                                   | Das Mitgliedsdokument entsteht erst bei der ersten App-Anmeldung mit gewählter Versammlung. Ein nur in der Emulator-UI angelegtes Auth-Konto reicht nicht. |
+| Konten oder Daten nach Neustart weg                                                             | Emulatoren ohne `--import` / `--export-on-exit` gestartet. |
 
 ## ▶️ Apps starten
 

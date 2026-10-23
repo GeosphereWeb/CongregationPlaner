@@ -12,6 +12,7 @@ import de.geosphere.congregationplaner.firestore.firestoreFields
 import de.geosphere.congregationplaner.firestore.firestoreNullableString
 import de.geosphere.congregationplaner.firestore.firestoreString
 import de.geosphere.congregationplaner.firestore.firestoreStringArray
+import de.geosphere.congregationplaner.firestore.optionalBooleanField
 import de.geosphere.congregationplaner.firestore.optionalStringField
 import de.geosphere.congregationplaner.firestore.parseDocument
 import de.geosphere.congregationplaner.firestore.parseDocuments
@@ -20,6 +21,9 @@ import de.geosphere.congregationplaner.firestore.runCatchingIo
 import de.geosphere.congregationplaner.firestore.stringArrayField
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.Appointment
+import de.geosphere.congregationplaner.user.domain.model.MemberCategory
+import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.UserPermission
 import de.geosphere.congregationplaner.user.domain.model.UserRole
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
@@ -49,6 +53,16 @@ internal class FirestoreRestUserRepository(
             .map { it.toUser(congregation) }
     }
 
+    override suspend fun createMemberWithoutAccount(
+        congregation: CongregationRef,
+        profile: MemberProfile,
+    ): Result<AppUser> = runCatchingIo {
+        // Ohne documentId vergibt Firestore eine zufällige ID, die nie mit einer Firebase-UID kollidiert.
+        val fields = profile.toNewMemberWithoutAccount(uid = "", congregation).allFields()
+        parseDocument(client.request("POST", client.collectionUrl(congregation.membersPath), firestoreFields(fields)))
+            .toUser(congregation)
+    }
+
     override suspend fun updateMember(congregation: CongregationRef, member: AppUser): Result<AppUser> = runCatchingIo {
         // currentDocument.exists verhindert, dass ein PATCH auf ein entferntes Mitglied es neu anlegt.
         client.request(
@@ -60,6 +74,17 @@ internal class FirestoreRestUserRepository(
         member
     }
 
+    override suspend fun updateMemberProfile(congregation: CongregationRef, member: AppUser): Result<AppUser> =
+        runCatchingIo {
+            client.request(
+                method = "PATCH",
+                url = "${documentUrl(congregation, member.uid)}?${client.updateMask(PROFILE_FIELD_NAMES)}" +
+                    "&currentDocument.exists=true",
+                body = firestoreFields(member.profile.fields()),
+            )
+            member
+        }
+
     override suspend fun removeMember(congregation: CongregationRef, uid: String): Result<Unit> = runCatchingIo {
         client.request("DELETE", documentUrl(congregation, uid))
     }
@@ -69,11 +94,7 @@ internal class FirestoreRestUserRepository(
 
     private fun createUser(congregation: CongregationRef, user: AppUser): AppUser {
         val url = "${client.collectionUrl(congregation.membersPath)}?documentId=${encode(user.uid)}"
-        val fields = user.accessFields().apply {
-            add("email", firestoreNullableString(user.email))
-            add("displayName", firestoreNullableString(user.displayName))
-        }
-        return parseDocument(client.request("POST", url, firestoreFields(fields))).toUser(congregation)
+        return parseDocument(client.request("POST", url, firestoreFields(user.allFields()))).toUser(congregation)
     }
 
     private fun documentUrl(congregation: CongregationRef, uid: String): String =
@@ -87,7 +108,24 @@ internal class FirestoreRestUserRepository(
         role = UserRole.fromValue(fields.optionalStringField("role")),
         permissions = UserPermission.fromValues(fields.stringArrayField("permissions")),
         congregation = congregation,
+        hasAccount = fields.optionalBooleanField("hasAccount") ?: true,
+        profile = MemberProfile(
+            lastName = fields.optionalStringField("lastName").orEmpty(),
+            firstName = fields.optionalStringField("firstName").orEmpty(),
+            category = MemberCategory.fromValue(fields.optionalStringField("category")),
+            baptized = fields.booleanField("baptized"),
+            appointment = Appointment.fromValue(fields.optionalStringField("appointment")),
+            mobilePhone = fields.optionalStringField("mobilePhone").orEmpty(),
+            landlinePhone = fields.optionalStringField("landlinePhone").orEmpty(),
+        ),
     )
+
+    private fun AppUser.allFields(): JsonObject = accessFields().apply {
+        add("email", firestoreNullableString(email))
+        add("displayName", firestoreNullableString(displayName))
+        add("hasAccount", firestoreBoolean(hasAccount))
+        profile.fields().entrySet().forEach { (name, value) -> add(name, value) }
+    }
 
     private fun AppUser.accessFields(): JsonObject = JsonObject().apply {
         add("approved", firestoreBoolean(approved))
@@ -95,7 +133,19 @@ internal class FirestoreRestUserRepository(
         add("permissions", firestoreStringArray(permissions.map { it.name }.sorted()))
     }
 
+    private fun MemberProfile.fields(): JsonObject = JsonObject().apply {
+        add("lastName", firestoreString(lastName))
+        add("firstName", firestoreString(firstName))
+        add("category", firestoreNullableString(category?.name))
+        add("baptized", firestoreBoolean(baptized))
+        add("appointment", firestoreString(appointment.name))
+        add("mobilePhone", firestoreString(mobilePhone))
+        add("landlinePhone", firestoreString(landlinePhone))
+    }
+
     private companion object {
         val ACCESS_FIELD_NAMES = listOf("approved", "role", "permissions")
+        val PROFILE_FIELD_NAMES =
+            listOf("lastName", "firstName", "category", "baptized", "appointment", "mobilePhone", "landlinePhone")
     }
 }

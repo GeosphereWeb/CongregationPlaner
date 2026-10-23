@@ -1,11 +1,16 @@
 package de.geosphere.congregationplaner.user.presentation
 
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.Appointment
+import de.geosphere.congregationplaner.user.domain.model.MemberCategory
+import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.UserPermission
 import de.geosphere.congregationplaner.user.domain.model.UserRole
 import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
+import de.geosphere.congregationplaner.user.domain.usecase.CreateMemberWithoutAccountUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.ObserveMembersUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.RemoveMemberUseCase
+import de.geosphere.congregationplaner.user.domain.usecase.UpdateMemberProfileUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.UpdateMemberUseCase
 import de.geosphere.congregationplaner.user.testing.FakeUserRepository
 import de.geosphere.congregationplaner.user.testing.testCongregation
@@ -48,6 +53,8 @@ class UserManagementViewModelTest {
         viewModel = UserManagementViewModel(
             ObserveMembersUseCase(repository),
             UpdateMemberUseCase(repository),
+            CreateMemberWithoutAccountUseCase(repository),
+            UpdateMemberProfileUseCase(repository),
             RemoveMemberUseCase(repository),
             UserPermissionPolicy(),
         )
@@ -155,5 +162,107 @@ class UserManagementViewModelTest {
         assertTrue(state.members.isEmpty())
         viewModel.setApproved(pending, true)
         assertTrue(repository.updatedMembers.isEmpty())
+    }
+
+    @Test
+    fun `admin records a member without account`() {
+        viewModel.onCurrentUserChanged(admin)
+
+        viewModel.addMemberWithoutAccount()
+        viewModel.updateEditor(MemberProfile(lastName = "Muster", firstName = "Lena", category = MemberCategory.CHILD))
+        viewModel.saveProfile()
+
+        val created = repository.createdMembers.single()
+        assertFalse(created.hasAccount)
+        assertEquals("Lena Muster", created.label)
+        val state = viewModel.uiState.value
+        assertNull(state.editor)
+        assertFalse(state.isSaving)
+        assertTrue(created in state.members)
+    }
+
+    @Test
+    fun `editor keeps the profile consistent`() {
+        viewModel.onCurrentUserChanged(admin)
+        viewModel.editProfile(pending)
+
+        viewModel.updateEditor(
+            MemberProfile(category = MemberCategory.BROTHER, baptized = true, appointment = Appointment.ELDER),
+        )
+        assertEquals(Appointment.ELDER, viewModel.uiState.value.editor?.profile?.appointment)
+
+        viewModel.updateEditor(viewModel.uiState.value.editor!!.profile.copy(category = MemberCategory.CHILD))
+        assertEquals(
+            MemberProfile(category = MemberCategory.CHILD, baptized = false, appointment = Appointment.NONE),
+            viewModel.uiState.value.editor?.profile,
+        )
+
+        viewModel.cancelEditing()
+        assertNull(viewModel.uiState.value.editor)
+        assertTrue(repository.updatedProfiles.isEmpty())
+    }
+
+    @Test
+    fun `admin edits profiles including the own one`() {
+        viewModel.onCurrentUserChanged(admin)
+        val profile = MemberProfile(lastName = "Admin", firstName = "Anna", category = MemberCategory.SISTER)
+
+        viewModel.editProfile(admin)
+        viewModel.updateEditor(profile)
+        viewModel.saveProfile()
+
+        assertEquals(listOf(admin.copy(profile = profile)), repository.updatedProfiles)
+        val state = viewModel.uiState.value
+        assertEquals(admin.copy(profile = profile), state.members.single { it.uid == admin.uid })
+        assertNull(state.editor)
+        assertTrue(state.busyMemberIds.isEmpty())
+    }
+
+    @Test
+    fun `profile save failures keep the editor open`() {
+        viewModel.onCurrentUserChanged(admin)
+        repository.updateProfileResult = Result.failure(IllegalStateException("permission-denied"))
+
+        viewModel.editProfile(pending)
+        viewModel.updateEditor(MemberProfile(mobilePhone = "0170"))
+        viewModel.saveProfile()
+
+        val state = viewModel.uiState.value
+        assertEquals("permission-denied", state.errorMessage)
+        assertEquals(MemberProfile(mobilePhone = "0170"), state.editor?.profile)
+        assertFalse(state.isSaving)
+        assertTrue(state.busyMemberIds.isEmpty())
+
+        viewModel.updateEditor(MemberProfile(mobilePhone = "abc"))
+        viewModel.saveProfile()
+        assertEquals(
+            "Telefonnummern dürfen nur Ziffern, Leerzeichen und + ( ) / - enthalten (max. 30 Zeichen).",
+            viewModel.uiState.value.errorMessage,
+        )
+    }
+
+    @Test
+    fun `members without admin role cannot edit profiles`() {
+        val member = pending.copy(approved = true)
+        viewModel.onCurrentUserChanged(member)
+
+        assertFalse(viewModel.canEditProfile(member))
+        viewModel.editProfile(member)
+        viewModel.addMemberWithoutAccount()
+
+        assertNull(viewModel.uiState.value.editor)
+        assertEquals("Dafür fehlt dir die Berechtigung.", viewModel.uiState.value.errorMessage)
+    }
+
+    @Test
+    fun `losing the admin role closes the editor`() {
+        viewModel.onCurrentUserChanged(admin)
+        viewModel.addMemberWithoutAccount()
+
+        viewModel.onCurrentUserChanged(admin.copy(role = UserRole.MEMBER))
+        viewModel.saveProfile()
+
+        assertNull(viewModel.uiState.value.editor)
+        assertTrue(repository.createdMembers.isEmpty())
     }
 }

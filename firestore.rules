@@ -19,13 +19,24 @@ rules_version = '2';
 //           congregation/{congId}      - name: string, meeting times/weekdays
 //
 // Collection: region/.../congregation/{congId}/members
-// Document ID: Firebase Auth UID of the member
+// Document ID: Firebase Auth UID of the member, or a random Firestore ID for
+//   persons without an account (e.g. children) that an admin records.
 // Fields:
 //   - email: string | null (required, immutable) - copied from the auth token
 //   - displayName: string | null (required, immutable, <= 200 chars)
 //   - approved: bool (required) - set by the congregation admin
 //   - role: string (required, 'CONGREGATION_ADMIN' | 'MEMBER')
 //   - permissions: list<string> (required, values from ['DUMMY'])
+//   - hasAccount: bool (optional, immutable, default true) - false for persons
+//     without an account; they are never approved and have no role or permissions
+// Profile fields (optional because older documents do not have them yet;
+// maintained by admins only):
+//   - lastName, firstName: string (<= 100 chars)
+//   - category: string | null ('BROTHER' | 'SISTER' | 'CHILD')
+//   - baptized: bool (default false; never true for 'CHILD')
+//   - appointment: string ('NONE' | 'MINISTERIAL_SERVANT' | 'ELDER';
+//     anything but 'NONE' only for baptized brothers)
+//   - mobilePhone, landlinePhone: string (<= 30 chars, digits and + ( ) / - space)
 //
 // ===============================================================
 
@@ -68,15 +79,66 @@ service cloud.firestore {
       return value == null || (value is string && value.size() <= maxLen);
     }
 
+    function isShortString(value, maxLen) {
+      return value is string && value.size() <= maxLen;
+    }
+
+    function isValidPhone(value) {
+      return isShortString(value, 30) && value.matches('^[0-9+ ()/-]*$');
+    }
+
+    function accessFields() {
+      return ['approved', 'role', 'permissions'];
+    }
+
+    function profileFields() {
+      return ['lastName', 'firstName', 'category', 'baptized', 'appointment', 'mobilePhone', 'landlinePhone'];
+    }
+
+    // Missing profile fields fall back to the defaults of a freshly registered member.
+    function isValidProfile(data) {
+      let category = data.get('category', null);
+      let baptized = data.get('baptized', false);
+      let appointment = data.get('appointment', 'NONE');
+      return isShortString(data.get('lastName', ''), 100) &&
+        isShortString(data.get('firstName', ''), 100) &&
+        (category == null || category in ['BROTHER', 'SISTER', 'CHILD']) &&
+        baptized is bool &&
+        !(category == 'CHILD' && baptized) &&
+        appointment in ['NONE', 'MINISTERIAL_SERVANT', 'ELDER'] &&
+        (appointment == 'NONE' || (category == 'BROTHER' && baptized)) &&
+        isValidPhone(data.get('mobilePhone', '')) &&
+        isValidPhone(data.get('landlinePhone', ''));
+    }
+
+    function hasDefaultProfile(data) {
+      return data.get('lastName', '') == '' &&
+        data.get('firstName', '') == '' &&
+        data.get('category', null) == null &&
+        data.get('baptized', false) == false &&
+        data.get('appointment', 'NONE') == 'NONE' &&
+        data.get('mobilePhone', '') == '' &&
+        data.get('landlinePhone', '') == '';
+    }
+
+    // Persons without an account never get access to the app.
+    function hasNoAccess(data) {
+      return data.approved == false && data.role == 'MEMBER' && data.permissions.size() == 0;
+    }
+
     // Validator for every member document after create or update.
     function isValidMember(data) {
-      return data.keys().hasOnly(['email', 'displayName', 'approved', 'role', 'permissions']) &&
+      return data.keys().hasOnly(['email', 'displayName', 'approved', 'role', 'permissions', 'hasAccount']
+          .concat(profileFields())) &&
         data.keys().hasAll(['email', 'displayName', 'approved', 'role', 'permissions']) &&
         isNullableString(data.email, 320) &&
         isNullableString(data.displayName, 200) &&
         data.approved is bool &&
         isValidRole(data.role) &&
-        isValidPermissions(data.permissions);
+        isValidPermissions(data.permissions) &&
+        data.get('hasAccount', true) is bool &&
+        (data.get('hasAccount', true) == true || hasNoAccess(data)) &&
+        isValidProfile(data);
     }
 
     // A user may only register themselves: unapproved, plain member, default permission,
@@ -89,13 +151,26 @@ service cloud.firestore {
         data.approved == false &&
         data.role == 'MEMBER' &&
         data.permissions == ['DUMMY'] &&
-        data.email == request.auth.token.get('email', null);
+        data.email == request.auth.token.get('email', null) &&
+        data.get('hasAccount', true) == true &&
+        hasDefaultProfile(data);
     }
 
-    // Admins may only change access fields; e-mail and name stay as registered.
-    function onlyAccessFieldsChanged() {
-      return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['approved', 'role', 'permissions']);
+    // Admins record persons without an account (e.g. children) with a name.
+    function isValidMemberWithoutAccount(regionId, subregionId, branchId, circuitId, congId) {
+      let data = request.resource.data;
+      return (isGlobalAdmin() || isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId)) &&
+        isValidMember(data) &&
+        data.get('hasAccount', true) == false &&
+        data.email == null &&
+        data.displayName == null &&
+        data.get('lastName', '') != '' &&
+        data.get('firstName', '') != '';
+    }
+
+    // E-mail, name and account type stay as registered.
+    function onlyFieldsChanged(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
     }
 
     // ===============================================================
@@ -145,13 +220,15 @@ service cloud.firestore {
                 allow list: if isGlobalAdmin() ||
                   isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId);
 
-                allow create: if isValidSelfRegistration(uid);
+                allow create: if isValidSelfRegistration(uid) ||
+                  isValidMemberWithoutAccount(regionId, subregionId, branchId, circuitId, congId);
 
-                // Admins cannot change their own membership, so nobody locks themselves out.
+                // Admins maintain profiles, including their own, but cannot change their own
+                // access, so nobody locks themselves out.
                 allow update: if isAuthenticated() &&
-                  request.auth.uid != uid &&
                   (isGlobalAdmin() || isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId)) &&
-                  onlyAccessFieldsChanged() &&
+                  (onlyFieldsChanged(profileFields()) ||
+                    (request.auth.uid != uid && onlyFieldsChanged(accessFields().concat(profileFields())))) &&
                   isValidMember(request.resource.data);
 
                 allow delete: if isAuthenticated() && (

@@ -4,11 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.UserPermission
 import de.geosphere.congregationplaner.user.domain.model.UserRole
 import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
+import de.geosphere.congregationplaner.user.domain.usecase.CreateMemberWithoutAccountUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.ObserveMembersUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.RemoveMemberUseCase
+import de.geosphere.congregationplaner.user.domain.usecase.UpdateMemberProfileUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.UpdateMemberUseCase
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.Job
@@ -17,6 +20,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+/** Die gerade bearbeiteten persönlichen Angaben; [member] ist `null`, solange eine neue Person ohne Konto entsteht. */
+data class MemberEditorState(val profile: MemberProfile = MemberProfile(), val member: AppUser? = null) {
+    val isNew: Boolean get() = member == null
+}
 
 data class UserManagementUiState(
     val members: List<AppUser> = emptyList(),
@@ -27,6 +35,8 @@ data class UserManagementUiState(
     val busyMemberIds: Set<String> = emptySet(),
     val errorMessage: String? = null,
     val canManage: Boolean = false,
+    val editor: MemberEditorState? = null,
+    val isSaving: Boolean = false,
 )
 
 /** Verwaltung der Mitglieder der Versammlung des angemeldeten Versammlungsadmins. */
@@ -34,6 +44,8 @@ data class UserManagementUiState(
 class UserManagementViewModel(
     private val observeMembers: ObserveMembersUseCase,
     private val updateMember: UpdateMemberUseCase,
+    private val createMemberWithoutAccount: CreateMemberWithoutAccountUseCase,
+    private val updateMemberProfile: UpdateMemberProfileUseCase,
     private val removeMemberUseCase: RemoveMemberUseCase,
     private val permissionPolicy: UserPermissionPolicy,
 ) : ViewModel() {
@@ -51,7 +63,12 @@ class UserManagementViewModel(
         // Mitglieder werden nur beobachtet, solange der Nutzer sie verwalten darf.
         val congregation = user.congregation?.takeIf { canManage }
         mutableUiState.update {
-            it.copy(currentUserId = user.uid, inviteLink = congregation?.toInviteLink(), canManage = canManage)
+            it.copy(
+                currentUserId = user.uid,
+                inviteLink = congregation?.toInviteLink(),
+                canManage = canManage,
+                editor = it.editor?.takeIf { canManage },
+            )
         }
         if (observing && congregation == observedCongregation) return
 
@@ -75,6 +92,80 @@ class UserManagementViewModel(
     }
 
     fun canEdit(member: AppUser): Boolean = currentUser?.let { permissionPolicy.canEditMember(it, member) } ?: false
+
+    fun canEditProfile(member: AppUser): Boolean =
+        currentUser?.let { permissionPolicy.canEditProfile(it, member) } ?: false
+
+    fun addMemberWithoutAccount() {
+        val user = currentUser
+        if (user == null || !permissionPolicy.canCreateMemberWithoutAccount(user)) {
+            mutableUiState.update { it.copy(errorMessage = MISSING_PERMISSION_MESSAGE) }
+            return
+        }
+        mutableUiState.update { it.copy(editor = MemberEditorState(), errorMessage = null) }
+    }
+
+    fun editProfile(member: AppUser) {
+        if (!canEditProfile(member)) {
+            mutableUiState.update { it.copy(errorMessage = MISSING_PERMISSION_MESSAGE) }
+            return
+        }
+        mutableUiState.update { it.copy(editor = MemberEditorState(member.profile, member), errorMessage = null) }
+    }
+
+    /** Hält die Angaben stimmig, z. B. verliert ein Kind die Taufe und ein Nicht-Bruder das Dienstamt. */
+    fun updateEditor(profile: MemberProfile) {
+        mutableUiState.update { state ->
+            state.copy(editor = state.editor?.copy(profile = profile.normalized()))
+        }
+    }
+
+    fun cancelEditing() {
+        if (mutableUiState.value.isSaving) return
+        mutableUiState.update { it.copy(editor = null, errorMessage = null) }
+    }
+
+    fun saveProfile() {
+        val state = mutableUiState.value
+        val editor = state.editor ?: return
+        val uid = editor.member?.uid
+        if (state.isSaving || uid in state.busyMemberIds) return
+        val congregation = profileCongregation(editor) ?: return
+
+        mutableUiState.update {
+            it.copy(isSaving = true, busyMemberIds = it.busyMemberIds + setOfNotNull(uid), errorMessage = null)
+        }
+        viewModelScope.launch {
+            val result = if (editor.member == null) {
+                createMemberWithoutAccount(congregation, editor.profile)
+            } else {
+                updateMemberProfile(congregation, editor.member.copy(profile = editor.profile))
+            }
+            result.onSuccess { saved ->
+                mutableUiState.update { current ->
+                    val members = if (current.members.any { it.uid == saved.uid }) {
+                        current.members.map { if (it.uid == saved.uid) saved else it }
+                    } else {
+                        current.members + saved
+                    }
+                    current.copy(
+                        members = members,
+                        editor = null,
+                        isSaving = false,
+                        busyMemberIds = current.busyMemberIds - saved.uid,
+                    )
+                }
+            }.onFailure { exception ->
+                mutableUiState.update {
+                    it.copy(
+                        isSaving = false,
+                        busyMemberIds = it.busyMemberIds - setOfNotNull(uid),
+                        errorMessage = exception.message ?: "Angaben konnten nicht gespeichert werden.",
+                    )
+                }
+            }
+        }
+    }
 
     fun setApproved(member: AppUser, approved: Boolean) = save(member.copy(approved = approved))
 
@@ -129,6 +220,19 @@ class UserManagementViewModel(
     private fun checkedCongregation(member: AppUser): CongregationRef? {
         if (member.uid in mutableUiState.value.busyMemberIds) return null
         val congregation = currentUser?.takeIf { permissionPolicy.canEditMember(it, member) }?.congregation
+        if (congregation == null) mutableUiState.update { it.copy(errorMessage = MISSING_PERMISSION_MESSAGE) }
+        return congregation
+    }
+
+    /** Liefert die Versammlung, sofern der angemeldete Nutzer die Angaben aus [editor] speichern darf. */
+    private fun profileCongregation(editor: MemberEditorState): CongregationRef? {
+        val user = currentUser
+        val allowed = when {
+            user == null -> false
+            editor.member == null -> permissionPolicy.canCreateMemberWithoutAccount(user)
+            else -> permissionPolicy.canEditProfile(user, editor.member)
+        }
+        val congregation = user?.congregation?.takeIf { allowed }
         if (congregation == null) mutableUiState.update { it.copy(errorMessage = MISSING_PERMISSION_MESSAGE) }
         return congregation
     }

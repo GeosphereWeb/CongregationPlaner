@@ -3,6 +3,7 @@ package de.geosphere.congregationplaner.user.domain.repository
 import de.geosphere.congregationplaner.auth.FirebaseUser
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import kotlinx.coroutines.flow.Flow
 
 /** Zugriff auf die Mitglieder einer Versammlung (`…/congregation/{id}/members/{uid}`). */
@@ -21,8 +22,14 @@ interface UserRepository {
 
     fun observeMembers(congregation: CongregationRef): Flow<List<AppUser>>
 
-    /** Speichert Freigabe, Rolle und Berechtigungen; Profilfelder (E-Mail, Name) bleiben unverändert. */
+    /** Legt eine Person ohne eigenes Konto mit einer von Firestore vergebenen ID an. */
+    suspend fun createMemberWithoutAccount(congregation: CongregationRef, profile: MemberProfile): Result<AppUser>
+
+    /** Speichert Freigabe, Rolle und Berechtigungen; alle anderen Felder bleiben unverändert. */
     suspend fun updateMember(congregation: CongregationRef, member: AppUser): Result<AppUser>
+
+    /** Speichert nur die persönlichen Angaben ([AppUser.profile]); alle anderen Felder bleiben unverändert. */
+    suspend fun updateMemberProfile(congregation: CongregationRef, member: AppUser): Result<AppUser>
 
     suspend fun removeMember(congregation: CongregationRef, uid: String): Result<Unit>
 }
