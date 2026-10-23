@@ -42,6 +42,9 @@ val sonarExclusions = listOf(
     "shared/src/iosMain/**",
     // Reine Vorschaudaten für @Preview-Composables
     "**/*PreviewData.kt",
+    // Reine Compose-Oberfläche ohne Unit-Tests: Lambdas in @Composable-Funktionen zählt Kover trotz Annotation mit
+    "**/*Content.kt",
+    "**/ListDetailNavigation.kt",
     // Exclude theming and ui modules from coverage
     "theming/**",
     "ui/**"

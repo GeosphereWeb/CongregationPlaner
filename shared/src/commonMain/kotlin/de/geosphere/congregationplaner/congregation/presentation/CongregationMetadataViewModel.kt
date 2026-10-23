@@ -6,6 +6,7 @@ import de.geosphere.congregationplaner.congregation.domain.model.CongregationMet
 import de.geosphere.congregationplaner.congregation.domain.usecase.DeleteCongregationUseCase
 import de.geosphere.congregationplaner.congregation.domain.usecase.ObserveCongregationsUseCase
 import de.geosphere.congregationplaner.congregation.domain.usecase.SaveCongregationUseCase
+import de.geosphere.congregationplaner.presentation.components.ListDetailState
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.permission.CongregationPermissionPolicy
 import dev.zacsweers.metro.Inject
@@ -25,12 +26,16 @@ data class CongregationPermissions(
 data class CongregationMetadataUiState(
     val congregations: List<CongregationMetadata> = emptyList(),
     val editor: CongregationMetadata? = null,
+    val editorOriginal: CongregationMetadata? = null,
     val isLoading: Boolean = true,
-    val isSaving: Boolean = false,
+    override val isSaving: Boolean = false,
     val isDeleting: Boolean = false,
-    val errorMessage: String? = null,
+    override val errorMessage: String? = null,
     val permissions: CongregationPermissions = CongregationPermissions(),
-)
+) : ListDetailState {
+    override val hasDetail: Boolean get() = editor != null
+    val isEditorDirty: Boolean get() = editor != editorOriginal
+}
 
 @Inject
 class CongregationMetadataViewModel(
@@ -73,11 +78,12 @@ class CongregationMetadataViewModel(
             updateState { it.copy(errorMessage = MISSING_PERMISSION_MESSAGE) }
             return
         }
-        updateState { it.copy(editor = CongregationMetadata(), errorMessage = null) }
+        val empty = CongregationMetadata()
+        updateState { it.copy(editor = empty, editorOriginal = empty, errorMessage = null) }
     }
 
     fun editCongregation(congregation: CongregationMetadata) {
-        updateState { it.copy(editor = congregation, errorMessage = null) }
+        updateState { it.copy(editor = congregation, editorOriginal = congregation, errorMessage = null) }
     }
 
     fun updateEditor(congregation: CongregationMetadata) {
@@ -86,7 +92,15 @@ class CongregationMetadataViewModel(
     }
 
     fun cancelEditing() {
-        updateState { it.copy(editor = null, errorMessage = null) }
+        updateState { it.copy(editor = null, editorOriginal = null, errorMessage = null) }
+    }
+
+    /** Verwirft Änderungen, lässt aber die ausgewählte Versammlung geöffnet; eine neue, ungespeicherte wird geschlossen. */
+    fun discardChanges() {
+        updateState { state ->
+            val original = state.editorOriginal?.takeUnless { it.id.isBlank() }
+            state.copy(editor = original, editorOriginal = original, errorMessage = null)
+        }
     }
 
     fun saveCongregation() {
@@ -118,6 +132,7 @@ class CongregationMetadataViewModel(
                         state.copy(
                             congregations = congregations,
                             editor = savedCongregation,
+                            editorOriginal = savedCongregation,
                             isSaving = false,
                             errorMessage = null,
                         )
@@ -146,9 +161,11 @@ class CongregationMetadataViewModel(
             deleteCongregationUseCase(congregation.id)
                 .onSuccess {
                     updateState {
+                        val editor = it.editor?.takeUnless { editor -> editor.id == congregation.id }
                         it.copy(
                             congregations = it.congregations.filterNot { item -> item.id == congregation.id },
-                            editor = it.editor?.takeUnless { editor -> editor.id == congregation.id },
+                            editor = editor,
+                            editorOriginal = it.editorOriginal.takeIf { editor != null },
                             isDeleting = false,
                             errorMessage = null,
                         )
