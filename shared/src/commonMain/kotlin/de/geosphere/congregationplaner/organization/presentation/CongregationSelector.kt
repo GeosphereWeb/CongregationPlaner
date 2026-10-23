@@ -3,6 +3,7 @@ package de.geosphere.congregationplaner.organization.presentation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
@@ -23,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.organization.domain.model.OrgLevel
@@ -36,7 +38,7 @@ import de.geosphere.congregationplaner.theming.ThemePreviews
  * oder über einen Einladungslink des Versammlungsadmins.
  */
 @Composable
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "DEPRECATION")
 internal fun CongregationSelector(
     state: CongregationSelectionUiState,
     onStartPicking: () -> Unit,
@@ -44,6 +46,7 @@ internal fun CongregationSelector(
     onSelectUnit: (OrgLevel, String) -> Unit,
     onInviteLinkChange: (String) -> Unit,
     onApplyInviteLink: () -> Unit,
+    onPasteInviteLink: (String?) -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -76,12 +79,19 @@ internal fun CongregationSelector(
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        val clipboardManager = LocalClipboardManager.current
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
                 onClick = onApplyInviteLink,
                 enabled = state.inviteLinkInput.isNotBlank() && !state.isResolvingLink,
             ) {
                 Text(if (state.isResolvingLink) "Prüft …" else "Link übernehmen")
+            }
+            OutlinedButton(
+                onClick = { onPasteInviteLink(clipboardManager.getText()?.text) },
+                enabled = !state.isResolvingLink,
+            ) {
+                Text("Aus Zwischenablage einfügen")
             }
             if (selected != null) {
                 TextButton(onClick = onCancelPicking) { Text("Abbrechen") }
@@ -141,6 +151,7 @@ internal fun CongregationSelector(
         onSelectUnit = viewModel::selectUnit,
         onInviteLinkChange = viewModel::onInviteLinkChanged,
         onApplyInviteLink = { viewModel.applyInviteLink() },
+        onPasteInviteLink = viewModel::pasteInviteLink,
         onRetry = viewModel::retry,
         modifier = modifier,
     )
@@ -163,6 +174,7 @@ private fun CongregationSelectorPickingPreview() = PreviewThemeWrapper {
         onSelectUnit = { _, _ -> },
         onInviteLinkChange = {},
         onApplyInviteLink = {},
+        onPasteInviteLink = {},
         onRetry = {},
     )
 }
@@ -177,6 +189,7 @@ private fun CongregationSelectorSelectedPreview() = PreviewThemeWrapper {
         onSelectUnit = { _, _ -> },
         onInviteLinkChange = {},
         onApplyInviteLink = {},
+        onPasteInviteLink = {},
         onRetry = {},
     )
 }

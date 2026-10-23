@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner.user.presentation
 
+import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
@@ -73,10 +74,20 @@ class UserManagementViewModelTest {
         assertTrue(state.canManage)
         assertFalse(state.isLoading)
         assertEquals(listOf("neu", "admin"), state.members.map { it.uid })
-        assertEquals(testCongregation.toInviteLink(), state.inviteLink)
+        assertEquals(testCongregation, CongregationRef.parse(state.inviteLink.orEmpty()))
         assertEquals(testCongregation, repository.requestedCongregation)
         assertTrue(viewModel.canEdit(pending))
         assertFalse(viewModel.canEdit(admin))
+    }
+
+    @Test
+    fun `invite link stays the same while the user changes`() {
+        viewModel.onCurrentUserChanged(admin)
+        val link = viewModel.uiState.value.inviteLink
+
+        viewModel.onCurrentUserChanged(admin.copy(displayName = "Neu"))
+
+        assertEquals(link, viewModel.uiState.value.inviteLink)
     }
 
     @Test

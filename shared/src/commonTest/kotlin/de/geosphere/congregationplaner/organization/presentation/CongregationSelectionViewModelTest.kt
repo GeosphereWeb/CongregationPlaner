@@ -141,6 +141,29 @@ class CongregationSelectionViewModelTest {
     }
 
     @Test
+    fun `invite link from the clipboard selects the congregation`() {
+        val viewModel = createViewModel()
+
+        viewModel.pasteInviteLink(ref.toInviteLink())
+
+        assertEquals(SelectedCongregation(ref, "Berlin"), viewModel.uiState.value.selected)
+        assertEquals("", viewModel.uiState.value.inviteLinkInput)
+    }
+
+    @Test
+    fun `empty or foreign clipboard content is reported`() {
+        val viewModel = createViewModel()
+
+        viewModel.pasteInviteLink(null)
+        assertEquals("Die Zwischenablage enthält keinen Text.", viewModel.uiState.value.errorMessage)
+
+        viewModel.pasteInviteLink("Hallo Welt")
+        assertEquals("Der Einladungslink ist ungültig.", viewModel.uiState.value.errorMessage)
+        assertEquals("Hallo Welt", viewModel.uiState.value.inviteLinkInput)
+        assertNull(viewModel.uiState.value.selected)
+    }
+
+    @Test
     fun `invalid or unknown invite links are rejected`() {
         val viewModel = createViewModel()
 

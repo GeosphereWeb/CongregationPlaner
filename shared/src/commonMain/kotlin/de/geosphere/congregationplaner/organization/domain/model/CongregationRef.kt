@@ -18,8 +18,12 @@ data class CongregationRef(
 
     val membersPath: String get() = "$documentPath/$MEMBERS_SUBCOLLECTION"
 
-    /** Link, den ein Versammlungsadmin weitergeben kann, damit neue Nutzer die Versammlung nicht suchen müssen. */
-    fun toInviteLink(): String = "$INVITE_LINK_PREFIX$documentPath"
+    /**
+     * Link, den ein Versammlungsadmin weitergeben kann, damit neue Nutzer die Versammlung nicht suchen müssen.
+     * Der Pfad ist verschlüsselt (siehe [InviteLinkCodec]); jeder Aufruf liefert einen anderen, gültigen Link;
+     * wer einen stabilen Link anzeigen will, muss ihn sich merken.
+     */
+    fun toInviteLink(): String = "$INVITE_LINK_PREFIX${InviteLinkCodec.encrypt(documentPath)}"
 
     companion object {
         const val INVITE_LINK_PREFIX = "congregationplaner://join/"
@@ -31,11 +35,17 @@ data class CongregationRef(
         }
 
         /**
-         * Liest einen Einladungslink oder einen reinen Versammlungspfad
-         * (`region/…/congregation/{id}`); liefert `null`, wenn die Eingabe keine Versammlung beschreibt.
+         * Liest einen verschlüsselten Einladungslink (mit oder ohne Präfix); liefert `null`, wenn die Eingabe
+         * keine Versammlung beschreibt. Klartext-Pfade werden nicht mehr akzeptiert.
          */
         fun parse(input: String): CongregationRef? {
-            val path = input.trim().removePrefix(INVITE_LINK_PREFIX).trim('/')
+            val token = input.trim().removePrefix(INVITE_LINK_PREFIX).trim('/')
+            return InviteLinkCodec.decrypt(token)?.let(::fromDocumentPath)
+        }
+
+        /** Liest einen Versammlungspfad (`region/…/congregation/{id}`), etwa aus dem lokalen Speicher. */
+        fun fromDocumentPath(input: String): CongregationRef? {
+            val path = input.trim().trim('/')
             val segments = path.split('/')
             if (segments.size != OrgLevel.entries.size * 2) return null
             val pairs = segments.chunked(2)
