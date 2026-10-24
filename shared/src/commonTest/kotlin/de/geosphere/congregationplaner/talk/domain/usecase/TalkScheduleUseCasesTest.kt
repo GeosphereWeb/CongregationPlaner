@@ -2,18 +2,22 @@ package de.geosphere.congregationplaner.talk.domain.usecase
 
 import de.geosphere.congregationplaner.talk.domain.model.TalkScheduleException
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
+import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
+import de.geosphere.congregationplaner.talk.testing.FakeWeekEventRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.UserRole
 import de.geosphere.congregationplaner.user.testing.testCongregation
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class TalkScheduleUseCasesTest {
@@ -122,6 +126,23 @@ class TalkScheduleUseCasesTest {
         val result = MoveTalkSlotUseCase(save, delete)(admin, from = sunday, slot = slot(LocalDate(2026, 10, 24)))
 
         assertEquals("offline", result.exceptionOrNull()?.message)
+    }
+
+    @Test
+    fun `observe returns nothing for a user without congregation`() = runBlocking {
+        val slots = ObserveTalkYearUseCase(repository)(member.copy(congregation = null), 2026).toList()
+
+        assertTrue(slots.isEmpty())
+        assertNull(repository.requestedYear)
+    }
+
+    @Test
+    fun `week events are sorted by name ignoring case`() = runBlocking {
+        val events = FakeWeekEventRepository(listOf(WeekEvent("b", "kongress"), WeekEvent("a", "Besuch")))
+
+        val sorted = ObserveWeekEventsUseCase(events)().first()
+
+        assertEquals(listOf("a", "b"), sorted.map { it.id })
     }
 
     @Test
