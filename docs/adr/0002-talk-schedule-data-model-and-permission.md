@@ -16,4 +16,4 @@ Jede Versammlung plant ihre wöchentlichen Vorträge selbst. Ein Termin braucht 
 - Schlägt beim Verschieben das Löschen fehl, bleibt ein Duplikat statt eines Verlusts.
 - Alte Termine bleiben lesbar, wenn sich ein Ereignisname ändert, werden aber nicht nachgezogen.
 - `firestore.rules` und App-Version müssen zusammen ausgerollt werden, weil `PLAN_TALKS` bei den erlaubten Berechtigungen ergänzt wurde.
-- Der Desktop-Client (REST) lädt die Termine ohne ID-Bereichsabfrage und filtert nach Jahr; das trägt bis ca. 1000 Termine.
+- Der Desktop-Client (REST) lädt die Termine seitenweise ohne ID-Bereichsabfrage und filtert nach Jahr; das wird bei sehr vielen Terminen (Jahrzehnte) langsam. Dokumente mit ungültiger ID oder Zeit werden auf beiden Plattformen übersprungen.

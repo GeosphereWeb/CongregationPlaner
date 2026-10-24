@@ -14,6 +14,7 @@ import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.UserPermission
 import de.geosphere.congregationplaner.user.domain.model.UserRole
 import de.geosphere.congregationplaner.user.testing.testCongregation
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -191,6 +192,42 @@ class TalkScheduleViewModelTest {
         assertEquals("offline", state.errorMessage)
         assertTrue(state.editor!!.isNew)
         assertFalse(state.isSaving)
+    }
+
+    @Test
+    fun `dismissing a load error loads the year again`() {
+        repository.observeError = IllegalStateException("denied")
+        viewModel.onCurrentUserChanged(planner)
+        assertEquals("denied", state.errorMessage)
+        assertFalse(state.isLoading)
+
+        repository.observeError = null
+        viewModel.dismissError()
+
+        assertNull(state.errorMessage)
+        assertEquals(listOf(october25, november1), state.slots)
+    }
+
+    @Test
+    fun `editor is locked while saving so the result cannot overwrite edits`() {
+        viewModel.onCurrentUserChanged(planner)
+        viewModel.newSlot()
+        val slot = TalkSlot(LocalDate(2026, 11, 8), LocalTime(10, 0))
+        viewModel.updateEditor(slot)
+        val gate = CompletableDeferred<Unit>()
+        repository.saveGate = gate
+
+        viewModel.save()
+        assertTrue(state.isSaving)
+        viewModel.updateEditor(slot.copy(talkCancelled = true))
+        viewModel.selectWeekEvent(kongress)
+        viewModel.editSlot(october25)
+        viewModel.newSlot()
+        assertEquals(slot, state.editor?.slot)
+
+        gate.complete(Unit)
+        assertFalse(state.isSaving)
+        assertEquals(slot, state.editor?.original)
     }
 
     @Test

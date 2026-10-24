@@ -79,7 +79,7 @@ class TalkScheduleViewModel(
     }
 
     fun newSlot() {
-        if (!checkAllowed()) return
+        if (mutableUiState.value.isSaving || !checkAllowed()) return
         val year = mutableUiState.value.year
         val date = today.takeIf { it.year == year } ?: LocalDate(year, 1, 1)
         val slot = TalkSlot(date = date, time = CongregationMetadata().weekendMeetingTime)
@@ -87,12 +87,13 @@ class TalkScheduleViewModel(
     }
 
     fun editSlot(slot: TalkSlot) {
-        if (!checkAllowed()) return
+        if (mutableUiState.value.isSaving || !checkAllowed()) return
         mutableUiState.update { it.copy(editor = TalkSlotEditorState(slot, slot), errorMessage = null) }
     }
 
+    /** Während des Speicherns bleibt der Editor unverändert, sonst würde das Ergebnis die Eingaben überschreiben. */
     fun updateEditor(slot: TalkSlot) {
-        mutableUiState.update { it.copy(editor = it.editor?.copy(slot = slot)) }
+        mutableUiState.update { if (it.isSaving) it else it.copy(editor = it.editor?.copy(slot = slot)) }
     }
 
     /** Übernimmt das Ereignis samt der Vorbelegung „Vortrag entfällt“; `null` entfernt das Ereignis. */
@@ -166,8 +167,13 @@ class TalkScheduleViewModel(
         }
     }
 
+    /** Schließt die Fehlermeldung; war es ein Ladefehler, wird dabei erneut geladen. */
     fun dismissError() {
         mutableUiState.update { it.copy(errorMessage = null) }
+        currentUser?.let { user ->
+            observeWeekEventsIfAllowed(permissionPolicy.canPlanTalks(user))
+            observeSlots()
+        }
     }
 
     private fun observeSlots() {
@@ -189,6 +195,8 @@ class TalkScheduleViewModel(
             observeYear(user, year)
                 .catch { exception ->
                     val message = exception.message ?: "Termine konnten nicht geladen werden."
+                    // Der Flow ist beendet; ohne Zurücksetzen würde observeSlots() nie wieder laden.
+                    observing = false
                     mutableUiState.update { it.copy(isLoading = false, errorMessage = message) }
                 }.collect { slots ->
                     mutableUiState.update { it.copy(slots = slots, isLoading = false) }
@@ -207,6 +215,7 @@ class TalkScheduleViewModel(
             observeWeekEvents()
                 .catch { exception ->
                     val message = exception.message ?: "Wochenereignisse konnten nicht geladen werden."
+                    weekEventsJob = null
                     mutableUiState.update { it.copy(errorMessage = message) }
                 }.collect { events -> mutableUiState.update { it.copy(weekEvents = events) } }
         }

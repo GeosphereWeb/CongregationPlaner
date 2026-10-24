@@ -42,6 +42,40 @@ class FirestoreRestTalkRepositoriesTest {
     }
 
     @Test
+    fun `observeYear follows the page token to read every page`() = runWithServer(
+        responder = { request ->
+            if (request.query.orEmpty().contains("pageToken=next%2F1")) {
+                FakeResponse(200, """{"documents":[${document("2026-11-01")}]}""")
+            } else {
+                FakeResponse(200, """{"documents":[${document("2026-10-25")}],"nextPageToken":"next/1"}""")
+            }
+        },
+    ) { server ->
+        val slots = FirestoreRestTalkScheduleRepository(idTokenProvider = { "token-123" })
+            .observeYear(congregation, 2026).first()
+
+        assertEquals(listOf(LocalDate(2026, 10, 25), LocalDate(2026, 11, 1)), slots.map { it.date })
+        assertEquals(2, server.requests.size)
+        assertTrue(server.requests.all { it.query.orEmpty().contains("pageSize=300") })
+    }
+
+    @Test
+    fun `observeYear skips documents with an invalid id or time`() = runWithServer(
+        responder = {
+            FakeResponse(
+                200,
+                """{"documents":[${document("2026-02-31")},${document("2026-10-25")},
+                    {"name":"x/talkSchedule/2026-11-01","fields":{"talkCancelled":{"booleanValue":false}}}]}""",
+            )
+        },
+    ) {
+        val slots = FirestoreRestTalkScheduleRepository(idTokenProvider = { "token-123" })
+            .observeYear(congregation, 2026).first()
+
+        assertEquals(listOf(LocalDate(2026, 10, 25)), slots.map { it.date })
+    }
+
+    @Test
     fun `saveSlot replaces the document with the date as id`() = runWithServer({ FakeResponse(200, "{}") }) { server ->
         val result = FirestoreRestTalkScheduleRepository(idTokenProvider = { "token-123" })
             .saveSlot(congregation, slot)
