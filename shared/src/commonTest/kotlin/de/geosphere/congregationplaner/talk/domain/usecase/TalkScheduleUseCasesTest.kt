@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner.talk.domain.usecase
 
+import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.MemberRef
 import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
@@ -7,6 +8,7 @@ import de.geosphere.congregationplaner.talk.domain.model.TalkScheduleException
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
+import de.geosphere.congregationplaner.talk.testing.FakeExternalSpeakerRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
 import de.geosphere.congregationplaner.talk.testing.FakeWeekEventRepository
@@ -151,6 +153,83 @@ class TalkScheduleUseCasesTest {
         assertEquals(testCongregation, users.requestedCongregation)
         val withoutCongregation = admin.copy(congregation = null)
         assertTrue(ObserveTalkMembersUseCase(ObserveMembersUseCase(users))(withoutCongregation).toList().isEmpty())
+    }
+
+    @Test
+    fun `save accepts an external speaker with congregation and trims the fields`() = runBlocking {
+        val external = slot().copy(
+            externalSpeakerId = "e1",
+            speakerLastName = " Extern ",
+            speakerFirstName = " Eva ",
+            speakerCongregation = " Nord ",
+        )
+
+        save(admin, external)
+
+        val saved = repository.savedSlots.single()
+        assertEquals(ExternalSpeaker("e1", "Extern", "Eva", "Nord"), saved.externalSpeaker)
+        assertNull(saved.speaker)
+    }
+
+    @Test
+    fun `save rejects inconsistent speakers`() = runBlocking {
+        val external = slot().copy(
+            externalSpeakerId = "e1",
+            speakerLastName = "Extern",
+            speakerFirstName = "Eva",
+            speakerCongregation = "Nord",
+        )
+        val invalid = listOf(
+            external.copy(speakerMemberId = "m1"),
+            external.copy(speakerCongregation = null),
+            external.copy(speakerCongregation = " "),
+            external.copy(speakerCongregation = "x".repeat(TalkSlot.MAX_PERSON_NAME_LENGTH + 1)),
+            external.copy(speakerLastName = null),
+            external.copy(externalSpeakerId = null),
+            slot().copy(
+                speakerMemberId = "m1",
+                speakerLastName = "Muster",
+                speakerFirstName = "Max",
+                speakerCongregation = "Nord",
+            ),
+        )
+
+        invalid.forEach { assertIs<TalkScheduleException.InvalidSpeaker>(save(admin, it).exceptionOrNull()) }
+        assertTrue(repository.savedSlots.isEmpty())
+    }
+
+    @Test
+    fun `external speakers are saved trimmed, validated, permission checked and sorted`() = runBlocking {
+        val externals = FakeExternalSpeakerRepository(
+            listOf(ExternalSpeaker("2", "zorn", "Tim", "Süd"), ExternalSpeaker("1", "Berg", "Lea", "Nord")),
+        )
+        val policy = TalkSchedulePermissionPolicy()
+        val saveExternal = SaveExternalSpeakerUseCase(externals, policy)
+        val deleteExternal = DeleteExternalSpeakerUseCase(externals, policy)
+
+        assertEquals(listOf("1", "2"), ObserveExternalSpeakersUseCase(externals)(admin).first().map { it.id })
+        assertTrue(ObserveExternalSpeakersUseCase(externals)(admin.copy(congregation = null)).toList().isEmpty())
+
+        val saved = saveExternal(admin, ExternalSpeaker("", " Neu ", " Nina ", " Ost ")).getOrThrow()
+        assertEquals(ExternalSpeaker("ext-1", "Neu", "Nina", "Ost"), saved)
+        assertEquals(testCongregation, externals.requestedCongregation)
+
+        assertIs<TalkScheduleException.NotAllowed>(saveExternal(member, saved).exceptionOrNull())
+        assertIs<TalkScheduleException.NotAllowed>(deleteExternal(member, "1").exceptionOrNull())
+        assertIs<TalkScheduleException.NotAllowed>(
+            saveExternal(admin.copy(congregation = null), saved).exceptionOrNull(),
+        )
+        listOf(
+            ExternalSpeaker("", " ", "Nina", "Ost"),
+            ExternalSpeaker("", "Neu", "Nina", " "),
+            ExternalSpeaker("", "x".repeat(TalkSlot.MAX_PERSON_NAME_LENGTH + 1), "Nina", "Ost"),
+        ).forEach { assertIs<TalkScheduleException.InvalidSpeaker>(saveExternal(admin, it).exceptionOrNull()) }
+        assertEquals(1, externals.savedSpeakers.size)
+
+        assertIs<TalkScheduleException.InvalidSpeaker>(deleteExternal(admin, " ").exceptionOrNull())
+        assertTrue(deleteExternal(admin, "1").isSuccess)
+        assertEquals(listOf("1"), externals.deletedIds)
+        assertEquals("Neu, Nina (Ost)", saved.displayName)
     }
 
     @Test
