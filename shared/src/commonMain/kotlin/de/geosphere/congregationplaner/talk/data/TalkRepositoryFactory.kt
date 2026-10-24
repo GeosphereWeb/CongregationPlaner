@@ -1,8 +1,10 @@
 package de.geosphere.congregationplaner.talk.data
 
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
+import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
+import de.geosphere.congregationplaner.talk.domain.repository.TalkCatalogRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkScheduleRepository
 import de.geosphere.congregationplaner.talk.domain.repository.WeekEventRepository
 import kotlinx.coroutines.flow.Flow
@@ -13,10 +15,15 @@ expect fun createTalkScheduleRepository(): TalkScheduleRepository
 
 expect fun createWeekEventRepository(): WeekEventRepository
 
+expect fun createTalkCatalogRepository(): TalkCatalogRepository
+
 internal const val TALK_SCHEDULE_SUBCOLLECTION = "talkSchedule"
 
 /** Globale Liste der Wochenereignisse; sie gilt für alle Versammlungen und Kreise. */
 internal const val WEEK_EVENTS_COLLECTION_PATH = "weekEvents"
+
+/** Globale Vortragsliste; die Dokument-ID ist die Vortragsnummer. */
+internal const val TALK_CATALOG_COLLECTION_PATH = "talkCatalog"
 
 internal val CongregationRef.talkSchedulePath: String get() = "$documentPath/$TALK_SCHEDULE_SUBCOLLECTION"
 
@@ -39,6 +46,12 @@ fun unavailableTalkScheduleRepository(platform: String): TalkScheduleRepository 
 
 fun unavailableWeekEventRepository(platform: String): WeekEventRepository = object : WeekEventRepository {
     override fun observeWeekEvents(): Flow<List<WeekEvent>> = flow {
+        throw UnsupportedOperationException("Firestore is not configured for $platform.")
+    }
+}
+
+fun unavailableTalkCatalogRepository(platform: String): TalkCatalogRepository = object : TalkCatalogRepository {
+    override fun observeTalks(): Flow<List<Talk>> = flow {
         throw UnsupportedOperationException("Firestore is not configured for $platform.")
     }
 }

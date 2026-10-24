@@ -1,9 +1,11 @@
 package de.geosphere.congregationplaner.talk.domain.usecase
 
+import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkScheduleException
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
+import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
 import de.geosphere.congregationplaner.talk.testing.FakeWeekEventRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
@@ -77,6 +79,34 @@ class TalkScheduleUseCasesTest {
         save(admin, slot().copy(weekEventId = "kongress", weekEventName = " Kongress "))
 
         assertEquals("Kongress", repository.savedSlots.single().weekEventName)
+    }
+
+    @Test
+    fun `save checks number and title of the talk together and trims the title`() = runBlocking {
+        val invalid = listOf(
+            slot().copy(talkNumber = 0, talkTitle = "Titel"),
+            slot().copy(talkNumber = 12, talkTitle = " "),
+            slot().copy(talkNumber = 12, talkTitle = null),
+            slot().copy(talkNumber = null, talkTitle = "Titel"),
+            slot().copy(talkNumber = 12, talkTitle = "x".repeat(TalkSlot.MAX_TALK_TITLE_LENGTH + 1)),
+        )
+        invalid.forEach { assertIs<TalkScheduleException.InvalidTalk>(save(admin, it).exceptionOrNull()) }
+        assertTrue(repository.savedSlots.isEmpty())
+
+        save(admin, slot().copy(talkNumber = 12, talkTitle = " Titel "))
+
+        assertEquals(12, repository.savedSlots.single().talkNumber)
+        assertEquals("Titel", repository.savedSlots.single().talkTitle)
+    }
+
+    @Test
+    fun `talk catalog is sorted by number and keeps inactive talks`() = runBlocking {
+        val catalog = FakeTalkCatalogRepository(listOf(Talk(30, "C"), Talk(2, "B", active = false), Talk(10, "A")))
+
+        val talks = ObserveTalkCatalogUseCase(catalog)().first()
+
+        assertEquals(listOf(2, 10, 30), talks.map { it.number })
+        assertEquals(false, talks.first().active)
     }
 
     @Test
