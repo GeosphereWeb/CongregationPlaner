@@ -1,13 +1,16 @@
 package de.geosphere.congregationplaner.talk.presentation
 
+import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.MoveTalkSlotUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkCatalogUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkYearUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveWeekEventsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveTalkSlotUseCase
+import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
 import de.geosphere.congregationplaner.talk.testing.FakeWeekEventRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
@@ -51,8 +54,12 @@ class TalkScheduleViewModelTest {
     private val november1 = TalkSlot(LocalDate(2026, 11, 1), LocalTime(17, 30))
     private val kongress = WeekEvent("kongress", "Kongress", cancelsTalk = true)
 
+    private val activeTalk = Talk(12, "Der Weg zum Glück")
+    private val pausedTalk = Talk(40, "Pausierter Vortrag", active = false)
+
     private lateinit var repository: FakeTalkScheduleRepository
     private lateinit var weekEvents: FakeWeekEventRepository
+    private lateinit var catalog: FakeTalkCatalogRepository
     private lateinit var viewModel: TalkScheduleViewModel
 
     @BeforeTest
@@ -60,12 +67,14 @@ class TalkScheduleViewModelTest {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         repository = FakeTalkScheduleRepository(listOf(october25, november1))
         weekEvents = FakeWeekEventRepository(listOf(kongress))
+        catalog = FakeTalkCatalogRepository(listOf(activeTalk, pausedTalk))
         val policy = TalkSchedulePermissionPolicy()
         val save = SaveTalkSlotUseCase(repository, policy)
         val delete = DeleteTalkSlotUseCase(repository, policy)
         viewModel = TalkScheduleViewModel(
             ObserveTalkYearUseCase(repository),
             ObserveWeekEventsUseCase(weekEvents),
+            ObserveTalkCatalogUseCase(catalog),
             MoveTalkSlotUseCase(save, delete),
             delete,
             policy,
@@ -89,6 +98,38 @@ class TalkScheduleViewModelTest {
         assertEquals(listOf(october25, november1), state.slots)
         assertEquals(listOf(kongress), state.weekEvents)
         assertEquals(2026, repository.requestedYear)
+    }
+
+    @Test
+    fun `planner loads the talk catalog and selects an active talk as snapshot`() {
+        viewModel.onCurrentUserChanged(planner)
+        assertEquals(listOf(activeTalk, pausedTalk), state.talks)
+
+        viewModel.newSlot()
+        viewModel.selectTalk(activeTalk)
+        assertEquals(12, state.editor!!.slot.talkNumber)
+        assertEquals("Der Weg zum Glück", state.editor!!.slot.talkTitle)
+
+        viewModel.selectTalk(null)
+        assertNull(state.editor!!.slot.talkNumber)
+        assertNull(state.editor!!.slot.talkTitle)
+    }
+
+    @Test
+    fun `an inactive talk cannot be selected`() {
+        viewModel.onCurrentUserChanged(planner)
+        viewModel.newSlot()
+
+        viewModel.selectTalk(pausedTalk)
+
+        assertNull(state.editor!!.slot.talkNumber)
+    }
+
+    @Test
+    fun `member without permission does not load the catalog`() {
+        viewModel.onCurrentUserChanged(member)
+
+        assertTrue(state.talks.isEmpty())
     }
 
     @Test

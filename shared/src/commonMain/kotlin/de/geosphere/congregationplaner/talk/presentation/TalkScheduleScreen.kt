@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.presentation.components.SelectableListCard
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
+import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
@@ -42,6 +43,7 @@ internal data class TalkScheduleActions(
     val onEditSlot: (TalkSlot) -> Unit = {},
     val onEditorChange: (TalkSlot) -> Unit = {},
     val onSelectWeekEvent: (WeekEvent?) -> Unit = {},
+    val onSelectTalk: (Talk?) -> Unit = {},
     val onSave: () -> Unit = {},
     val onDelete: (TalkSlot) -> Unit = {},
     val onCancelEditing: () -> Unit = {},
@@ -61,6 +63,7 @@ fun TalkScheduleScreen(viewModel: TalkScheduleViewModel, modifier: Modifier = Mo
             onEditSlot = viewModel::editSlot,
             onEditorChange = viewModel::updateEditor,
             onSelectWeekEvent = viewModel::selectWeekEvent,
+            onSelectTalk = viewModel::selectTalk,
             onSave = viewModel::save,
             onDelete = viewModel::delete,
             onCancelEditing = viewModel::cancelEditing,
@@ -155,9 +158,11 @@ internal fun TalkScheduleContent(
                             TalkSlotEditor(
                                 editor = editor,
                                 weekEvents = state.weekEvents,
+                                talks = state.talks,
                                 isSaving = state.isSaving,
                                 onChange = actions.onEditorChange,
                                 onSelectWeekEvent = actions.onSelectWeekEvent,
+                                onSelectTalk = actions.onSelectTalk,
                                 onSave = actions.onSave,
                                 onCancel = onCancelEditing,
                             )
@@ -175,6 +180,7 @@ internal fun TalkScheduleContent(
 private fun SlotSummary(slot: TalkSlot) {
     Text("${slot.date.toDisplayText()} · ${slot.time}", style = MaterialTheme.typography.titleMedium)
     slot.weekEventName?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+    slot.talkNumber?.let { Text("$it – ${slot.talkTitle.orEmpty()}", style = MaterialTheme.typography.bodyMedium) }
     if (slot.talkCancelled) Text("Vortrag entfällt", color = MaterialTheme.colorScheme.error)
 }
 

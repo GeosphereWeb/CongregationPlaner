@@ -32,4 +32,11 @@ class UnavailableTalkRepositoriesTest {
 
         assertFailsWith<UnsupportedOperationException> { repository.observeWeekEvents().first() }
     }
+
+    @Test
+    fun `unavailable talk catalog repository fails with the platform name`(): Unit = runBlocking {
+        val repository = unavailableTalkCatalogRepository("iOS")
+
+        assertFailsWith<UnsupportedOperationException> { repository.observeTalks().first() }
+    }
 }

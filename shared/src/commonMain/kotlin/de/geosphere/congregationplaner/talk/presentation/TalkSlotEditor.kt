@@ -10,14 +10,20 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.congregation.presentation.MeetingTimeInput
+import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
@@ -30,13 +36,16 @@ import kotlinx.datetime.LocalTime
 internal fun TalkSlotEditor(
     editor: TalkSlotEditorState,
     weekEvents: List<WeekEvent>,
+    talks: List<Talk>,
     isSaving: Boolean,
     onChange: (TalkSlot) -> Unit,
     onSelectWeekEvent: (WeekEvent?) -> Unit,
+    onSelectTalk: (Talk?) -> Unit,
     onSave: () -> Unit,
     onCancel: () -> Unit,
 ) {
     val slot = editor.slot
+    var showTalkPicker by remember { mutableStateOf(false) }
     Card {
         Column(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -72,6 +81,28 @@ internal fun TalkSlotEditor(
                 Switch(checked = slot.talkCancelled, onCheckedChange = { onChange(slot.copy(talkCancelled = it)) })
             }
 
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Vortrag", style = MaterialTheme.typography.labelLarge)
+                Text(
+                    slot.talkNumber?.let { "$it – ${slot.talkTitle.orEmpty()}" } ?: "Noch kein Vortrag gewählt",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { showTalkPicker = true }, enabled = !slot.talkCancelled) {
+                        Text(if (slot.talkNumber == null) "Vortrag wählen" else "Vortrag ändern")
+                    }
+                    if (slot.talkNumber != null) {
+                        TextButton(onClick = { onSelectTalk(null) }) { Text("Entfernen") }
+                    }
+                }
+                if (slot.talkCancelled) {
+                    Text(
+                        "Der Vortrag entfällt, eine Auswahl ist nicht nötig.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = onSave, enabled = !isSaving && editor.isDirty) {
                     Text(if (isSaving) "Speichert …" else "Speichern")
@@ -79,6 +110,17 @@ internal fun TalkSlotEditor(
                 TextButton(onClick = onCancel, enabled = !isSaving) { Text("Abbrechen") }
             }
         }
+    }
+
+    if (showTalkPicker) {
+        TalkPickerDialog(
+            talks = talks,
+            onSelect = {
+                onSelectTalk(it)
+                showTalkPicker = false
+            },
+            onDismiss = { showTalkPicker = false },
+        )
     }
 }
 
@@ -91,9 +133,11 @@ private fun TalkSlotEditorPreview() = PreviewThemeWrapper {
             WeekEvent("kongress", "Kongress", cancelsTalk = true),
             WeekEvent("besuch", "Kreisaufseher"),
         ),
+        talks = listOf(Talk(1, "Beispielvortrag"), Talk(2, "Weiterer Vortrag")),
         isSaving = false,
         onChange = {},
         onSelectWeekEvent = {},
+        onSelectTalk = {},
         onSave = {},
         onCancel = {},
     )

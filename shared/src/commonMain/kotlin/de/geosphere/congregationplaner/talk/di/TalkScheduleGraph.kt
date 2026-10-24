@@ -1,7 +1,9 @@
 package de.geosphere.congregationplaner.talk.di
 
+import de.geosphere.congregationplaner.talk.data.createTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.data.createTalkScheduleRepository
 import de.geosphere.congregationplaner.talk.data.createWeekEventRepository
+import de.geosphere.congregationplaner.talk.domain.repository.TalkCatalogRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkScheduleRepository
 import de.geosphere.congregationplaner.talk.domain.repository.WeekEventRepository
 import de.geosphere.congregationplaner.talk.presentation.TalkScheduleViewModel
@@ -17,4 +19,7 @@ interface TalkScheduleGraph {
 
     @Provides
     fun provideWeekEventRepository(): WeekEventRepository = createWeekEventRepository()
+
+    @Provides
+    fun provideTalkCatalogRepository(): TalkCatalogRepository = createTalkCatalogRepository()
 }

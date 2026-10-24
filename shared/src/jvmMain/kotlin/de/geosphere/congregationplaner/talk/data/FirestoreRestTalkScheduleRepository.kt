@@ -7,9 +7,11 @@ import de.geosphere.congregationplaner.firestore.FirestoreRestDocument
 import de.geosphere.congregationplaner.firestore.booleanField
 import de.geosphere.congregationplaner.firestore.firestoreBoolean
 import de.geosphere.congregationplaner.firestore.firestoreFields
+import de.geosphere.congregationplaner.firestore.firestoreNullableInteger
 import de.geosphere.congregationplaner.firestore.firestoreNullableString
 import de.geosphere.congregationplaner.firestore.firestoreString
 import de.geosphere.congregationplaner.firestore.listAllDocuments
+import de.geosphere.congregationplaner.firestore.optionalIntField
 import de.geosphere.congregationplaner.firestore.optionalStringField
 import de.geosphere.congregationplaner.firestore.pollingFlow
 import de.geosphere.congregationplaner.firestore.runCatchingIo
@@ -54,6 +56,8 @@ internal class FirestoreRestTalkScheduleRepository(
         weekEventId = fields.optionalStringField("weekEventId"),
         weekEventName = fields.optionalStringField("weekEventName"),
         talkCancelled = fields.booleanField("talkCancelled"),
+        talkNumber = fields.optionalIntField("talkNumber"),
+        talkTitle = fields.optionalStringField("talkTitle"),
     )
 
     private fun TalkSlot.toBody(): String = firestoreFields(
@@ -62,6 +66,8 @@ internal class FirestoreRestTalkScheduleRepository(
             add("talkCancelled", firestoreBoolean(talkCancelled))
             add("weekEventId", firestoreNullableString(weekEventId))
             add("weekEventName", firestoreNullableString(weekEventName))
+            add("talkNumber", firestoreNullableInteger(talkNumber))
+            add("talkTitle", firestoreNullableString(talkTitle))
         },
     )
 }
