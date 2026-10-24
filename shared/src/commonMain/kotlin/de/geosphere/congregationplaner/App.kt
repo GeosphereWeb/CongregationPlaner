@@ -58,6 +58,7 @@ import de.geosphere.congregationplaner.congregation.presentation.CongregationMet
 import de.geosphere.congregationplaner.organization.InviteLinkInbox
 import de.geosphere.congregationplaner.organization.di.OrganizationGraph
 import de.geosphere.congregationplaner.organization.presentation.CongregationSelector
+import de.geosphere.congregationplaner.talk.presentation.TalkReferenceRoute
 import de.geosphere.congregationplaner.talk.presentation.TalkScheduleRoute
 import de.geosphere.congregationplaner.theming.AppTheme
 import de.geosphere.congregationplaner.theming.brushes.backgroundBrush
@@ -229,9 +230,10 @@ fun App() {
         }
 
         val navigationItems = remember(currentUser) {
-            NavigationItem.entries.filter { item ->
-                item != NavigationItem.Usererwaltung || userAccessViewModel.canManageUsers(currentUser)
-            }
+            visibleNavigationItems(
+                canManageUsers = userAccessViewModel.canManageUsers(currentUser),
+                isGlobalAdmin = currentUser.isGlobalAdmin,
+            )
         }
         LaunchedEffect(navigationItems, selectedRoute) {
             if (navigationItems.none { it.routeName == selectedRoute }) selectedRoute = NavigationItem.Home.routeName
@@ -496,6 +498,8 @@ fun DesktopLayout(
 
                     "planung_wochenende" -> TalkScheduleRoute(currentUser)
 
+                    "talk_reference" -> TalkReferenceRoute(currentUser)
+
                     "circuit" -> CircuitRoute(currentUser)
 
                     "versammlung_metadata" -> CongregationMetadataRoute(currentUser)
@@ -579,6 +583,7 @@ fun MobileLayout(
                         "home" -> Text("Home Content")
                         "settings" -> Text("Settings Content")
                         "planung_wochenende" -> TalkScheduleRoute(currentUser)
+                        "talk_reference" -> TalkReferenceRoute(currentUser)
                         "circuit" -> CircuitRoute(currentUser)
                         "versammlung_metadata" -> CongregationMetadataRoute(currentUser)
                         "userverwaltung" -> UserManagementRoute(currentUser)
