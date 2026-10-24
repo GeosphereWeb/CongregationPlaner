@@ -53,6 +53,12 @@ rules_version = '2';
 //   - speakerMemberId: string | null (member uid), speakerLastName: string | null (1..100 chars),
 //     speakerFirstName: string | null (<= 100 chars); all three set or all three null (snapshot of the member).
 //   - chairmanMemberId, chairmanLastName, chairmanFirstName: same shape as the speaker fields (the chairman).
+//   - externalSpeakerId: string | null, speakerCongregation: string | null (1..100 chars): an external speaker
+//     instead of a member; then the speaker name fields are set and speakerMemberId is null (never both).
+//
+// Collection: region/.../congregation/{congId}/externalSpeakers
+// Document ID: free (auto id). Readable and writable only by planners of this congregation.
+// Fields: lastName: string (1..100), firstName: string (<= 100), congregationName: string (1..100).
 //
 // Collection: weekEvents (global, identical for all congregations)
 // Document ID: free. Fields: name: string, cancelsTalk: bool.
@@ -122,6 +128,14 @@ service cloud.firestore {
           'PLAN_TALKS' in get(memberPath).data.permissions);
     }
 
+    function isValidExternalSpeaker(data) {
+      return data.keys().hasOnly(['lastName', 'firstName', 'congregationName']) &&
+        data.keys().hasAll(['lastName', 'firstName', 'congregationName']) &&
+        data.lastName is string && data.lastName.size() >= 1 && data.lastName.size() <= 100 &&
+        data.firstName is string && data.firstName.size() <= 100 &&
+        data.congregationName is string && data.congregationName.size() >= 1 && data.congregationName.size() <= 100;
+    }
+
     function isValidTalkSlot(date, data) {
       let eventId = data.get('weekEventId', null);
       let eventName = data.get('weekEventName', null);
@@ -133,10 +147,12 @@ service cloud.firestore {
       let chairmanId = data.get('chairmanMemberId', null);
       let chairmanLast = data.get('chairmanLastName', null);
       let chairmanFirst = data.get('chairmanFirstName', null);
+      let externalId = data.get('externalSpeakerId', null);
+      let speakerCongregation = data.get('speakerCongregation', null);
       return date.matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$') &&
         data.keys().hasOnly(['time', 'talkCancelled', 'weekEventId', 'weekEventName', 'talkNumber', 'talkTitle',
           'speakerMemberId', 'speakerLastName', 'speakerFirstName',
-          'chairmanMemberId', 'chairmanLastName', 'chairmanFirstName']) &&
+          'chairmanMemberId', 'chairmanLastName', 'chairmanFirstName', 'externalSpeakerId', 'speakerCongregation']) &&
         data.keys().hasAll(['time', 'talkCancelled']) &&
         data.time is string && data.time.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$') &&
         data.talkCancelled is bool &&
@@ -149,8 +165,13 @@ service cloud.firestore {
         (speakerId == null || (speakerId is string && speakerId.size() >= 1 && speakerId.size() <= 128)) &&
         (speakerLast == null || (speakerLast is string && speakerLast.size() >= 1 && speakerLast.size() <= 100)) &&
         (speakerFirst == null || (speakerFirst is string && speakerFirst.size() <= 100)) &&
-        ((speakerId == null) == (speakerLast == null)) &&
-        ((speakerId == null) == (speakerFirst == null)) &&
+        (externalId == null || (externalId is string && externalId.size() >= 1 && externalId.size() <= 128)) &&
+        (speakerCongregation == null ||
+          (speakerCongregation is string && speakerCongregation.size() >= 1 && speakerCongregation.size() <= 100)) &&
+        (speakerId == null || externalId == null) &&
+        ((externalId == null) == (speakerCongregation == null)) &&
+        ((speakerId == null && externalId == null) == (speakerLast == null)) &&
+        ((speakerId == null && externalId == null) == (speakerFirst == null)) &&
         (chairmanId == null || (chairmanId is string && chairmanId.size() >= 1 && chairmanId.size() <= 128)) &&
         (chairmanLast == null || (chairmanLast is string && chairmanLast.size() >= 1 && chairmanLast.size() <= 100)) &&
         (chairmanFirst == null || (chairmanFirst is string && chairmanFirst.size() <= 100)) &&
@@ -348,6 +369,16 @@ service cloud.firestore {
 
                 allow create, update: if canPlanTalks(regionId, subregionId, branchId, circuitId, congId) &&
                   isValidTalkSlot(date, request.resource.data);
+              }
+
+              // ---------------------------------------------------------
+              // External speakers of a congregation (planners only)
+              // ---------------------------------------------------------
+              match /externalSpeakers/{speakerId} {
+                allow read, delete: if canPlanTalks(regionId, subregionId, branchId, circuitId, congId);
+
+                allow create, update: if canPlanTalks(regionId, subregionId, branchId, circuitId, congId) &&
+                  isValidExternalSpeaker(request.resource.data);
               }
             }
           }

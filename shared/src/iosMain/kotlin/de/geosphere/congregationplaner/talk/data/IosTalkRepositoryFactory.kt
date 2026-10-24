@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner.talk.data
 
+import de.geosphere.congregationplaner.talk.domain.repository.ExternalSpeakerRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkCatalogRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkScheduleRepository
 import de.geosphere.congregationplaner.talk.domain.repository.WeekEventRepository
@@ -9,3 +10,5 @@ actual fun createTalkScheduleRepository(): TalkScheduleRepository = unavailableT
 actual fun createWeekEventRepository(): WeekEventRepository = unavailableWeekEventRepository("iOS")
 
 actual fun createTalkCatalogRepository(): TalkCatalogRepository = unavailableTalkCatalogRepository("iOS")
+
+actual fun createExternalSpeakerRepository(): ExternalSpeakerRepository = unavailableExternalSpeakerRepository("iOS")

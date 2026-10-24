@@ -1,8 +1,10 @@
 package de.geosphere.congregationplaner.talk.di
 
+import de.geosphere.congregationplaner.talk.data.createExternalSpeakerRepository
 import de.geosphere.congregationplaner.talk.data.createTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.data.createTalkScheduleRepository
 import de.geosphere.congregationplaner.talk.data.createWeekEventRepository
+import de.geosphere.congregationplaner.talk.domain.repository.ExternalSpeakerRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkCatalogRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkScheduleRepository
 import de.geosphere.congregationplaner.talk.domain.repository.WeekEventRepository
@@ -24,6 +26,9 @@ interface TalkScheduleGraph {
 
     @Provides
     fun provideTalkCatalogRepository(): TalkCatalogRepository = createTalkCatalogRepository()
+
+    @Provides
+    fun provideExternalSpeakerRepository(): ExternalSpeakerRepository = createExternalSpeakerRepository()
 
     // Die Redner stammen aus den Mitgliedern der Versammlung.
     @Provides
