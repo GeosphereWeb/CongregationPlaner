@@ -1,6 +1,7 @@
 package de.geosphere.congregationplaner.talk.data
 
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
+import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.testing.FakeFirestoreRestServer
@@ -87,6 +88,53 @@ class FirestoreRestTalkRepositoriesTest {
         assertTrue(request.body.contains(""""time":{"stringValue":"17:30"}"""))
         assertTrue(request.body.contains(""""talkCancelled":{"booleanValue":true}"""))
         assertTrue(request.body.contains(""""weekEventId":{"stringValue":"kongress"}"""))
+    }
+
+    @Test
+    fun `slot talk is written as integer and title and read back`() = runWithServer(
+        responder = { request ->
+            if (request.method == "GET") {
+                FakeResponse(
+                    200,
+                    """{"documents":[{"name":"x/talkSchedule/2026-10-25","fields":{
+                        "time":{"stringValue":"17:30"},"talkCancelled":{"booleanValue":false},
+                        "talkNumber":{"integerValue":"12"},"talkTitle":{"stringValue":"Der Weg zum Glück"}}}]}""",
+                )
+            } else {
+                FakeResponse(200, "{}")
+            }
+        },
+    ) { server ->
+        val repository = FirestoreRestTalkScheduleRepository(idTokenProvider = { "token-123" })
+
+        val read = repository.observeYear(congregation, 2026).first().single()
+        assertEquals(12, read.talkNumber)
+        assertEquals("Der Weg zum Glück", read.talkTitle)
+
+        repository.saveSlot(congregation, read)
+        val body = server.requests.last().body
+        assertTrue(body.contains(""""talkNumber":{"integerValue":"12"}"""))
+        assertTrue(body.contains(""""talkTitle":{"stringValue":"Der Weg zum Glück"}"""))
+
+        repository.saveSlot(congregation, read.copy(talkNumber = null, talkTitle = null))
+        assertTrue(server.requests.last().body.contains(""""talkNumber":{"nullValue":null}"""))
+    }
+
+    @Test
+    fun `talk catalog reads number from the id and skips documents without a valid number`() = runWithServer({
+        FakeResponse(
+            200,
+            """{"documents":[
+                {"name":"x/talkCatalog/12","fields":{"title":{"stringValue":"Der Weg zum Glück"}}},
+                {"name":"x/talkCatalog/7","fields":{"title":{"stringValue":"Pausiert"},"active":{"booleanValue":false}}},
+                {"name":"x/talkCatalog/abc","fields":{"title":{"stringValue":"Ungültig"}}},
+                {"name":"x/talkCatalog/0","fields":{"title":{"stringValue":"Null"}}}]}""",
+        )
+    }) { server ->
+        val talks = FirestoreRestTalkCatalogRepository(idTokenProvider = { "token-123" }).observeTalks().first()
+
+        assertEquals(listOf(Talk(12, "Der Weg zum Glück", true), Talk(7, "Pausiert", false)), talks)
+        assertEquals("${FakeFirestoreRestServer.DOCUMENTS_PATH}/talkCatalog", server.requests.first().path)
     }
 
     @Test

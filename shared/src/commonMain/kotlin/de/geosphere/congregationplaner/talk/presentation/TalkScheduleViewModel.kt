@@ -5,11 +5,13 @@ import androidx.lifecycle.viewModelScope
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.presentation.components.ListDetailState
+import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.MoveTalkSlotUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkCatalogUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkYearUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveWeekEventsUseCase
 import de.geosphere.congregationplaner.user.domain.model.AppUser
@@ -35,6 +37,7 @@ data class TalkScheduleUiState(
     val year: Int,
     val slots: List<TalkSlot> = emptyList(),
     val weekEvents: List<WeekEvent> = emptyList(),
+    val talks: List<Talk> = emptyList(),
     val isLoading: Boolean = true,
     val canPlan: Boolean = false,
     val editor: TalkSlotEditorState? = null,
@@ -49,6 +52,7 @@ data class TalkScheduleUiState(
 class TalkScheduleViewModel(
     private val observeYear: ObserveTalkYearUseCase,
     private val observeWeekEvents: ObserveWeekEventsUseCase,
+    private val observeTalkCatalog: ObserveTalkCatalogUseCase,
     private val moveSlot: MoveTalkSlotUseCase,
     private val deleteSlot: DeleteTalkSlotUseCase,
     private val permissionPolicy: TalkSchedulePermissionPolicy,
@@ -60,6 +64,7 @@ class TalkScheduleViewModel(
     private var currentUser: AppUser? = null
     private var slotsJob: Job? = null
     private var weekEventsJob: Job? = null
+    private var talksJob: Job? = null
     private var observing = false
     private var observedCongregation: CongregationRef? = null
     private var observedYear: Int? = null
@@ -68,7 +73,7 @@ class TalkScheduleViewModel(
         currentUser = user
         val canPlan = permissionPolicy.canPlanTalks(user)
         mutableUiState.update { it.copy(canPlan = canPlan, editor = it.editor?.takeIf { canPlan }) }
-        observeWeekEventsIfAllowed(canPlan)
+        observeReferenceData(canPlan)
         observeSlots()
     }
 
@@ -106,6 +111,13 @@ class TalkScheduleViewModel(
                 slot.copy(weekEventId = event.id, weekEventName = event.name, talkCancelled = event.cancelsTalk)
             },
         )
+    }
+
+    /** Übernimmt Nummer und Titel des Vortrags als Momentaufnahme; `null` entfernt den Vortrag. */
+    fun selectTalk(talk: Talk?) {
+        if (talk != null && !talk.active) return
+        val slot = mutableUiState.value.editor?.slot ?: return
+        updateEditor(slot.copy(talkNumber = talk?.number, talkTitle = talk?.title))
     }
 
     fun cancelEditing() {
@@ -171,7 +183,7 @@ class TalkScheduleViewModel(
     fun dismissError() {
         mutableUiState.update { it.copy(errorMessage = null) }
         currentUser?.let { user ->
-            observeWeekEventsIfAllowed(permissionPolicy.canPlanTalks(user))
+            observeReferenceData(permissionPolicy.canPlanTalks(user))
             observeSlots()
         }
     }
@@ -204,20 +216,34 @@ class TalkScheduleViewModel(
         }
     }
 
-    private fun observeWeekEventsIfAllowed(canPlan: Boolean) {
+    // Wochenereignisse und Vortragsliste sind global und werden nur beobachtet, solange der Nutzer planen darf.
+    private fun observeReferenceData(canPlan: Boolean) {
         if (!canPlan) {
             weekEventsJob?.cancel()
             weekEventsJob = null
+            talksJob?.cancel()
+            talksJob = null
             return
         }
-        if (weekEventsJob != null) return
-        weekEventsJob = viewModelScope.launch {
-            observeWeekEvents()
-                .catch { exception ->
-                    val message = exception.message ?: "Wochenereignisse konnten nicht geladen werden."
-                    weekEventsJob = null
-                    mutableUiState.update { it.copy(errorMessage = message) }
-                }.collect { events -> mutableUiState.update { it.copy(weekEvents = events) } }
+        if (weekEventsJob == null) {
+            weekEventsJob = viewModelScope.launch {
+                observeWeekEvents()
+                    .catch { exception ->
+                        val message = exception.message ?: "Wochenereignisse konnten nicht geladen werden."
+                        weekEventsJob = null
+                        mutableUiState.update { it.copy(errorMessage = message) }
+                    }.collect { events -> mutableUiState.update { it.copy(weekEvents = events) } }
+            }
+        }
+        if (talksJob == null) {
+            talksJob = viewModelScope.launch {
+                observeTalkCatalog()
+                    .catch { exception ->
+                        val message = exception.message ?: "Vortragsliste konnte nicht geladen werden."
+                        talksJob = null
+                        mutableUiState.update { it.copy(errorMessage = message) }
+                    }.collect { talks -> mutableUiState.update { it.copy(talks = talks) } }
+            }
         }
     }
 

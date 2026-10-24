@@ -1,9 +1,11 @@
 package de.geosphere.congregationplaner.talk.domain.usecase
 
+import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkScheduleException
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
+import de.geosphere.congregationplaner.talk.domain.repository.TalkCatalogRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkScheduleRepository
 import de.geosphere.congregationplaner.talk.domain.repository.WeekEventRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
@@ -24,6 +26,12 @@ class ObserveTalkYearUseCase(private val repository: TalkScheduleRepository) {
 class ObserveWeekEventsUseCase(private val repository: WeekEventRepository) {
     operator fun invoke(): Flow<List<WeekEvent>> =
         repository.observeWeekEvents().map { events -> events.sortedBy { it.name.lowercase() } }
+}
+
+/** Die Vortragsliste nach Nummer; auch nicht aktive Vorträge sind enthalten, die Auswahl filtert sie. */
+@Inject
+class ObserveTalkCatalogUseCase(private val repository: TalkCatalogRepository) {
+    operator fun invoke(): Flow<List<Talk>> = repository.observeTalks().map { talks -> talks.sortedBy { it.number } }
 }
 
 /**
@@ -49,7 +57,16 @@ class SaveTalkSlotUseCase(
                 eventName.length <= TalkSlot.MAX_WEEK_EVENT_NAME_LENGTH
         }
         if (!validEvent) return Result.failure(TalkScheduleException.InvalidWeekEvent())
-        return repository.saveSlot(congregation, slot.copy(weekEventName = eventName))
+        val talkTitle = slot.talkTitle?.trim()
+        val validTalk = if (slot.talkNumber == null) {
+            talkTitle == null
+        } else {
+            slot.talkNumber >= 1 &&
+                !talkTitle.isNullOrEmpty() &&
+                talkTitle.length <= TalkSlot.MAX_TALK_TITLE_LENGTH
+        }
+        if (!validTalk) return Result.failure(TalkScheduleException.InvalidTalk())
+        return repository.saveSlot(congregation, slot.copy(weekEventName = eventName, talkTitle = talkTitle))
     }
 }
 

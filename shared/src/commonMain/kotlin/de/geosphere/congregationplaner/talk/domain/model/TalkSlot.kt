@@ -11,6 +11,8 @@ import kotlinx.datetime.LocalTime
  *   Termine lesbar bleiben, wenn die Liste sich ändert.
  * @param talkCancelled `true`, wenn an diesem Tag kein Vortrag gehalten wird; Vorbelegung ist
  *   [WeekEvent.cancelsTalk], der Planer kann sie überschreiben.
+ * @param talkNumber Nummer des Vortrags aus der Vortragsliste; der Titel wird mitgespeichert, damit alte
+ *   Termine unverändert bleiben, wenn sich der Titel in der Liste ändert. Nummer und Titel gehören zusammen.
  */
 data class TalkSlot(
     val date: LocalDate,
@@ -18,14 +20,23 @@ data class TalkSlot(
     val weekEventId: String? = null,
     val weekEventName: String? = null,
     val talkCancelled: Boolean = false,
+    val talkNumber: Int? = null,
+    val talkTitle: String? = null,
 ) {
     /** Dokument-ID in Firestore: ISO-Datum `yyyy-MM-dd`. */
     val id: String get() = date.toString()
 
     companion object {
         const val MAX_WEEK_EVENT_NAME_LENGTH = 100
+        const val MAX_TALK_TITLE_LENGTH = 200
     }
 }
+
+/**
+ * Ein Vortrag aus der Vortragsliste (`talkCatalog/{Nummer}`); sie gilt für alle Versammlungen und Kreise.
+ * Die Nummer bleibt stabil, der Titel kann sich ändern, und ein Vortrag kann zeitweise nicht [active] sein.
+ */
+data class Talk(val number: Int, val title: String, val active: Boolean = true)
 
 /** Ein Wochenereignis (z. B. Kreisaufseherbesuch); die Liste gilt für alle Versammlungen und Kreise. */
 data class WeekEvent(val id: String, val name: String, val cancelsTalk: Boolean = false)
@@ -36,5 +47,11 @@ sealed class TalkScheduleException(message: String) : Exception(message) {
     class InvalidWeekEvent :
         TalkScheduleException(
             "Das Wochenereignis ist ungültig (höchstens ${TalkSlot.MAX_WEEK_EVENT_NAME_LENGTH} Zeichen).",
+        )
+
+    class InvalidTalk :
+        TalkScheduleException(
+            "Der Vortrag ist ungültig: Nummer ab 1 und ein Titel mit höchstens " +
+                "${TalkSlot.MAX_TALK_TITLE_LENGTH} Zeichen.",
         )
 }
