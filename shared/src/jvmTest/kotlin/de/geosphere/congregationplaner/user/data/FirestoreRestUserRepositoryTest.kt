@@ -242,7 +242,7 @@ class FirestoreRestUserRepositoryTest {
             approved = true,
             profile = MemberProfile(
                 lastName = "Muster",
-                category = MemberCategory.SISTER,
+                category = MemberCategory.BROTHER,
                 mobilePhone = "0170",
                 isSpeaker = true,
             ),
@@ -268,7 +268,7 @@ class FirestoreRestUserRepositoryTest {
             request.query,
         )
         assertFalse(request.body.contains("approved"))
-        assertTrue(request.body.contains(""""category":{"stringValue":"SISTER"}"""))
+        assertTrue(request.body.contains(""""category":{"stringValue":"BROTHER"}"""))
         assertTrue(request.body.contains(""""mobilePhone":{"stringValue":"0170"}"""))
         assertTrue(request.body.contains(""""isSpeaker":{"booleanValue":true}"""))
     }

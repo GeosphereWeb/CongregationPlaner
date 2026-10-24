@@ -16,11 +16,17 @@ class MemberProfileTest {
     }
 
     @Test
-    fun `members are no speakers by default and normalizing keeps the speaker flag`() {
+    fun `only brothers can be speakers and normalizing drops the flag for everyone else`() {
         assertFalse(MemberProfile().isSpeaker)
-        val speaker = MemberProfile(category = MemberCategory.BROTHER, baptized = true, isSpeaker = true)
+        assertTrue(MemberProfile(category = MemberCategory.BROTHER).canBeSpeaker)
+        assertFalse(MemberProfile(category = MemberCategory.SISTER).canBeSpeaker)
+        assertFalse(MemberProfile(category = MemberCategory.CHILD).canBeSpeaker)
+        assertFalse(MemberProfile(category = null).canBeSpeaker)
 
+        val speaker = MemberProfile(category = MemberCategory.BROTHER, isSpeaker = true)
         assertTrue(speaker.normalized().isSpeaker)
+        assertFalse(speaker.copy(category = MemberCategory.SISTER).normalized().isSpeaker)
+        assertFalse(speaker.copy(category = null).normalized().isSpeaker)
     }
 
     @Test
