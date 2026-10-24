@@ -53,6 +53,7 @@ rules_version = '2';
 //   - speakerMemberId: string | null (member uid), speakerLastName: string | null (1..100 chars),
 //     speakerFirstName: string | null (<= 100 chars); all three set or all three null (snapshot of the member).
 //   - chairmanMemberId, chairmanLastName, chairmanFirstName: same shape as the speaker fields (the chairman).
+//   - A member is never speaker and chairman on the same day (speakerMemberId != chairmanMemberId).
 //   - externalSpeakerId: string | null, speakerCongregation: string | null (1..100 chars): an external speaker
 //     instead of a member; then the speaker name fields are set and speakerMemberId is null (never both).
 //
@@ -176,7 +177,8 @@ service cloud.firestore {
         (chairmanLast == null || (chairmanLast is string && chairmanLast.size() >= 1 && chairmanLast.size() <= 100)) &&
         (chairmanFirst == null || (chairmanFirst is string && chairmanFirst.size() <= 100)) &&
         ((chairmanId == null) == (chairmanLast == null)) &&
-        ((chairmanId == null) == (chairmanFirst == null));
+        ((chairmanId == null) == (chairmanFirst == null)) &&
+        (speakerId == null || chairmanId == null || speakerId != chairmanId);
     }
 
     function isNullableString(value, maxLen) {

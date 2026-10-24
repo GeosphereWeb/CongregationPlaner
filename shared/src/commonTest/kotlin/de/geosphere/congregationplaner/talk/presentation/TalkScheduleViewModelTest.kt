@@ -212,6 +212,33 @@ class TalkScheduleViewModelTest {
     }
 
     @Test
+    fun `speaker and chairman cannot be the same member`() {
+        viewModel.onCurrentUserChanged(viewer)
+        viewModel.newSlot()
+        viewModel.selectChairman(antonAlt)
+
+        viewModel.selectSpeaker(Speaker("m4", "Alt", "Anton"))
+
+        assertNull(state.editor!!.slot.speakerMemberId)
+        assertEquals(antonAlt, state.editor!!.slot.chairman)
+        assertEquals("Redner und Vorsitzender dürfen nicht dieselbe Person sein.", state.errorMessage)
+
+        viewModel.dismissError()
+        viewModel.selectChairman(null)
+        viewModel.selectSpeaker(Speaker("m4", "Alt", "Anton"))
+        assertEquals("m4", state.editor!!.slot.speakerMemberId)
+
+        viewModel.selectChairman(antonAlt)
+        assertNull(state.editor!!.slot.chairmanMemberId)
+        assertNotNull(state.errorMessage)
+
+        viewModel.dismissError()
+        viewModel.selectExternalSpeaker(externalSpeaker)
+        viewModel.selectChairman(antonAlt)
+        assertEquals(antonAlt, state.editor!!.slot.chairman)
+    }
+
+    @Test
     fun `chairman can still be selected when the talk is cancelled`() {
         viewModel.onCurrentUserChanged(viewer)
         viewModel.newSlot()
