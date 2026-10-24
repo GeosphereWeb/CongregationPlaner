@@ -92,6 +92,7 @@ class FirestoreRestUserRepositoryTest {
             assertTrue(create.body.contains(""""category":{"nullValue":null}"""))
             assertTrue(create.body.contains(""""appointment":{"stringValue":"NONE"}"""))
             assertTrue(create.body.contains(""""lastName":{"stringValue":""}"""))
+            assertTrue(create.body.contains(""""isSpeaker":{"booleanValue":false}"""))
         }
 
     @Test
@@ -106,7 +107,8 @@ class FirestoreRestUserRepositoryTest {
                 "baptized":{"booleanValue":true},
                 "appointment":{"stringValue":"ELDER"},
                 "mobilePhone":{"stringValue":"0170 123"},
-                "landlinePhone":{"stringValue":"030 456"}}}""",
+                "landlinePhone":{"stringValue":"030 456"},
+                "isSpeaker":{"booleanValue":true}}}""",
         )
     }) { _, repository ->
         val user = repository.observeUser(congregation, "uid-1").first()
@@ -121,6 +123,7 @@ class FirestoreRestUserRepositoryTest {
                 appointment = Appointment.ELDER,
                 mobilePhone = "0170 123",
                 landlinePhone = "030 456",
+                isSpeaker = true,
             ),
             user.profile,
         )
@@ -237,7 +240,12 @@ class FirestoreRestUserRepositoryTest {
         val member = AppUser(
             uid = "uid-1",
             approved = true,
-            profile = MemberProfile(lastName = "Muster", category = MemberCategory.SISTER, mobilePhone = "0170"),
+            profile = MemberProfile(
+                lastName = "Muster",
+                category = MemberCategory.BROTHER,
+                mobilePhone = "0170",
+                isSpeaker = true,
+            ),
         )
 
         assertEquals(member, repository.updateMemberProfile(congregation, member).getOrThrow())
@@ -246,13 +254,23 @@ class FirestoreRestUserRepositoryTest {
         assertEquals("PATCH", request.method)
         assertEquals("$membersPath/uid-1", request.path)
         assertEquals(
-            listOf("lastName", "firstName", "category", "baptized", "appointment", "mobilePhone", "landlinePhone")
+            listOf(
+                "lastName",
+                "firstName",
+                "category",
+                "baptized",
+                "appointment",
+                "mobilePhone",
+                "landlinePhone",
+                "isSpeaker",
+            )
                 .joinToString("&") { "updateMask.fieldPaths=$it" } + "&currentDocument.exists=true",
             request.query,
         )
         assertFalse(request.body.contains("approved"))
-        assertTrue(request.body.contains(""""category":{"stringValue":"SISTER"}"""))
+        assertTrue(request.body.contains(""""category":{"stringValue":"BROTHER"}"""))
         assertTrue(request.body.contains(""""mobilePhone":{"stringValue":"0170"}"""))
+        assertTrue(request.body.contains(""""isSpeaker":{"booleanValue":true}"""))
     }
 
     @Test

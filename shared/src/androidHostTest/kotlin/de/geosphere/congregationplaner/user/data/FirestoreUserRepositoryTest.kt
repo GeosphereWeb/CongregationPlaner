@@ -130,6 +130,7 @@ class FirestoreUserRepositoryTest {
                     "appointment" to "MINISTERIAL_SERVANT",
                     "mobilePhone" to "0170 123",
                     "landlinePhone" to "030 456",
+                    "isSpeaker" to true,
                     "hasAccount" to false,
                 ),
             ),
@@ -147,6 +148,7 @@ class FirestoreUserRepositoryTest {
                 appointment = Appointment.MINISTERIAL_SERVANT,
                 mobilePhone = "0170 123",
                 landlinePhone = "030 456",
+                isSpeaker = true,
             ),
             user.profile,
         )
@@ -196,6 +198,7 @@ class FirestoreUserRepositoryTest {
             category = MemberCategory.BROTHER,
             baptized = true,
             appointment = Appointment.ELDER,
+            isSpeaker = true,
         )
         val member = AppUser(uid = "uid-1", approved = true, profile = profile)
 
@@ -206,6 +209,7 @@ class FirestoreUserRepositoryTest {
                 "category" to "BROTHER",
                 "baptized" to true,
                 "appointment" to "ELDER",
+                "isSpeaker" to true,
             ),
             fields.captured,
         )
@@ -365,5 +369,6 @@ class FirestoreUserRepositoryTest {
         "appointment" to "NONE",
         "mobilePhone" to "",
         "landlinePhone" to "",
+        "isSpeaker" to false,
     )
 }
