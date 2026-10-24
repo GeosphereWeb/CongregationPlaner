@@ -120,6 +120,7 @@ private fun toDomain(document: DocumentSnapshot, congregation: CongregationRef):
         appointment = Appointment.fromValue(document.getString("appointment")),
         mobilePhone = document.getString("mobilePhone").orEmpty(),
         landlinePhone = document.getString("landlinePhone").orEmpty(),
+        isSpeaker = document.getBoolean("isSpeaker") ?: false,
     ),
 )
 
@@ -143,4 +144,5 @@ private fun MemberProfile.toFirestoreFields(): Map<String, Any?> = mapOf(
     "appointment" to appointment.name,
     "mobilePhone" to mobilePhone,
     "landlinePhone" to landlinePhone,
+    "isSpeaker" to isSpeaker,
 )

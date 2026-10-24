@@ -16,6 +16,14 @@ class MemberProfileTest {
     }
 
     @Test
+    fun `members are no speakers by default and normalizing keeps the speaker flag`() {
+        assertFalse(MemberProfile().isSpeaker)
+        val speaker = MemberProfile(category = MemberCategory.BROTHER, baptized = true, isSpeaker = true)
+
+        assertTrue(speaker.normalized().isSpeaker)
+    }
+
+    @Test
     fun `normalized drops baptism of children and appointments without prerequisites`() {
         val elder = MemberProfile(category = MemberCategory.BROTHER, baptized = true, appointment = Appointment.ELDER)
 

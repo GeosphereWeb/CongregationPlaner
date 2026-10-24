@@ -293,6 +293,7 @@ private fun ProfileSummary(profile: MemberProfile) {
         profile.category?.label,
         "getauft".takeIf { profile.baptized },
         profile.appointment.takeIf { it != Appointment.NONE }?.label,
+        "Redner".takeIf { profile.isSpeaker },
     )
     Text(
         details.joinToString(" · ").ifEmpty { "Noch keine Angaben" },
