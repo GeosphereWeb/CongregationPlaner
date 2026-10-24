@@ -8,5 +8,6 @@ class DesktopTalkRepositoryFactoryTest {
     fun `desktop factories create the rest repositories`() {
         assertIs<FirestoreRestTalkScheduleRepository>(createTalkScheduleRepository())
         assertIs<FirestoreRestWeekEventRepository>(createWeekEventRepository())
+        assertIs<FirestoreRestTalkCatalogRepository>(createTalkCatalogRepository())
     }
 }
