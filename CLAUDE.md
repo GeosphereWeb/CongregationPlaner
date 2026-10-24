@@ -22,6 +22,7 @@ Gradle Wrapper verwenden (`./gradlew`, unter Windows PowerShell `.\gradlew.bat`)
 - Tests (target-spezifisch): `:shared:jvmTest`, `:shared:testAndroidHostTest`, `:shared:iosSimulatorArm64Test`
 - Einzelner Test: `./gradlew :shared:jvmTest --tests "de.geosphere.congregationplaner.MyTest"`
 - Coverage: `./gradlew koverReport` (siehe `KOVER_SETUP.md`)
+- Firestore-Rules: Bei Änderungen an `firestore.rules` vor dem Commit den Rules-Test gegen den Emulator ausführen: `node firebase-rules-test/run.mjs` (siehe `firebase-rules-test/README.md`)
 
 - Format/Lint: ktlint (`./gradlew ktlintCheck`, `ktlintFormat`) und detekt (`./gradlew detekt`, Regeln in `config/detekt/detekt.yml`); SonarCloud läuft in der CI
 
