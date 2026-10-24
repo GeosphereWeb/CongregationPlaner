@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.presentation.components.ListDetailState
+import de.geosphere.congregationplaner.talk.domain.model.Chairman
 import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
@@ -12,8 +13,8 @@ import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.MoveTalkSlotUseCase
-import de.geosphere.congregationplaner.talk.domain.usecase.ObserveSpeakersUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkCatalogUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkMembersUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkYearUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveWeekEventsUseCase
 import de.geosphere.congregationplaner.user.domain.model.AppUser
@@ -43,6 +44,7 @@ data class TalkScheduleUiState(
     val weekEvents: List<WeekEvent> = emptyList(),
     val talks: List<Talk> = emptyList(),
     val speakers: List<Speaker> = emptyList(),
+    val chairmen: List<Chairman> = emptyList(),
     val isLoading: Boolean = true,
     val canPlan: Boolean = false,
     /** Ohne diese Berechtigung können die Redner nicht geladen werden. */
@@ -60,7 +62,7 @@ class TalkScheduleViewModel(
     private val observeYear: ObserveTalkYearUseCase,
     private val observeWeekEvents: ObserveWeekEventsUseCase,
     private val observeTalkCatalog: ObserveTalkCatalogUseCase,
-    private val observeSpeakers: ObserveSpeakersUseCase,
+    private val observeTalkMembers: ObserveTalkMembersUseCase,
     private val moveSlot: MoveTalkSlotUseCase,
     private val deleteSlot: DeleteTalkSlotUseCase,
     private val permissionPolicy: TalkSchedulePermissionPolicy,
@@ -74,7 +76,7 @@ class TalkScheduleViewModel(
     private var slotsJob: Job? = null
     private var weekEventsJob: Job? = null
     private var talksJob: Job? = null
-    private var speakersJob: Job? = null
+    private var membersJob: Job? = null
     private var observing = false
     private var observedCongregation: CongregationRef? = null
     private var observedYear: Int? = null
@@ -141,6 +143,18 @@ class TalkScheduleViewModel(
                 speakerMemberId = speaker?.memberId,
                 speakerLastName = speaker?.lastName,
                 speakerFirstName = speaker?.firstName,
+            ),
+        )
+    }
+
+    /** Übernimmt Name und Vorname des Vorsitzenden als Momentaufnahme; `null` entfernt den Vorsitzenden. */
+    fun selectChairman(chairman: Chairman?) {
+        val slot = mutableUiState.value.editor?.slot ?: return
+        updateEditor(
+            slot.copy(
+                chairmanMemberId = chairman?.memberId,
+                chairmanLastName = chairman?.lastName,
+                chairmanFirstName = chairman?.firstName,
             ),
         )
     }
@@ -263,15 +277,15 @@ class TalkScheduleViewModel(
             }
         }
         if (canPlan && userPolicy.canViewMembers(user)) {
-            if (speakersJob == null) {
-                speakersJob = launchReference("Redner", observeSpeakers(user)) { speakers ->
-                    mutableUiState.update { it.copy(speakers = speakers) }
+            if (membersJob == null) {
+                membersJob = launchReference(MEMBERS_NAME, observeTalkMembers(user)) { members ->
+                    mutableUiState.update { it.copy(speakers = members.speakers, chairmen = members.chairmen) }
                 }
             }
         } else {
-            speakersJob?.cancel()
-            speakersJob = null
-            mutableUiState.update { it.copy(speakers = emptyList()) }
+            membersJob?.cancel()
+            membersJob = null
+            mutableUiState.update { it.copy(speakers = emptyList(), chairmen = emptyList()) }
         }
     }
 
@@ -289,7 +303,7 @@ class TalkScheduleViewModel(
         when (name) {
             "Wochenereignisse" -> weekEventsJob = null
             "Vortragsliste" -> talksJob = null
-            else -> speakersJob = null
+            else -> membersJob = null
         }
     }
 
@@ -305,5 +319,6 @@ class TalkScheduleViewModel(
 
     private companion object {
         const val MISSING_PERMISSION_MESSAGE = "Dafür fehlt dir die Berechtigung."
+        const val MEMBERS_NAME = "Redner und Vorsitzende"
     }
 }

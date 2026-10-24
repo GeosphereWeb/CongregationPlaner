@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner.talk.presentation
 
+import de.geosphere.congregationplaner.talk.domain.model.Chairman
 import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
@@ -7,8 +8,8 @@ import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.MoveTalkSlotUseCase
-import de.geosphere.congregationplaner.talk.domain.usecase.ObserveSpeakersUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkCatalogUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkMembersUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkYearUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveWeekEventsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveTalkSlotUseCase
@@ -16,6 +17,7 @@ import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
 import de.geosphere.congregationplaner.talk.testing.FakeWeekEventRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.UserPermission
@@ -81,6 +83,18 @@ class TalkScheduleViewModelTest {
         profile = MemberProfile(lastName = "Beispiel", firstName = "Tim"),
     )
     private val nameless = AppUser(uid = "m3", approved = true, profile = MemberProfile(isSpeaker = true))
+    private val elder = AppUser(
+        uid = "m4",
+        approved = true,
+        profile = MemberProfile(
+            lastName = "Alt",
+            firstName = "Anton",
+            category = MemberCategory.BROTHER,
+            baptized = true,
+            appointment = Appointment.ELDER,
+        ),
+    )
+    private val antonAlt = Chairman("m4", "Alt", "Anton")
     private val maxMuster = Speaker("m1", "Muster", "Max")
 
     private val activeTalk = Talk(12, "Der Weg zum Glück")
@@ -98,7 +112,7 @@ class TalkScheduleViewModelTest {
         repository = FakeTalkScheduleRepository(listOf(october25, november1))
         weekEvents = FakeWeekEventRepository(listOf(kongress))
         catalog = FakeTalkCatalogRepository(listOf(activeTalk, pausedTalk))
-        users = FakeUserRepository(members = listOf(speakerMember, otherMember, nameless))
+        users = FakeUserRepository(members = listOf(speakerMember, otherMember, nameless, elder))
         val policy = TalkSchedulePermissionPolicy()
         val save = SaveTalkSlotUseCase(repository, policy)
         val delete = DeleteTalkSlotUseCase(repository, policy)
@@ -106,7 +120,7 @@ class TalkScheduleViewModelTest {
             ObserveTalkYearUseCase(repository),
             ObserveWeekEventsUseCase(weekEvents),
             ObserveTalkCatalogUseCase(catalog),
-            ObserveSpeakersUseCase(ObserveMembersUseCase(users)),
+            ObserveTalkMembersUseCase(ObserveMembersUseCase(users)),
             MoveTalkSlotUseCase(save, delete),
             delete,
             policy,
@@ -168,12 +182,43 @@ class TalkScheduleViewModelTest {
     }
 
     @Test
+    fun `planner with VIEW_MEMBERS sees the chairmen and selects one as snapshot`() {
+        viewModel.onCurrentUserChanged(viewer)
+
+        assertEquals(listOf(antonAlt), state.chairmen)
+
+        viewModel.newSlot()
+        viewModel.selectChairman(antonAlt)
+        assertEquals("m4", state.editor!!.slot.chairmanMemberId)
+        assertEquals("Alt", state.editor!!.slot.chairmanLastName)
+        assertEquals("Anton", state.editor!!.slot.chairmanFirstName)
+        assertEquals(antonAlt, state.editor!!.slot.chairman)
+
+        viewModel.selectChairman(null)
+        assertNull(state.editor!!.slot.chairmanMemberId)
+        assertNull(state.editor!!.slot.chairmanLastName)
+        assertNull(state.editor!!.slot.chairmanFirstName)
+    }
+
+    @Test
+    fun `chairman can still be selected when the talk is cancelled`() {
+        viewModel.onCurrentUserChanged(viewer)
+        viewModel.newSlot()
+        viewModel.updateEditor(state.editor!!.slot.copy(talkCancelled = true))
+
+        viewModel.selectChairman(antonAlt)
+
+        assertEquals(antonAlt, state.editor!!.slot.chairman)
+    }
+
+    @Test
     fun `planner without VIEW_MEMBERS does not load the speakers`() {
         viewModel.onCurrentUserChanged(planner)
 
         assertTrue(state.canPlan)
         assertFalse(state.canViewMembers)
         assertTrue(state.speakers.isEmpty())
+        assertTrue(state.chairmen.isEmpty())
         assertNull(users.requestedCongregation)
     }
 
@@ -185,6 +230,7 @@ class TalkScheduleViewModelTest {
         viewModel.onCurrentUserChanged(planner)
 
         assertTrue(state.speakers.isEmpty())
+        assertTrue(state.chairmen.isEmpty())
         assertFalse(state.canViewMembers)
     }
 
