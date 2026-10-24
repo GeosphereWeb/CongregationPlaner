@@ -6,6 +6,7 @@ package de.geosphere.congregationplaner.user.domain.model
  *
  * @param category `null`, solange der Admin die Angabe noch nicht gepflegt hat (z. B. nach der Selbstregistrierung).
  * @param appointment Nur getaufte Brüder können ein Dienstamt haben, siehe [canHaveAppointment].
+ * @param isSpeaker `true` für Vortragsredner; solche Mitglieder können in der Vortragsplanung ausgewählt werden.
  */
 data class MemberProfile(
     val lastName: String = "",
@@ -15,6 +16,7 @@ data class MemberProfile(
     val appointment: Appointment = Appointment.NONE,
     val mobilePhone: String = "",
     val landlinePhone: String = "",
+    val isSpeaker: Boolean = false,
 ) {
     val fullName: String get() = listOf(firstName, lastName).filter(String::isNotBlank).joinToString(" ")
 
