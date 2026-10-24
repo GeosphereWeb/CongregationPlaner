@@ -15,6 +15,8 @@ import kotlinx.datetime.LocalTime
  *   Termine unverändert bleiben, wenn sich der Titel in der Liste ändert. Nummer und Titel gehören zusammen.
  * @param speakerMemberId Das Mitglied der Versammlung, das den Vortrag hält; Name und Vorname werden als
  *   Momentaufnahme mitgespeichert. Die drei Redner-Felder gehören zusammen.
+ * @param chairmanMemberId Das Mitglied, das die Zusammenkunft leitet (Vorsitzender); Name und Vorname werden
+ *   wie beim Redner als Momentaufnahme mitgespeichert, die drei Felder gehören zusammen.
  */
 data class TalkSlot(
     val date: LocalDate,
@@ -27,12 +29,18 @@ data class TalkSlot(
     val speakerMemberId: String? = null,
     val speakerLastName: String? = null,
     val speakerFirstName: String? = null,
+    val chairmanMemberId: String? = null,
+    val chairmanLastName: String? = null,
+    val chairmanFirstName: String? = null,
 ) {
     /** Dokument-ID in Firestore: ISO-Datum `yyyy-MM-dd`. */
     val id: String get() = date.toString()
 
     val speaker: Speaker?
         get() = speakerMemberId?.let { Speaker(it, speakerLastName.orEmpty(), speakerFirstName.orEmpty()) }
+
+    val chairman: Chairman?
+        get() = chairmanMemberId?.let { Chairman(it, chairmanLastName.orEmpty(), chairmanFirstName.orEmpty()) }
 
     companion object {
         const val MAX_WEEK_EVENT_NAME_LENGTH = 100
@@ -47,10 +55,16 @@ data class TalkSlot(
  */
 data class Talk(val number: Int, val title: String, val active: Boolean = true)
 
-/** Ein Redner aus den Mitgliedern der Versammlung (`isSpeaker`), wie er im Termin ausgewählt wird. */
-data class Speaker(val memberId: String, val lastName: String, val firstName: String) {
+/** Ein Mitglied der Versammlung, wie es als Redner oder Vorsitzender im Termin ausgewählt wird. */
+data class MemberRef(val memberId: String, val lastName: String, val firstName: String) {
     val displayName: String get() = listOf(lastName, firstName).filter(String::isNotBlank).joinToString(", ")
 }
+
+/** Mitglieder mit `isSpeaker`. */
+typealias Speaker = MemberRef
+
+/** Brüder mit dem Dienstamt Ältester oder Dienstamtgehilfe. */
+typealias Chairman = MemberRef
 
 /** Ein Wochenereignis (z. B. Kreisaufseherbesuch); die Liste gilt für alle Versammlungen und Kreise. */
 data class WeekEvent(val id: String, val name: String, val cancelsTalk: Boolean = false)
@@ -66,6 +80,12 @@ sealed class TalkScheduleException(message: String) : Exception(message) {
     class InvalidSpeaker :
         TalkScheduleException(
             "Der Redner ist ungültig: Familienname erforderlich, Namen mit höchstens " +
+                "${TalkSlot.MAX_PERSON_NAME_LENGTH} Zeichen.",
+        )
+
+    class InvalidChairman :
+        TalkScheduleException(
+            "Der Vorsitzende ist ungültig: Familienname erforderlich, Namen mit höchstens " +
                 "${TalkSlot.MAX_PERSON_NAME_LENGTH} Zeichen.",
         )
 

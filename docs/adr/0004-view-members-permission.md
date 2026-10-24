@@ -9,7 +9,7 @@ Planer wählen den Redner aus den Mitgliedern ihrer Versammlung. Die Mitgliedsdo
 ## Decision
 - Neue Berechtigung `UserPermission.VIEW_MEMBERS`, getrennt von `PLAN_TALKS`: Planen allein erlaubt kein Lesen der Mitglieder. Admins behalten ihre Rechte.
 - Die Rules erlauben `get` (zusätzlich zum eigenen Dokument) und `list` der Mitglieder nur über `canViewMembers`: globale Admins, Versammlungsadmins dieser Versammlung oder freigegebene Mitglieder dieser Versammlung mit der Berechtigung. Schreiben bleibt unverändert Admins vorbehalten.
-- Der Termin speichert den Redner als Momentaufnahme (`speakerMemberId`, `speakerLastName`, `speakerFirstName`, alle drei oder keiner); die Rules prüfen nur die Form, nicht ob das Mitglied existiert oder noch Redner ist.
+- Der Termin speichert Redner und Vorsitzenden als Momentaufnahme (`speakerMemberId`, `speakerLastName`, `speakerFirstName` und entsprechend `chairman…`, je alle drei oder keiner); die Rules prüfen nur die Form, nicht ob das Mitglied existiert oder noch Redner bzw. Ältester oder Dienstamtgehilfe ist. Zur Auswahl stehen Mitglieder mit `isSpeaker` bzw. Brüder mit Dienstamt, beide aus einer gemeinsamen Beobachtung der Mitglieder.
 
 ## Consequences
 - Wer `VIEW_MEMBERS` erhält, sieht alle Felder aller Mitglieder seiner Versammlung, auch Telefonnummern und E-Mail-Adressen; der Admin vergibt die Berechtigung bewusst. Eine eigene Redner-Collection ohne Kontaktdaten wäre sparsamer, müsste aber parallel gepflegt werden.

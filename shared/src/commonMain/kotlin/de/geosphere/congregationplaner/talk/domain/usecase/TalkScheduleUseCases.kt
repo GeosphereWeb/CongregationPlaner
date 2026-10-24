@@ -1,5 +1,7 @@
 package de.geosphere.congregationplaner.talk.domain.usecase
 
+import de.geosphere.congregationplaner.talk.domain.model.Chairman
+import de.geosphere.congregationplaner.talk.domain.model.MemberRef
 import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkScheduleException
@@ -36,19 +38,29 @@ class ObserveTalkCatalogUseCase(private val repository: TalkCatalogRepository) {
     operator fun invoke(): Flow<List<Talk>> = repository.observeTalks().map { talks -> talks.sortedBy { it.number } }
 }
 
+/** Die Mitglieder, die im Termin als Redner und als Vorsitzender zur Auswahl stehen. */
+data class TalkMembers(val speakers: List<Speaker>, val chairmen: List<Chairman>)
+
 /**
- * Die Redner der Versammlung: Mitglieder mit `isSpeaker` und Familiennamen, nach Namen sortiert. Das Lesen der
- * Mitglieder erfordert die Berechtigung `VIEW_MEMBERS` (oder Adminrechte), sonst lehnen die Rules ab.
+ * Redner (Mitglieder mit `isSpeaker`) und Vorsitzende (Brüder mit Dienstamt) der Versammlung, jeweils mit
+ * Familiennamen und nach Namen sortiert. Beide kommen aus einer gemeinsamen Beobachtung der Mitglieder. Das Lesen
+ * der Mitglieder erfordert die Berechtigung `VIEW_MEMBERS` (oder Adminrechte), sonst lehnen die Rules ab.
  */
 @Inject
-class ObserveSpeakersUseCase(private val observeMembers: ObserveMembersUseCase) {
-    operator fun invoke(user: AppUser): Flow<List<Speaker>> = user.congregation?.let { congregation ->
+class ObserveTalkMembersUseCase(private val observeMembers: ObserveMembersUseCase) {
+    operator fun invoke(user: AppUser): Flow<TalkMembers> = user.congregation?.let { congregation ->
         observeMembers(congregation).map { members ->
-            members.filter { it.profile.isSpeaker && it.profile.lastName.isNotBlank() }
-                .map { Speaker(it.uid, it.profile.lastName, it.profile.firstName) }
-                .sortedWith(compareBy({ it.lastName.lowercase() }, { it.firstName.lowercase() }))
+            val named = members.filter { it.profile.lastName.isNotBlank() }
+            TalkMembers(
+                speakers = named.filter { it.profile.isSpeaker }.toRefs(),
+                chairmen = named.filter { it.profile.canBeChairman }.toRefs(),
+            )
         }
     } ?: emptyFlow()
+
+    private fun List<AppUser>.toRefs(): List<MemberRef> =
+        map { MemberRef(it.uid, it.profile.lastName, it.profile.firstName) }
+            .sortedWith(compareBy({ it.lastName.lowercase() }, { it.firstName.lowercase() }))
 }
 
 /**
@@ -76,12 +88,15 @@ private fun TalkSlot.trimmed(): TalkSlot = copy(
     talkTitle = talkTitle?.trim(),
     speakerLastName = speakerLastName?.trim(),
     speakerFirstName = speakerFirstName?.trim(),
+    chairmanLastName = chairmanLastName?.trim(),
+    chairmanFirstName = chairmanFirstName?.trim(),
 )
 
 private fun TalkSlot.validationError(): TalkScheduleException? = when {
     !hasValidWeekEvent() -> TalkScheduleException.InvalidWeekEvent()
     !hasValidTalk() -> TalkScheduleException.InvalidTalk()
-    !hasValidSpeaker() -> TalkScheduleException.InvalidSpeaker()
+    !hasValidMember(speakerMemberId, speakerLastName, speakerFirstName) -> TalkScheduleException.InvalidSpeaker()
+    !hasValidMember(chairmanMemberId, chairmanLastName, chairmanFirstName) -> TalkScheduleException.InvalidChairman()
     else -> null
 }
 
@@ -99,13 +114,14 @@ private fun TalkSlot.hasValidTalk(): Boolean = if (talkNumber == null) {
     talkNumber >= 1 && !talkTitle.isNullOrEmpty() && talkTitle.length <= TalkSlot.MAX_TALK_TITLE_LENGTH
 }
 
-private fun TalkSlot.hasValidSpeaker(): Boolean = if (speakerMemberId == null) {
-    speakerLastName == null && speakerFirstName == null
+// Mitglied-ID, Familienname und Vorname gehören zusammen (alle gesetzt oder alle leer).
+private fun hasValidMember(memberId: String?, lastName: String?, firstName: String?): Boolean = if (memberId == null) {
+    lastName == null && firstName == null
 } else {
-    speakerMemberId.isNotBlank() &&
-        !speakerLastName.isNullOrEmpty() &&
-        speakerFirstName != null &&
-        maxOf(speakerLastName.length, speakerFirstName.length) <= TalkSlot.MAX_PERSON_NAME_LENGTH
+    memberId.isNotBlank() &&
+        !lastName.isNullOrEmpty() &&
+        firstName != null &&
+        maxOf(lastName.length, firstName.length) <= TalkSlot.MAX_PERSON_NAME_LENGTH
 }
 
 /**

@@ -23,6 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.congregation.presentation.MeetingTimeInput
+import de.geosphere.congregationplaner.talk.domain.model.Chairman
+import de.geosphere.congregationplaner.talk.domain.model.MemberRef
 import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
@@ -39,18 +41,21 @@ internal fun TalkSlotEditor(
     weekEvents: List<WeekEvent>,
     talks: List<Talk>,
     speakers: List<Speaker>,
+    chairmen: List<Chairman>,
     canViewMembers: Boolean,
     isSaving: Boolean,
     onChange: (TalkSlot) -> Unit,
     onSelectWeekEvent: (WeekEvent?) -> Unit,
     onSelectTalk: (Talk?) -> Unit,
     onSelectSpeaker: (Speaker?) -> Unit,
+    onSelectChairman: (Chairman?) -> Unit,
     onSave: () -> Unit,
     onCancel: () -> Unit,
 ) {
     val slot = editor.slot
     var showTalkPicker by remember { mutableStateOf(false) }
     var showSpeakerPicker by remember { mutableStateOf(false) }
+    var showChairmanPicker by remember { mutableStateOf(false) }
     Card {
         Column(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -108,12 +113,30 @@ internal fun TalkSlotEditor(
                 }
             }
 
-            SpeakerSection(
-                slot = slot,
-                hasSpeakers = speakers.isNotEmpty(),
+            MemberSection(
+                label = "Redner",
+                actionLabel = "Redner",
+                plural = "Redner",
+                emptyHint = "Noch kein Mitglied ist als Redner markiert (Userverwaltung).",
+                selected = slot.speaker,
+                hasCandidates = speakers.isNotEmpty(),
                 canViewMembers = canViewMembers,
+                enabled = !slot.talkCancelled,
                 onPick = { showSpeakerPicker = true },
                 onRemove = { onSelectSpeaker(null) },
+            )
+
+            MemberSection(
+                label = "Vorsitzender",
+                actionLabel = "Vorsitzenden",
+                plural = "Vorsitzende",
+                emptyHint = "Kein Bruder mit Dienstamt (Ältester oder Dienstamtgehilfe) mit Namen gefunden.",
+                selected = slot.chairman,
+                hasCandidates = chairmen.isNotEmpty(),
+                canViewMembers = canViewMembers,
+                enabled = true,
+                onPick = { showChairmanPicker = true },
+                onRemove = { onSelectChairman(null) },
             )
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -126,13 +149,26 @@ internal fun TalkSlotEditor(
     }
 
     if (showSpeakerPicker) {
-        SpeakerPickerDialog(
-            speakers = speakers,
+        MemberPickerDialog(
+            title = "Redner wählen",
+            members = speakers,
             onSelect = {
                 onSelectSpeaker(it)
                 showSpeakerPicker = false
             },
             onDismiss = { showSpeakerPicker = false },
+        )
+    }
+
+    if (showChairmanPicker) {
+        MemberPickerDialog(
+            title = "Vorsitzenden wählen",
+            members = chairmen,
+            onSelect = {
+                onSelectChairman(it)
+                showChairmanPicker = false
+            },
+            onDismiss = { showChairmanPicker = false },
         )
     }
 
@@ -148,27 +184,34 @@ internal fun TalkSlotEditor(
     }
 }
 
+/** Redner oder Vorsitzender: Anzeige der Auswahl, Auswählen, Entfernen und Hinweise bei fehlenden Daten. */
 @Composable
-private fun SpeakerSection(
-    slot: TalkSlot,
-    hasSpeakers: Boolean,
+@Suppress("LongParameterList")
+private fun MemberSection(
+    label: String,
+    actionLabel: String,
+    plural: String,
+    emptyHint: String,
+    selected: MemberRef?,
+    hasCandidates: Boolean,
     canViewMembers: Boolean,
+    enabled: Boolean,
     onPick: () -> Unit,
     onRemove: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text("Redner", style = MaterialTheme.typography.labelLarge)
-        Text(slot.speaker?.displayName ?: "Noch kein Redner gewählt", style = MaterialTheme.typography.bodyMedium)
+        Text(label, style = MaterialTheme.typography.labelLarge)
+        Text(selected?.displayName ?: "Noch kein $label gewählt", style = MaterialTheme.typography.bodyMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = onPick, enabled = canViewMembers && hasSpeakers && !slot.talkCancelled) {
-                Text(if (slot.speaker == null) "Redner wählen" else "Redner ändern")
+            OutlinedButton(onClick = onPick, enabled = canViewMembers && hasCandidates && enabled) {
+                Text(if (selected == null) "$actionLabel wählen" else "$actionLabel ändern")
             }
-            if (slot.speaker != null) TextButton(onClick = onRemove) { Text("Entfernen") }
+            if (selected != null) TextButton(onClick = onRemove) { Text("Entfernen") }
         }
         val hint = when {
             !canViewMembers ->
-                "Dir fehlt die Berechtigung „Mitglieder einsehen“, deshalb können keine Redner geladen werden."
-            !hasSpeakers -> "Noch kein Mitglied ist als Redner markiert (Userverwaltung)."
+                "Dir fehlt die Berechtigung „Mitglieder einsehen“, deshalb können keine $plural geladen werden."
+            !hasCandidates -> emptyHint
             else -> null
         }
         hint?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
@@ -186,12 +229,14 @@ private fun TalkSlotEditorPreview() = PreviewThemeWrapper {
         ),
         talks = listOf(Talk(1, "Beispielvortrag"), Talk(2, "Weiterer Vortrag")),
         speakers = listOf(Speaker("1", "Muster", "Max")),
+        chairmen = listOf(Chairman("2", "Beispiel", "Tim")),
         canViewMembers = true,
         isSaving = false,
         onChange = {},
         onSelectWeekEvent = {},
         onSelectTalk = {},
         onSelectSpeaker = {},
+        onSelectChairman = {},
         onSave = {},
         onCancel = {},
     )

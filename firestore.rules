@@ -52,6 +52,7 @@ rules_version = '2';
 //     The title is a snapshot of the talk list so that old slots stay unchanged.
 //   - speakerMemberId: string | null (member uid), speakerLastName: string | null (1..100 chars),
 //     speakerFirstName: string | null (<= 100 chars); all three set or all three null (snapshot of the member).
+//   - chairmanMemberId, chairmanLastName, chairmanFirstName: same shape as the speaker fields (the chairman).
 //
 // Collection: weekEvents (global, identical for all congregations)
 // Document ID: free. Fields: name: string, cancelsTalk: bool.
@@ -129,9 +130,13 @@ service cloud.firestore {
       let speakerId = data.get('speakerMemberId', null);
       let speakerLast = data.get('speakerLastName', null);
       let speakerFirst = data.get('speakerFirstName', null);
+      let chairmanId = data.get('chairmanMemberId', null);
+      let chairmanLast = data.get('chairmanLastName', null);
+      let chairmanFirst = data.get('chairmanFirstName', null);
       return date.matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$') &&
         data.keys().hasOnly(['time', 'talkCancelled', 'weekEventId', 'weekEventName', 'talkNumber', 'talkTitle',
-          'speakerMemberId', 'speakerLastName', 'speakerFirstName']) &&
+          'speakerMemberId', 'speakerLastName', 'speakerFirstName',
+          'chairmanMemberId', 'chairmanLastName', 'chairmanFirstName']) &&
         data.keys().hasAll(['time', 'talkCancelled']) &&
         data.time is string && data.time.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$') &&
         data.talkCancelled is bool &&
@@ -145,7 +150,12 @@ service cloud.firestore {
         (speakerLast == null || (speakerLast is string && speakerLast.size() >= 1 && speakerLast.size() <= 100)) &&
         (speakerFirst == null || (speakerFirst is string && speakerFirst.size() <= 100)) &&
         ((speakerId == null) == (speakerLast == null)) &&
-        ((speakerId == null) == (speakerFirst == null));
+        ((speakerId == null) == (speakerFirst == null)) &&
+        (chairmanId == null || (chairmanId is string && chairmanId.size() >= 1 && chairmanId.size() <= 128)) &&
+        (chairmanLast == null || (chairmanLast is string && chairmanLast.size() >= 1 && chairmanLast.size() <= 100)) &&
+        (chairmanFirst == null || (chairmanFirst is string && chairmanFirst.size() <= 100)) &&
+        ((chairmanId == null) == (chairmanLast == null)) &&
+        ((chairmanId == null) == (chairmanFirst == null));
     }
 
     function isNullableString(value, maxLen) {
