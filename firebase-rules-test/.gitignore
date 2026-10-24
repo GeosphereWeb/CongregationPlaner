@@ -1,0 +1,3 @@
+# Kopie von ../firestore.rules, die run.mjs vor jedem Lauf anlegt
+firestore.rules
+*-debug.log
