@@ -1,0 +1,100 @@
+package de.geosphere.congregationplaner.talk.presentation
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import de.geosphere.congregationplaner.congregation.presentation.MeetingTimeInput
+import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
+import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
+import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
+import de.geosphere.congregationplaner.theming.ThemePreviews
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+
+@Composable
+@Suppress("LongParameterList")
+internal fun TalkSlotEditor(
+    editor: TalkSlotEditorState,
+    weekEvents: List<WeekEvent>,
+    isSaving: Boolean,
+    onChange: (TalkSlot) -> Unit,
+    onSelectWeekEvent: (WeekEvent?) -> Unit,
+    onSave: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val slot = editor.slot
+    Card {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(if (editor.isNew) "Neuer Termin" else "Termin ändern", style = MaterialTheme.typography.titleMedium)
+            TalkDateInput(slot.date, onDateChange = { onChange(slot.copy(date = it)) })
+            MeetingTimeInput("Uhrzeit", slot.time, onTimeChange = { onChange(slot.copy(time = it)) })
+
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Wochenereignis", style = MaterialTheme.typography.labelLarge)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = slot.weekEventId == null,
+                        onClick = { onSelectWeekEvent(null) },
+                        label = { Text("Kein Ereignis") },
+                    )
+                    weekEvents.forEach { event ->
+                        FilterChip(
+                            selected = slot.weekEventId == event.id,
+                            onClick = { onSelectWeekEvent(event) },
+                            label = { Text(event.name) },
+                        )
+                    }
+                    // Ein inzwischen entferntes Ereignis bleibt am Termin sichtbar.
+                    if (slot.weekEventId != null && weekEvents.none { it.id == slot.weekEventId }) {
+                        FilterChip(selected = true, onClick = {}, label = { Text(slot.weekEventName.orEmpty()) })
+                    }
+                }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Vortrag entfällt", modifier = Modifier.weight(1f))
+                Switch(checked = slot.talkCancelled, onCheckedChange = { onChange(slot.copy(talkCancelled = it)) })
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onSave, enabled = !isSaving && editor.isDirty) {
+                    Text(if (isSaving) "Speichert …" else "Speichern")
+                }
+                TextButton(onClick = onCancel, enabled = !isSaving) { Text("Abbrechen") }
+            }
+        }
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun TalkSlotEditorPreview() = PreviewThemeWrapper {
+    TalkSlotEditor(
+        editor = TalkSlotEditorState(TalkSlot(LocalDate(2026, 10, 25), LocalTime(17, 30))),
+        weekEvents = listOf(
+            WeekEvent("kongress", "Kongress", cancelsTalk = true),
+            WeekEvent("besuch", "Kreisaufseher"),
+        ),
+        isSaving = false,
+        onChange = {},
+        onSelectWeekEvent = {},
+        onSave = {},
+        onCancel = {},
+    )
+}
