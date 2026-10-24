@@ -58,6 +58,7 @@ import de.geosphere.congregationplaner.congregation.presentation.CongregationMet
 import de.geosphere.congregationplaner.organization.InviteLinkInbox
 import de.geosphere.congregationplaner.organization.di.OrganizationGraph
 import de.geosphere.congregationplaner.organization.presentation.CongregationSelector
+import de.geosphere.congregationplaner.talk.presentation.TalkScheduleRoute
 import de.geosphere.congregationplaner.theming.AppTheme
 import de.geosphere.congregationplaner.theming.brushes.backgroundBrush
 import de.geosphere.congregationplaner.theming.customColors
@@ -493,7 +494,7 @@ fun DesktopLayout(
 
                     "leben_und_dienst" -> Text("leben_und_dienst \n Schätze \n uns verbessern \n leben als christ")
 
-                    "planung_wochenende" -> Text("Vortragsplanung und WT Leiter")
+                    "planung_wochenende" -> TalkScheduleRoute(currentUser)
 
                     "circuit" -> CircuitRoute(currentUser)
 
@@ -577,6 +578,7 @@ fun MobileLayout(
                     when (selectedRoute) {
                         "home" -> Text("Home Content")
                         "settings" -> Text("Settings Content")
+                        "planung_wochenende" -> TalkScheduleRoute(currentUser)
                         "circuit" -> CircuitRoute(currentUser)
                         "versammlung_metadata" -> CongregationMetadataRoute(currentUser)
                         "userverwaltung" -> UserManagementRoute(currentUser)
