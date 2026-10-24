@@ -37,6 +37,7 @@ rules_version = '2';
 //   - appointment: string ('NONE' | 'MINISTERIAL_SERVANT' | 'ELDER';
 //     anything but 'NONE' only for baptized brothers)
 //   - mobilePhone, landlinePhone: string (<= 30 chars, digits and + ( ) / - space)
+//   - isSpeaker: bool (default false; marks talk speakers, only for category 'BROTHER')
 //
 // Collection: region/.../congregation/{congId}/talkSchedule
 // Document ID: the date as yyyy-MM-dd (one day of the weekend meeting; the weekday
@@ -141,7 +142,7 @@ service cloud.firestore {
     }
 
     function profileFields() {
-      return ['lastName', 'firstName', 'category', 'baptized', 'appointment', 'mobilePhone', 'landlinePhone'];
+      return ['lastName', 'firstName', 'category', 'baptized', 'appointment', 'mobilePhone', 'landlinePhone', 'isSpeaker'];
     }
 
     // Missing profile fields fall back to the defaults of a freshly registered member.
@@ -157,7 +158,9 @@ service cloud.firestore {
         appointment in ['NONE', 'MINISTERIAL_SERVANT', 'ELDER'] &&
         (appointment == 'NONE' || (category == 'BROTHER' && baptized)) &&
         isValidPhone(data.get('mobilePhone', '')) &&
-        isValidPhone(data.get('landlinePhone', ''));
+        isValidPhone(data.get('landlinePhone', '')) &&
+        data.get('isSpeaker', false) is bool &&
+        (data.get('isSpeaker', false) == false || category == 'BROTHER');
     }
 
     function hasDefaultProfile(data) {
@@ -167,7 +170,8 @@ service cloud.firestore {
         data.get('baptized', false) == false &&
         data.get('appointment', 'NONE') == 'NONE' &&
         data.get('mobilePhone', '') == '' &&
-        data.get('landlinePhone', '') == '';
+        data.get('landlinePhone', '') == '' &&
+        data.get('isSpeaker', false) == false;
     }
 
     // Persons without an account never get access to the app.

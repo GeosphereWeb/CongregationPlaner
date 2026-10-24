@@ -70,6 +70,14 @@ internal fun MemberEditor(
                     enabled = profile.category != MemberCategory.CHILD,
                 )
             }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Redner", modifier = Modifier.weight(1f))
+                Switch(
+                    checked = profile.isSpeaker,
+                    onCheckedChange = { onChange(profile.copy(isSpeaker = it)) },
+                    enabled = profile.canBeSpeaker,
+                )
+            }
             if (profile.canHaveAppointment) {
                 ChipGroup("Dienstamt") {
                     Appointment.entries.forEach { appointment ->

@@ -117,6 +117,7 @@ internal class FirestoreRestUserRepository(
             appointment = Appointment.fromValue(fields.optionalStringField("appointment")),
             mobilePhone = fields.optionalStringField("mobilePhone").orEmpty(),
             landlinePhone = fields.optionalStringField("landlinePhone").orEmpty(),
+            isSpeaker = fields.booleanField("isSpeaker"),
         ),
     )
 
@@ -141,11 +142,21 @@ internal class FirestoreRestUserRepository(
         add("appointment", firestoreString(appointment.name))
         add("mobilePhone", firestoreString(mobilePhone))
         add("landlinePhone", firestoreString(landlinePhone))
+        add("isSpeaker", firestoreBoolean(isSpeaker))
     }
 
     private companion object {
         val ACCESS_FIELD_NAMES = listOf("approved", "role", "permissions")
         val PROFILE_FIELD_NAMES =
-            listOf("lastName", "firstName", "category", "baptized", "appointment", "mobilePhone", "landlinePhone")
+            listOf(
+                "lastName",
+                "firstName",
+                "category",
+                "baptized",
+                "appointment",
+                "mobilePhone",
+                "landlinePhone",
+                "isSpeaker",
+            )
     }
 }

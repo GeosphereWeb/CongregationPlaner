@@ -115,6 +115,10 @@ class MemberUseCasesTest {
             errorFor(profile(MemberCategory.SISTER, baptized = true, elder = true)),
         )
         assertIs<MemberProfileException.AppointmentNotAllowed>(errorFor(profile(MemberCategory.BROTHER, elder = true)))
+        assertIs<MemberProfileException.SpeakerNotAllowed>(
+            errorFor(MemberProfile(category = MemberCategory.SISTER, isSpeaker = true)),
+        )
+        assertIs<MemberProfileException.SpeakerNotAllowed>(errorFor(MemberProfile(category = null, isSpeaker = true)))
         assertIs<MemberProfileException.InvalidPhone>(errorFor(MemberProfile(landlinePhone = "030-abc")))
         assertIs<MemberProfileException.NameTooLong>(errorFor(MemberProfile(lastName = "x".repeat(101))))
         // Mitglieder mit Konto sind über ihr Login erkennbar; ohne Konto ist der Name Pflicht.
@@ -124,7 +128,9 @@ class MemberUseCasesTest {
         useCase(testCongregation, member).getOrThrow()
         val elder = member.copy(profile = profile(MemberCategory.BROTHER, baptized = true, elder = true))
         useCase(testCongregation, elder).getOrThrow()
-        assertEquals(listOf(member, elder), repository.updatedProfiles)
+        val speaker = member.copy(profile = MemberProfile(category = MemberCategory.BROTHER, isSpeaker = true))
+        useCase(testCongregation, speaker).getOrThrow()
+        assertEquals(listOf(member, elder, speaker), repository.updatedProfiles)
     }
 
     @Test

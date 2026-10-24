@@ -236,6 +236,11 @@ class UserManagementViewModelTest {
             viewModel.uiState.value.editor?.profile,
         )
 
+        viewModel.updateEditor(MemberProfile(category = MemberCategory.BROTHER, isSpeaker = true))
+        assertTrue(viewModel.uiState.value.editor!!.profile.isSpeaker)
+        viewModel.updateEditor(viewModel.uiState.value.editor!!.profile.copy(category = MemberCategory.SISTER))
+        assertFalse(viewModel.uiState.value.editor!!.profile.isSpeaker)
+
         viewModel.cancelEditing()
         assertNull(viewModel.uiState.value.editor)
         assertTrue(repository.updatedProfiles.isEmpty())

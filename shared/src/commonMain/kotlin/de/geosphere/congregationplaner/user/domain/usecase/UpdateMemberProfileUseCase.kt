@@ -37,6 +37,7 @@ internal fun MemberProfile.validated(requireName: Boolean): Result<MemberProfile
         trimmed.category == MemberCategory.CHILD && trimmed.baptized -> MemberProfileException.BaptizedChild()
         trimmed.appointment != Appointment.NONE && !trimmed.canHaveAppointment ->
             MemberProfileException.AppointmentNotAllowed()
+        trimmed.isSpeaker && !trimmed.canBeSpeaker -> MemberProfileException.SpeakerNotAllowed()
         !MemberProfile.isValidPhone(trimmed.mobilePhone) || !MemberProfile.isValidPhone(trimmed.landlinePhone) ->
             MemberProfileException.InvalidPhone()
         else -> null

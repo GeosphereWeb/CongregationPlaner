@@ -6,6 +6,8 @@ package de.geosphere.congregationplaner.user.domain.model
  *
  * @param category `null`, solange der Admin die Angabe noch nicht gepflegt hat (z. B. nach der Selbstregistrierung).
  * @param appointment Nur getaufte Brüder können ein Dienstamt haben, siehe [canHaveAppointment].
+ * @param isSpeaker `true` für Vortragsredner; solche Mitglieder können in der Vortragsplanung ausgewählt werden.
+ *   Nur Brüder können Redner sein, siehe [canBeSpeaker].
  */
 data class MemberProfile(
     val lastName: String = "",
@@ -15,15 +17,18 @@ data class MemberProfile(
     val appointment: Appointment = Appointment.NONE,
     val mobilePhone: String = "",
     val landlinePhone: String = "",
+    val isSpeaker: Boolean = false,
 ) {
     val fullName: String get() = listOf(firstName, lastName).filter(String::isNotBlank).joinToString(" ")
 
     val canHaveAppointment: Boolean get() = category == MemberCategory.BROTHER && baptized
 
-    /** Kinder sind nie getauft und ohne passende Voraussetzungen gibt es kein Dienstamt. */
+    val canBeSpeaker: Boolean get() = category == MemberCategory.BROTHER
+
+    /** Kinder sind nie getauft, und ohne passende Voraussetzungen gibt es kein Dienstamt und keinen Redner. */
     fun normalized(): MemberProfile {
         val baptized = baptized && category != MemberCategory.CHILD
-        val profile = copy(baptized = baptized)
+        val profile = copy(baptized = baptized, isSpeaker = isSpeaker && canBeSpeaker)
         return if (profile.canHaveAppointment) profile else profile.copy(appointment = Appointment.NONE)
     }
 
@@ -75,6 +80,8 @@ sealed class MemberProfileException(message: String) : Exception(message) {
     class BaptizedChild : MemberProfileException("Ein Kind kann nicht als getauft erfasst werden.")
 
     class AppointmentNotAllowed : MemberProfileException("Ein Dienstamt ist nur bei getauften Brüdern möglich.")
+
+    class SpeakerNotAllowed : MemberProfileException("Ein Redner kann nur ein Bruder sein.")
 
     class InvalidPhone :
         MemberProfileException(
