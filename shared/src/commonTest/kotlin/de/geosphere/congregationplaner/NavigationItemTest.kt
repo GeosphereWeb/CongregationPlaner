@@ -83,9 +83,36 @@ class NavigationItemTest {
     }
 
     @Test
+    fun testVortragsdatenNavigationItem() {
+        val item = NavigationItem.Vortragsdaten
+        assertEquals("Vortragsliste & Ereignisse", item.label)
+        assertEquals("talk_reference", item.routeName)
+        assertNotNull(item.iconRes)
+    }
+
+    @Test
+    fun testVisibleNavigationItemsDependOnTheUsersRights() {
+        val everyone = NavigationItem.entries - NavigationItem.Usererwaltung - NavigationItem.Vortragsdaten
+
+        assertEquals(everyone, visibleNavigationItems(canManageUsers = false, isGlobalAdmin = false))
+        assertEquals(
+            everyone + NavigationItem.Usererwaltung,
+            visibleNavigationItems(canManageUsers = true, isGlobalAdmin = false),
+        )
+        assertEquals(
+            everyone + NavigationItem.Vortragsdaten,
+            visibleNavigationItems(canManageUsers = false, isGlobalAdmin = true),
+        )
+        assertEquals(
+            NavigationItem.entries,
+            visibleNavigationItems(canManageUsers = true, isGlobalAdmin = true),
+        )
+    }
+
+    @Test
     fun testAllNavigationItemsCount() {
         val items = NavigationItem.entries
-        assertEquals(8, items.size)
+        assertEquals(9, items.size)
     }
 
     @Test
@@ -101,6 +128,7 @@ class NavigationItemTest {
         assertEquals(true, names.contains("Versammlung"))
         assertEquals(true, names.contains("Dienste"))
         assertEquals(true, names.contains("Usererwaltung"))
+        assertEquals(true, names.contains("Vortragsdaten"))
     }
 
     @Test

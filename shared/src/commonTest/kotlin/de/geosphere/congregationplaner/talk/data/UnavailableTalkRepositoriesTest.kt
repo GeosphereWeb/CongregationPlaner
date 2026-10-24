@@ -2,7 +2,9 @@ package de.geosphere.congregationplaner.talk.data
 
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
+import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
+import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
@@ -32,6 +34,8 @@ class UnavailableTalkRepositoriesTest {
         val repository = unavailableWeekEventRepository("iOS")
 
         assertFailsWith<UnsupportedOperationException> { repository.observeWeekEvents().first() }
+        assertIs<UnsupportedOperationException>(repository.save(WeekEvent("", "Kongress")).exceptionOrNull())
+        assertIs<UnsupportedOperationException>(repository.delete("ev-1").exceptionOrNull())
     }
 
     @Test
@@ -50,5 +54,7 @@ class UnavailableTalkRepositoriesTest {
         val repository = unavailableTalkCatalogRepository("iOS")
 
         assertFailsWith<UnsupportedOperationException> { repository.observeTalks().first() }
+        assertIs<UnsupportedOperationException>(repository.save(Talk(1, "Titel")).exceptionOrNull())
+        assertIs<UnsupportedOperationException>(repository.delete(1).exceptionOrNull())
     }
 }
