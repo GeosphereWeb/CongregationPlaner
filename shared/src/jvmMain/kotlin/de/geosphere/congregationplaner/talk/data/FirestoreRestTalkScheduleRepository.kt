@@ -58,6 +58,9 @@ internal class FirestoreRestTalkScheduleRepository(
         talkCancelled = fields.booleanField("talkCancelled"),
         talkNumber = fields.optionalIntField("talkNumber"),
         talkTitle = fields.optionalStringField("talkTitle"),
+        speakerMemberId = fields.optionalStringField("speakerMemberId"),
+        speakerLastName = fields.optionalStringField("speakerLastName"),
+        speakerFirstName = fields.optionalStringField("speakerFirstName"),
     )
 
     private fun TalkSlot.toBody(): String = firestoreFields(
@@ -68,6 +71,9 @@ internal class FirestoreRestTalkScheduleRepository(
             add("weekEventName", firestoreNullableString(weekEventName))
             add("talkNumber", firestoreNullableInteger(talkNumber))
             add("talkTitle", firestoreNullableString(talkTitle))
+            add("speakerMemberId", firestoreNullableString(speakerMemberId))
+            add("speakerLastName", firestoreNullableString(speakerLastName))
+            add("speakerFirstName", firestoreNullableString(speakerFirstName))
         },
     )
 }

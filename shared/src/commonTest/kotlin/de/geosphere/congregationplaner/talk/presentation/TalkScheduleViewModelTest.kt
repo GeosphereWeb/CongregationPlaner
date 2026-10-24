@@ -1,11 +1,13 @@
 package de.geosphere.congregationplaner.talk.presentation
 
+import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.MoveTalkSlotUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.ObserveSpeakersUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkCatalogUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkYearUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveWeekEventsUseCase
@@ -14,8 +16,13 @@ import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
 import de.geosphere.congregationplaner.talk.testing.FakeWeekEventRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.MemberCategory
+import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.UserPermission
 import de.geosphere.congregationplaner.user.domain.model.UserRole
+import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
+import de.geosphere.congregationplaner.user.domain.usecase.ObserveMembersUseCase
+import de.geosphere.congregationplaner.user.testing.FakeUserRepository
 import de.geosphere.congregationplaner.user.testing.testCongregation
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -42,6 +49,10 @@ class TalkScheduleViewModelTest {
         permissions = setOf(UserPermission.PLAN_TALKS),
         congregation = testCongregation,
     )
+    private val viewer = planner.copy(
+        uid = "viewer",
+        permissions = setOf(UserPermission.PLAN_TALKS, UserPermission.VIEW_MEMBERS),
+    )
     private val member = AppUser(uid = "member", approved = true, congregation = testCongregation)
     private val admin = AppUser(
         uid = "admin",
@@ -54,12 +65,31 @@ class TalkScheduleViewModelTest {
     private val november1 = TalkSlot(LocalDate(2026, 11, 1), LocalTime(17, 30))
     private val kongress = WeekEvent("kongress", "Kongress", cancelsTalk = true)
 
+    private val speakerMember = AppUser(
+        uid = "m1",
+        approved = true,
+        profile = MemberProfile(
+            lastName = "Muster",
+            firstName = "Max",
+            category = MemberCategory.BROTHER,
+            isSpeaker = true,
+        ),
+    )
+    private val otherMember = AppUser(
+        uid = "m2",
+        approved = true,
+        profile = MemberProfile(lastName = "Beispiel", firstName = "Tim"),
+    )
+    private val nameless = AppUser(uid = "m3", approved = true, profile = MemberProfile(isSpeaker = true))
+    private val maxMuster = Speaker("m1", "Muster", "Max")
+
     private val activeTalk = Talk(12, "Der Weg zum Glück")
     private val pausedTalk = Talk(40, "Pausierter Vortrag", active = false)
 
     private lateinit var repository: FakeTalkScheduleRepository
     private lateinit var weekEvents: FakeWeekEventRepository
     private lateinit var catalog: FakeTalkCatalogRepository
+    private lateinit var users: FakeUserRepository
     private lateinit var viewModel: TalkScheduleViewModel
 
     @BeforeTest
@@ -68,6 +98,7 @@ class TalkScheduleViewModelTest {
         repository = FakeTalkScheduleRepository(listOf(october25, november1))
         weekEvents = FakeWeekEventRepository(listOf(kongress))
         catalog = FakeTalkCatalogRepository(listOf(activeTalk, pausedTalk))
+        users = FakeUserRepository(members = listOf(speakerMember, otherMember, nameless))
         val policy = TalkSchedulePermissionPolicy()
         val save = SaveTalkSlotUseCase(repository, policy)
         val delete = DeleteTalkSlotUseCase(repository, policy)
@@ -75,9 +106,11 @@ class TalkScheduleViewModelTest {
             ObserveTalkYearUseCase(repository),
             ObserveWeekEventsUseCase(weekEvents),
             ObserveTalkCatalogUseCase(catalog),
+            ObserveSpeakersUseCase(ObserveMembersUseCase(users)),
             MoveTalkSlotUseCase(save, delete),
             delete,
             policy,
+            UserPermissionPolicy(),
         )
         viewModel.changeYear(2026)
     }
@@ -113,6 +146,46 @@ class TalkScheduleViewModelTest {
         viewModel.selectTalk(null)
         assertNull(state.editor!!.slot.talkNumber)
         assertNull(state.editor!!.slot.talkTitle)
+    }
+
+    @Test
+    fun `planner with VIEW_MEMBERS sees the speakers and selects one as snapshot`() {
+        viewModel.onCurrentUserChanged(viewer)
+
+        assertTrue(state.canViewMembers)
+        assertEquals(listOf(maxMuster), state.speakers)
+
+        viewModel.newSlot()
+        viewModel.selectSpeaker(maxMuster)
+        assertEquals("m1", state.editor!!.slot.speakerMemberId)
+        assertEquals("Muster", state.editor!!.slot.speakerLastName)
+        assertEquals("Max", state.editor!!.slot.speakerFirstName)
+
+        viewModel.selectSpeaker(null)
+        assertNull(state.editor!!.slot.speakerMemberId)
+        assertNull(state.editor!!.slot.speakerLastName)
+        assertNull(state.editor!!.slot.speakerFirstName)
+    }
+
+    @Test
+    fun `planner without VIEW_MEMBERS does not load the speakers`() {
+        viewModel.onCurrentUserChanged(planner)
+
+        assertTrue(state.canPlan)
+        assertFalse(state.canViewMembers)
+        assertTrue(state.speakers.isEmpty())
+        assertNull(users.requestedCongregation)
+    }
+
+    @Test
+    fun `losing VIEW_MEMBERS clears the speakers`() {
+        viewModel.onCurrentUserChanged(viewer)
+        assertEquals(listOf(maxMuster), state.speakers)
+
+        viewModel.onCurrentUserChanged(planner)
+
+        assertTrue(state.speakers.isEmpty())
+        assertFalse(state.canViewMembers)
     }
 
     @Test

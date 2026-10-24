@@ -5,18 +5,22 @@ import androidx.lifecycle.viewModelScope
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.presentation.components.ListDetailState
+import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.MoveTalkSlotUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.ObserveSpeakersUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkCatalogUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkYearUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveWeekEventsUseCase
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
@@ -38,8 +42,11 @@ data class TalkScheduleUiState(
     val slots: List<TalkSlot> = emptyList(),
     val weekEvents: List<WeekEvent> = emptyList(),
     val talks: List<Talk> = emptyList(),
+    val speakers: List<Speaker> = emptyList(),
     val isLoading: Boolean = true,
     val canPlan: Boolean = false,
+    /** Ohne diese Berechtigung können die Redner nicht geladen werden. */
+    val canViewMembers: Boolean = false,
     val editor: TalkSlotEditorState? = null,
     override val errorMessage: String? = null,
     override val isSaving: Boolean = false,
@@ -53,9 +60,11 @@ class TalkScheduleViewModel(
     private val observeYear: ObserveTalkYearUseCase,
     private val observeWeekEvents: ObserveWeekEventsUseCase,
     private val observeTalkCatalog: ObserveTalkCatalogUseCase,
+    private val observeSpeakers: ObserveSpeakersUseCase,
     private val moveSlot: MoveTalkSlotUseCase,
     private val deleteSlot: DeleteTalkSlotUseCase,
     private val permissionPolicy: TalkSchedulePermissionPolicy,
+    private val userPolicy: UserPermissionPolicy,
 ) : ViewModel() {
     private val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
     private val mutableUiState = MutableStateFlow(TalkScheduleUiState(year = today.year))
@@ -65,6 +74,7 @@ class TalkScheduleViewModel(
     private var slotsJob: Job? = null
     private var weekEventsJob: Job? = null
     private var talksJob: Job? = null
+    private var speakersJob: Job? = null
     private var observing = false
     private var observedCongregation: CongregationRef? = null
     private var observedYear: Int? = null
@@ -72,8 +82,11 @@ class TalkScheduleViewModel(
     fun onCurrentUserChanged(user: AppUser) {
         currentUser = user
         val canPlan = permissionPolicy.canPlanTalks(user)
-        mutableUiState.update { it.copy(canPlan = canPlan, editor = it.editor?.takeIf { canPlan }) }
-        observeReferenceData(canPlan)
+        val canViewMembers = canPlan && userPolicy.canViewMembers(user)
+        mutableUiState.update {
+            it.copy(canPlan = canPlan, canViewMembers = canViewMembers, editor = it.editor?.takeIf { canPlan })
+        }
+        observeReferenceData(user)
         observeSlots()
     }
 
@@ -118,6 +131,18 @@ class TalkScheduleViewModel(
         if (talk != null && !talk.active) return
         val slot = mutableUiState.value.editor?.slot ?: return
         updateEditor(slot.copy(talkNumber = talk?.number, talkTitle = talk?.title))
+    }
+
+    /** Übernimmt Name und Vorname des Redners als Momentaufnahme; `null` entfernt den Redner. */
+    fun selectSpeaker(speaker: Speaker?) {
+        val slot = mutableUiState.value.editor?.slot ?: return
+        updateEditor(
+            slot.copy(
+                speakerMemberId = speaker?.memberId,
+                speakerLastName = speaker?.lastName,
+                speakerFirstName = speaker?.firstName,
+            ),
+        )
     }
 
     fun cancelEditing() {
@@ -183,7 +208,7 @@ class TalkScheduleViewModel(
     fun dismissError() {
         mutableUiState.update { it.copy(errorMessage = null) }
         currentUser?.let { user ->
-            observeReferenceData(permissionPolicy.canPlanTalks(user))
+            observeReferenceData(user)
             observeSlots()
         }
     }
@@ -216,34 +241,55 @@ class TalkScheduleViewModel(
         }
     }
 
-    // Wochenereignisse und Vortragsliste sind global und werden nur beobachtet, solange der Nutzer planen darf.
-    private fun observeReferenceData(canPlan: Boolean) {
+    // Wochenereignisse und Vortragsliste sind global, die Redner stammen aus den Mitgliedern der Versammlung.
+    // Sie werden nur beobachtet, solange der Nutzer planen (bzw. Mitglieder einsehen) darf.
+    private fun observeReferenceData(user: AppUser) {
+        val canPlan = permissionPolicy.canPlanTalks(user)
         if (!canPlan) {
             weekEventsJob?.cancel()
             weekEventsJob = null
             talksJob?.cancel()
             talksJob = null
-            return
-        }
-        if (weekEventsJob == null) {
-            weekEventsJob = viewModelScope.launch {
-                observeWeekEvents()
-                    .catch { exception ->
-                        val message = exception.message ?: "Wochenereignisse konnten nicht geladen werden."
-                        weekEventsJob = null
-                        mutableUiState.update { it.copy(errorMessage = message) }
-                    }.collect { events -> mutableUiState.update { it.copy(weekEvents = events) } }
+        } else {
+            if (weekEventsJob == null) {
+                weekEventsJob = launchReference("Wochenereignisse", observeWeekEvents()) { events ->
+                    mutableUiState.update { it.copy(weekEvents = events) }
+                }
+            }
+            if (talksJob == null) {
+                talksJob = launchReference("Vortragsliste", observeTalkCatalog()) { talks ->
+                    mutableUiState.update { it.copy(talks = talks) }
+                }
             }
         }
-        if (talksJob == null) {
-            talksJob = viewModelScope.launch {
-                observeTalkCatalog()
-                    .catch { exception ->
-                        val message = exception.message ?: "Vortragsliste konnte nicht geladen werden."
-                        talksJob = null
-                        mutableUiState.update { it.copy(errorMessage = message) }
-                    }.collect { talks -> mutableUiState.update { it.copy(talks = talks) } }
+        if (canPlan && userPolicy.canViewMembers(user)) {
+            if (speakersJob == null) {
+                speakersJob = launchReference("Redner", observeSpeakers(user)) { speakers ->
+                    mutableUiState.update { it.copy(speakers = speakers) }
+                }
             }
+        } else {
+            speakersJob?.cancel()
+            speakersJob = null
+            mutableUiState.update { it.copy(speakers = emptyList()) }
+        }
+    }
+
+    private fun <T> launchReference(name: String, source: Flow<T>, onValue: (T) -> Unit): Job = viewModelScope.launch {
+        source
+            .catch { exception ->
+                val message = exception.message ?: "$name konnten nicht geladen werden."
+                // Der Flow ist beendet; ohne Zurücksetzen würde er nie wieder gestartet.
+                resetReferenceJob(name)
+                mutableUiState.update { it.copy(errorMessage = message) }
+            }.collect(onValue)
+    }
+
+    private fun resetReferenceJob(name: String) {
+        when (name) {
+            "Wochenereignisse" -> weekEventsJob = null
+            "Vortragsliste" -> talksJob = null
+            else -> speakersJob = null
         }
     }
 

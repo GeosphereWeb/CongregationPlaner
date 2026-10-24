@@ -1,6 +1,7 @@
 package de.geosphere.congregationplaner.talk.data
 
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
+import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
@@ -88,6 +89,40 @@ class FirestoreRestTalkRepositoriesTest {
         assertTrue(request.body.contains(""""time":{"stringValue":"17:30"}"""))
         assertTrue(request.body.contains(""""talkCancelled":{"booleanValue":true}"""))
         assertTrue(request.body.contains(""""weekEventId":{"stringValue":"kongress"}"""))
+    }
+
+    @Test
+    fun `slot speaker is read back and written as snapshot`() = runWithServer(
+        responder = { request ->
+            if (request.method == "GET") {
+                FakeResponse(
+                    200,
+                    """{"documents":[{"name":"x/talkSchedule/2026-10-25","fields":{
+                        "time":{"stringValue":"17:30"},"talkCancelled":{"booleanValue":false},
+                        "speakerMemberId":{"stringValue":"m1"},"speakerLastName":{"stringValue":"Muster"},
+                        "speakerFirstName":{"stringValue":"Max"}}}]}""",
+                )
+            } else {
+                FakeResponse(200, "{}")
+            }
+        },
+    ) { server ->
+        val repository = FirestoreRestTalkScheduleRepository(idTokenProvider = { "token-123" })
+
+        val read = repository.observeYear(congregation, 2026).first().single()
+        assertEquals(Speaker("m1", "Muster", "Max"), read.speaker)
+
+        repository.saveSlot(congregation, read)
+        val body = server.requests.last().body
+        assertTrue(body.contains(""""speakerMemberId":{"stringValue":"m1"}"""))
+        assertTrue(body.contains(""""speakerLastName":{"stringValue":"Muster"}"""))
+        assertTrue(body.contains(""""speakerFirstName":{"stringValue":"Max"}"""))
+
+        repository.saveSlot(
+            congregation,
+            read.copy(speakerMemberId = null, speakerLastName = null, speakerFirstName = null),
+        )
+        assertTrue(server.requests.last().body.contains(""""speakerMemberId":{"nullValue":null}"""))
     }
 
     @Test
