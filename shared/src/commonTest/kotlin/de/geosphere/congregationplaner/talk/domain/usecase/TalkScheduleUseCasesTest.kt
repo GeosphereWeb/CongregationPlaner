@@ -233,6 +233,32 @@ class TalkScheduleUseCasesTest {
     }
 
     @Test
+    fun `a member is never speaker and chairman of the same slot`() = runBlocking {
+        val sameMember = slot().copy(
+            speakerMemberId = "m1",
+            speakerLastName = "Muster",
+            speakerFirstName = "Max",
+            chairmanMemberId = "m1",
+            chairmanLastName = "Muster",
+            chairmanFirstName = "Max",
+        )
+
+        assertIs<TalkScheduleException.SpeakerIsChairman>(save(admin, sameMember).exceptionOrNull())
+        assertTrue(repository.savedSlots.isEmpty())
+
+        val different = sameMember.copy(chairmanMemberId = "m2")
+        assertTrue(save(admin, different).isSuccess)
+        // Ein externer Redner ist kein Mitglied und kann daher nie mit dem Vorsitzenden zusammenfallen.
+        val external = different.copy(
+            speakerMemberId = null,
+            externalSpeakerId = "m2",
+            speakerCongregation = "Nord",
+            chairmanMemberId = "m2",
+        )
+        assertTrue(save(admin, external).isSuccess)
+    }
+
+    @Test
     fun `chairmen are the sorted brothers with an appointment and a last name`() = runBlocking {
         fun member(uid: String, last: String, category: MemberCategory?, appointment: Appointment) = AppUser(
             uid = uid,

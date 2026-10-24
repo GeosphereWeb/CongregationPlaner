@@ -108,6 +108,8 @@ sealed class TalkScheduleException(message: String) : Exception(message) {
                 "${TalkSlot.MAX_PERSON_NAME_LENGTH} Zeichen.",
         )
 
+    class SpeakerIsChairman : TalkScheduleException("Redner und Vorsitzender dürfen nicht dieselbe Person sein.")
+
     class InvalidTalk :
         TalkScheduleException(
             "Der Vortrag ist ungültig: Nummer ab 1 und ein Titel mit höchstens " +
