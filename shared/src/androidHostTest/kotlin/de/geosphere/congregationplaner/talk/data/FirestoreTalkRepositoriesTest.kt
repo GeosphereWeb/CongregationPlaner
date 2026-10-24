@@ -11,6 +11,7 @@ import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
+import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
@@ -106,6 +107,43 @@ class FirestoreTalkRepositoriesTest {
     }
 
     @Test
+    fun `observeYear maps an external speaker and saveSlot writes the snapshot`() = runBlocking {
+        val query = mockk<Query>()
+        val ranged = mockk<Query>()
+        every { collection.whereGreaterThanOrEqualTo(any<FieldPath>(), any()) } returns query
+        every { query.whereLessThanOrEqualTo(any<FieldPath>(), any()) } returns ranged
+        val external = mockk<DocumentSnapshot> {
+            every { id } returns "2026-10-25"
+            every { getString("time") } returns "17:30"
+            every { getBoolean("talkCancelled") } returns false
+            every { getString("weekEventId") } returns null
+            every { getString("weekEventName") } returns null
+            every { getLong("talkNumber") } returns null
+            every { getString("talkTitle") } returns null
+            every { getString("speakerMemberId") } returns null
+            every { getString("speakerLastName") } returns "Extern"
+            every { getString("speakerFirstName") } returns "Eva"
+            every { getString("chairmanMemberId") } returns null
+            every { getString("chairmanLastName") } returns null
+            every { getString("chairmanFirstName") } returns null
+            every { getString("externalSpeakerId") } returns "e1"
+            every { getString("speakerCongregation") } returns "Nord"
+        }
+        emitSnapshot(ranged, querySnapshot(external), null)
+        val repository = FirestoreTalkScheduleRepository(firestore)
+
+        val read = repository.observeYear(congregation, 2026).first().single()
+        assertEquals(ExternalSpeaker("e1", "Extern", "Eva", "Nord"), read.externalSpeaker)
+
+        val fields = slot<Any>()
+        every { reference.set(capture(fields)) } returns successTask<Void?>(null)
+        repository.saveSlot(congregation, read)
+        val written = fields.captured as Map<*, *>
+        assertEquals("e1", written["externalSpeakerId"])
+        assertEquals("Nord", written["speakerCongregation"])
+    }
+
+    @Test
     fun `saveSlot writes the document under the date`() = runBlocking {
         val fields = slot<Any>()
         every { reference.set(capture(fields)) } returns successTask<Void?>(null)
@@ -125,6 +163,8 @@ class FirestoreTalkRepositoriesTest {
                 "chairmanMemberId" to "c1",
                 "chairmanLastName" to "Alt",
                 "chairmanFirstName" to "Anton",
+                "externalSpeakerId" to null,
+                "speakerCongregation" to null,
             ),
             fields.captured,
         )
@@ -236,6 +276,8 @@ class FirestoreTalkRepositoriesTest {
         every { getString("chairmanMemberId") } returns "c1"
         every { getString("chairmanLastName") } returns "Alt"
         every { getString("chairmanFirstName") } returns "Anton"
+        every { getString("externalSpeakerId") } returns null
+        every { getString("speakerCongregation") } returns null
     }
 
     // Ein Termin ohne Ereignis; fehlende Felder bekommen ihre Vorgaben.
@@ -253,5 +295,7 @@ class FirestoreTalkRepositoriesTest {
         every { getString("chairmanMemberId") } returns null
         every { getString("chairmanLastName") } returns null
         every { getString("chairmanFirstName") } returns null
+        every { getString("externalSpeakerId") } returns null
+        every { getString("speakerCongregation") } returns null
     }
 }

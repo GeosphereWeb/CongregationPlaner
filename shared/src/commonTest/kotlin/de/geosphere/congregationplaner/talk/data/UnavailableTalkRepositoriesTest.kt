@@ -1,6 +1,7 @@
 package de.geosphere.congregationplaner.talk.data
 
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
+import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -31,6 +32,17 @@ class UnavailableTalkRepositoriesTest {
         val repository = unavailableWeekEventRepository("iOS")
 
         assertFailsWith<UnsupportedOperationException> { repository.observeWeekEvents().first() }
+    }
+
+    @Test
+    fun `unavailable external speaker repository fails with the platform name`(): Unit = runBlocking {
+        val repository = unavailableExternalSpeakerRepository("iOS")
+
+        assertFailsWith<UnsupportedOperationException> { repository.observeAll(congregation).first() }
+        val save = repository.save(congregation, ExternalSpeaker("", "Extern", "Eva", "Nord")).exceptionOrNull()
+        assertIs<UnsupportedOperationException>(save)
+        assertEquals("Firestore is not configured for iOS.", save.message)
+        assertIs<UnsupportedOperationException>(repository.delete(congregation, "e1").exceptionOrNull())
     }
 
     @Test

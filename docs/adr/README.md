@@ -61,3 +61,4 @@ Numbers are sequential and permanent. Never reuse or renumber an existing ADR, e
 - [ADR-0002: Vortragsplanung – Datenmodell und Berechtigung](0002-talk-schedule-data-model-and-permission.md) — Accepted
 - [ADR-0003: Globale Vortragsliste mit Titel-Momentaufnahme im Termin](0003-global-talk-catalog.md) — Accepted
 - [ADR-0004: Lese-Berechtigung VIEW_MEMBERS für Mitgliederdaten](0004-view-members-permission.md) — Accepted
+- [ADR-0005: Externe Redner je Versammlung ohne Verweis auf fremde Mitglieder](0005-external-speakers.md) — Accepted
