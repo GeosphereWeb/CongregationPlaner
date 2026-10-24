@@ -121,6 +121,22 @@ internal fun parseDocuments(response: String): List<FirestoreRestDocument> =
         ?.map { parseDocument(it.asJsonObject) }
         .orEmpty()
 
+// Die REST-API begrenzt die Seitengröße (Standard 100); größere Werte werden gekürzt.
+private const val LIST_PAGE_SIZE = 300
+
+/** Liest alle Dokumente einer Collection und folgt dabei dem `nextPageToken` jeder Seite. */
+internal fun FirestoreRestClient.listAllDocuments(collectionPath: String): List<FirestoreRestDocument> {
+    val documents = mutableListOf<FirestoreRestDocument>()
+    var pageToken: String? = null
+    do {
+        val tokenQuery = pageToken?.let { "&pageToken=${encode(it)}" }.orEmpty()
+        val response = request("GET", "${collectionUrl(collectionPath)}?pageSize=$LIST_PAGE_SIZE$tokenQuery")
+        documents += parseDocuments(response)
+        pageToken = JsonParser.parseString(response).asJsonObject.get("nextPageToken")?.asString
+    } while (!pageToken.isNullOrEmpty())
+    return documents
+}
+
 internal fun firestoreString(value: String): JsonObject = JsonObject().apply { addProperty("stringValue", value) }
 
 internal fun firestoreNullableString(value: String?): JsonObject =

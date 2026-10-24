@@ -6,6 +6,7 @@ package de.geosphere.congregationplaner.user.domain.model
  */
 enum class UserPermission(val label: String) {
     DUMMY("Dummy-Berechtigung"),
+    PLAN_TALKS("Vortragsplanung"),
     ;
 
     companion object {
