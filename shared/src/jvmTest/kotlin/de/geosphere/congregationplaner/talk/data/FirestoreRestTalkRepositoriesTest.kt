@@ -1,0 +1,107 @@
+package de.geosphere.congregationplaner.talk.data
+
+import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
+import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
+import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
+import de.geosphere.congregationplaner.testing.FakeFirestoreRestServer
+import de.geosphere.congregationplaner.testing.FakeFirestoreRestServer.FakeResponse
+import de.geosphere.congregationplaner.testing.withFirestoreRestConfig
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+
+class FirestoreRestTalkRepositoriesTest {
+    private val congregation = CongregationRef("EMEA", "europe", "central-europe", "609a", "berlin")
+    private val slotsPath = "${FakeFirestoreRestServer.DOCUMENTS_PATH}/${congregation.talkSchedulePath}"
+    private val slot = TalkSlot(LocalDate(2026, 10, 25), LocalTime(17, 30), "kongress", "Kongress", true)
+
+    @Test
+    fun `observeYear lists the collection, keeps only that year and sorts by date`() = runWithServer(
+        responder = {
+            FakeResponse(
+                200,
+                """{"documents":[${document("2027-01-03")},${document("2026-11-01")},${document("2026-10-25")}]}""",
+            )
+        },
+    ) { server ->
+        val slots = FirestoreRestTalkScheduleRepository(idTokenProvider = { "token-123" })
+            .observeYear(congregation, 2026).first()
+
+        assertEquals(listOf(LocalDate(2026, 10, 25), LocalDate(2026, 11, 1)), slots.map { it.date })
+        assertEquals(LocalTime(17, 30), slots.first().time)
+        assertEquals("Kongress", slots.first().weekEventName)
+        assertTrue(slots.first().talkCancelled)
+        val request = server.requests.single()
+        assertEquals("GET", request.method)
+        assertEquals(slotsPath, request.path)
+        assertEquals("Bearer token-123", request.authorization)
+    }
+
+    @Test
+    fun `saveSlot replaces the document with the date as id`() = runWithServer({ FakeResponse(200, "{}") }) { server ->
+        val result = FirestoreRestTalkScheduleRepository(idTokenProvider = { "token-123" })
+            .saveSlot(congregation, slot)
+
+        assertEquals(slot, result.getOrThrow())
+        val request = server.requests.single()
+        assertEquals("PATCH", request.method)
+        assertEquals("$slotsPath/2026-10-25", request.path)
+        assertTrue(request.body.contains(""""time":{"stringValue":"17:30"}"""))
+        assertTrue(request.body.contains(""""talkCancelled":{"booleanValue":true}"""))
+        assertTrue(request.body.contains(""""weekEventId":{"stringValue":"kongress"}"""))
+    }
+
+    @Test
+    fun `saveSlot writes null for a missing week event`() = runWithServer({ FakeResponse(200, "{}") }) { server ->
+        FirestoreRestTalkScheduleRepository(idTokenProvider = { "token-123" })
+            .saveSlot(congregation, slot.copy(weekEventId = null, weekEventName = null, talkCancelled = false))
+
+        assertTrue(server.requests.single().body.contains(""""weekEventId":{"nullValue":null}"""))
+    }
+
+    @Test
+    fun `deleteSlot deletes the document of the day and reports failures`() = runWithServer({ request ->
+        if (request.path.endsWith("2026-10-25")) FakeResponse(200, "{}") else FakeResponse(403)
+    }) { server ->
+        val repository = FirestoreRestTalkScheduleRepository(idTokenProvider = { "token-123" })
+
+        assertTrue(repository.deleteSlot(congregation, LocalDate(2026, 10, 25)).isSuccess)
+        assertEquals("DELETE", server.requests.single().method)
+        assertTrue(repository.deleteSlot(congregation, LocalDate(2026, 11, 1)).isFailure)
+    }
+
+    @Test
+    fun `week events are read from the global collection`() = runWithServer({
+        FakeResponse(
+            200,
+            """{"documents":[{"name":"x/weekEvents/kongress","fields":{
+                "name":{"stringValue":"Kongress"},"cancelsTalk":{"booleanValue":true}}},
+                {"name":"x/weekEvents/besuch","fields":{"name":{"stringValue":"Kreisaufseher"}}}]}""",
+        )
+    }) { server ->
+        val events = FirestoreRestWeekEventRepository(idTokenProvider = { "token-123" })
+            .observeWeekEvents().first()
+
+        assertEquals(listOf(WeekEvent("kongress", "Kongress", true), WeekEvent("besuch", "Kreisaufseher")), events)
+        assertEquals("${FakeFirestoreRestServer.DOCUMENTS_PATH}/weekEvents", server.requests.single().path)
+    }
+
+    private fun document(id: String) = """{"name":"x/talkSchedule/$id","fields":{
+        "time":{"stringValue":"17:30"},
+        "talkCancelled":{"booleanValue":true},
+        "weekEventId":{"stringValue":"kongress"},
+        "weekEventName":{"stringValue":"Kongress"}}}"""
+
+    private fun runWithServer(
+        responder: (FakeFirestoreRestServer.RecordedRequest) -> FakeResponse,
+        block: suspend (FakeFirestoreRestServer) -> Unit,
+    ) {
+        FakeFirestoreRestServer(responder).use { server ->
+            withFirestoreRestConfig(server) { runBlocking { block(server) } }
+        }
+    }
+}
