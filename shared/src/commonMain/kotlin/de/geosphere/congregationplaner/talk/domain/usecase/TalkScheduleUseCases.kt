@@ -151,6 +151,7 @@ private fun TalkSlot.validationError(): TalkScheduleException? = when {
     !hasValidTalk() -> TalkScheduleException.InvalidTalk()
     !hasValidSpeaker() -> TalkScheduleException.InvalidSpeaker()
     !hasValidMember(chairmanMemberId, chairmanLastName, chairmanFirstName) -> TalkScheduleException.InvalidChairman()
+    speakerMemberId != null && speakerMemberId == chairmanMemberId -> TalkScheduleException.SpeakerIsChairman()
     else -> null
 }
 

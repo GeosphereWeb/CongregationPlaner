@@ -57,6 +57,9 @@ internal fun TalkSlotEditor(
     var showTalkPicker by remember { mutableStateOf(false) }
     var showSpeakerPicker by remember { mutableStateOf(false) }
     var showChairmanPicker by remember { mutableStateOf(false) }
+    // Wer schon Vorsitzender ist, kann nicht Redner sein, und umgekehrt.
+    val selectableSpeakers = speakers.filterNot { it.memberId == slot.chairmanMemberId }
+    val selectableChairmen = chairmen.filterNot { it.memberId == slot.speakerMemberId }
     Card {
         Column(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -133,13 +136,14 @@ internal fun TalkSlotEditor(
                 label = "Vorsitzender",
                 actionLabel = "Vorsitzenden",
                 selectedText = slot.chairman?.displayName,
-                pickEnabled = canViewMembers && chairmen.isNotEmpty(),
+                pickEnabled = canViewMembers && selectableChairmen.isNotEmpty(),
                 hint = when {
                     !canViewMembers ->
                         "Dir fehlt die Berechtigung „Mitglieder einsehen“, " +
                             "deshalb können keine Vorsitzenden geladen werden."
                     chairmen.isEmpty() ->
                         "Kein Bruder mit Dienstamt (Ältester oder Dienstamtgehilfe) mit Namen gefunden."
+                    selectableChairmen.isEmpty() -> "Alle Brüder mit Dienstamt sind schon als Redner eingeteilt."
                     else -> null
                 },
                 onPick = { showChairmanPicker = true },
@@ -157,7 +161,7 @@ internal fun TalkSlotEditor(
 
     if (showSpeakerPicker) {
         SpeakerPickerDialog(
-            members = speakers,
+            members = selectableSpeakers,
             externalSpeakers = externalSpeakers,
             canViewMembers = canViewMembers,
             actions = speakerActions.closingPicker { showSpeakerPicker = false },
@@ -168,7 +172,7 @@ internal fun TalkSlotEditor(
     if (showChairmanPicker) {
         MemberPickerDialog(
             title = "Vorsitzenden wählen",
-            members = chairmen,
+            members = selectableChairmen,
             onSelect = {
                 onSelectChairman(it)
                 showChairmanPicker = false

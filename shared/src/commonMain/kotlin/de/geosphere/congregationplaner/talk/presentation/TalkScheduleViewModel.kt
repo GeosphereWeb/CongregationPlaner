@@ -9,6 +9,7 @@ import de.geosphere.congregationplaner.talk.domain.model.Chairman
 import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
+import de.geosphere.congregationplaner.talk.domain.model.TalkScheduleException
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
@@ -147,6 +148,7 @@ class TalkScheduleViewModel(
     /** Übernimmt Name und Vorname des Redners als Momentaufnahme; `null` entfernt den Redner. */
     fun selectSpeaker(speaker: Speaker?) {
         val slot = mutableUiState.value.editor?.slot ?: return
+        if (speaker != null && speaker.memberId == slot.chairmanMemberId) return rejectSamePerson()
         updateEditor(
             slot.copy(
                 speakerMemberId = speaker?.memberId,
@@ -196,6 +198,7 @@ class TalkScheduleViewModel(
     /** Übernimmt Name und Vorname des Vorsitzenden als Momentaufnahme; `null` entfernt den Vorsitzenden. */
     fun selectChairman(chairman: Chairman?) {
         val slot = mutableUiState.value.editor?.slot ?: return
+        if (chairman != null && chairman.memberId == slot.speakerMemberId) return rejectSamePerson()
         updateEditor(
             slot.copy(
                 chairmanMemberId = chairman?.memberId,
@@ -366,6 +369,11 @@ class TalkScheduleViewModel(
         val allowed = currentUser?.let(permissionPolicy::canPlanTalks) == true && currentUser?.congregation != null
         if (!allowed) mutableUiState.update { it.copy(errorMessage = MISSING_PERMISSION_MESSAGE) }
         return allowed
+    }
+
+    // Ein Mitglied kann an einem Tag nicht Redner und Vorsitzender sein; die Dialoge bieten es gar nicht erst an.
+    private fun rejectSamePerson() {
+        mutableUiState.update { it.copy(errorMessage = TalkScheduleException.SpeakerIsChairman().message) }
     }
 
     // Fehler außerhalb eines Speichervorgangs (isSaving gehört dem Termin).
