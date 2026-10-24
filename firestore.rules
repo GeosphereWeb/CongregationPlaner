@@ -151,19 +151,55 @@ service cloud.firestore {
         data.congregationName is string && data.congregationName.size() >= 1 && data.congregationName.size() <= 100;
     }
 
+    // A text that is either absent (null) or a string with minLen..maxLen characters.
+    function isOptionalText(value, minLen, maxLen) {
+      return value == null || (value is string && value.size() >= minLen && value.size() <= maxLen);
+    }
+
+    // Talk number and title are a snapshot of the talk list: both set or both null.
+    function isValidTalkFields(data) {
+      let talkNumber = data.get('talkNumber', null);
+      let talkTitle = data.get('talkTitle', null);
+      return (talkNumber == null || (talkNumber is int && talkNumber >= 1)) &&
+        isOptionalText(talkTitle, 1, 200) &&
+        ((talkNumber == null) == (talkTitle == null));
+    }
+
+    // The speaker is a member or an external speaker (never both); the name fields are set exactly then, and the
+    // congregation snapshot belongs to external speakers only.
+    function isValidSpeakerFields(data) {
+      let memberId = data.get('speakerMemberId', null);
+      let externalId = data.get('externalSpeakerId', null);
+      let lastName = data.get('speakerLastName', null);
+      let firstName = data.get('speakerFirstName', null);
+      let congregation = data.get('speakerCongregation', null);
+      let hasSpeaker = memberId != null || externalId != null;
+      return isOptionalText(memberId, 1, 128) &&
+        isOptionalText(externalId, 1, 128) &&
+        isOptionalText(lastName, 1, 100) &&
+        isOptionalText(firstName, 0, 100) &&
+        isOptionalText(congregation, 1, 100) &&
+        (memberId == null || externalId == null) &&
+        ((externalId == null) == (congregation == null)) &&
+        (hasSpeaker == (lastName != null)) &&
+        (hasSpeaker == (firstName != null));
+    }
+
+    // The chairman is a member snapshot: id, last name and first name all set or all null.
+    function isValidChairmanFields(data) {
+      let memberId = data.get('chairmanMemberId', null);
+      let lastName = data.get('chairmanLastName', null);
+      let firstName = data.get('chairmanFirstName', null);
+      return isOptionalText(memberId, 1, 128) &&
+        isOptionalText(lastName, 1, 100) &&
+        isOptionalText(firstName, 0, 100) &&
+        ((memberId == null) == (lastName == null)) &&
+        ((memberId == null) == (firstName == null));
+    }
+
     function isValidTalkSlot(date, data) {
       let eventId = data.get('weekEventId', null);
       let eventName = data.get('weekEventName', null);
-      let talkNumber = data.get('talkNumber', null);
-      let talkTitle = data.get('talkTitle', null);
-      let speakerId = data.get('speakerMemberId', null);
-      let speakerLast = data.get('speakerLastName', null);
-      let speakerFirst = data.get('speakerFirstName', null);
-      let chairmanId = data.get('chairmanMemberId', null);
-      let chairmanLast = data.get('chairmanLastName', null);
-      let chairmanFirst = data.get('chairmanFirstName', null);
-      let externalId = data.get('externalSpeakerId', null);
-      let speakerCongregation = data.get('speakerCongregation', null);
       return date.matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$') &&
         data.keys().hasOnly(['time', 'talkCancelled', 'weekEventId', 'weekEventName', 'talkNumber', 'talkTitle',
           'speakerMemberId', 'speakerLastName', 'speakerFirstName',
@@ -174,25 +210,12 @@ service cloud.firestore {
         isNullableString(eventId, 100) &&
         isNullableString(eventName, 100) &&
         ((eventId == null) == (eventName == null)) &&
-        (talkNumber == null || (talkNumber is int && talkNumber >= 1)) &&
-        (talkTitle == null || (talkTitle is string && talkTitle.size() >= 1 && talkTitle.size() <= 200)) &&
-        ((talkNumber == null) == (talkTitle == null)) &&
-        (speakerId == null || (speakerId is string && speakerId.size() >= 1 && speakerId.size() <= 128)) &&
-        (speakerLast == null || (speakerLast is string && speakerLast.size() >= 1 && speakerLast.size() <= 100)) &&
-        (speakerFirst == null || (speakerFirst is string && speakerFirst.size() <= 100)) &&
-        (externalId == null || (externalId is string && externalId.size() >= 1 && externalId.size() <= 128)) &&
-        (speakerCongregation == null ||
-          (speakerCongregation is string && speakerCongregation.size() >= 1 && speakerCongregation.size() <= 100)) &&
-        (speakerId == null || externalId == null) &&
-        ((externalId == null) == (speakerCongregation == null)) &&
-        ((speakerId == null && externalId == null) == (speakerLast == null)) &&
-        ((speakerId == null && externalId == null) == (speakerFirst == null)) &&
-        (chairmanId == null || (chairmanId is string && chairmanId.size() >= 1 && chairmanId.size() <= 128)) &&
-        (chairmanLast == null || (chairmanLast is string && chairmanLast.size() >= 1 && chairmanLast.size() <= 100)) &&
-        (chairmanFirst == null || (chairmanFirst is string && chairmanFirst.size() <= 100)) &&
-        ((chairmanId == null) == (chairmanLast == null)) &&
-        ((chairmanId == null) == (chairmanFirst == null)) &&
-        (speakerId == null || chairmanId == null || speakerId != chairmanId);
+        isValidTalkFields(data) &&
+        isValidSpeakerFields(data) &&
+        isValidChairmanFields(data) &&
+        // A member is never speaker and chairman on the same day.
+        (data.get('speakerMemberId', null) == null || data.get('chairmanMemberId', null) == null ||
+          data.get('speakerMemberId', null) != data.get('chairmanMemberId', null));
     }
 
     function isNullableString(value, maxLen) {
