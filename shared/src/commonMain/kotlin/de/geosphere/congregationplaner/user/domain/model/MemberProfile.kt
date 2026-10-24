@@ -25,6 +25,9 @@ data class MemberProfile(
 
     val canBeSpeaker: Boolean get() = category == MemberCategory.BROTHER
 
+    /** Vorsitzende kommen aus den Ältesten und Dienstamtgehilfen, siehe [canHaveAppointment]. */
+    val canBeChairman: Boolean get() = canHaveAppointment && appointment != Appointment.NONE
+
     /** Kinder sind nie getauft, und ohne passende Voraussetzungen gibt es kein Dienstamt und keinen Redner. */
     fun normalized(): MemberProfile {
         val baptized = baptized && category != MemberCategory.CHILD
