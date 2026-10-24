@@ -30,6 +30,17 @@ class MemberProfileTest {
     }
 
     @Test
+    fun `only baptized brothers with an appointment can be chairmen`() {
+        val elder = MemberProfile(category = MemberCategory.BROTHER, baptized = true, appointment = Appointment.ELDER)
+
+        assertTrue(elder.canBeChairman)
+        assertTrue(elder.copy(appointment = Appointment.MINISTERIAL_SERVANT).canBeChairman)
+        assertFalse(elder.copy(appointment = Appointment.NONE).canBeChairman)
+        assertFalse(elder.copy(category = MemberCategory.SISTER).canBeChairman)
+        assertFalse(elder.copy(baptized = false).canBeChairman)
+    }
+
+    @Test
     fun `normalized drops baptism of children and appointments without prerequisites`() {
         val elder = MemberProfile(category = MemberCategory.BROTHER, baptized = true, appointment = Appointment.ELDER)
 

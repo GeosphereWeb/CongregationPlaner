@@ -100,7 +100,9 @@ class FirestoreRestTalkRepositoriesTest {
                     """{"documents":[{"name":"x/talkSchedule/2026-10-25","fields":{
                         "time":{"stringValue":"17:30"},"talkCancelled":{"booleanValue":false},
                         "speakerMemberId":{"stringValue":"m1"},"speakerLastName":{"stringValue":"Muster"},
-                        "speakerFirstName":{"stringValue":"Max"}}}]}""",
+                        "speakerFirstName":{"stringValue":"Max"},
+                        "chairmanMemberId":{"stringValue":"c1"},"chairmanLastName":{"stringValue":"Alt"},
+                        "chairmanFirstName":{"stringValue":"Anton"}}}]}""",
                 )
             } else {
                 FakeResponse(200, "{}")
@@ -111,18 +113,31 @@ class FirestoreRestTalkRepositoriesTest {
 
         val read = repository.observeYear(congregation, 2026).first().single()
         assertEquals(Speaker("m1", "Muster", "Max"), read.speaker)
+        assertEquals(Speaker("c1", "Alt", "Anton"), read.chairman)
 
         repository.saveSlot(congregation, read)
         val body = server.requests.last().body
         assertTrue(body.contains(""""speakerMemberId":{"stringValue":"m1"}"""))
         assertTrue(body.contains(""""speakerLastName":{"stringValue":"Muster"}"""))
         assertTrue(body.contains(""""speakerFirstName":{"stringValue":"Max"}"""))
+        assertTrue(body.contains(""""chairmanMemberId":{"stringValue":"c1"}"""))
+        assertTrue(body.contains(""""chairmanLastName":{"stringValue":"Alt"}"""))
+        assertTrue(body.contains(""""chairmanFirstName":{"stringValue":"Anton"}"""))
 
         repository.saveSlot(
             congregation,
-            read.copy(speakerMemberId = null, speakerLastName = null, speakerFirstName = null),
+            read.copy(
+                speakerMemberId = null,
+                speakerLastName = null,
+                speakerFirstName = null,
+                chairmanMemberId = null,
+                chairmanLastName = null,
+                chairmanFirstName = null,
+            ),
         )
-        assertTrue(server.requests.last().body.contains(""""speakerMemberId":{"nullValue":null}"""))
+        val cleared = server.requests.last().body
+        assertTrue(cleared.contains(""""speakerMemberId":{"nullValue":null}"""))
+        assertTrue(cleared.contains(""""chairmanMemberId":{"nullValue":null}"""))
     }
 
     @Test

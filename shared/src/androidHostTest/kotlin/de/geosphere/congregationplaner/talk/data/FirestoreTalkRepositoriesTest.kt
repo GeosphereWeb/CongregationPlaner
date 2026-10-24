@@ -50,6 +50,9 @@ class FirestoreTalkRepositoriesTest {
         "m1",
         "Muster",
         "Max",
+        "c1",
+        "Alt",
+        "Anton",
     )
 
     init {
@@ -119,6 +122,9 @@ class FirestoreTalkRepositoriesTest {
                 "speakerMemberId" to "m1",
                 "speakerLastName" to "Muster",
                 "speakerFirstName" to "Max",
+                "chairmanMemberId" to "c1",
+                "chairmanLastName" to "Alt",
+                "chairmanFirstName" to "Anton",
             ),
             fields.captured,
         )
@@ -227,6 +233,9 @@ class FirestoreTalkRepositoriesTest {
         every { getString("speakerMemberId") } returns "m1"
         every { getString("speakerLastName") } returns "Muster"
         every { getString("speakerFirstName") } returns "Max"
+        every { getString("chairmanMemberId") } returns "c1"
+        every { getString("chairmanLastName") } returns "Alt"
+        every { getString("chairmanFirstName") } returns "Anton"
     }
 
     // Ein Termin ohne Ereignis; fehlende Felder bekommen ihre Vorgaben.
@@ -241,5 +250,8 @@ class FirestoreTalkRepositoriesTest {
         every { getString("speakerMemberId") } returns null
         every { getString("speakerLastName") } returns null
         every { getString("speakerFirstName") } returns null
+        every { getString("chairmanMemberId") } returns null
+        every { getString("chairmanLastName") } returns null
+        every { getString("chairmanFirstName") } returns null
     }
 }

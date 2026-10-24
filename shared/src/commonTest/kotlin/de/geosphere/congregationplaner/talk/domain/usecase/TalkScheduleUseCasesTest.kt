@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner.talk.domain.usecase
 
+import de.geosphere.congregationplaner.talk.domain.model.MemberRef
 import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkScheduleException
@@ -10,6 +11,8 @@ import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
 import de.geosphere.congregationplaner.talk.testing.FakeWeekEventRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.Appointment
+import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.UserRole
 import de.geosphere.congregationplaner.user.domain.usecase.ObserveMembersUseCase
@@ -140,14 +143,64 @@ class TalkScheduleUseCasesTest {
             ),
         )
 
-        val speakers = ObserveSpeakersUseCase(ObserveMembersUseCase(users))(admin).first()
+        val speakers = ObserveTalkMembersUseCase(ObserveMembersUseCase(users))(admin).first().speakers
 
         assertEquals(listOf("5", "3", "1"), speakers.map { it.memberId })
         assertEquals("Berg, adam", speakers.first().displayName)
         assertEquals("Muster", Speaker("x", "Muster", " ").displayName)
         assertEquals(testCongregation, users.requestedCongregation)
         val withoutCongregation = admin.copy(congregation = null)
-        assertTrue(ObserveSpeakersUseCase(ObserveMembersUseCase(users))(withoutCongregation).toList().isEmpty())
+        assertTrue(ObserveTalkMembersUseCase(ObserveMembersUseCase(users))(withoutCongregation).toList().isEmpty())
+    }
+
+    @Test
+    fun `chairmen are the sorted brothers with an appointment and a last name`() = runBlocking {
+        fun member(uid: String, last: String, category: MemberCategory?, appointment: Appointment) = AppUser(
+            uid = uid,
+            profile = MemberProfile(
+                lastName = last,
+                firstName = "X",
+                category = category,
+                baptized = true,
+                appointment = appointment,
+            ),
+        )
+        val users = FakeUserRepository(
+            members = listOf(
+                member("1", "Zander", MemberCategory.BROTHER, Appointment.ELDER),
+                member("2", "Berg", MemberCategory.BROTHER, Appointment.MINISTERIAL_SERVANT),
+                member("3", "Alt", MemberCategory.BROTHER, Appointment.NONE),
+                member("4", "Schwester", MemberCategory.SISTER, Appointment.ELDER),
+                member("5", "", MemberCategory.BROTHER, Appointment.ELDER),
+            ),
+        )
+
+        val chairmen = ObserveTalkMembersUseCase(ObserveMembersUseCase(users))(admin).first().chairmen
+
+        assertEquals(listOf("2", "1"), chairmen.map { it.memberId })
+    }
+
+    @Test
+    fun `save checks the three chairman fields together and trims the names`() = runBlocking {
+        val invalid = listOf(
+            slot().copy(chairmanMemberId = "c1", chairmanLastName = null, chairmanFirstName = "Max"),
+            slot().copy(chairmanMemberId = "c1", chairmanLastName = " ", chairmanFirstName = "Max"),
+            slot().copy(chairmanMemberId = "c1", chairmanLastName = "Muster", chairmanFirstName = null),
+            slot().copy(chairmanMemberId = " ", chairmanLastName = "Muster", chairmanFirstName = "Max"),
+            slot().copy(chairmanMemberId = null, chairmanLastName = "Muster", chairmanFirstName = null),
+            slot().copy(
+                chairmanMemberId = "c1",
+                chairmanLastName = "x".repeat(TalkSlot.MAX_PERSON_NAME_LENGTH + 1),
+                chairmanFirstName = "Max",
+            ),
+        )
+        invalid.forEach { assertIs<TalkScheduleException.InvalidChairman>(save(admin, it).exceptionOrNull()) }
+        assertTrue(repository.savedSlots.isEmpty())
+
+        save(admin, slot().copy(chairmanMemberId = "c1", chairmanLastName = " Muster ", chairmanFirstName = " Max "))
+
+        assertEquals(MemberRef("c1", "Muster", "Max"), repository.savedSlots.single().chairman)
+        assertEquals(null, slot().chairman)
     }
 
     @Test
