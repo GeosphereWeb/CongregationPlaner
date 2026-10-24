@@ -9,8 +9,8 @@ import de.geosphere.congregationplaner.firestore.firestoreBoolean
 import de.geosphere.congregationplaner.firestore.firestoreFields
 import de.geosphere.congregationplaner.firestore.firestoreNullableString
 import de.geosphere.congregationplaner.firestore.firestoreString
+import de.geosphere.congregationplaner.firestore.listAllDocuments
 import de.geosphere.congregationplaner.firestore.optionalStringField
-import de.geosphere.congregationplaner.firestore.parseDocuments
 import de.geosphere.congregationplaner.firestore.pollingFlow
 import de.geosphere.congregationplaner.firestore.runCatchingIo
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
@@ -27,14 +27,15 @@ internal class FirestoreRestTalkScheduleRepository(
 ) : TalkScheduleRepository {
     private val client = FirestoreRestClient(httpClient, idTokenProvider, "Sign in before accessing the talk schedule.")
 
-    // shortcut: die REST-Liste kennt hier keinen ID-Bereich, deshalb wird die Collection (max. 1000 Termine,
-    // gut 19 Jahre) geladen und nach Jahr gefiltert; bei mehr Terminen auf eine StructuredQuery umstellen.
+    // shortcut: die REST-Liste kennt hier keinen ID-Bereich, deshalb wird die ganze Collection seitenweise geladen
+    // und nach Jahr gefiltert; bei sehr vielen Terminen (Jahrzehnte) auf eine StructuredQuery umstellen.
+    // Ein Dokument mit ungültiger ID oder Zeit wird übersprungen, damit es nicht das ganze Jahr blockiert.
     override fun observeYear(congregation: CongregationRef, year: Int): Flow<List<TalkSlot>> = pollingFlow {
         val range = yearIdRange(year)
-        parseDocuments(client.request("GET", "${client.collectionUrl(congregation.talkSchedulePath)}?pageSize=1000"))
+        client.listAllDocuments(congregation.talkSchedulePath)
             .filter { it.id in range }
             .sortedBy { it.id }
-            .map { it.toSlot() }
+            .mapNotNull { document -> runCatching { document.toSlot() }.getOrNull() }
     }
 
     override suspend fun saveSlot(congregation: CongregationRef, slot: TalkSlot): Result<TalkSlot> = runCatchingIo {

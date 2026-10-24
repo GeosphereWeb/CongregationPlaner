@@ -5,12 +5,14 @@ import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
 import de.geosphere.congregationplaner.auth.AndroidFirestoreProvider
 import de.geosphere.congregationplaner.firestore.awaitResult
+import de.geosphere.congregationplaner.firestore.logFirestoreFailure
 import de.geosphere.congregationplaner.firestore.observeDocuments
 import de.geosphere.congregationplaner.firestore.runFirestoreCatching
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.repository.TalkScheduleRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 
@@ -23,7 +25,7 @@ internal class FirestoreTalkScheduleRepository(private val firestore: FirebaseFi
         val query = firestore.collection(congregation.talkSchedulePath)
             .whereGreaterThanOrEqualTo(FieldPath.documentId(), range.start)
             .whereLessThanOrEqualTo(FieldPath.documentId(), range.endInclusive)
-        return observeDocuments(query, "talk slot", ::toSlot)
+        return observeDocuments(query, "talk slot", ::toSlotOrNull).map { it.filterNotNull() }
     }
 
     override suspend fun saveSlot(congregation: CongregationRef, slot: TalkSlot): Result<TalkSlot> =
@@ -39,6 +41,11 @@ internal class FirestoreTalkScheduleRepository(private val firestore: FirebaseFi
             firestore.collection(congregation.talkSchedulePath).document(date.toString()).delete().awaitResult()
         }
 }
+
+// Ein Dokument mit ungültiger ID oder Zeit wird übersprungen, damit es nicht das ganze Jahr blockiert.
+private fun toSlotOrNull(document: DocumentSnapshot): TalkSlot? = runCatching { toSlot(document) }
+    .onFailure { logFirestoreFailure("parse talk slot ${document.id}", it) }
+    .getOrNull()
 
 private fun toSlot(document: DocumentSnapshot): TalkSlot = TalkSlot(
     date = LocalDate.parse(document.id),
