@@ -13,6 +13,8 @@ import kotlinx.datetime.LocalTime
  *   [WeekEvent.cancelsTalk], der Planer kann sie überschreiben.
  * @param talkNumber Nummer des Vortrags aus der Vortragsliste; der Titel wird mitgespeichert, damit alte
  *   Termine unverändert bleiben, wenn sich der Titel in der Liste ändert. Nummer und Titel gehören zusammen.
+ * @param speakerMemberId Das Mitglied der Versammlung, das den Vortrag hält; Name und Vorname werden als
+ *   Momentaufnahme mitgespeichert. Die drei Redner-Felder gehören zusammen.
  */
 data class TalkSlot(
     val date: LocalDate,
@@ -22,13 +24,20 @@ data class TalkSlot(
     val talkCancelled: Boolean = false,
     val talkNumber: Int? = null,
     val talkTitle: String? = null,
+    val speakerMemberId: String? = null,
+    val speakerLastName: String? = null,
+    val speakerFirstName: String? = null,
 ) {
     /** Dokument-ID in Firestore: ISO-Datum `yyyy-MM-dd`. */
     val id: String get() = date.toString()
 
+    val speaker: Speaker?
+        get() = speakerMemberId?.let { Speaker(it, speakerLastName.orEmpty(), speakerFirstName.orEmpty()) }
+
     companion object {
         const val MAX_WEEK_EVENT_NAME_LENGTH = 100
         const val MAX_TALK_TITLE_LENGTH = 200
+        const val MAX_PERSON_NAME_LENGTH = 100
     }
 }
 
@@ -37,6 +46,11 @@ data class TalkSlot(
  * Die Nummer bleibt stabil, der Titel kann sich ändern, und ein Vortrag kann zeitweise nicht [active] sein.
  */
 data class Talk(val number: Int, val title: String, val active: Boolean = true)
+
+/** Ein Redner aus den Mitgliedern der Versammlung (`isSpeaker`), wie er im Termin ausgewählt wird. */
+data class Speaker(val memberId: String, val lastName: String, val firstName: String) {
+    val displayName: String get() = listOf(lastName, firstName).filter(String::isNotBlank).joinToString(", ")
+}
 
 /** Ein Wochenereignis (z. B. Kreisaufseherbesuch); die Liste gilt für alle Versammlungen und Kreise. */
 data class WeekEvent(val id: String, val name: String, val cancelsTalk: Boolean = false)
@@ -47,6 +61,12 @@ sealed class TalkScheduleException(message: String) : Exception(message) {
     class InvalidWeekEvent :
         TalkScheduleException(
             "Das Wochenereignis ist ungültig (höchstens ${TalkSlot.MAX_WEEK_EVENT_NAME_LENGTH} Zeichen).",
+        )
+
+    class InvalidSpeaker :
+        TalkScheduleException(
+            "Der Redner ist ungültig: Familienname erforderlich, Namen mit höchstens " +
+                "${TalkSlot.MAX_PERSON_NAME_LENGTH} Zeichen.",
         )
 
     class InvalidTalk :

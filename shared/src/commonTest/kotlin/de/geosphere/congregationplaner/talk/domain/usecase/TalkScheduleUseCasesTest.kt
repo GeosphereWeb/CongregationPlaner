@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner.talk.domain.usecase
 
+import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkScheduleException
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
@@ -9,7 +10,10 @@ import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
 import de.geosphere.congregationplaner.talk.testing.FakeWeekEventRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.UserRole
+import de.geosphere.congregationplaner.user.domain.usecase.ObserveMembersUseCase
+import de.geosphere.congregationplaner.user.testing.FakeUserRepository
 import de.geosphere.congregationplaner.user.testing.testCongregation
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.toList
@@ -97,6 +101,53 @@ class TalkScheduleUseCasesTest {
 
         assertEquals(12, repository.savedSlots.single().talkNumber)
         assertEquals("Titel", repository.savedSlots.single().talkTitle)
+    }
+
+    @Test
+    fun `save checks the three speaker fields together and trims the names`() = runBlocking {
+        val invalid = listOf(
+            slot().copy(speakerMemberId = "m1", speakerLastName = null, speakerFirstName = "Max"),
+            slot().copy(speakerMemberId = "m1", speakerLastName = " ", speakerFirstName = "Max"),
+            slot().copy(speakerMemberId = "m1", speakerLastName = "Muster", speakerFirstName = null),
+            slot().copy(speakerMemberId = " ", speakerLastName = "Muster", speakerFirstName = "Max"),
+            slot().copy(speakerMemberId = null, speakerLastName = "Muster", speakerFirstName = null),
+            slot().copy(speakerMemberId = null, speakerLastName = null, speakerFirstName = "Max"),
+            slot().copy(
+                speakerMemberId = "m1",
+                speakerLastName = "x".repeat(TalkSlot.MAX_PERSON_NAME_LENGTH + 1),
+                speakerFirstName = "Max",
+            ),
+        )
+        invalid.forEach { assertIs<TalkScheduleException.InvalidSpeaker>(save(admin, it).exceptionOrNull()) }
+        assertTrue(repository.savedSlots.isEmpty())
+
+        save(admin, slot().copy(speakerMemberId = "m1", speakerLastName = " Muster ", speakerFirstName = ""))
+
+        assertEquals(Speaker("m1", "Muster", ""), repository.savedSlots.single().speaker)
+    }
+
+    @Test
+    fun `speakers are the sorted members marked as speaker with a last name`() = runBlocking {
+        fun member(uid: String, last: String, first: String, speaker: Boolean) =
+            AppUser(uid = uid, profile = MemberProfile(lastName = last, firstName = first, isSpeaker = speaker))
+        val users = FakeUserRepository(
+            members = listOf(
+                member("1", "zander", "Anna", true),
+                member("2", "Berg", "Tim", false),
+                member("3", "Berg", "Lea", true),
+                member("4", "", "Ohne", true),
+                member("5", "Berg", "adam", true),
+            ),
+        )
+
+        val speakers = ObserveSpeakersUseCase(ObserveMembersUseCase(users))(admin).first()
+
+        assertEquals(listOf("5", "3", "1"), speakers.map { it.memberId })
+        assertEquals("Berg, adam", speakers.first().displayName)
+        assertEquals("Muster", Speaker("x", "Muster", " ").displayName)
+        assertEquals(testCongregation, users.requestedCongregation)
+        val withoutCongregation = admin.copy(congregation = null)
+        assertTrue(ObserveSpeakersUseCase(ObserveMembersUseCase(users))(withoutCongregation).toList().isEmpty())
     }
 
     @Test
