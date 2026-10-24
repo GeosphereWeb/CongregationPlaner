@@ -7,6 +7,8 @@ import de.geosphere.congregationplaner.talk.domain.repository.TalkCatalogReposit
 import de.geosphere.congregationplaner.talk.domain.repository.TalkScheduleRepository
 import de.geosphere.congregationplaner.talk.domain.repository.WeekEventRepository
 import de.geosphere.congregationplaner.talk.presentation.TalkScheduleViewModel
+import de.geosphere.congregationplaner.user.data.createUserRepository
+import de.geosphere.congregationplaner.user.domain.repository.UserRepository
 import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Provides
 
@@ -22,4 +24,8 @@ interface TalkScheduleGraph {
 
     @Provides
     fun provideTalkCatalogRepository(): TalkCatalogRepository = createTalkCatalogRepository()
+
+    // Die Redner stammen aus den Mitgliedern der Versammlung.
+    @Provides
+    fun provideUserRepository(): UserRepository = createUserRepository()
 }

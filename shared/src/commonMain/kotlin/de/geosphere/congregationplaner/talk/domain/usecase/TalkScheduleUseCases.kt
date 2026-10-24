@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner.talk.domain.usecase
 
+import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkScheduleException
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
@@ -9,6 +10,7 @@ import de.geosphere.congregationplaner.talk.domain.repository.TalkCatalogReposit
 import de.geosphere.congregationplaner.talk.domain.repository.TalkScheduleRepository
 import de.geosphere.congregationplaner.talk.domain.repository.WeekEventRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.usecase.ObserveMembersUseCase
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -35,6 +37,21 @@ class ObserveTalkCatalogUseCase(private val repository: TalkCatalogRepository) {
 }
 
 /**
+ * Die Redner der Versammlung: Mitglieder mit `isSpeaker` und Familiennamen, nach Namen sortiert. Das Lesen der
+ * Mitglieder erfordert die Berechtigung `VIEW_MEMBERS` (oder Adminrechte), sonst lehnen die Rules ab.
+ */
+@Inject
+class ObserveSpeakersUseCase(private val observeMembers: ObserveMembersUseCase) {
+    operator fun invoke(user: AppUser): Flow<List<Speaker>> = user.congregation?.let { congregation ->
+        observeMembers(congregation).map { members ->
+            members.filter { it.profile.isSpeaker && it.profile.lastName.isNotBlank() }
+                .map { Speaker(it.uid, it.profile.lastName, it.profile.firstName) }
+                .sortedWith(compareBy({ it.lastName.lowercase() }, { it.firstName.lowercase() }))
+        }
+    } ?: emptyFlow()
+}
+
+/**
  * Speichert einen Termin in der Versammlung des Nutzers. Der Schlüssel ist das Datum, ein Termin pro Tag.
  * Der Wochentag wird bewusst nicht geprüft, weil sich der Versammlungstag kurzfristig verschieben kann.
  */
@@ -48,26 +65,47 @@ class SaveTalkSlotUseCase(
         if (congregation == null || !policy.canPlanTalks(user)) {
             return Result.failure(TalkScheduleException.NotAllowed())
         }
-        val eventName = slot.weekEventName?.trim()
-        val validEvent = if (slot.weekEventId == null) {
-            eventName == null
-        } else {
-            slot.weekEventId.isNotBlank() &&
-                !eventName.isNullOrEmpty() &&
-                eventName.length <= TalkSlot.MAX_WEEK_EVENT_NAME_LENGTH
-        }
-        if (!validEvent) return Result.failure(TalkScheduleException.InvalidWeekEvent())
-        val talkTitle = slot.talkTitle?.trim()
-        val validTalk = if (slot.talkNumber == null) {
-            talkTitle == null
-        } else {
-            slot.talkNumber >= 1 &&
-                !talkTitle.isNullOrEmpty() &&
-                talkTitle.length <= TalkSlot.MAX_TALK_TITLE_LENGTH
-        }
-        if (!validTalk) return Result.failure(TalkScheduleException.InvalidTalk())
-        return repository.saveSlot(congregation, slot.copy(weekEventName = eventName, talkTitle = talkTitle))
+        val cleaned = slot.trimmed()
+        cleaned.validationError()?.let { return Result.failure(it) }
+        return repository.saveSlot(congregation, cleaned)
     }
+}
+
+private fun TalkSlot.trimmed(): TalkSlot = copy(
+    weekEventName = weekEventName?.trim(),
+    talkTitle = talkTitle?.trim(),
+    speakerLastName = speakerLastName?.trim(),
+    speakerFirstName = speakerFirstName?.trim(),
+)
+
+private fun TalkSlot.validationError(): TalkScheduleException? = when {
+    !hasValidWeekEvent() -> TalkScheduleException.InvalidWeekEvent()
+    !hasValidTalk() -> TalkScheduleException.InvalidTalk()
+    !hasValidSpeaker() -> TalkScheduleException.InvalidSpeaker()
+    else -> null
+}
+
+private fun TalkSlot.hasValidWeekEvent(): Boolean = if (weekEventId == null) {
+    weekEventName == null
+} else {
+    weekEventId.isNotBlank() &&
+        !weekEventName.isNullOrEmpty() &&
+        weekEventName.length <= TalkSlot.MAX_WEEK_EVENT_NAME_LENGTH
+}
+
+private fun TalkSlot.hasValidTalk(): Boolean = if (talkNumber == null) {
+    talkTitle == null
+} else {
+    talkNumber >= 1 && !talkTitle.isNullOrEmpty() && talkTitle.length <= TalkSlot.MAX_TALK_TITLE_LENGTH
+}
+
+private fun TalkSlot.hasValidSpeaker(): Boolean = if (speakerMemberId == null) {
+    speakerLastName == null && speakerFirstName == null
+} else {
+    speakerMemberId.isNotBlank() &&
+        !speakerLastName.isNullOrEmpty() &&
+        speakerFirstName != null &&
+        maxOf(speakerLastName.length, speakerFirstName.length) <= TalkSlot.MAX_PERSON_NAME_LENGTH
 }
 
 /**

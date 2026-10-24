@@ -55,6 +55,9 @@ private fun toSlot(document: DocumentSnapshot): TalkSlot = TalkSlot(
     talkCancelled = document.getBoolean("talkCancelled") ?: false,
     talkNumber = document.getLong("talkNumber")?.toInt(),
     talkTitle = document.getString("talkTitle"),
+    speakerMemberId = document.getString("speakerMemberId"),
+    speakerLastName = document.getString("speakerLastName"),
+    speakerFirstName = document.getString("speakerFirstName"),
 )
 
 // LocalTime.toString() liefert HH:mm, solange keine Sekunden gesetzt sind; die Rules verlangen genau dieses Format.
@@ -65,4 +68,7 @@ private fun TalkSlot.toFirestoreFields(): Map<String, Any?> = mapOf(
     "weekEventName" to weekEventName,
     "talkNumber" to talkNumber,
     "talkTitle" to talkTitle,
+    "speakerMemberId" to speakerMemberId,
+    "speakerLastName" to speakerLastName,
+    "speakerFirstName" to speakerFirstName,
 )

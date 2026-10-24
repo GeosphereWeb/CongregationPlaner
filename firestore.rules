@@ -26,7 +26,7 @@ rules_version = '2';
 //   - displayName: string | null (required, immutable, <= 200 chars)
 //   - approved: bool (required) - set by the congregation admin
 //   - role: string (required, 'CONGREGATION_ADMIN' | 'MEMBER')
-//   - permissions: list<string> (required, values from ['DUMMY', 'PLAN_TALKS'])
+//   - permissions: list<string> (required, values from ['DUMMY', 'PLAN_TALKS', 'VIEW_MEMBERS'])
 //   - hasAccount: bool (optional, immutable, default true) - false for persons
 //     without an account; they are never approved and have no role or permissions
 // Profile fields (optional because older documents do not have them yet;
@@ -50,6 +50,8 @@ rules_version = '2';
 //   - weekEventId, weekEventName: string | null (<= 100 chars, both set or both null)
 //   - talkNumber: int | null (>= 1), talkTitle: string | null (1..200 chars); both set or both null.
 //     The title is a snapshot of the talk list so that old slots stay unchanged.
+//   - speakerMemberId: string | null (member uid), speakerLastName: string | null (1..100 chars),
+//     speakerFirstName: string | null (<= 100 chars); all three set or all three null (snapshot of the member).
 //
 // Collection: weekEvents (global, identical for all congregations)
 // Document ID: free. Fields: name: string, cancelsTalk: bool.
@@ -93,7 +95,19 @@ service cloud.firestore {
     function isValidPermissions(permissions) {
       return permissions is list &&
         permissions.size() <= 10 &&
-        permissions.toSet().hasOnly(['DUMMY', 'PLAN_TALKS']);
+        permissions.toSet().hasOnly(['DUMMY', 'PLAN_TALKS', 'VIEW_MEMBERS']);
+    }
+
+    // May read (never write) the members of exactly this congregation: admins, or approved members with the
+    // separate permission 'VIEW_MEMBERS'. PLAN_TALKS alone does not grant it.
+    function canViewMembers(regionId, subregionId, branchId, circuitId, congId) {
+      let memberPath = /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/circuit/$(circuitId)/congregation/$(congId)/members/$(request.auth.uid);
+      return isGlobalAdmin() ||
+        isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) ||
+        (isAuthenticated() &&
+          exists(memberPath) &&
+          get(memberPath).data.approved == true &&
+          'VIEW_MEMBERS' in get(memberPath).data.permissions);
     }
 
     // Planners of exactly this congregation: global admin, congregation admin or member with PLAN_TALKS.
@@ -112,8 +126,12 @@ service cloud.firestore {
       let eventName = data.get('weekEventName', null);
       let talkNumber = data.get('talkNumber', null);
       let talkTitle = data.get('talkTitle', null);
+      let speakerId = data.get('speakerMemberId', null);
+      let speakerLast = data.get('speakerLastName', null);
+      let speakerFirst = data.get('speakerFirstName', null);
       return date.matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$') &&
-        data.keys().hasOnly(['time', 'talkCancelled', 'weekEventId', 'weekEventName', 'talkNumber', 'talkTitle']) &&
+        data.keys().hasOnly(['time', 'talkCancelled', 'weekEventId', 'weekEventName', 'talkNumber', 'talkTitle',
+          'speakerMemberId', 'speakerLastName', 'speakerFirstName']) &&
         data.keys().hasAll(['time', 'talkCancelled']) &&
         data.time is string && data.time.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$') &&
         data.talkCancelled is bool &&
@@ -122,7 +140,12 @@ service cloud.firestore {
         ((eventId == null) == (eventName == null)) &&
         (talkNumber == null || (talkNumber is int && talkNumber >= 1)) &&
         (talkTitle == null || (talkTitle is string && talkTitle.size() >= 1 && talkTitle.size() <= 200)) &&
-        ((talkNumber == null) == (talkTitle == null));
+        ((talkNumber == null) == (talkTitle == null)) &&
+        (speakerId == null || (speakerId is string && speakerId.size() >= 1 && speakerId.size() <= 128)) &&
+        (speakerLast == null || (speakerLast is string && speakerLast.size() >= 1 && speakerLast.size() <= 100)) &&
+        (speakerFirst == null || (speakerFirst is string && speakerFirst.size() <= 100)) &&
+        ((speakerId == null) == (speakerLast == null)) &&
+        ((speakerId == null) == (speakerFirst == null));
     }
 
     function isNullableString(value, maxLen) {
@@ -284,12 +307,10 @@ service cloud.firestore {
               match /members/{uid} {
                 allow get: if isAuthenticated() && (
                   request.auth.uid == uid ||
-                  isGlobalAdmin() ||
-                  isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId)
+                  canViewMembers(regionId, subregionId, branchId, circuitId, congId)
                 );
 
-                allow list: if isGlobalAdmin() ||
-                  isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId);
+                allow list: if canViewMembers(regionId, subregionId, branchId, circuitId, congId);
 
                 allow create: if isValidSelfRegistration(uid) ||
                   isValidMemberWithoutAccount(regionId, subregionId, branchId, circuitId, congId);
