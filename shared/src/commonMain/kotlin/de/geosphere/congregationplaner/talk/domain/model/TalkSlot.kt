@@ -63,7 +63,11 @@ data class TalkSlot(
  * Ein Vortrag aus der Vortragsliste (`talkCatalog/{Nummer}`); sie gilt für alle Versammlungen und Kreise.
  * Die Nummer bleibt stabil, der Titel kann sich ändern, und ein Vortrag kann zeitweise nicht [active] sein.
  */
-data class Talk(val number: Int, val title: String, val active: Boolean = true)
+data class Talk(val number: Int, val title: String, val active: Boolean = true) {
+    companion object {
+        const val MAX_NUMBER = 9999
+    }
+}
 
 /** Ein Mitglied der Versammlung, wie es als Redner oder Vorsitzender im Termin ausgewählt wird. */
 data class MemberRef(val memberId: String, val lastName: String, val firstName: String) {

@@ -62,12 +62,12 @@ rules_version = '2';
 // Fields: lastName: string (1..100), firstName: string (<= 100), congregationName: string (1..100).
 //
 // Collection: weekEvents (global, identical for all congregations)
-// Document ID: free. Fields: name: string, cancelsTalk: bool.
-//   Readable by every signed-in user; maintained outside the app (console / Admin SDK).
+// Document ID: free. Fields: name: string (1..100), cancelsTalk: bool.
+//   Readable by every signed-in user; written only by global admins (in the app or the console).
 //
 // Collection: talkCatalog (global talk list, identical for all congregations)
-// Document ID: the talk number (digits). Fields: title: string, active: bool.
-//   Readable by every signed-in user; maintained outside the app (console / Admin SDK).
+// Document ID: the talk number (1..9999, no leading zero). Fields: title: string (1..200), active: bool.
+//   Readable by every signed-in user; written only by global admins (in the app or the console).
 //
 // ===============================================================
 
@@ -127,6 +127,20 @@ service cloud.firestore {
           exists(memberPath) &&
           get(memberPath).data.approved == true &&
           'PLAN_TALKS' in get(memberPath).data.permissions);
+    }
+
+    function isValidWeekEvent(data) {
+      return data.keys().hasOnly(['name', 'cancelsTalk']) &&
+        data.keys().hasAll(['name', 'cancelsTalk']) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+        data.cancelsTalk is bool;
+    }
+
+    function isValidCatalogTalk(data) {
+      return data.keys().hasOnly(['title', 'active']) &&
+        data.keys().hasAll(['title', 'active']) &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+        data.active is bool;
     }
 
     function isValidExternalSpeaker(data) {
@@ -298,7 +312,8 @@ service cloud.firestore {
 
     match /weekEvents/{eventId} {
       allow read: if isAuthenticated();
-      allow write: if false;
+      allow create, update: if isGlobalAdmin() && isValidWeekEvent(request.resource.data);
+      allow delete: if isGlobalAdmin();
     }
 
     // ===============================================================
@@ -307,7 +322,10 @@ service cloud.firestore {
 
     match /talkCatalog/{talkNumber} {
       allow read: if isAuthenticated();
-      allow write: if false;
+      allow create, update: if isGlobalAdmin() &&
+        talkNumber.matches('^[1-9][0-9]{0,3}$') &&
+        isValidCatalogTalk(request.resource.data);
+      allow delete: if isGlobalAdmin();
     }
 
     // ===============================================================

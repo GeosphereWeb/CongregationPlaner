@@ -54,15 +54,29 @@ fun unavailableTalkScheduleRepository(platform: String): TalkScheduleRepository 
 }
 
 fun unavailableWeekEventRepository(platform: String): WeekEventRepository = object : WeekEventRepository {
+    private fun <T> unavailable(): Result<T> =
+        Result.failure(UnsupportedOperationException("Firestore is not configured for $platform."))
+
     override fun observeWeekEvents(): Flow<List<WeekEvent>> = flow {
         throw UnsupportedOperationException("Firestore is not configured for $platform.")
     }
+
+    override suspend fun save(event: WeekEvent): Result<WeekEvent> = unavailable()
+
+    override suspend fun delete(id: String): Result<Unit> = unavailable()
 }
 
 fun unavailableTalkCatalogRepository(platform: String): TalkCatalogRepository = object : TalkCatalogRepository {
+    private fun <T> unavailable(): Result<T> =
+        Result.failure(UnsupportedOperationException("Firestore is not configured for $platform."))
+
     override fun observeTalks(): Flow<List<Talk>> = flow {
         throw UnsupportedOperationException("Firestore is not configured for $platform.")
     }
+
+    override suspend fun save(talk: Talk): Result<Talk> = unavailable()
+
+    override suspend fun delete(number: Int): Result<Unit> = unavailable()
 }
 
 fun unavailableExternalSpeakerRepository(platform: String): ExternalSpeakerRepository =

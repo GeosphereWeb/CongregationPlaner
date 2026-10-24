@@ -49,4 +49,19 @@ enum class NavigationItem(val iconRes: DrawableResource, val label: String, val 
         label = "Userverwaltung",
         routeName = "userverwaltung",
     ),
+    Vortragsdaten(
+        iconRes = Res.drawable.dummy,
+        label = "Vortragsliste & Ereignisse",
+        routeName = "talk_reference",
+    ),
 }
+
+/** Die Menüpunkte, die der Nutzer sehen darf: Userverwaltung für Admins, Vortragsdaten für globale Admins. */
+fun visibleNavigationItems(canManageUsers: Boolean, isGlobalAdmin: Boolean): List<NavigationItem> =
+    NavigationItem.entries.filter { item ->
+        when (item) {
+            NavigationItem.Usererwaltung -> canManageUsers
+            NavigationItem.Vortragsdaten -> isGlobalAdmin
+            else -> true
+        }
+    }
