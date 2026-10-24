@@ -45,6 +45,21 @@ class PermissionPolicyTest {
     }
 
     @Test
+    fun `viewing members is a separate permission besides the admin rights`() {
+        val viewer = AppUser(uid = "1", approved = true, permissions = setOf(UserPermission.VIEW_MEMBERS))
+
+        assertTrue(userPolicy.canViewMembers(viewer))
+        assertTrue(userPolicy.canViewMembers(AppUser(uid = "2", isGlobalAdmin = true)))
+        assertTrue(userPolicy.canViewMembers(AppUser(uid = "3", approved = true, role = UserRole.CONGREGATION_ADMIN)))
+        // PLAN_TALKS und eine fehlende Freigabe genügen nicht; Lesen heißt nicht Bearbeiten.
+        assertFalse(userPolicy.canViewMembers(viewer.copy(permissions = setOf(UserPermission.PLAN_TALKS))))
+        assertFalse(userPolicy.canViewMembers(viewer.copy(approved = false)))
+        assertFalse(userPolicy.canManageUsers(viewer))
+        assertFalse(userPolicy.canEditMember(viewer, AppUser(uid = "9")))
+        assertEquals(setOf(UserPermission.VIEW_MEMBERS), UserPermission.fromValues(listOf("VIEW_MEMBERS", "OTHER")))
+    }
+
+    @Test
     fun `admins may edit other members but not themselves`() {
         val admin = AppUser(uid = "1", approved = true, role = UserRole.CONGREGATION_ADMIN)
         val member = AppUser(uid = "2", approved = true)
