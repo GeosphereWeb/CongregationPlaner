@@ -11,6 +11,7 @@ import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
+import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.testing.assertFailure
@@ -38,11 +39,20 @@ class FirestoreTalkRepositoriesTest {
     private val collection = mockk<CollectionReference>()
     private val reference = mockk<DocumentReference>()
     private val registration = mockk<ListenerRegistration>(relaxed = true)
-    private val slot = TalkSlot(LocalDate(2026, 10, 25), LocalTime(17, 30), "kongress", "Kongress", true)
+    private val slot = TalkSlot(
+        LocalDate(2026, 10, 25),
+        LocalTime(17, 30),
+        "kongress",
+        "Kongress",
+        true,
+        12,
+        "Der Weg zum Glück",
+    )
 
     init {
         every { firestore.collection(congregation.talkSchedulePath) } returns collection
         every { firestore.collection(WEEK_EVENTS_COLLECTION_PATH) } returns collection
+        every { firestore.collection(TALK_CATALOG_COLLECTION_PATH) } returns collection
         every { collection.document("2026-10-25") } returns reference
     }
 
@@ -101,6 +111,8 @@ class FirestoreTalkRepositoriesTest {
                 "talkCancelled" to true,
                 "weekEventId" to "kongress",
                 "weekEventName" to "Kongress",
+                "talkNumber" to 12,
+                "talkTitle" to "Der Weg zum Glück",
             ),
             fields.captured,
         )
@@ -147,12 +159,30 @@ class FirestoreTalkRepositoriesTest {
     }
 
     @Test
+    fun `talk catalog maps documents and skips ids that are not a talk number`(): Unit = withMockedLog {
+        val active = catalogDocument("12", "Der Weg zum Glück", true)
+        val paused = catalogDocument("7", "Pausiert", false)
+        val defaults = catalogDocument("9", null, null)
+        val notANumber = catalogDocument("abc", "Ungültig", true)
+        val zero = catalogDocument("0", "Null", true)
+        emitSnapshot(collection, querySnapshot(active, paused, defaults, notANumber, zero), null)
+
+        val talks = runBlocking { FirestoreTalkCatalogRepository(firestore).observeTalks().first() }
+
+        assertEquals(
+            listOf(Talk(12, "Der Weg zum Glück", true), Talk(7, "Pausiert", false), Talk(9, "", true)),
+            talks,
+        )
+    }
+
+    @Test
     fun `android factories create the firestore repositories`() {
         mockkStatic(FirebaseFirestore::class)
         try {
             every { FirebaseFirestore.getInstance() } returns mockk(relaxed = true)
             assertIs<FirestoreTalkScheduleRepository>(createTalkScheduleRepository())
             assertIs<FirestoreWeekEventRepository>(createWeekEventRepository())
+            assertIs<FirestoreTalkCatalogRepository>(createTalkCatalogRepository())
         } finally {
             unmockkStatic(FirebaseFirestore::class)
         }
@@ -170,6 +200,12 @@ class FirestoreTalkRepositoriesTest {
         }
     }
 
+    private fun catalogDocument(id: String, title: String?, active: Boolean?): DocumentSnapshot = mockk {
+        every { this@mockk.id } returns id
+        every { getString("title") } returns title
+        every { getBoolean("active") } returns active
+    }
+
     private fun querySnapshot(vararg documents: DocumentSnapshot): QuerySnapshot = mockk {
         every { this@mockk.documents } returns documents.toList()
     }
@@ -180,6 +216,8 @@ class FirestoreTalkRepositoriesTest {
         every { getBoolean("talkCancelled") } returns true
         every { getString("weekEventId") } returns "kongress"
         every { getString("weekEventName") } returns "Kongress"
+        every { getLong("talkNumber") } returns 12L
+        every { getString("talkTitle") } returns "Der Weg zum Glück"
     }
 
     // Ein Termin ohne Ereignis; fehlende Felder bekommen ihre Vorgaben.
@@ -189,5 +227,7 @@ class FirestoreTalkRepositoriesTest {
         every { getBoolean("talkCancelled") } returns null
         every { getString("weekEventId") } returns null
         every { getString("weekEventName") } returns null
+        every { getLong("talkNumber") } returns null
+        every { getString("talkTitle") } returns null
     }
 }

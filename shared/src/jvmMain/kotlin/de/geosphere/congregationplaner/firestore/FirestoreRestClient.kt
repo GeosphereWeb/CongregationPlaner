@@ -144,6 +144,14 @@ internal fun firestoreNullableString(value: String?): JsonObject =
 
 internal fun firestoreBoolean(value: Boolean): JsonObject = JsonObject().apply { addProperty("booleanValue", value) }
 
+// Die REST-API überträgt 64-Bit-Ganzzahlen als String.
+internal fun firestoreNullableInteger(value: Int?): JsonObject =
+    value?.let { JsonObject().apply { addProperty("integerValue", it.toString()) } }
+        ?: JsonObject().apply { add("nullValue", JsonNull.INSTANCE) }
+
+internal fun JsonObject.optionalIntField(name: String): Int? =
+    get(name)?.takeIf { it.isJsonObject }?.asJsonObject?.get("integerValue")?.asString?.toIntOrNull()
+
 internal fun JsonObject.optionalStringField(name: String): String? =
     get(name)?.takeIf { it.isJsonObject }?.asJsonObject?.get("stringValue")?.asString
 
