@@ -1,6 +1,7 @@
 package de.geosphere.congregationplaner.talk.domain.usecase
 
 import de.geosphere.congregationplaner.talk.domain.model.Chairman
+import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.MemberRef
 import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
@@ -8,6 +9,7 @@ import de.geosphere.congregationplaner.talk.domain.model.TalkScheduleException
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
+import de.geosphere.congregationplaner.talk.domain.repository.ExternalSpeakerRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkCatalogRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkScheduleRepository
 import de.geosphere.congregationplaner.talk.domain.repository.WeekEventRepository
@@ -63,6 +65,57 @@ class ObserveTalkMembersUseCase(private val observeMembers: ObserveMembersUseCas
             .sortedWith(compareBy({ it.lastName.lowercase() }, { it.firstName.lowercase() }))
 }
 
+/** Die externen Redner der Versammlung des Nutzers, nach Namen sortiert. */
+@Inject
+class ObserveExternalSpeakersUseCase(private val repository: ExternalSpeakerRepository) {
+    operator fun invoke(user: AppUser): Flow<List<ExternalSpeaker>> = user.congregation?.let { congregation ->
+        repository.observeAll(congregation).map { speakers ->
+            speakers.sortedWith(compareBy({ it.lastName.lowercase() }, { it.firstName.lowercase() }))
+        }
+    } ?: emptyFlow()
+}
+
+/** Legt einen externen Redner an oder ändert ihn; Familienname und Versammlung sind Pflicht. */
+@Inject
+class SaveExternalSpeakerUseCase(
+    private val repository: ExternalSpeakerRepository,
+    private val policy: TalkSchedulePermissionPolicy,
+) {
+    suspend operator fun invoke(user: AppUser, speaker: ExternalSpeaker): Result<ExternalSpeaker> {
+        val congregation = user.congregation
+        if (congregation == null || !policy.canPlanTalks(user)) {
+            return Result.failure(TalkScheduleException.NotAllowed())
+        }
+        val cleaned = speaker.copy(
+            lastName = speaker.lastName.trim(),
+            firstName = speaker.firstName.trim(),
+            congregationName = speaker.congregationName.trim(),
+        )
+        val valid = cleaned.lastName.isNotEmpty() &&
+            cleaned.congregationName.isNotEmpty() &&
+            maxOf(cleaned.lastName.length, cleaned.firstName.length, cleaned.congregationName.length) <=
+            TalkSlot.MAX_PERSON_NAME_LENGTH
+        if (!valid) return Result.failure(TalkScheduleException.InvalidSpeaker())
+        return repository.save(congregation, cleaned)
+    }
+}
+
+/** Entfernt einen externen Redner aus der Liste; bereits geplante Termine behalten seinen Namen. */
+@Inject
+class DeleteExternalSpeakerUseCase(
+    private val repository: ExternalSpeakerRepository,
+    private val policy: TalkSchedulePermissionPolicy,
+) {
+    suspend operator fun invoke(user: AppUser, id: String): Result<Unit> {
+        val congregation = user.congregation
+        if (congregation == null || !policy.canPlanTalks(user)) {
+            return Result.failure(TalkScheduleException.NotAllowed())
+        }
+        if (id.isBlank()) return Result.failure(TalkScheduleException.InvalidSpeaker())
+        return repository.delete(congregation, id)
+    }
+}
+
 /**
  * Speichert einen Termin in der Versammlung des Nutzers. Der Schlüssel ist das Datum, ein Termin pro Tag.
  * Der Wochentag wird bewusst nicht geprüft, weil sich der Versammlungstag kurzfristig verschieben kann.
@@ -90,12 +143,13 @@ private fun TalkSlot.trimmed(): TalkSlot = copy(
     speakerFirstName = speakerFirstName?.trim(),
     chairmanLastName = chairmanLastName?.trim(),
     chairmanFirstName = chairmanFirstName?.trim(),
+    speakerCongregation = speakerCongregation?.trim(),
 )
 
 private fun TalkSlot.validationError(): TalkScheduleException? = when {
     !hasValidWeekEvent() -> TalkScheduleException.InvalidWeekEvent()
     !hasValidTalk() -> TalkScheduleException.InvalidTalk()
-    !hasValidMember(speakerMemberId, speakerLastName, speakerFirstName) -> TalkScheduleException.InvalidSpeaker()
+    !hasValidSpeaker() -> TalkScheduleException.InvalidSpeaker()
     !hasValidMember(chairmanMemberId, chairmanLastName, chairmanFirstName) -> TalkScheduleException.InvalidChairman()
     else -> null
 }
@@ -112,6 +166,16 @@ private fun TalkSlot.hasValidTalk(): Boolean = if (talkNumber == null) {
     talkTitle == null
 } else {
     talkNumber >= 1 && !talkTitle.isNullOrEmpty() && talkTitle.length <= TalkSlot.MAX_TALK_TITLE_LENGTH
+}
+
+// Ein Mitglied oder ein externer Redner mit Versammlung, nie beides.
+private fun TalkSlot.hasValidSpeaker(): Boolean = when {
+    speakerMemberId != null && externalSpeakerId != null -> false
+    externalSpeakerId != null ->
+        hasValidMember(externalSpeakerId, speakerLastName, speakerFirstName) &&
+            !speakerCongregation.isNullOrEmpty() &&
+            speakerCongregation.length <= TalkSlot.MAX_PERSON_NAME_LENGTH
+    else -> speakerCongregation == null && hasValidMember(speakerMemberId, speakerLastName, speakerFirstName)
 }
 
 // Mitglied-ID, Familienname und Vorname gehören zusammen (alle gesetzt oder alle leer).

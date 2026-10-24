@@ -29,7 +29,6 @@ import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.presentation.components.SelectableListCard
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.talk.domain.model.Chairman
-import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
@@ -46,7 +45,7 @@ internal data class TalkScheduleActions(
     val onEditorChange: (TalkSlot) -> Unit = {},
     val onSelectWeekEvent: (WeekEvent?) -> Unit = {},
     val onSelectTalk: (Talk?) -> Unit = {},
-    val onSelectSpeaker: (Speaker?) -> Unit = {},
+    val speaker: SpeakerActions = SpeakerActions(),
     val onSelectChairman: (Chairman?) -> Unit = {},
     val onSave: () -> Unit = {},
     val onDelete: (TalkSlot) -> Unit = {},
@@ -68,7 +67,12 @@ fun TalkScheduleScreen(viewModel: TalkScheduleViewModel, modifier: Modifier = Mo
             onEditorChange = viewModel::updateEditor,
             onSelectWeekEvent = viewModel::selectWeekEvent,
             onSelectTalk = viewModel::selectTalk,
-            onSelectSpeaker = viewModel::selectSpeaker,
+            speaker = SpeakerActions(
+                onSelectMember = viewModel::selectSpeaker,
+                onSelectExternal = viewModel::selectExternalSpeaker,
+                onAddExternal = viewModel::addExternalSpeaker,
+                onDeleteExternal = viewModel::deleteExternalSpeaker,
+            ),
             onSelectChairman = viewModel::selectChairman,
             onSave = viewModel::save,
             onDelete = viewModel::delete,
@@ -167,12 +171,13 @@ internal fun TalkScheduleContent(
                                 talks = state.talks,
                                 speakers = state.speakers,
                                 chairmen = state.chairmen,
+                                externalSpeakers = state.externalSpeakers,
                                 canViewMembers = state.canViewMembers,
                                 isSaving = state.isSaving,
                                 onChange = actions.onEditorChange,
                                 onSelectWeekEvent = actions.onSelectWeekEvent,
                                 onSelectTalk = actions.onSelectTalk,
-                                onSelectSpeaker = actions.onSelectSpeaker,
+                                speakerActions = actions.speaker,
                                 onSelectChairman = actions.onSelectChairman,
                                 onSave = actions.onSave,
                                 onCancel = onCancelEditing,
@@ -192,7 +197,9 @@ private fun SlotSummary(slot: TalkSlot) {
     Text("${slot.date.toDisplayText()} · ${slot.time}", style = MaterialTheme.typography.titleMedium)
     slot.weekEventName?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
     slot.chairman?.let { Text("Vorsitz: ${it.displayName}", style = MaterialTheme.typography.bodyMedium) }
-    slot.speaker?.let { Text("Redner: ${it.displayName}", style = MaterialTheme.typography.bodyMedium) }
+    (slot.externalSpeaker?.displayName ?: slot.speaker?.displayName)?.let {
+        Text("Redner: $it", style = MaterialTheme.typography.bodyMedium)
+    }
     slot.talkNumber?.let { Text("$it – ${slot.talkTitle.orEmpty()}", style = MaterialTheme.typography.bodyMedium) }
     if (slot.talkCancelled) Text("Vortrag entfällt", color = MaterialTheme.colorScheme.error)
 }
