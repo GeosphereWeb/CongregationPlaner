@@ -199,7 +199,7 @@ class TalkScheduleUseCasesTest {
     }
 
     @Test
-    fun `external speakers are saved trimmed, validated, permission checked and sorted`() = runBlocking {
+    fun `external speakers are saved trimmed and validated with permission check and sorted`() = runBlocking {
         val externals = FakeExternalSpeakerRepository(
             listOf(ExternalSpeaker("2", "zorn", "Tim", "Süd"), ExternalSpeaker("1", "Berg", "Lea", "Nord")),
         )
