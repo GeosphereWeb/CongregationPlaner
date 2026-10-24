@@ -3,8 +3,10 @@ package de.geosphere.congregationplaner.talk.data
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import de.geosphere.congregationplaner.auth.AndroidFirestoreProvider
+import de.geosphere.congregationplaner.firestore.awaitResult
 import de.geosphere.congregationplaner.firestore.logFirestoreFailure
 import de.geosphere.congregationplaner.firestore.observeDocuments
+import de.geosphere.congregationplaner.firestore.runFirestoreCatching
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.repository.TalkCatalogRepository
 import kotlinx.coroutines.flow.Flow
@@ -17,6 +19,17 @@ internal class FirestoreTalkCatalogRepository(private val firestore: FirebaseFir
     override fun observeTalks(): Flow<List<Talk>> =
         observeDocuments(firestore.collection(TALK_CATALOG_COLLECTION_PATH), "talk", ::toTalkOrNull)
             .map { it.filterNotNull() }
+
+    override suspend fun save(talk: Talk): Result<Talk> = runFirestoreCatching("save talk") {
+        firestore.collection(TALK_CATALOG_COLLECTION_PATH).document(talk.number.toString())
+            .set(mapOf("title" to talk.title, "active" to talk.active))
+            .awaitResult()
+        talk
+    }
+
+    override suspend fun delete(number: Int): Result<Unit> = runFirestoreCatching("delete talk") {
+        firestore.collection(TALK_CATALOG_COLLECTION_PATH).document(number.toString()).delete().awaitResult()
+    }
 }
 
 // Ein Dokument ohne gültige Nummer als ID wird übersprungen, damit es nicht die ganze Liste blockiert.
