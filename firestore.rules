@@ -57,9 +57,16 @@ rules_version = '2';
 //   - externalSpeakerId: string | null, speakerCongregation: string | null (1..100 chars): an external speaker
 //     instead of a member; then the speaker name fields are set and speakerMemberId is null (never both).
 //
-// Collection: region/.../congregation/{congId}/externalSpeakers
-// Document ID: free (auto id). Readable and writable only by planners of this congregation.
-// Fields: lastName: string (1..100), firstName: string (<= 100), congregationName: string (1..100).
+// Directory of external speakers, kept by the planners of this congregation. Independent of the organization
+// hierarchy above: circuits and congregations are entered by the planner. Document IDs: free (auto id).
+// Readable and writable only by planners of this congregation.
+//   region/.../congregation/{congId}/externalCircuits:      name: string (1..100)
+//   region/.../congregation/{congId}/externalCongregations: circuitId: string (id of an external circuit),
+//     name: string (1..100)
+//   region/.../congregation/{congId}/visitingSpeakers: congregationId: string (id of an external congregation),
+//     lastName: string (1..100), firstName: string (<= 100), phone: string (<= 30), email: string (<= 200),
+//     talkNumbers: list<int> (<= 200 entries, the talk numbers the speaker gives)
+// The rules check the form only, not whether circuitId/congregationId exist; the app does that.
 //
 // Collection: weekEvents (global, identical for all congregations)
 // Document ID: free. Fields: name: string (1..100), cancelsTalk: bool.
@@ -143,12 +150,28 @@ service cloud.firestore {
         data.active is bool;
     }
 
-    function isValidExternalSpeaker(data) {
-      return data.keys().hasOnly(['lastName', 'firstName', 'congregationName']) &&
-        data.keys().hasAll(['lastName', 'firstName', 'congregationName']) &&
+    // Directory of external speakers: circuit -> congregation -> speaker, kept by the planners (see header).
+    function isValidExternalCircuit(data) {
+      return data.keys().hasOnly(['name']) && data.keys().hasAll(['name']) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 100;
+    }
+
+    function isValidExternalCongregation(data) {
+      return data.keys().hasOnly(['circuitId', 'name']) && data.keys().hasAll(['circuitId', 'name']) &&
+        data.circuitId is string && data.circuitId.size() >= 1 && data.circuitId.size() <= 100 &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 100;
+    }
+
+    // The elements of talkNumbers cannot be checked in the rules; the app validates them (ints 1..9999).
+    function isValidVisitingSpeaker(data) {
+      return data.keys().hasOnly(['congregationId', 'lastName', 'firstName', 'phone', 'email', 'talkNumbers']) &&
+        data.keys().hasAll(['congregationId', 'lastName', 'firstName', 'phone', 'email', 'talkNumbers']) &&
+        data.congregationId is string && data.congregationId.size() >= 1 && data.congregationId.size() <= 100 &&
         data.lastName is string && data.lastName.size() >= 1 && data.lastName.size() <= 100 &&
         data.firstName is string && data.firstName.size() <= 100 &&
-        data.congregationName is string && data.congregationName.size() >= 1 && data.congregationName.size() <= 100;
+        data.phone is string && data.phone.size() <= 30 &&
+        data.email is string && data.email.size() <= 200 &&
+        data.talkNumbers is list && data.talkNumbers.size() <= 200;
     }
 
     // Talk history: one document per talk number holding the days the talk was given (plannedOn: from the planning).
@@ -433,13 +456,27 @@ service cloud.firestore {
               }
 
               // ---------------------------------------------------------
-              // External speakers of a congregation (planners only)
+              // Directory of external speakers (planners only)
               // ---------------------------------------------------------
-              match /externalSpeakers/{speakerId} {
+              match /externalCircuits/{externalCircuitId} {
                 allow read, delete: if canPlanTalks(regionId, subregionId, branchId, circuitId, congId);
 
                 allow create, update: if canPlanTalks(regionId, subregionId, branchId, circuitId, congId) &&
-                  isValidExternalSpeaker(request.resource.data);
+                  isValidExternalCircuit(request.resource.data);
+              }
+
+              match /externalCongregations/{externalCongregationId} {
+                allow read, delete: if canPlanTalks(regionId, subregionId, branchId, circuitId, congId);
+
+                allow create, update: if canPlanTalks(regionId, subregionId, branchId, circuitId, congId) &&
+                  isValidExternalCongregation(request.resource.data);
+              }
+
+              match /visitingSpeakers/{speakerId} {
+                allow read, delete: if canPlanTalks(regionId, subregionId, branchId, circuitId, congId);
+
+                allow create, update: if canPlanTalks(regionId, subregionId, branchId, circuitId, congId) &&
+                  isValidVisitingSpeaker(request.resource.data);
               }
             }
           }

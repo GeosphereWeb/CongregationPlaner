@@ -13,7 +13,6 @@ import de.geosphere.congregationplaner.talk.domain.model.TalkScheduleException
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
-import de.geosphere.congregationplaner.talk.domain.usecase.DeleteExternalSpeakerUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.MoveTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalSpeakersUseCase
@@ -21,7 +20,6 @@ import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkCatalogUse
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkMembersUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkYearUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveWeekEventsUseCase
-import de.geosphere.congregationplaner.talk.domain.usecase.SaveExternalSpeakerUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SyncTalkHistoryWithSlotUseCase
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
@@ -71,8 +69,6 @@ class TalkScheduleViewModel(
     private val observeTalkCatalog: ObserveTalkCatalogUseCase,
     private val observeTalkMembers: ObserveTalkMembersUseCase,
     private val loadExternalSpeakers: ObserveExternalSpeakersUseCase,
-    private val saveExternalSpeaker: SaveExternalSpeakerUseCase,
-    private val removeExternalSpeaker: DeleteExternalSpeakerUseCase,
     private val moveSlot: MoveTalkSlotUseCase,
     private val deleteSlot: DeleteTalkSlotUseCase,
     private val syncHistory: SyncTalkHistoryWithSlotUseCase,
@@ -174,27 +170,6 @@ class TalkScheduleViewModel(
                 speakerCongregation = speaker?.congregationName,
             ),
         )
-    }
-
-    /** Legt einen externen Redner in der Liste der Versammlung an und wählt ihn für den Termin aus. */
-    fun addExternalSpeaker(lastName: String, firstName: String, congregationName: String) {
-        if (mutableUiState.value.isSaving || !checkAllowed()) return
-        val user = currentUser ?: return
-        viewModelScope.launch {
-            saveExternalSpeaker(user, ExternalSpeaker("", lastName, firstName, congregationName))
-                .onSuccess { saved -> selectExternalSpeaker(saved) }
-                .onFailure { exception -> failSilently(exception, "Redner konnte nicht gespeichert werden.") }
-        }
-    }
-
-    /** Entfernt einen externen Redner aus der Liste; bereits geplante Termine behalten seinen Namen. */
-    fun deleteExternalSpeaker(speaker: ExternalSpeaker) {
-        if (!checkAllowed()) return
-        val user = currentUser ?: return
-        viewModelScope.launch {
-            removeExternalSpeaker(user, speaker.id)
-                .onFailure { exception -> failSilently(exception, "Redner konnte nicht gelöscht werden.") }
-        }
     }
 
     /** Übernimmt Name und Vorname des Vorsitzenden als Momentaufnahme; `null` entfernt den Vorsitzenden. */
@@ -383,11 +358,6 @@ class TalkScheduleViewModel(
     // Ein Mitglied kann an einem Tag nicht Redner und Vorsitzender sein; die Dialoge bieten es gar nicht erst an.
     private fun rejectSamePerson() {
         mutableUiState.update { it.copy(errorMessage = TalkScheduleException.SpeakerIsChairman().message) }
-    }
-
-    // Fehler außerhalb eines Speichervorgangs (isSaving gehört dem Termin).
-    private fun failSilently(exception: Throwable, fallback: String) {
-        mutableUiState.update { it.copy(errorMessage = exception.message ?: fallback) }
     }
 
     private fun fail(exception: Throwable, fallback: String) {

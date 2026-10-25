@@ -70,8 +70,6 @@ fun TalkScheduleScreen(viewModel: TalkScheduleViewModel, modifier: Modifier = Mo
             speaker = SpeakerActions(
                 onSelectMember = viewModel::selectSpeaker,
                 onSelectExternal = viewModel::selectExternalSpeaker,
-                onAddExternal = viewModel::addExternalSpeaker,
-                onDeleteExternal = viewModel::deleteExternalSpeaker,
             ),
             onSelectChairman = viewModel::selectChairman,
             onSave = viewModel::save,
