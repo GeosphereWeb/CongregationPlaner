@@ -168,9 +168,12 @@ class TalkCatalogManagementViewModelTest {
         assertNull(state.errorMessage)
         assertEquals(listOf(first, second), state.talks)
 
+        assertFalse(state.hasDetail)
         viewModel.newTalk()
+        assertTrue(state.hasDetail)
         viewModel.cancelEditing()
         assertNull(state.editor)
+        assertFalse(state.hasDetail)
     }
 
     @Test

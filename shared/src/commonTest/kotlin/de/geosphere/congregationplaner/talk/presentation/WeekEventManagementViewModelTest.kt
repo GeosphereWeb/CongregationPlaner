@@ -159,9 +159,12 @@ class WeekEventManagementViewModelTest {
         viewModel.dismissError()
         assertEquals(listOf(besuch, kongress), state.events)
 
+        assertFalse(state.hasDetail)
         viewModel.newEvent()
+        assertTrue(state.hasDetail)
         viewModel.cancelEditing()
         assertNull(state.editor)
+        assertFalse(state.hasDetail)
 
         viewModel.editEvent(besuch)
         viewModel.onCurrentUserChanged(congregationAdmin)
