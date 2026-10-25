@@ -24,6 +24,7 @@ Der Test läuft auf eigenen Ports (Firestore 18080, Auth 19099, Hub 14400, Loggi
 
 - **Termine** (`talkSchedule`): minimal, mit Mitglied als Redner und Vorsitzendem, externer Redner, Redner = Vorsitzender (abgelehnt), Mitglied und externer Redner zugleich (abgelehnt), unvollständige Redner- und Vorsitzenden-Felder, Vortrag mit und ohne Titel, Wochenereignis, ungültige Datums-IDs, unbekannte Felder, ungültige Uhrzeit, Lesen und Löschen durch Planer und Nutzer ohne `PLAN_TALKS`.
 - **Externe Redner** (`externalSpeakers`): Anlegen und Lesen durch Planer, Formfehler, Nutzer ohne `PLAN_TALKS`.
+- **Vortragshistorie** (`talkHistory`): Anlegen, Lesen und Löschen durch Planer, ungültige Nummer, leere Tage, geplante Tage (`plannedOn`), Zusatzfeld, Nutzer ohne `PLAN_TALKS`.
 - **Mitglieder lesen** (`members`): Planer mit und ohne `VIEW_MEMBERS`, das eigene Mitglied, `VIEW_MEMBERS` darf nicht schreiben, globale Admins.
 - **Vortragsliste und Wochenereignisse** (`talkCatalog`, `weekEvents`): Lesen für angemeldete Nutzer, Schreiben und Löschen nur für globale Admins, Formvalidierung (Nummer 1 bis 9999 ohne führende Null, Titel und Namen).
 
