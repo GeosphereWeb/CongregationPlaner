@@ -10,6 +10,9 @@ import kotlinx.coroutines.flow.flow
 internal class FakeWeekEventRepository(events: List<WeekEvent> = emptyList()) : WeekEventRepository {
     val events = MutableStateFlow(events)
 
+    /** `false` simuliert einen verzögerten Snapshot-Flow: Schreibvorgänge erreichen [observeWeekEvents] nicht. */
+    var publishesChanges = true
+
     var saveResult: Result<Unit> = Result.success(Unit)
     var deleteResult: Result<Unit> = Result.success(Unit)
 
@@ -25,12 +28,12 @@ internal class FakeWeekEventRepository(events: List<WeekEvent> = emptyList()) : 
     override suspend fun save(event: WeekEvent): Result<WeekEvent> = saveResult.map {
         val saved = if (event.id.isBlank()) event.copy(id = "ev-${savedEvents.size + 1}") else event
         savedEvents += saved
-        events.value = events.value.filterNot { it.id == saved.id } + saved
+        if (publishesChanges) events.value = events.value.filterNot { it.id == saved.id } + saved
         saved
     }
 
     override suspend fun delete(id: String): Result<Unit> = deleteResult.onSuccess {
         deletedIds += id
-        events.value = events.value.filterNot { it.id == id }
+        if (publishesChanges) events.value = events.value.filterNot { it.id == id }
     }
 }
