@@ -174,6 +174,20 @@ class TalkCatalogManagementViewModelTest {
     }
 
     @Test
+    fun `saving and deleting update the list before the snapshot flow delivers`() {
+        catalog.publishesChanges = false
+        viewModel.onCurrentUserChanged(admin)
+        viewModel.newTalk()
+        viewModel.updateEditor(state.editor!!.copy(numberText = "3", title = "Dritter"))
+
+        viewModel.save()
+        assertEquals(listOf(first, second, Talk(3, "Dritter")), state.talks)
+
+        viewModel.delete(first)
+        assertEquals(listOf(second, Talk(3, "Dritter")), state.talks)
+    }
+
+    @Test
     fun `losing the permission clears the list and the editor`() {
         viewModel.onCurrentUserChanged(admin)
         viewModel.editTalk(first)

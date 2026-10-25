@@ -2,6 +2,7 @@ package de.geosphere.congregationplaner.talk.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import de.geosphere.congregationplaner.presentation.components.ListDetailState
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.permission.TalkReferenceDataPolicy
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteWeekEventUseCase
@@ -28,9 +29,11 @@ data class WeekEventUiState(
     val isLoading: Boolean = true,
     val canManage: Boolean = false,
     val editor: WeekEventEditorState? = null,
-    val errorMessage: String? = null,
-    val isSaving: Boolean = false,
-)
+    override val errorMessage: String? = null,
+    override val isSaving: Boolean = false,
+) : ListDetailState {
+    override val hasDetail: Boolean get() = editor != null
+}
 
 /** Pflege der globalen Wochenereignisse durch globale Administratoren. */
 @Inject
@@ -89,7 +92,12 @@ class WeekEventManagementViewModel(
             saveEvent(user, editor.event)
                 .onSuccess { saved ->
                     val next = WeekEventEditorState(saved.name, saved.cancelsTalk, saved)
-                    mutableUiState.update { it.copy(editor = next, isSaving = false) }
+                    // Show the result at once; the snapshot flow can lag behind, especially on desktop.
+                    mutableUiState.update {
+                        val events = (it.events.filterNot { e -> e.id == saved.id } + saved)
+                            .sortedBy { e -> e.name.lowercase() }
+                        it.copy(events = events, editor = next, isSaving = false)
+                    }
                 }.onFailure { exception ->
                     fail(exception, "Wochenereignis konnte nicht gespeichert werden.")
                 }
@@ -105,6 +113,7 @@ class WeekEventManagementViewModel(
                 .onSuccess {
                     mutableUiState.update { state ->
                         state.copy(
+                            events = state.events.filterNot { it.id == event.id },
                             editor = state.editor?.takeUnless { it.original?.id == event.id },
                             isSaving = false,
                         )

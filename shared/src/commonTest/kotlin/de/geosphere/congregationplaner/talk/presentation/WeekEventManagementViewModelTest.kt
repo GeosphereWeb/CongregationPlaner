@@ -88,6 +88,21 @@ class WeekEventManagementViewModelTest {
     }
 
     @Test
+    fun `saving and deleting update the list before the snapshot flow delivers`() {
+        events.publishesChanges = false
+        viewModel.onCurrentUserChanged(admin)
+        viewModel.newEvent()
+        viewModel.updateEditor(state.editor!!.copy(name = "Aaa"))
+
+        viewModel.save()
+        val saved = WeekEvent("ev-1", "Aaa", cancelsTalk = false)
+        assertTrue(saved in state.events)
+
+        viewModel.delete(saved)
+        assertFalse(saved in state.events)
+    }
+
+    @Test
     fun `an existing week event keeps its id when changed`() {
         viewModel.onCurrentUserChanged(admin)
         viewModel.editEvent(kongress)
