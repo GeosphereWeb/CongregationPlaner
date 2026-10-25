@@ -123,6 +123,20 @@ await expect('externe Redner lesen als Planer', api('GET', EXT, undefined, plann
 await expect('externe Redner lesen ohne PLAN_TALKS', api('GET', EXT, undefined, plain.token), false);
 await expect('externen Redner anlegen ohne PLAN_TALKS', call('POST', `${FS}/${EXT}`, fields(validExternal), plain.token), false);
 
+// ---------- Vortragshistorie ----------
+const HIST = `${CONG}/talkHistory`;
+const putHistory = (number, data, token = planner.token) => api('PATCH', `${HIST}/${number}`, fields(data), token);
+await expect('Vortragshistorie anlegen', putHistory('7', { heldOn: ['2026-03-01', '2026-10-25'] }), true);
+await expect('Vortragshistorie mit geplanten Tagen', putHistory('6', { heldOn: ['2026-03-01'], plannedOn: ['2026-03-01'] }), true);
+await expect('Vortragshistorie mit ungültigen geplanten Tagen', putHistory('6', { heldOn: ['2026-03-01'], plannedOn: 'x' }), false);
+await expect('Vortragshistorie mit ungültiger Nummer', putHistory('abc', { heldOn: ['2026-03-01'] }), false);
+await expect('Vortragshistorie ohne Tage', putHistory('8', { heldOn: [] }), false);
+await expect('Vortragshistorie mit Zusatzfeld', putHistory('8', { heldOn: ['2026-03-01'], x: 'y' }), false);
+await expect('Vortragshistorie lesen als Planer', api('GET', HIST, undefined, planner.token), true);
+await expect('Vortragshistorie lesen ohne PLAN_TALKS', api('GET', HIST, undefined, plain.token), false);
+await expect('Vortragshistorie anlegen ohne PLAN_TALKS', putHistory('9', { heldOn: ['2026-03-01'] }, plain.token), false);
+await expect('Planer löscht Vortragshistorie', api('DELETE', `${HIST}/7`, undefined, planner.token), true);
+
 // ---------- Mitglieder lesen (VIEW_MEMBERS) ----------
 const MEMBERS = `${CONG}/members`;
 await expect('Planer ohne VIEW_MEMBERS listet Mitglieder', api('GET', MEMBERS, undefined, planner.token), false);

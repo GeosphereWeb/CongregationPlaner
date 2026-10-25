@@ -29,6 +29,11 @@ enum class NavigationItem(val iconRes: DrawableResource, val label: String, val 
         label = "Planung Wochenende",
         routeName = "planung_wochenende",
     ),
+    Vortragshistorie(
+        iconRes = Res.drawable.dummy,
+        label = "Vortragshistorie",
+        routeName = "talk_history",
+    ),
     Kreise(
         iconRes = Res.drawable.dummy,
         label = "Kreise",

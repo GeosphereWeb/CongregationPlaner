@@ -83,6 +83,14 @@ class NavigationItemTest {
     }
 
     @Test
+    fun testVortragshistorieNavigationItem() {
+        val item = NavigationItem.Vortragshistorie
+        assertEquals("Vortragshistorie", item.label)
+        assertEquals("talk_history", item.routeName)
+        assertNotNull(item.iconRes)
+    }
+
+    @Test
     fun testVortragsdatenNavigationItem() {
         val item = NavigationItem.Vortragsdaten
         assertEquals("Vortragsliste & Ereignisse", item.label)
@@ -112,7 +120,7 @@ class NavigationItemTest {
     @Test
     fun testAllNavigationItemsCount() {
         val items = NavigationItem.entries
-        assertEquals(9, items.size)
+        assertEquals(10, items.size)
     }
 
     @Test
