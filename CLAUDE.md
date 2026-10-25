@@ -72,6 +72,7 @@ Bei Repository-/DB-Anbindung sind Interface + UseCase-Schicht Pflicht. Repositor
 - Commit-Header und PR-Titel müssen mit `CP-<nr>:` oder `JDI:` beginnen, optional gefolgt von einem Emoji, z. B. `CP-14: 📝 docs: add ADR README` (Prüfung in `.github/workflows/mergeable.yml`).
 - Branch-Schema: `feature/CP-<nr>-kurzbeschreibung` (kebab-case). Die Ticketnummer aus dem Branchnamen als Commit-Prefix verwenden.
 - PRs nutzen `.github/pull_request_template.md`.
+- Ein Branch wird für einen PR nur freigegeben, wenn er auf den aktuellen `master` gerebased ist (`git fetch` + `git rebase origin/master`, kein Merge von `master` in den Branch). Danach mit `git push --force-with-lease` pushen, nie mit `--force`.
 - Nur auf ausdrückliche Anfrage committen oder pushen. Nie direkt auf `master`.
 
 ## ADRs
