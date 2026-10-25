@@ -1,11 +1,11 @@
 package de.geosphere.congregationplaner.talk.di
 
-import de.geosphere.congregationplaner.talk.data.createExternalSpeakerRepository
+import de.geosphere.congregationplaner.talk.data.createExternalSpeakerDirectoryRepository
 import de.geosphere.congregationplaner.talk.data.createTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.data.createTalkHistoryRepository
 import de.geosphere.congregationplaner.talk.data.createTalkScheduleRepository
 import de.geosphere.congregationplaner.talk.data.createWeekEventRepository
-import de.geosphere.congregationplaner.talk.domain.repository.ExternalSpeakerRepository
+import de.geosphere.congregationplaner.talk.domain.repository.ExternalSpeakerDirectoryRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkCatalogRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkHistoryRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkScheduleRepository
@@ -30,7 +30,8 @@ interface TalkScheduleGraph {
     fun provideTalkCatalogRepository(): TalkCatalogRepository = createTalkCatalogRepository()
 
     @Provides
-    fun provideExternalSpeakerRepository(): ExternalSpeakerRepository = createExternalSpeakerRepository()
+    fun provideExternalSpeakerDirectoryRepository(): ExternalSpeakerDirectoryRepository =
+        createExternalSpeakerDirectoryRepository()
 
     @Provides
     fun provideTalkHistoryRepository(): TalkHistoryRepository = createTalkHistoryRepository()

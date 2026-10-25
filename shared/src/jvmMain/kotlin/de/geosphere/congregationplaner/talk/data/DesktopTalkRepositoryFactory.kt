@@ -1,6 +1,6 @@
 package de.geosphere.congregationplaner.talk.data
 
-import de.geosphere.congregationplaner.talk.domain.repository.ExternalSpeakerRepository
+import de.geosphere.congregationplaner.talk.domain.repository.ExternalSpeakerDirectoryRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkCatalogRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkHistoryRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkScheduleRepository
@@ -12,6 +12,7 @@ actual fun createWeekEventRepository(): WeekEventRepository = FirestoreRestWeekE
 
 actual fun createTalkCatalogRepository(): TalkCatalogRepository = FirestoreRestTalkCatalogRepository()
 
-actual fun createExternalSpeakerRepository(): ExternalSpeakerRepository = FirestoreRestExternalSpeakerRepository()
+actual fun createExternalSpeakerDirectoryRepository(): ExternalSpeakerDirectoryRepository =
+    FirestoreRestExternalSpeakerDirectoryRepository()
 
 actual fun createTalkHistoryRepository(): TalkHistoryRepository = FirestoreRestTalkHistoryRepository()
