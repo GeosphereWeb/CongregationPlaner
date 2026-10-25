@@ -91,6 +91,14 @@ class NavigationItemTest {
     }
 
     @Test
+    fun testExterneRednerNavigationItem() {
+        val item = NavigationItem.ExterneRedner
+        assertEquals("Externe Redner", item.label)
+        assertEquals("external_speakers", item.routeName)
+        assertNotNull(item.iconRes)
+    }
+
+    @Test
     fun testVortragsdatenNavigationItem() {
         val item = NavigationItem.Vortragsdaten
         assertEquals("Vortragsliste & Ereignisse", item.label)
@@ -120,7 +128,7 @@ class NavigationItemTest {
     @Test
     fun testAllNavigationItemsCount() {
         val items = NavigationItem.entries
-        assertEquals(10, items.size)
+        assertEquals(11, items.size)
     }
 
     @Test

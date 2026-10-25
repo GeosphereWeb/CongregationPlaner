@@ -112,16 +112,38 @@ await expect('Nutzer ohne PLAN_TALKS schreibt Termin', putSlot('2026-11-01', bas
 await expect('Nutzer ohne PLAN_TALKS liest Termin', api('GET', `${SLOT}/2026-10-25`, undefined, plain.token), false);
 await expect('Planer löscht Termin', api('DELETE', `${SLOT}/2026-10-25`, undefined, planner.token), true);
 
-// ---------- Externe Redner ----------
-const EXT = `${CONG}/externalSpeakers`;
-const validExternal = { lastName: 'Extern', firstName: 'Eva', congregationName: 'Nord' };
-await expect('externen Redner anlegen', call('POST', `${FS}/${EXT}`, fields(validExternal), planner.token), true);
-await expect('externer Redner ohne Versammlung', call('POST', `${FS}/${EXT}`, fields({ lastName: 'Extern', firstName: 'Eva' }), planner.token), false);
-await expect('externer Redner mit leerem Familiennamen', call('POST', `${FS}/${EXT}`, fields({ ...validExternal, lastName: '' }), planner.token), false);
-await expect('externer Redner mit Zusatzfeld', call('POST', `${FS}/${EXT}`, fields({ ...validExternal, x: 'y' }), planner.token), false);
-await expect('externe Redner lesen als Planer', api('GET', EXT, undefined, planner.token), true);
-await expect('externe Redner lesen ohne PLAN_TALKS', api('GET', EXT, undefined, plain.token), false);
-await expect('externen Redner anlegen ohne PLAN_TALKS', call('POST', `${FS}/${EXT}`, fields(validExternal), plain.token), false);
+// ---------- Verzeichnis externer Redner (Kreis → Versammlung → Redner) ----------
+const EXT_CIRCUITS = `${CONG}/externalCircuits`;
+const EXT_CONGREGATIONS = `${CONG}/externalCongregations`;
+const EXT_SPEAKERS = `${CONG}/visitingSpeakers`;
+const post = (path, data, token = planner.token) => call('POST', `${FS}/${path}`, fields(data), token);
+const validCircuit = { name: 'Kreis Nord' };
+const validCongregation = { circuitId: 'c1', name: 'Musterstadt' };
+const validSpeaker = {
+  congregationId: 'g1',
+  lastName: 'Extern',
+  firstName: 'Eva',
+  phone: '0170 1234',
+  email: 'eva@example.org',
+  talkNumbers: [12, 45],
+};
+await expect('externen Kreis anlegen', post(EXT_CIRCUITS, validCircuit), true);
+await expect('externer Kreis ohne Namen', post(EXT_CIRCUITS, { name: '' }), false);
+await expect('externer Kreis mit Zusatzfeld', post(EXT_CIRCUITS, { ...validCircuit, x: 'y' }), false);
+await expect('externe Versammlung anlegen', post(EXT_CONGREGATIONS, validCongregation), true);
+await expect('externe Versammlung ohne Kreis', post(EXT_CONGREGATIONS, { name: 'Musterstadt' }), false);
+await expect('externen Redner anlegen', post(EXT_SPEAKERS, validSpeaker), true);
+await expect('externer Redner ohne Vortragsliste', post(EXT_SPEAKERS, { ...validSpeaker, talkNumbers: [] }), true);
+await expect('externer Redner ohne Versammlung', post(EXT_SPEAKERS, { ...validSpeaker, congregationId: '' }), false);
+await expect('externer Redner mit leerem Familiennamen', post(EXT_SPEAKERS, { ...validSpeaker, lastName: '' }), false);
+await expect('externer Redner mit Vortragsliste als Text', post(EXT_SPEAKERS, { ...validSpeaker, talkNumbers: '12' }), false);
+await expect('externer Redner mit zu langer Telefonnummer', post(EXT_SPEAKERS, { ...validSpeaker, phone: '1'.repeat(31) }), false);
+await expect('externer Redner mit Zusatzfeld', post(EXT_SPEAKERS, { ...validSpeaker, x: 'y' }), false);
+await expect('externes Verzeichnis lesen als Planer', api('GET', EXT_SPEAKERS, undefined, planner.token), true);
+await expect('externe Kreise lesen ohne PLAN_TALKS', api('GET', EXT_CIRCUITS, undefined, plain.token), false);
+await expect('externe Redner lesen ohne PLAN_TALKS', api('GET', EXT_SPEAKERS, undefined, plain.token), false);
+await expect('externen Redner anlegen ohne PLAN_TALKS', post(EXT_SPEAKERS, validSpeaker, plain.token), false);
+await expect('alte Liste externalSpeakers ist nicht mehr beschreibbar', post(`${CONG}/externalSpeakers`, validSpeaker), false);
 
 // ---------- Vortragshistorie ----------
 const HIST = `${CONG}/talkHistory`;

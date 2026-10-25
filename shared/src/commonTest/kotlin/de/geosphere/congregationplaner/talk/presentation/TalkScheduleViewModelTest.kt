@@ -1,25 +1,27 @@
 package de.geosphere.congregationplaner.talk.presentation
 
 import de.geosphere.congregationplaner.talk.domain.model.Chairman
+import de.geosphere.congregationplaner.talk.domain.model.ExternalCircuit
+import de.geosphere.congregationplaner.talk.domain.model.ExternalCongregation
 import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkHistoryEntry
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
+import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
-import de.geosphere.congregationplaner.talk.domain.usecase.DeleteExternalSpeakerUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.MoveTalkSlotUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalDirectoryUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalSpeakersUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkCatalogUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkMembersUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkYearUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveWeekEventsUseCase
-import de.geosphere.congregationplaner.talk.domain.usecase.SaveExternalSpeakerUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SyncTalkHistoryWithSlotUseCase
-import de.geosphere.congregationplaner.talk.testing.FakeExternalSpeakerRepository
+import de.geosphere.congregationplaner.talk.testing.FakeExternalSpeakerDirectoryRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkHistoryRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
@@ -113,7 +115,7 @@ class TalkScheduleViewModelTest {
     private lateinit var weekEvents: FakeWeekEventRepository
     private lateinit var catalog: FakeTalkCatalogRepository
     private lateinit var users: FakeUserRepository
-    private lateinit var externals: FakeExternalSpeakerRepository
+    private lateinit var externals: FakeExternalSpeakerDirectoryRepository
     private lateinit var history: FakeTalkHistoryRepository
     private lateinit var viewModel: TalkScheduleViewModel
 
@@ -124,7 +126,11 @@ class TalkScheduleViewModelTest {
         weekEvents = FakeWeekEventRepository(listOf(kongress))
         catalog = FakeTalkCatalogRepository(listOf(activeTalk, pausedTalk))
         users = FakeUserRepository(members = listOf(speakerMember, otherMember, nameless, elder))
-        externals = FakeExternalSpeakerRepository(listOf(externalSpeaker))
+        externals = FakeExternalSpeakerDirectoryRepository(
+            listOf(ExternalCircuit("c1", "Kreis Nord")),
+            listOf(ExternalCongregation("g1", "c1", "Nord")),
+            listOf(VisitingSpeaker("e1", "g1", "Extern", "Eva")),
+        )
         history = FakeTalkHistoryRepository()
         val policy = TalkSchedulePermissionPolicy()
         val save = SaveTalkSlotUseCase(repository, policy)
@@ -134,9 +140,7 @@ class TalkScheduleViewModelTest {
             ObserveWeekEventsUseCase(weekEvents),
             ObserveTalkCatalogUseCase(catalog),
             ObserveTalkMembersUseCase(ObserveMembersUseCase(users)),
-            ObserveExternalSpeakersUseCase(externals),
-            SaveExternalSpeakerUseCase(externals, policy),
-            DeleteExternalSpeakerUseCase(externals, policy),
+            ObserveExternalSpeakersUseCase(ObserveExternalDirectoryUseCase(externals)),
             MoveTalkSlotUseCase(save, delete),
             delete,
             SyncTalkHistoryWithSlotUseCase(history, policy),
@@ -286,60 +290,6 @@ class TalkScheduleViewModelTest {
         viewModel.selectExternalSpeaker(null)
         assertNull(state.editor!!.slot.speaker)
         assertNull(state.editor!!.slot.externalSpeaker)
-    }
-
-    @Test
-    fun `adding an external speaker saves it and selects it for the slot`() {
-        viewModel.onCurrentUserChanged(planner)
-        viewModel.newSlot()
-
-        viewModel.addExternalSpeaker(" Neu ", "Nina", "Süd")
-
-        val saved = ExternalSpeaker("ext-1", "Neu", "Nina", "Süd")
-        assertEquals(listOf(saved), externals.savedSpeakers)
-        assertEquals(saved, state.editor!!.slot.externalSpeaker)
-        assertTrue(saved in state.externalSpeakers)
-    }
-
-    @Test
-    fun `an invalid or rejected external speaker shows an error`() {
-        viewModel.onCurrentUserChanged(planner)
-        viewModel.newSlot()
-
-        viewModel.addExternalSpeaker("", "Nina", "Süd")
-        assertNotNull(state.errorMessage)
-        assertTrue(externals.savedSpeakers.isEmpty())
-
-        viewModel.dismissError()
-        externals.saveResult = Result.failure(IllegalStateException("offline"))
-        viewModel.addExternalSpeaker("Neu", "Nina", "Süd")
-        assertEquals("offline", state.errorMessage)
-        assertNull(state.editor!!.slot.externalSpeakerId)
-    }
-
-    @Test
-    fun `deleting an external speaker removes it from the list and reports failures`() {
-        viewModel.onCurrentUserChanged(planner)
-
-        viewModel.deleteExternalSpeaker(externalSpeaker)
-        assertEquals(listOf("e1"), externals.deletedIds)
-        assertTrue(state.externalSpeakers.isEmpty())
-
-        externals.deleteResult = Result.failure(IllegalStateException("denied"))
-        viewModel.deleteExternalSpeaker(externalSpeaker)
-        assertEquals("denied", state.errorMessage)
-    }
-
-    @Test
-    fun `member without permission cannot manage external speakers`() {
-        viewModel.onCurrentUserChanged(member)
-
-        viewModel.addExternalSpeaker("Neu", "Nina", "Süd")
-        viewModel.deleteExternalSpeaker(externalSpeaker)
-
-        assertTrue(externals.savedSpeakers.isEmpty())
-        assertTrue(externals.deletedIds.isEmpty())
-        assertNotNull(state.errorMessage)
     }
 
     @Test
