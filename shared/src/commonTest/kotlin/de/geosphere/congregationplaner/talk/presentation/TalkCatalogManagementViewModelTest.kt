@@ -168,9 +168,26 @@ class TalkCatalogManagementViewModelTest {
         assertNull(state.errorMessage)
         assertEquals(listOf(first, second), state.talks)
 
+        assertFalse(state.hasDetail)
         viewModel.newTalk()
+        assertTrue(state.hasDetail)
         viewModel.cancelEditing()
         assertNull(state.editor)
+        assertFalse(state.hasDetail)
+    }
+
+    @Test
+    fun `saving and deleting update the list before the snapshot flow delivers`() {
+        catalog.publishesChanges = false
+        viewModel.onCurrentUserChanged(admin)
+        viewModel.newTalk()
+        viewModel.updateEditor(state.editor!!.copy(numberText = "3", title = "Dritter"))
+
+        viewModel.save()
+        assertEquals(listOf(first, second, Talk(3, "Dritter")), state.talks)
+
+        viewModel.delete(first)
+        assertEquals(listOf(second, Talk(3, "Dritter")), state.talks)
     }
 
     @Test
