@@ -2,6 +2,7 @@ package de.geosphere.congregationplaner.talk.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import de.geosphere.congregationplaner.presentation.components.ListDetailState
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.permission.TalkReferenceDataPolicy
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkUseCase
@@ -36,9 +37,11 @@ data class TalkCatalogUiState(
     val isLoading: Boolean = true,
     val canManage: Boolean = false,
     val editor: TalkEditorState? = null,
-    val errorMessage: String? = null,
-    val isSaving: Boolean = false,
-)
+    override val errorMessage: String? = null,
+    override val isSaving: Boolean = false,
+) : ListDetailState {
+    override val hasDetail: Boolean get() = editor != null
+}
 
 /** Pflege der globalen Vortragsliste durch globale Administratoren. */
 @Inject
@@ -113,7 +116,12 @@ class TalkCatalogManagementViewModel(
             saveTalk(user, talk)
                 .onSuccess { saved ->
                     val next = TalkEditorState(saved.number.toString(), saved.title, saved.active, saved)
-                    mutableUiState.update { it.copy(editor = next, isSaving = false) }
+                    // Show the result at once; the snapshot flow can lag behind, especially on desktop.
+                    mutableUiState.update {
+                        val talks = (it.talks.filterNot { t -> t.number == saved.number } + saved)
+                            .sortedBy { t -> t.number }
+                        it.copy(talks = talks, editor = next, isSaving = false)
+                    }
                 }.onFailure { exception ->
                     fail(exception, "Vortrag konnte nicht gespeichert werden.")
                 }
@@ -129,6 +137,7 @@ class TalkCatalogManagementViewModel(
                 .onSuccess {
                     mutableUiState.update { state ->
                         state.copy(
+                            talks = state.talks.filterNot { it.number == talk.number },
                             editor = state.editor?.takeUnless { it.original?.number == talk.number },
                             isSaving = false,
                         )

@@ -10,6 +10,9 @@ import kotlinx.coroutines.flow.flow
 internal class FakeTalkCatalogRepository(talks: List<Talk> = emptyList()) : TalkCatalogRepository {
     val talks = MutableStateFlow(talks)
 
+    /** `false` simuliert einen verzögerten Snapshot-Flow: Schreibvorgänge erreichen [observeTalks] nicht. */
+    var publishesChanges = true
+
     var saveResult: Result<Unit> = Result.success(Unit)
     var deleteResult: Result<Unit> = Result.success(Unit)
 
@@ -23,12 +26,12 @@ internal class FakeTalkCatalogRepository(talks: List<Talk> = emptyList()) : Talk
 
     override suspend fun save(talk: Talk): Result<Talk> = saveResult.map {
         savedTalks += talk
-        talks.value = talks.value.filterNot { it.number == talk.number } + talk
+        if (publishesChanges) talks.value = talks.value.filterNot { it.number == talk.number } + talk
         talk
     }
 
     override suspend fun delete(number: Int): Result<Unit> = deleteResult.onSuccess {
         deletedNumbers += number
-        talks.value = talks.value.filterNot { it.number == number }
+        if (publishesChanges) talks.value = talks.value.filterNot { it.number == number }
     }
 }

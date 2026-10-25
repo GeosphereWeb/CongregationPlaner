@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -20,6 +22,11 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.layout.AnimatedPane
+import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffold
+import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
+import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -30,7 +37,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import de.geosphere.congregationplaner.presentation.components.ListDetailState
 import de.geosphere.congregationplaner.presentation.components.SelectableListCard
+import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
@@ -127,6 +136,44 @@ private fun ErrorRow(message: String?, onDismiss: () -> Unit) {
     }
 }
 
+/** Liste links, Detail rechts; auf kleinen Bildschirmen nacheinander (siehe [rememberListDetailNavigation]). */
+@Composable
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
+private fun ReferenceListDetail(
+    state: ListDetailState,
+    onClose: () -> Unit,
+    list: @Composable () -> Unit,
+    detail: @Composable () -> Unit,
+) {
+    val navigator = rememberListDetailNavigation(state, onClose = onClose)
+    ListDetailPaneScaffold(
+        directive = navigator.scaffoldDirective,
+        scaffoldState = navigator.scaffoldState,
+        modifier = Modifier.fillMaxSize(),
+        listPane = { AnimatedPane { list() } },
+        detailPane = {
+            AnimatedPane {
+                Column(
+                    modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    if (navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Hidden) {
+                        TextButton(onClick = onClose, enabled = !state.isSaving) { Text("Zurück zur Liste") }
+                    }
+                    detail()
+                }
+            }
+        },
+    )
+}
+
+@Composable
+private fun DetailPlaceholder(text: String) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Text(text, modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
 @Composable
 private fun TalkCatalogTab(state: TalkCatalogUiState, actions: TalkCatalogActions) {
     ErrorRow(state.errorMessage, actions.onDismissError)
@@ -134,23 +181,32 @@ private fun TalkCatalogTab(state: TalkCatalogUiState, actions: TalkCatalogAction
         CircularProgressIndicator()
         return
     }
-    LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { OutlinedButton(onClick = actions.onNew, enabled = !state.isSaving) { Text("Vortrag anlegen") } }
-        state.editor?.let { editor -> item { TalkEditorCard(editor, state.isSaving, actions) } }
-        if (state.talks.isEmpty()) item { Text("Noch keine Vorträge in der Liste.") }
-        items(state.talks, key = { it.number }) { talk ->
-            SelectableListCard(
-                selected = state.editor?.original?.number == talk.number,
-                onSelect = { actions.onEdit(talk) },
-                onDelete = { actions.onDelete(talk) },
-                actionsEnabled = !state.isSaving,
-                canDelete = true,
-            ) {
-                Text("${talk.number} – ${talk.title}", style = MaterialTheme.typography.titleMedium)
-                if (!talk.active) Text("nicht aktiv", color = MaterialTheme.colorScheme.error)
+    OutlinedButton(onClick = actions.onNew, enabled = !state.isSaving) { Text("Vortrag anlegen") }
+    ReferenceListDetail(
+        state = state,
+        onClose = actions.onCancel,
+        list = {
+            LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (state.talks.isEmpty()) item { Text("Noch keine Vorträge in der Liste.") }
+                items(state.talks, key = { it.number }) { talk ->
+                    SelectableListCard(
+                        selected = state.editor?.original?.number == talk.number,
+                        onSelect = { actions.onEdit(talk) },
+                        onDelete = { actions.onDelete(talk) },
+                        actionsEnabled = !state.isSaving,
+                        canDelete = true,
+                    ) {
+                        Text("${talk.number} – ${talk.title}", style = MaterialTheme.typography.titleMedium)
+                        if (!talk.active) Text("nicht aktiv", color = MaterialTheme.colorScheme.error)
+                    }
+                }
             }
-        }
-    }
+        },
+        detail = {
+            state.editor?.let { TalkEditorCard(it, state.isSaving, actions) }
+                ?: DetailPlaceholder("Wähle einen Vortrag aus oder lege einen neuen an.")
+        },
+    )
 }
 
 @Composable
@@ -195,23 +251,32 @@ private fun WeekEventTab(state: WeekEventUiState, actions: WeekEventActions) {
         CircularProgressIndicator()
         return
     }
-    LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { OutlinedButton(onClick = actions.onNew, enabled = !state.isSaving) { Text("Ereignis anlegen") } }
-        state.editor?.let { editor -> item { WeekEventEditorCard(editor, state.isSaving, actions) } }
-        if (state.events.isEmpty()) item { Text("Noch keine Wochenereignisse.") }
-        items(state.events, key = { it.id }) { event ->
-            SelectableListCard(
-                selected = state.editor?.original?.id == event.id,
-                onSelect = { actions.onEdit(event) },
-                onDelete = { actions.onDelete(event) },
-                actionsEnabled = !state.isSaving,
-                canDelete = true,
-            ) {
-                Text(event.name, style = MaterialTheme.typography.titleMedium)
-                if (event.cancelsTalk) Text("Vortrag entfällt")
+    OutlinedButton(onClick = actions.onNew, enabled = !state.isSaving) { Text("Ereignis anlegen") }
+    ReferenceListDetail(
+        state = state,
+        onClose = actions.onCancel,
+        list = {
+            LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (state.events.isEmpty()) item { Text("Noch keine Wochenereignisse.") }
+                items(state.events, key = { it.id }) { event ->
+                    SelectableListCard(
+                        selected = state.editor?.original?.id == event.id,
+                        onSelect = { actions.onEdit(event) },
+                        onDelete = { actions.onDelete(event) },
+                        actionsEnabled = !state.isSaving,
+                        canDelete = true,
+                    ) {
+                        Text(event.name, style = MaterialTheme.typography.titleMedium)
+                        if (event.cancelsTalk) Text("Vortrag entfällt")
+                    }
+                }
             }
-        }
-    }
+        },
+        detail = {
+            state.editor?.let { WeekEventEditorCard(it, state.isSaving, actions) }
+                ?: DetailPlaceholder("Wähle ein Ereignis aus oder lege ein neues an.")
+        },
+    )
 }
 
 @Composable
