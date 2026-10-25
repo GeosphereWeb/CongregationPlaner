@@ -114,6 +114,11 @@ sealed class TalkScheduleException(message: String) : Exception(message) {
 
     class SpeakerIsChairman : TalkScheduleException("Redner und Vorsitzender dürfen nicht dieselbe Person sein.")
 
+    class InvalidTalkHistory :
+        TalkScheduleException(
+            "Die Vortragshistorie ist ungültig: Nummer ab 1 und 1 bis ${TalkHistoryEntry.MAX_DATES} Tage.",
+        )
+
     class InvalidTalk :
         TalkScheduleException(
             "Der Vortrag ist ungültig: Nummer ab 1 und ein Titel mit höchstens " +

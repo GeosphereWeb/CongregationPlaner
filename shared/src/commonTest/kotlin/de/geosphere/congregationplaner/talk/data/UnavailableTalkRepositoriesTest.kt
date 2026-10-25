@@ -3,6 +3,7 @@ package de.geosphere.congregationplaner.talk.data
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
+import de.geosphere.congregationplaner.talk.domain.model.TalkHistoryEntry
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import kotlinx.coroutines.flow.first
@@ -47,6 +48,16 @@ class UnavailableTalkRepositoriesTest {
         assertIs<UnsupportedOperationException>(save)
         assertEquals("Firestore is not configured for iOS.", save.message)
         assertIs<UnsupportedOperationException>(repository.delete(congregation, "e1").exceptionOrNull())
+    }
+
+    @Test
+    fun `unavailable talk history repository fails with the platform name`(): Unit = runBlocking {
+        val repository = unavailableTalkHistoryRepository("iOS")
+
+        assertFailsWith<UnsupportedOperationException> { repository.observeAll(congregation).first() }
+        val entry = TalkHistoryEntry(1, listOf(LocalDate(2026, 3, 1)))
+        assertIs<UnsupportedOperationException>(repository.save(congregation, entry).exceptionOrNull())
+        assertIs<UnsupportedOperationException>(repository.delete(congregation, 1).exceptionOrNull())
     }
 
     @Test

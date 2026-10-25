@@ -151,6 +151,14 @@ service cloud.firestore {
         data.congregationName is string && data.congregationName.size() >= 1 && data.congregationName.size() <= 100;
     }
 
+    // Talk history: one document per talk number holding the days the talk was given (plannedOn: from the planning).
+    function isValidTalkHistory(talkNumber, data) {
+      return talkNumber.matches('[1-9][0-9]{0,3}') &&
+        data.keys().hasOnly(['heldOn', 'plannedOn']) && data.keys().hasAll(['heldOn']) &&
+        data.heldOn is list && data.heldOn.size() >= 1 && data.heldOn.size() <= 100 &&
+        (!('plannedOn' in data) || (data.plannedOn is list && data.plannedOn.size() <= 100));
+    }
+
     // A text that is either absent (null) or a string with minLen..maxLen characters.
     function isOptionalText(value, minLen, maxLen) {
       return value == null || (value is string && value.size() >= minLen && value.size() <= maxLen);
@@ -412,6 +420,16 @@ service cloud.firestore {
 
                 allow create, update: if canPlanTalks(regionId, subregionId, branchId, circuitId, congId) &&
                   isValidTalkSlot(date, request.resource.data);
+              }
+
+              // ---------------------------------------------------------
+              // Talk history of a congregation (planners only)
+              // ---------------------------------------------------------
+              match /talkHistory/{talkNumber} {
+                allow read, delete: if canPlanTalks(regionId, subregionId, branchId, circuitId, congId);
+
+                allow create, update: if canPlanTalks(regionId, subregionId, branchId, circuitId, congId) &&
+                  isValidTalkHistory(talkNumber, request.resource.data);
               }
 
               // ---------------------------------------------------------

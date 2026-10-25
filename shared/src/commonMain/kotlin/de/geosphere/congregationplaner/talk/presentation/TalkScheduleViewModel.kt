@@ -22,6 +22,7 @@ import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkMembersUse
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkYearUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveWeekEventsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveExternalSpeakerUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.SyncTalkHistoryWithSlotUseCase
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
 import dev.zacsweers.metro.Inject
@@ -74,6 +75,7 @@ class TalkScheduleViewModel(
     private val removeExternalSpeaker: DeleteExternalSpeakerUseCase,
     private val moveSlot: MoveTalkSlotUseCase,
     private val deleteSlot: DeleteTalkSlotUseCase,
+    private val syncHistory: SyncTalkHistoryWithSlotUseCase,
     private val permissionPolicy: TalkSchedulePermissionPolicy,
     private val userPolicy: UserPermissionPolicy,
 ) : ViewModel() {
@@ -239,8 +241,13 @@ class TalkScheduleViewModel(
         viewModelScope.launch {
             moveSlot(user, editor.original?.date ?: slot.date, slot)
                 .onSuccess { saved ->
+                    val history = syncHistory(user, editor.original, saved)
                     mutableUiState.update {
-                        it.copy(editor = TalkSlotEditorState(saved, saved), isSaving = false)
+                        it.copy(
+                            editor = TalkSlotEditorState(saved, saved),
+                            isSaving = false,
+                            errorMessage = history.exceptionOrNull()?.let(::historyError),
+                        )
                     }
                     // Ein Termin in einem anderen Jahr wäre sonst nicht in der Liste zu sehen.
                     changeYear(saved.date.year)
@@ -257,10 +264,12 @@ class TalkScheduleViewModel(
         viewModelScope.launch {
             deleteSlot(user, slot.date)
                 .onSuccess {
+                    val history = syncHistory(user, slot, null)
                     mutableUiState.update { state ->
                         state.copy(
                             editor = state.editor?.takeUnless { it.original?.date == slot.date },
                             isSaving = false,
+                            errorMessage = history.exceptionOrNull()?.let(::historyError),
                         )
                     }
                 }.onFailure { exception -> fail(exception, "Termin konnte nicht gelöscht werden.") }
@@ -384,6 +393,11 @@ class TalkScheduleViewModel(
     private fun fail(exception: Throwable, fallback: String) {
         mutableUiState.update { it.copy(isSaving = false, errorMessage = exception.message ?: fallback) }
     }
+
+    // Der Termin ist dann schon gespeichert; nur die Vortragshistorie konnte nicht nachgezogen werden.
+    private fun historyError(exception: Throwable): String =
+        "Termin gespeichert, aber die Vortragshistorie konnte nicht aktualisiert werden: " +
+            (exception.message ?: "unbekannter Fehler")
 
     private companion object {
         const val MISSING_PERMISSION_MESSAGE = "Dafür fehlt dir die Berechtigung."

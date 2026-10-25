@@ -58,6 +58,7 @@ import de.geosphere.congregationplaner.congregation.presentation.CongregationMet
 import de.geosphere.congregationplaner.organization.InviteLinkInbox
 import de.geosphere.congregationplaner.organization.di.OrganizationGraph
 import de.geosphere.congregationplaner.organization.presentation.CongregationSelector
+import de.geosphere.congregationplaner.talk.presentation.TalkHistoryRoute
 import de.geosphere.congregationplaner.talk.presentation.TalkReferenceRoute
 import de.geosphere.congregationplaner.talk.presentation.TalkScheduleRoute
 import de.geosphere.congregationplaner.theming.AppTheme
@@ -498,6 +499,8 @@ fun DesktopLayout(
 
                     "planung_wochenende" -> TalkScheduleRoute(currentUser)
 
+                    "talk_history" -> TalkHistoryRoute(currentUser)
+
                     "talk_reference" -> TalkReferenceRoute(currentUser)
 
                     "circuit" -> CircuitRoute(currentUser)
@@ -583,6 +586,7 @@ fun MobileLayout(
                         "home" -> Text("Home Content")
                         "settings" -> Text("Settings Content")
                         "planung_wochenende" -> TalkScheduleRoute(currentUser)
+                        "talk_history" -> TalkHistoryRoute(currentUser)
                         "talk_reference" -> TalkReferenceRoute(currentUser)
                         "circuit" -> CircuitRoute(currentUser)
                         "versammlung_metadata" -> CongregationMetadataRoute(currentUser)
