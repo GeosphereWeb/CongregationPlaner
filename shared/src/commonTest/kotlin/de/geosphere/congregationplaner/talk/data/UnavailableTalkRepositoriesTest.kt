@@ -1,10 +1,12 @@
 package de.geosphere.congregationplaner.talk.data
 
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
-import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
+import de.geosphere.congregationplaner.talk.domain.model.ExternalCircuit
+import de.geosphere.congregationplaner.talk.domain.model.ExternalCongregation
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkHistoryEntry
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
+import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -40,14 +42,24 @@ class UnavailableTalkRepositoriesTest {
     }
 
     @Test
-    fun `unavailable external speaker repository fails with the platform name`(): Unit = runBlocking {
-        val repository = unavailableExternalSpeakerRepository("iOS")
+    fun `unavailable external speaker directory repository fails with the platform name`(): Unit = runBlocking {
+        val repository = unavailableExternalSpeakerDirectoryRepository("iOS")
 
-        assertFailsWith<UnsupportedOperationException> { repository.observeAll(congregation).first() }
-        val save = repository.save(congregation, ExternalSpeaker("", "Extern", "Eva", "Nord")).exceptionOrNull()
+        assertFailsWith<UnsupportedOperationException> { repository.observeCircuits(congregation).first() }
+        assertFailsWith<UnsupportedOperationException> { repository.observeCongregations(congregation).first() }
+        assertFailsWith<UnsupportedOperationException> { repository.observeSpeakers(congregation).first() }
+        val save = repository.saveSpeaker(congregation, VisitingSpeaker("", "g1", "Extern")).exceptionOrNull()
         assertIs<UnsupportedOperationException>(save)
         assertEquals("Firestore is not configured for iOS.", save.message)
-        assertIs<UnsupportedOperationException>(repository.delete(congregation, "e1").exceptionOrNull())
+        assertIs<UnsupportedOperationException>(
+            repository.saveCircuit(congregation, ExternalCircuit("", "Nord")).exceptionOrNull(),
+        )
+        assertIs<UnsupportedOperationException>(
+            repository.saveCongregation(congregation, ExternalCongregation("", "c1", "Süd")).exceptionOrNull(),
+        )
+        assertIs<UnsupportedOperationException>(repository.deleteCircuit(congregation, "c1").exceptionOrNull())
+        assertIs<UnsupportedOperationException>(repository.deleteCongregation(congregation, "g1").exceptionOrNull())
+        assertIs<UnsupportedOperationException>(repository.deleteSpeaker(congregation, "s1").exceptionOrNull())
     }
 
     @Test

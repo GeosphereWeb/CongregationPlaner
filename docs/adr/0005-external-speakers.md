@@ -1,7 +1,7 @@
 # ADR-0005: Externe Redner je Versammlung ohne Verweis auf fremde Mitglieder
 
 ## Status
-Accepted
+Superseded by [ADR-0008](0008-external-speaker-directory.md)
 
 ## Context
 Neben den eigenen Mitgliedern halten auch Redner aus anderen Versammlungen Vorträge. Mitglieder anderer Versammlungen zu referenzieren hieße, deren Mitgliedsdokumente lesbar zu machen, die bewusst nur Admins und Berechtigten der eigenen Versammlung offenstehen (ADR-0004).
