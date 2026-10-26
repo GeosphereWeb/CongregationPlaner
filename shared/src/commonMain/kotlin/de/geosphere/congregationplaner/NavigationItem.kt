@@ -34,6 +34,11 @@ enum class NavigationItem(val iconRes: DrawableResource, val label: String, val 
         label = "Vortragshistorie",
         routeName = "talk_history",
     ),
+    ExterneRedner(
+        iconRes = Res.drawable.dummy,
+        label = "Externe Redner",
+        routeName = "external_speakers",
+    ),
     Kreise(
         iconRes = Res.drawable.dummy,
         label = "Kreise",

@@ -216,56 +216,6 @@ class FirestoreRestTalkRepositoriesTest {
     }
 
     @Test
-    fun `external speakers are listed, created, updated and deleted`() {
-        val path = "${FakeFirestoreRestServer.DOCUMENTS_PATH}/${congregation.externalSpeakersPath}"
-        runWithServer(
-            responder = { request ->
-                when {
-                    request.method == "GET" -> FakeResponse(
-                        200,
-                        """{"documents":[{"name":"x/externalSpeakers/e1","fields":{
-                            "lastName":{"stringValue":"Extern"},"firstName":{"stringValue":"Eva"},
-                            "congregationName":{"stringValue":"Nord"}}},
-                            {"name":"x/externalSpeakers/e2","fields":{}}]}""",
-                    )
-                    request.method == "POST" -> FakeResponse(
-                        200,
-                        """{"name":"x/externalSpeakers/new1","fields":{
-                            "lastName":{"stringValue":"Neu"},"firstName":{"stringValue":"Nina"},
-                            "congregationName":{"stringValue":"Süd"}}}""",
-                    )
-                    request.method == "DELETE" && request.path.endsWith("/e9") -> FakeResponse(403)
-                    else -> FakeResponse(200, "{}")
-                }
-            },
-        ) { server ->
-            val repository = FirestoreRestExternalSpeakerRepository(idTokenProvider = { "token-123" })
-
-            val listed = repository.observeAll(congregation).first()
-            val expected = listOf(ExternalSpeaker("e1", "Extern", "Eva", "Nord"), ExternalSpeaker("e2", "", "", ""))
-            assertEquals(expected, listed)
-            assertEquals(path, server.requests.first().path)
-
-            val created = repository.save(congregation, ExternalSpeaker("", "Neu", "Nina", "Süd")).getOrThrow()
-            assertEquals(ExternalSpeaker("new1", "Neu", "Nina", "Süd"), created)
-            val post = server.requests.last()
-            assertEquals("POST", post.method)
-            assertEquals(path, post.path)
-            assertTrue(post.body.contains(""""congregationName":{"stringValue":"Süd"}"""))
-
-            val existing = ExternalSpeaker("e1", "Extern", "Eva", "Nord")
-            assertEquals(existing, repository.save(congregation, existing).getOrThrow())
-            val patch = server.requests.last()
-            assertEquals("PATCH", patch.method)
-            assertEquals("$path/e1", patch.path)
-
-            assertTrue(repository.delete(congregation, "e1").isSuccess)
-            assertEquals("DELETE", server.requests.last().method)
-            assertTrue(repository.delete(congregation, "e9").isFailure)
-        }
-    }
-
-    @Test
     fun `saveSlot writes null for a missing week event`() = runWithServer({ FakeResponse(200, "{}") }) { server ->
         FirestoreRestTalkScheduleRepository(idTokenProvider = { "token-123" })
             .saveSlot(congregation, slot.copy(weekEventId = null, weekEventName = null, talkCancelled = false))

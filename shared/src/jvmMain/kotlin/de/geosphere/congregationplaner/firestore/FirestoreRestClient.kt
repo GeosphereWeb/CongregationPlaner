@@ -167,6 +167,18 @@ internal fun JsonObject.stringArrayField(name: String): List<String?> =
         ?.map { it.asJsonObject.get("stringValue")?.asString }
         .orEmpty()
 
+internal fun firestoreIntegerArray(values: List<Int>): JsonObject = JsonObject().apply {
+    val array = JsonArray().apply { values.forEach { add(firestoreNullableInteger(it)) } }
+    add("arrayValue", JsonObject().apply { add("values", array) })
+}
+
+// Einträge, die keine Ganzzahl sind, werden übersprungen; ein fehlendes Feld ist eine leere Liste.
+internal fun JsonObject.intArrayField(name: String): List<Int> = get(name)?.takeIf { it.isJsonObject }?.asJsonObject
+    ?.getAsJsonObject("arrayValue")
+    ?.getAsJsonArray("values")
+    ?.mapNotNull { it.asJsonObject.get("integerValue")?.asString?.toIntOrNull() }
+    .orEmpty()
+
 internal fun JsonObject.booleanField(name: String): Boolean = optionalBooleanField(name) ?: false
 
 internal fun JsonObject.optionalBooleanField(name: String): Boolean? =
