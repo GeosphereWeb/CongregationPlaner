@@ -63,7 +63,9 @@ await api('PATCH', `${CONG}/members/${viewer.uid}`, memberDoc('viewer@test.de', 
 await api('PATCH', `${CONG}/members/${plain.uid}`, memberDoc('plain@test.de', ['DUMMY']), owner);
 const congAdmin = await signUp('congadmin@test.de');
 await api('PATCH', `${CONG}/members/${congAdmin.uid}`, fields({ email: 'congadmin@test.de', displayName: 'ca', approved: true, role: 'CONGREGATION_ADMIN', permissions: [] }), owner);
-const OTHER_CONG = 'region/R/subregion/S/branch/B/circuit/C/congregation/OTHER';
+const adminPlanner = await signUp('adminplanner@test.de');
+await api('PATCH', `${CONG}/members/${adminPlanner.uid}`, fields({ email: 'adminplanner@test.de', displayName: 'ap', approved: true, role: 'CONGREGATION_ADMIN', permissions: ['PLAN_TALKS'] }), owner);
+const OTHER_CONG ='region/R/subregion/S/branch/B/circuit/C/congregation/OTHER';
 await api('PATCH', CONG, fields({ name: 'Berlin', midweek_meeting_time: '19:00', midweek_meeting_weekday: 3 }), owner);
 await api('PATCH', OTHER_CONG, fields({ name: 'Hamburg', midweek_meeting_time: '19:00', midweek_meeting_weekday: 3 }), owner);
 
@@ -208,6 +210,11 @@ await expect('Versammlungsadmin ändert fremdes Feld der eigenen Versammlung', a
 await expect('Versammlungsadmin ändert Zeiten einer fremden Versammlung', api('PATCH', `${OTHER_CONG}${mask('midweek_meeting_time')}`, time('18:30'), congAdmin.token), false);
 await expect('Versammlungsadmin löscht die eigene Versammlung', api('DELETE', CONG, undefined, congAdmin.token), false);
 await expect('Planer ändert Zeiten der Versammlung', api('PATCH', `${CONG}${mask('midweek_meeting_time')}`, time('18:30'), planner.token), false);
+
+// ---------- Planen nur mit PLAN_TALKS: die Rolle Versammlungsadmin allein genügt nicht ----------
+await expect('Versammlungsadmin ohne PLAN_TALKS schreibt Termin', putSlot('2026-11-08', base, congAdmin.token), false);
+await expect('Versammlungsadmin ohne PLAN_TALKS liest Termine', api('GET', SLOT, undefined, congAdmin.token), false);
+await expect('Versammlungsadmin mit PLAN_TALKS schreibt Termin', putSlot('2026-11-08', base, adminPlanner.token), true);
 
 console.log(`${count} checks, ${failures.length} failures`);
 failures.forEach((failure) => console.log(`FAILURE: ${failure}`));

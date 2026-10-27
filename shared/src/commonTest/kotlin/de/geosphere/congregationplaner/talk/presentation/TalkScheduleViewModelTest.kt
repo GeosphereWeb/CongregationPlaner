@@ -345,8 +345,17 @@ class TalkScheduleViewModelTest {
     }
 
     @Test
-    fun `congregation admin may plan without PLAN_TALKS`() {
+    fun `congregation admin may not plan without PLAN_TALKS`() {
         viewModel.onCurrentUserChanged(admin)
+        viewModel.newSlot()
+
+        assertFalse(state.canPlan)
+        assertNull(state.editor)
+    }
+
+    @Test
+    fun `congregation admin with PLAN_TALKS may plan`() {
+        viewModel.onCurrentUserChanged(admin.copy(permissions = setOf(UserPermission.PLAN_TALKS)))
         viewModel.newSlot()
 
         assertTrue(state.canPlan)
