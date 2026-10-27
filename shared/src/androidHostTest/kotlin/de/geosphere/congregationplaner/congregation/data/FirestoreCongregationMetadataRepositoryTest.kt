@@ -9,6 +9,7 @@ import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.QuerySnapshot
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
+import de.geosphere.congregationplaner.congregation.domain.model.MeetingTimes
 import de.geosphere.congregationplaner.testing.assertFailure
 import de.geosphere.congregationplaner.testing.failedTask
 import de.geosphere.congregationplaner.testing.successTask
@@ -100,8 +101,20 @@ class FirestoreCongregationMetadataRepositoryTest {
                 "midweek_meeting_weekday" to 3,
                 "weekend_meeting_time" to "17:30",
                 "weekend_meeting_weekday" to 7,
+                "yearly_meeting_times" to emptyList<String>(),
             ),
             fields.captured,
+        )
+    }
+
+    @Test
+    fun `observeAll maps yearly meeting times and skips malformed entries`() = runBlocking {
+        val yearly = listOf("2027|4|18:30|6|09:30", "garbage")
+        emitSnapshot(querySnapshot(document("1", "Berlin", "19:00", 3L, "10:00", 7L, yearly)), null)
+
+        assertEquals(
+            mapOf(2027 to MeetingTimes(4, LocalTime(18, 30), 6, LocalTime(9, 30))),
+            repository.observeAll().first().single().yearlyMeetingTimes,
         )
     }
 
@@ -181,6 +194,7 @@ class FirestoreCongregationMetadataRepositoryTest {
         midweekWeekday: Any?,
         weekendTime: Any?,
         weekendWeekday: Any?,
+        yearlyMeetingTimes: Any? = null,
     ): DocumentSnapshot {
         val snapshot = mockk<DocumentSnapshot>()
         every { snapshot.id } returns id
@@ -189,6 +203,7 @@ class FirestoreCongregationMetadataRepositoryTest {
         every { snapshot.get("midweek_meeting_weekday") } returns midweekWeekday
         every { snapshot.get("weekend_meeting_time") } returns weekendTime
         every { snapshot.get("weekend_meeting_weekday") } returns weekendWeekday
+        every { snapshot.get("yearly_meeting_times") } returns yearlyMeetingTimes
         return snapshot
     }
 }

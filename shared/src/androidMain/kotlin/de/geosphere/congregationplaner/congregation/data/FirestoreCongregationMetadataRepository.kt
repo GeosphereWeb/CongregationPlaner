@@ -4,6 +4,8 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import de.geosphere.congregationplaner.auth.AndroidFirestoreProvider
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
+import de.geosphere.congregationplaner.congregation.domain.model.decodeYearlyMeetingTimes
+import de.geosphere.congregationplaner.congregation.domain.model.encodeYearlyMeetingTimes
 import de.geosphere.congregationplaner.congregation.domain.repository.CongregationMetadataRepository
 import de.geosphere.congregationplaner.firestore.awaitResult
 import de.geosphere.congregationplaner.firestore.observeDocuments
@@ -51,6 +53,8 @@ private fun toDomain(document: DocumentSnapshot): CongregationMetadata = Congreg
     midweekMeetingWeekday = document.intField("midweek_meeting_weekday"),
     weekendMeetingTime = document.timeField("weekend_meeting_time"),
     weekendMeetingWeekday = document.intField("weekend_meeting_weekday"),
+    yearlyMeetingTimes = (document.get("yearly_meeting_times") as? List<*>).orEmpty()
+        .map { it as? String }.decodeYearlyMeetingTimes(),
 )
 
 private fun weekdayMessage(name: String) = "Firestore field '$name' must be an integer from 1 (Monday) to 7 (Sunday)."
@@ -81,4 +85,5 @@ private fun CongregationMetadata.toFirestoreFields(): Map<String, Any> = mapOf(
     "midweek_meeting_weekday" to midweekMeetingWeekday,
     "weekend_meeting_time" to weekendMeetingTime.toString(),
     "weekend_meeting_weekday" to weekendMeetingWeekday,
+    "yearly_meeting_times" to yearlyMeetingTimes.encodeYearlyMeetingTimes(),
 )
