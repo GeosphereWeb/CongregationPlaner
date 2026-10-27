@@ -404,7 +404,14 @@ service cloud.firestore {
 
             match /congregation/{congId} {
               allow read: if true;
-              allow write: if isGlobalAdmin();
+              allow create, delete: if isGlobalAdmin();
+              // The congregation admin may change the meeting data of exactly this congregation.
+              allow update: if isGlobalAdmin() || (
+                isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) &&
+                request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                  'name', 'midweek_meeting_time', 'midweek_meeting_weekday',
+                  'weekend_meeting_time', 'weekend_meeting_weekday', 'yearly_meeting_times'])
+              );
 
               // ---------------------------------------------------------
               // Members of a congregation
