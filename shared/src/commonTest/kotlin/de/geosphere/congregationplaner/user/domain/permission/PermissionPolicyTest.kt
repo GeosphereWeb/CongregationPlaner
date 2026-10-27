@@ -1,6 +1,7 @@
 package de.geosphere.congregationplaner.user.domain.permission
 
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
+import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.UserPermission
 import de.geosphere.congregationplaner.user.domain.model.UserRole
@@ -34,6 +35,18 @@ class PermissionPolicyTest {
         assertFalse(congregationPolicy.canEdit(admin, congregation))
         assertFalse(congregationPolicy.canDelete(admin, congregation))
         assertFalse(congregationPolicy.canManageGeneral(admin))
+    }
+
+    @Test
+    fun `congregation admin may edit only the own congregation`() {
+        val own = CongregationRef("r", "s", "b", "c", "609a")
+        val admin = AppUser(uid = "1", approved = true, role = UserRole.CONGREGATION_ADMIN, congregation = own)
+
+        assertTrue(congregationPolicy.canEdit(admin, congregation))
+        assertFalse(congregationPolicy.canEdit(admin, congregation.copy(id = "other")))
+        assertFalse(congregationPolicy.canEdit(admin.copy(approved = false), congregation))
+        assertFalse(congregationPolicy.canEdit(admin.copy(role = UserRole.MEMBER), congregation))
+        assertFalse(congregationPolicy.canDelete(admin, congregation))
     }
 
     @Test

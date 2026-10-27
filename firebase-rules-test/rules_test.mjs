@@ -61,6 +61,11 @@ await api('PATCH', `admins/${admin.uid}`, { fields: {} }, owner);
 await api('PATCH', `${CONG}/members/${planner.uid}`, memberDoc('planner@test.de', ['DUMMY', 'PLAN_TALKS']), owner);
 await api('PATCH', `${CONG}/members/${viewer.uid}`, memberDoc('viewer@test.de', ['PLAN_TALKS', 'VIEW_MEMBERS']), owner);
 await api('PATCH', `${CONG}/members/${plain.uid}`, memberDoc('plain@test.de', ['DUMMY']), owner);
+const congAdmin = await signUp('congadmin@test.de');
+await api('PATCH', `${CONG}/members/${congAdmin.uid}`, fields({ email: 'congadmin@test.de', displayName: 'ca', approved: true, role: 'CONGREGATION_ADMIN', permissions: [] }), owner);
+const OTHER_CONG = 'region/R/subregion/S/branch/B/circuit/C/congregation/OTHER';
+await api('PATCH', CONG, fields({ name: 'Berlin', midweek_meeting_time: '19:00', midweek_meeting_weekday: 3 }), owner);
+await api('PATCH', OTHER_CONG, fields({ name: 'Hamburg', midweek_meeting_time: '19:00', midweek_meeting_weekday: 3 }), owner);
 
 const SLOT = `${CONG}/talkSchedule`;
 const base = { time: '17:30', talkCancelled: false };
@@ -194,6 +199,15 @@ await expect('Wochenereignis mit leerem Namen', api('PATCH', 'weekEvents/k2', fi
 await expect('Wochenereignis schreiben als normaler Nutzer', api('PATCH', 'weekEvents/k3', fields({ name: 'X', cancelsTalk: false }), plain.token), false);
 await expect('Wochenereignisse lesen als angemeldeter Nutzer', api('GET', 'weekEvents', undefined, plain.token), true);
 await expect('Wochenereignis löschen als Global Admin', api('DELETE', 'weekEvents/k', undefined, admin.token), true);
+
+// ---------- Versammlungs-Metadaten (Versammlungsadmin nur für die eigene Versammlung) ----------
+const mask = (name) => `?updateMask.fieldPaths=${name}`;
+const time = (value) => ({ fields: { midweek_meeting_time: { stringValue: value } } });
+await expect('Versammlungsadmin ändert Zeiten der eigenen Versammlung', api('PATCH', `${CONG}${mask('midweek_meeting_time')}`, time('18:30'), congAdmin.token), true);
+await expect('Versammlungsadmin ändert fremdes Feld der eigenen Versammlung', api('PATCH', `${CONG}${mask('secret')}`, { fields: { secret: { stringValue: 'x' } } }, congAdmin.token), false);
+await expect('Versammlungsadmin ändert Zeiten einer fremden Versammlung', api('PATCH', `${OTHER_CONG}${mask('midweek_meeting_time')}`, time('18:30'), congAdmin.token), false);
+await expect('Versammlungsadmin löscht die eigene Versammlung', api('DELETE', CONG, undefined, congAdmin.token), false);
+await expect('Planer ändert Zeiten der Versammlung', api('PATCH', `${CONG}${mask('midweek_meeting_time')}`, time('18:30'), planner.token), false);
 
 console.log(`${count} checks, ${failures.length} failures`);
 failures.forEach((failure) => console.log(`FAILURE: ${failure}`));
