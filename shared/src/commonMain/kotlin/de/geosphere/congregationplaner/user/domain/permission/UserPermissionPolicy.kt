@@ -23,6 +23,11 @@ class UserPermissionPolicy {
     // Darf der User dieses Mitglied ändern? Das eigene Mitglied ist ausgenommen, damit sich kein Admin aussperrt.
     fun canEditMember(user: AppUser, member: AppUser): Boolean = canManageUsers(user) && member.uid != user.uid
 
+    // Darf der User die Berechtigungen dieses Mitglieds ändern? Anders als Rolle und Freigabe auch die eigenen:
+    // Ein Admin kann sich damit nicht aussperren, weil seine Rolle bestehen bleibt.
+    @Suppress("UnusedParameter")
+    fun canEditPermissions(user: AppUser, member: AppUser): Boolean = canManageUsers(user)
+
     // Darf der User die persönlichen Angaben pflegen? Das betrifft keinen Zugang, daher auch beim eigenen Mitglied.
     @Suppress("UnusedParameter")
     fun canEditProfile(user: AppUser, member: AppUser): Boolean = canManageUsers(user)
