@@ -42,8 +42,8 @@ rules_version = '2';
 // Collection: region/.../congregation/{congId}/talkSchedule
 // Document ID: the date as yyyy-MM-dd (one day of the weekend meeting; the weekday
 //   is deliberately not checked because the meeting day can move at short notice).
-// Readable and writable only by planners of this congregation (global admin, approved
-//   congregation admin, or approved member with permission 'PLAN_TALKS').
+// Readable and writable only by planners of this congregation (global admin, or approved
+//   member with permission 'PLAN_TALKS'; the congregation admin role alone is not enough).
 // Fields:
 //   - time: string (required, 'HH:mm')
 //   - talkCancelled: bool (required)
@@ -125,11 +125,11 @@ service cloud.firestore {
           'VIEW_MEMBERS' in get(memberPath).data.permissions);
     }
 
-    // Planners of exactly this congregation: global admin, congregation admin or member with PLAN_TALKS.
+    // Planners of exactly this congregation: global admin or approved member with PLAN_TALKS. The role
+    // CONGREGATION_ADMIN alone does not grant it; an admin who plans needs the permission too.
     function canPlanTalks(regionId, subregionId, branchId, circuitId, congId) {
       let memberPath = /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/circuit/$(circuitId)/congregation/$(congId)/members/$(request.auth.uid);
       return isGlobalAdmin() ||
-        isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) ||
         (isAuthenticated() &&
           exists(memberPath) &&
           get(memberPath).data.approved == true &&

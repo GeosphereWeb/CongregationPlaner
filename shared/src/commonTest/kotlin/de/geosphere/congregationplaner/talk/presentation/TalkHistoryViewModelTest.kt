@@ -8,6 +8,7 @@ import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkHistoryUse
 import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkHistoryRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.UserPermission
 import de.geosphere.congregationplaner.user.domain.model.UserRole
 import de.geosphere.congregationplaner.user.testing.testCongregation
 import kotlinx.coroutines.Dispatchers
@@ -31,6 +32,7 @@ class TalkHistoryViewModelTest {
         uid = "planner",
         approved = true,
         role = UserRole.CONGREGATION_ADMIN,
+        permissions = setOf(UserPermission.PLAN_TALKS),
         congregation = testCongregation,
     )
     private val member = AppUser(uid = "member", approved = true, congregation = testCongregation)
