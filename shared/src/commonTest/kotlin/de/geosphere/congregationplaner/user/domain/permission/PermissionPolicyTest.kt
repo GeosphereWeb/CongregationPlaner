@@ -83,6 +83,17 @@ class PermissionPolicyTest {
     }
 
     @Test
+    fun `admins may change permissions of members and their own`() {
+        val admin = AppUser(uid = "1", approved = true, role = UserRole.CONGREGATION_ADMIN)
+        val member = AppUser(uid = "2", approved = true)
+
+        assertTrue(userPolicy.canEditPermissions(admin, member))
+        assertTrue(userPolicy.canEditPermissions(admin, admin))
+        assertFalse(userPolicy.canEditPermissions(member, admin))
+        assertFalse(userPolicy.canEditPermissions(member, member))
+    }
+
+    @Test
     fun `admins maintain profiles including their own and record members without account`() {
         val admin = AppUser(uid = "1", approved = true, role = UserRole.CONGREGATION_ADMIN)
         val member = AppUser(uid = "2", approved = true)

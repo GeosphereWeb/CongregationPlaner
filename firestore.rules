@@ -427,11 +427,11 @@ service cloud.firestore {
                 allow create: if isValidSelfRegistration(uid) ||
                   isValidMemberWithoutAccount(regionId, subregionId, branchId, circuitId, congId);
 
-                // Admins maintain profiles, including their own, but cannot change their own
-                // access, so nobody locks themselves out.
+                // Admins maintain profiles and permissions, including their own, but cannot change their
+                // own approval or role, so nobody locks themselves out.
                 allow update: if isAuthenticated() &&
                   (isGlobalAdmin() || isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId)) &&
-                  (onlyFieldsChanged(profileFields()) ||
+                  (onlyFieldsChanged(profileFields().concat(['permissions'])) ||
                     (request.auth.uid != uid && onlyFieldsChanged(accessFields().concat(profileFields())))) &&
                   isValidMember(request.resource.data);
 

@@ -211,6 +211,12 @@ await expect('Versammlungsadmin ändert Zeiten einer fremden Versammlung', api('
 await expect('Versammlungsadmin löscht die eigene Versammlung', api('DELETE', CONG, undefined, congAdmin.token), false);
 await expect('Planer ändert Zeiten der Versammlung', api('PATCH', `${CONG}${mask('midweek_meeting_time')}`, time('18:30'), planner.token), false);
 
+// ---------- Versammlungsadmin ändert das eigene Mitglied: Berechtigungen ja, Rolle und Freigabe nein ----------
+const ownMember = `${CONG}/members/${congAdmin.uid}`;
+await expect('Versammlungsadmin ändert eigene Berechtigungen', api('PATCH', `${CONG}/members/${adminPlanner.uid}?updateMask.fieldPaths=permissions`, { fields: { permissions: { arrayValue: { values: [{ stringValue: 'PLAN_TALKS' }] } } } }, adminPlanner.token), true);
+await expect('Versammlungsadmin ändert eigene Rolle', api('PATCH', `${ownMember}?updateMask.fieldPaths=role`, { fields: { role: { stringValue: 'MEMBER' } } }, congAdmin.token), false);
+await expect('Versammlungsadmin ändert eigene Freigabe', api('PATCH', `${ownMember}?updateMask.fieldPaths=approved`, { fields: { approved: { booleanValue: false } } }, congAdmin.token), false);
+
 // ---------- Planen nur mit PLAN_TALKS: die Rolle Versammlungsadmin allein genügt nicht ----------
 await expect('Versammlungsadmin ohne PLAN_TALKS schreibt Termin', putSlot('2026-11-08', base, congAdmin.token), false);
 await expect('Versammlungsadmin ohne PLAN_TALKS liest Termine', api('GET', SLOT, undefined, congAdmin.token), false);

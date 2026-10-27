@@ -55,6 +55,7 @@ import kotlinx.coroutines.delay
 internal data class UserManagementActions(
     val canEdit: (AppUser) -> Boolean = { false },
     val canEditProfile: (AppUser) -> Boolean = { false },
+    val canEditPermissions: (AppUser) -> Boolean = { false },
     val onApprovedChange: (AppUser, Boolean) -> Unit = { _, _ -> },
     val onRoleChange: (AppUser, UserRole) -> Unit = { _, _ -> },
     val onTogglePermission: (AppUser, UserPermission) -> Unit = { _, _ -> },
@@ -77,6 +78,7 @@ fun UserManagementScreen(viewModel: UserManagementViewModel, modifier: Modifier 
         actions = UserManagementActions(
             canEdit = viewModel::canEdit,
             canEditProfile = viewModel::canEditProfile,
+            canEditPermissions = viewModel::canEditPermissions,
             onApprovedChange = viewModel::setApproved,
             onRoleChange = viewModel::setRole,
             onTogglePermission = viewModel::togglePermission,
@@ -149,6 +151,7 @@ internal fun UserManagementContent(
                                 member = member,
                                 isCurrentUser = member.uid == state.currentUserId,
                                 enabled = actions.canEdit(member) && !isBusy,
+                                permissionsEnabled = actions.canEditPermissions(member) && !isBusy,
                                 selected = editor?.member?.uid == member.uid,
                                 canSelect = actions.canEditProfile(member) && !isBusy,
                                 actions = actions,
@@ -235,6 +238,7 @@ private fun MemberCard(
     member: AppUser,
     isCurrentUser: Boolean,
     enabled: Boolean,
+    permissionsEnabled: Boolean,
     selected: Boolean,
     canSelect: Boolean,
     actions: UserManagementActions,
@@ -274,7 +278,7 @@ private fun MemberCard(
             }
             ProfileSummary(member.profile)
             if (member.hasAccount) {
-                AccessSettings(member, enabled, actions)
+                AccessSettings(member, enabled, permissionsEnabled, actions)
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (enabled) {
@@ -309,7 +313,12 @@ private fun ProfileSummary(profile: MemberProfile) {
 }
 
 @Composable
-private fun AccessSettings(member: AppUser, enabled: Boolean, actions: UserManagementActions) {
+private fun AccessSettings(
+    member: AppUser,
+    enabled: Boolean,
+    permissionsEnabled: Boolean,
+    actions: UserManagementActions,
+) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             "Rolle:",
@@ -336,7 +345,7 @@ private fun AccessSettings(member: AppUser, enabled: Boolean, actions: UserManag
                 selected = permission in member.permissions,
                 onClick = { actions.onTogglePermission(member, permission) },
                 label = { Text(permission.label) },
-                enabled = enabled,
+                enabled = permissionsEnabled,
             )
         }
     }
@@ -375,6 +384,10 @@ private fun UserManagementPreview() = PreviewThemeWrapper {
             isLoading = false,
             canManage = true,
         ),
-        actions = UserManagementActions(canEdit = { it.uid != "2" }, canEditProfile = { true }),
+        actions = UserManagementActions(
+            canEdit = { it.uid != "2" },
+            canEditProfile = { true },
+            canEditPermissions = { true },
+        ),
     )
 }
