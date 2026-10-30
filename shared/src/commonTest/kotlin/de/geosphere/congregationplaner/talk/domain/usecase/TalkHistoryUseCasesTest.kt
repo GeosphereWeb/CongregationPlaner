@@ -125,6 +125,32 @@ class TalkHistoryUseCasesTest {
     )
 
     @Test
+    fun `the speaker of a slot is stored per day and follows changes of the slot`() = runBlocking {
+        val member = slot(autumn).copy(speakerMemberId = "m1", speakerLastName = "Muster", speakerFirstName = "Max")
+        sync(admin, null, member)
+        assertEquals(mapOf(autumn to "Muster, Max"), repository.entries.value.single().speakers)
+
+        val external = slot(autumn).copy(
+            externalSpeakerId = "e1",
+            speakerLastName = "Gast",
+            speakerFirstName = "Gustav",
+            speakerCongregation = "Nord",
+        )
+        sync(admin, member, external)
+        assertEquals(mapOf(autumn to "Gast, Gustav (Nord)"), repository.entries.value.single().speakers)
+
+        sync(admin, external, slot(autumn))
+        assertEquals(TalkHistoryEntry(7, listOf(autumn), listOf(autumn)), repository.entries.value.single())
+    }
+
+    @Test
+    fun `saving drops speakers of days that were not held`() = runBlocking {
+        val entry = TalkHistoryEntry(7, listOf(spring), speakers = mapOf(spring to "A", autumn to "B"))
+
+        assertEquals(mapOf(spring to "A"), save(admin, entry).getOrThrow().speakers)
+    }
+
+    @Test
     fun `a new slot with a talk adds its day to the history of the talk`() = runBlocking {
         repository.entries.value = listOf(TalkHistoryEntry(7, listOf(spring)))
 
