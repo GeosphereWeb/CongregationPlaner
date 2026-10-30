@@ -167,6 +167,21 @@ internal fun JsonObject.stringArrayField(name: String): List<String?> =
         ?.map { it.asJsonObject.get("stringValue")?.asString }
         .orEmpty()
 
+internal fun firestoreStringMap(values: Map<String, String>): JsonObject = JsonObject().apply {
+    val fields = JsonObject().apply { values.forEach { (key, value) -> add(key, firestoreString(value)) } }
+    add("mapValue", JsonObject().apply { add("fields", fields) })
+}
+
+// Einträge, die kein String sind, werden übersprungen; ein fehlendes Feld ist eine leere Map.
+internal fun JsonObject.stringMapField(name: String): Map<String, String> =
+    get(name)?.takeIf { it.isJsonObject }?.asJsonObject
+        ?.getAsJsonObject("mapValue")
+        ?.getAsJsonObject("fields")
+        ?.entrySet()
+        ?.mapNotNull { (key, value) -> value.asJsonObject.get("stringValue")?.asString?.let { key to it } }
+        ?.toMap()
+        .orEmpty()
+
 internal fun firestoreIntegerArray(values: List<Int>): JsonObject = JsonObject().apply {
     val array = JsonArray().apply { values.forEach { add(firestoreNullableInteger(it)) } }
     add("arrayValue", JsonObject().apply { add("values", array) })

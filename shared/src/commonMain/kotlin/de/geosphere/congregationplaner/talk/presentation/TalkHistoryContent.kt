@@ -135,7 +135,10 @@ private fun TalkHistoryDetail(row: TalkHistoryRow?) {
             Text("${row.talk.number} – ${row.talk.title}", style = MaterialTheme.typography.titleMedium)
             val days = row.entry?.heldOn.orEmpty()
             if (days.isEmpty()) Text("Noch nie gehalten.")
-            days.reversed().forEach { day -> Text(day.toDisplayText()) }
+            days.reversed().forEach { day ->
+                val speaker = row.entry?.speakers?.get(day)
+                Text(if (speaker == null) day.toDisplayText() else "${day.toDisplayText()} – $speaker")
+            }
             Text("Die Tage ändern sich nur in der Planung am Wochenende.", style = MaterialTheme.typography.bodySmall)
         }
     }
@@ -148,7 +151,13 @@ private fun TalkHistoryContentPreview() = PreviewThemeWrapper {
     TalkHistoryContent(
         state = TalkHistoryUiState(
             talks = talks,
-            history = listOf(TalkHistoryEntry(1, listOf(LocalDate(2026, 3, 1), LocalDate(2026, 10, 25)))),
+            history = listOf(
+                TalkHistoryEntry(
+                    1,
+                    listOf(LocalDate(2026, 3, 1), LocalDate(2026, 10, 25)),
+                    speakers = mapOf(LocalDate(2026, 10, 25) to "Muster, Max"),
+                ),
+            ),
             isLoading = false,
             canPlan = true,
             selectedNumber = 1,

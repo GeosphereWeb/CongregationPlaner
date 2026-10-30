@@ -31,6 +31,7 @@ internal class FirestoreTalkHistoryRepository(private val firestore: FirebaseFir
                     mapOf(
                         "heldOn" to entry.heldOn.map(LocalDate::toString),
                         "plannedOn" to entry.plannedOn.map(LocalDate::toString),
+                        "speakers" to entry.speakers.mapKeys { it.key.toString() },
                     ),
                 )
                 .awaitResult()
@@ -52,8 +53,15 @@ private fun toTalkHistoryEntryOrNull(document: DocumentSnapshot): TalkHistoryEnt
         logFirestoreFailure("parse talk history ${document.id}", IllegalArgumentException("Invalid talk history."))
         return null
     }
-    return TalkHistoryEntry(number, dates.sorted(), planned.sorted())
+    return TalkHistoryEntry(number, dates.sorted(), planned.sorted(), parseSpeakers(document.get("speakers")))
 }
+
+// Einträge ohne lesbares Datum oder Namen werden übersprungen; der Tag bleibt dann ohne Redner.
+private fun parseSpeakers(value: Any?): Map<LocalDate, String> = (value as? Map<*, *>).orEmpty()
+    .mapNotNull { (day, name) ->
+        val date = (day as? String)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+        if (date == null || name !is String) null else date to name
+    }.toMap()
 
 // `null`, wenn der Wert keine Liste lesbarer Daten ist.
 private fun parseDates(value: Any?): List<LocalDate>? = (value as? List<*>)
