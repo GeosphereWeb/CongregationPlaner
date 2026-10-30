@@ -6,10 +6,12 @@ import de.geosphere.congregationplaner.firestore.FirestoreRestClient
 import de.geosphere.congregationplaner.firestore.FirestoreRestDocument
 import de.geosphere.congregationplaner.firestore.firestoreFields
 import de.geosphere.congregationplaner.firestore.firestoreStringArray
+import de.geosphere.congregationplaner.firestore.firestoreStringMap
 import de.geosphere.congregationplaner.firestore.listAllDocuments
 import de.geosphere.congregationplaner.firestore.pollingFlow
 import de.geosphere.congregationplaner.firestore.runCatchingIo
 import de.geosphere.congregationplaner.firestore.stringArrayField
+import de.geosphere.congregationplaner.firestore.stringMapField
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.talk.domain.model.TalkHistoryEntry
 import de.geosphere.congregationplaner.talk.domain.repository.TalkHistoryRepository
@@ -34,6 +36,7 @@ internal class FirestoreRestTalkHistoryRepository(
                 JsonObject().apply {
                     add("heldOn", firestoreStringArray(entry.heldOn.map(LocalDate::toString)))
                     add("plannedOn", firestoreStringArray(entry.plannedOn.map(LocalDate::toString)))
+                    add("speakers", firestoreStringMap(entry.speakers.mapKeys { it.key.toString() }))
                 },
             )
             client.request("PATCH", client.documentUrl(congregation.talkHistoryPath, entry.talkNumber.toString()), body)
@@ -50,7 +53,11 @@ internal class FirestoreRestTalkHistoryRepository(
         val dates = parseDates("heldOn")
         val planned = parseDates("plannedOn")
         if (number == null || dates.isNullOrEmpty() || planned == null) return null
-        return TalkHistoryEntry(number, dates.sorted(), planned.sorted())
+        // Einträge ohne lesbares Datum werden übersprungen; der Tag bleibt dann ohne Redner.
+        val speakers = fields.stringMapField("speakers")
+            .mapNotNull { (day, name) -> runCatching { LocalDate.parse(day) }.getOrNull()?.let { it to name } }
+            .toMap()
+        return TalkHistoryEntry(number, dates.sorted(), planned.sorted(), speakers)
     }
 
     // `null`, wenn ein Eintrag kein lesbares Datum ist; ein fehlendes Feld ist eine leere Liste.
