@@ -25,7 +25,9 @@ class FirestoreRestTalkHistoryRepositoryTest {
                     """{"documents":[
                         {"name":"x/talkHistory/7","fields":{"heldOn":{"arrayValue":{"values":[
                             {"stringValue":"2026-10-25"},{"stringValue":"2026-03-01"}]}},
-                            "plannedOn":{"arrayValue":{"values":[{"stringValue":"2026-10-25"}]}}}},
+                            "plannedOn":{"arrayValue":{"values":[{"stringValue":"2026-10-25"}]}},
+                            "speakers":{"mapValue":{"fields":{"2026-10-25":{"stringValue":"Muster, Max"},
+                                "not a date":{"stringValue":"x"},"2026-03-01":{"integerValue":"5"}}}}}},
                         {"name":"x/talkHistory/x","fields":{"heldOn":{"arrayValue":{"values":[
                             {"stringValue":"2026-03-01"}]}}}},
                         {"name":"x/talkHistory/8","fields":{"heldOn":{"arrayValue":{"values":[
@@ -46,6 +48,7 @@ class FirestoreRestTalkHistoryRepositoryTest {
                         7,
                         listOf(LocalDate(2026, 3, 1), LocalDate(2026, 10, 25)),
                         listOf(LocalDate(2026, 10, 25)),
+                        mapOf(LocalDate(2026, 10, 25) to "Muster, Max"),
                     )
                     assertEquals(listOf(expected), listed)
                     assertEquals(path, server.requests.first().path)
@@ -56,6 +59,7 @@ class FirestoreRestTalkHistoryRepositoryTest {
                     assertEquals("$path/7", patch.path)
                     assertTrue(patch.body.contains(""""stringValue":"2026-10-25""""))
                     assertTrue(patch.body.contains(""""plannedOn""""))
+                    assertTrue(patch.body.contains(""""2026-10-25":{"stringValue":"Muster, Max"}"""))
 
                     assertTrue(repository.delete(congregation, 7).isSuccess)
                     assertEquals("DELETE", server.requests.last().method)
