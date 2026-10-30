@@ -36,16 +36,23 @@ class FirestoreTalkHistoryRepositoryTest {
         every { firestore.collection(congregation.talkHistoryPath) } returns collection
     }
 
-    private fun document(id: String, heldOn: Any?, plannedOn: Any? = null) = mockk<DocumentSnapshot> {
-        every { this@mockk.id } returns id
-        every { this@mockk.get("heldOn") } returns heldOn
-        every { this@mockk.get("plannedOn") } returns plannedOn
-    }
+    private fun document(id: String, heldOn: Any?, plannedOn: Any? = null, speakers: Any? = null) =
+        mockk<DocumentSnapshot> {
+            every { this@mockk.id } returns id
+            every { this@mockk.get("heldOn") } returns heldOn
+            every { this@mockk.get("plannedOn") } returns plannedOn
+            every { this@mockk.get("speakers") } returns speakers
+        }
 
     @Test
     fun `observeAll maps documents and skips invalid ones`(): Unit = withMockedLog {
         val documents = listOf(
-            document("7", listOf("2026-10-25", "2026-03-01"), listOf("2026-10-25")),
+            document(
+                "7",
+                listOf("2026-10-25", "2026-03-01"),
+                listOf("2026-10-25"),
+                mapOf("2026-10-25" to "Muster, Max", "not a date" to "x", "2026-03-01" to 5),
+            ),
             document("6", listOf("2026-03-01"), "not a list"),
             document("x", listOf("2026-03-01")),
             document("8", listOf("not a date")),
@@ -63,7 +70,7 @@ class FirestoreTalkHistoryRepositoryTest {
 
         val march = LocalDate(2026, 3, 1)
         val october = LocalDate(2026, 10, 25)
-        val expected = TalkHistoryEntry(7, listOf(march, october), listOf(october))
+        val expected = TalkHistoryEntry(7, listOf(march, october), listOf(october), mapOf(october to "Muster, Max"))
         assertEquals(listOf(expected), entries)
     }
 
@@ -75,10 +82,14 @@ class FirestoreTalkHistoryRepositoryTest {
         every { reference.set(capture(fields)) } returns successTask<Void?>(null)
         val march = LocalDate(2026, 3, 1)
         val october = LocalDate(2026, 10, 25)
-        val entry = TalkHistoryEntry(7, listOf(march, october), listOf(october))
+        val entry = TalkHistoryEntry(7, listOf(march, october), listOf(october), mapOf(october to "Muster, Max"))
 
         assertEquals(entry, repository.save(congregation, entry).getOrThrow())
-        val expected = mapOf("heldOn" to listOf("2026-03-01", "2026-10-25"), "plannedOn" to listOf("2026-10-25"))
+        val expected = mapOf(
+            "heldOn" to listOf("2026-03-01", "2026-10-25"),
+            "plannedOn" to listOf("2026-10-25"),
+            "speakers" to mapOf("2026-10-25" to "Muster, Max"),
+        )
         assertEquals(expected, fields.captured)
     }
 
