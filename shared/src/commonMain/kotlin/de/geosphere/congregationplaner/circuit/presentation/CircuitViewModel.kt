@@ -62,7 +62,11 @@ class CircuitViewModel(
             observeCircuits()
                 .catch { exception ->
                     updateState {
-                        it.copy(isLoading = false, errorMessage = exception.message ?: "Kreise konnten nicht geladen werden.")
+                        it.copy(
+                            isLoading = false,
+                            errorMessage =
+                            exception.message ?: "Kreise konnten nicht geladen werden.",
+                        )
                     }
                 }.collect { circuits ->
                     updateState { it.copy(circuits = circuits, isLoading = false, errorMessage = null) }
@@ -136,7 +140,11 @@ class CircuitViewModel(
                 }
             }.onFailure { exception ->
                 updateState {
-                    it.copy(isSaving = false, errorMessage = exception.message ?: "Kreis konnte nicht gespeichert werden.")
+                    it.copy(
+                        isSaving = false,
+                        errorMessage =
+                        exception.message ?: "Kreis konnte nicht gespeichert werden.",
+                    )
                 }
             }
         }
@@ -157,14 +165,20 @@ class CircuitViewModel(
                     updateState {
                         it.copy(
                             circuits = it.circuits.filterNot { item -> item.id == circuit.id },
-                            editor = it.editor?.takeUnless { editor -> !editor.isNew && editor.circuit.id == circuit.id },
+                            editor = it.editor?.takeUnless { editor ->
+                                !editor.isNew && editor.circuit.id == circuit.id
+                            },
                             isDeleting = false,
                             errorMessage = null,
                         )
                     }
                 }.onFailure { exception ->
                     updateState {
-                        it.copy(isDeleting = false, errorMessage = exception.message ?: "Kreis konnte nicht gelöscht werden.")
+                        it.copy(
+                            isDeleting = false,
+                            errorMessage =
+                            exception.message ?: "Kreis konnte nicht gelöscht werden.",
+                        )
                     }
                 }
         }

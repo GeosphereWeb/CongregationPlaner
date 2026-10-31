@@ -45,6 +45,10 @@ internal fun CongregationEditor(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )
+            Text(
+                "Zeiten ${rememberCurrentYear()} (gelten auch für Jahre ohne Abweichung)",
+                style = MaterialTheme.typography.titleSmall,
+            )
             WeekdaySelector(
                 label = "Wochentag der Zusammenkunft unter der Woche",
                 weekday = congregation.midweekMeetingWeekday,
@@ -65,6 +69,7 @@ internal fun CongregationEditor(
                 time = congregation.weekendMeetingTime,
                 onTimeChange = { onChange(congregation.copy(weekendMeetingTime = it)) },
             )
+            YearlyMeetingTimesEditor(congregation, onChange)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = onSave, enabled = !isBusy && isDirty) {
                     Text(if (isSaving) "Speichert …" else "Speichern")
