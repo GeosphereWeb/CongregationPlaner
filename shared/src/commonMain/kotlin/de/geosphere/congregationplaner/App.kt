@@ -9,19 +9,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -77,8 +70,8 @@ import de.geosphere.congregationplaner.ui.button.PrimaryButton
 import de.geosphere.congregationplaner.ui.button.SecondaryButton
 import de.geosphere.congregationplaner.ui.field.FieldBox
 import de.geosphere.congregationplaner.ui.field.PasswordVisibilityButton
-import de.geosphere.congregationplaner.ui.header.NightPanel
-import de.geosphere.congregationplaner.ui.header.TeleprompterHeader
+import de.geosphere.congregationplaner.ui.header.NightScreen
+import de.geosphere.congregationplaner.ui.header.PanelTitle
 import de.geosphere.congregationplaner.user.di.UserAccessGraph
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.UserAccessState
@@ -304,60 +297,44 @@ fun LoginScreen(
     previousSteps: List<String> = emptyList(),
     congregationSelector: @Composable () -> Unit = {},
 ) {
-    Box(
-        modifier = Modifier.fillMaxSize().background(NightColors.Background),
-        contentAlignment = Alignment.TopCenter,
+    NightScreen(
+        stepLabel = if (showCredentials) "SCHRITT 2 / 2" else "SCHRITT 1 / 2",
+        current = if (showCredentials) congregationName ?: "Anmelden" else "Welche Versammlung?",
+        previous = if (showCredentials) previousSteps else emptyList(),
     ) {
-        Column(modifier = Modifier.widthIn(max = 480.dp).fillMaxHeight().imePadding()) {
-            TeleprompterHeader(
-                stepLabel = if (showCredentials) "SCHRITT 2 / 2" else "SCHRITT 1 / 2",
-                current = if (showCredentials) congregationName ?: "Anmelden" else "Welche Versammlung?",
-                previous = if (showCredentials) previousSteps else emptyList(),
+        if (showCredentials) {
+            congregationSelector()
+            CredentialsForm(
+                email = email,
+                password = password,
+                authMode = authMode,
+                loginError = loginError,
+                infoMessage = infoMessage,
+                canSignIn = canSignIn,
+                onEmailChange = onEmailChange,
+                onPasswordChange = onPasswordChange,
+                onToggleMode = onToggleMode,
+                onLoginClick = onLoginClick,
+                onGoogleClick = onGoogleClick,
             )
-            NightPanel(modifier = Modifier.weight(1f)) {
-                if (showCredentials) {
-                    congregationSelector()
-                    CredentialsForm(
-                        email = email,
-                        password = password,
-                        authMode = authMode,
-                        loginError = loginError,
-                        infoMessage = infoMessage,
-                        canSignIn = canSignIn,
-                        onEmailChange = onEmailChange,
-                        onPasswordChange = onPasswordChange,
-                        onToggleMode = onToggleMode,
-                        onLoginClick = onLoginClick,
-                        onGoogleClick = onGoogleClick,
-                    )
-                } else {
-                    PanelTitle("Versammlung wählen", "Wähle deine Versammlung, bevor du dich anmeldest.")
-                    Spacer(Modifier.height(14.dp))
-                    congregationSelector()
-                    Spacer(Modifier.weight(1f))
-                    Text(
-                        text = "Anmeldung folgt, sobald die Versammlung feststeht.",
-                        modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                        textAlign = TextAlign.Center,
-                        style = nightTextStyle(13.sp, color = NightColors.OnBackgroundMuted),
-                    )
-                }
-                Text(
-                    text = firebaseStatus,
-                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-                    textAlign = TextAlign.Center,
-                    style = nightTextStyle(11.sp, color = NightColors.OnBackgroundMuted, monospace = true),
-                )
-            }
+        } else {
+            PanelTitle("Versammlung wählen", "Wähle deine Versammlung, bevor du dich anmeldest.")
+            Spacer(Modifier.height(14.dp))
+            congregationSelector()
+            Spacer(Modifier.weight(1f))
+            Text(
+                text = "Anmeldung folgt, sobald die Versammlung feststeht.",
+                modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                textAlign = TextAlign.Center,
+                style = nightTextStyle(13.sp, color = NightColors.OnBackgroundMuted),
+            )
         }
-    }
-}
-
-@Composable
-private fun PanelTitle(title: String, subtitle: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(title, style = nightTextStyle(28.sp, FontWeight.Bold, letterSpacing = (-0.56).sp))
-        Text(subtitle, style = nightTextStyle(15.sp, color = NightColors.OnBackgroundMuted))
+        Text(
+            text = firebaseStatus,
+            modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+            textAlign = TextAlign.Center,
+            style = nightTextStyle(11.sp, color = NightColors.OnBackgroundMuted, monospace = true),
+        )
     }
 }
 
@@ -456,27 +433,12 @@ private fun ColumnScope.CredentialsForm(
 /** Für bereits angemeldete Nutzer, deren Versammlung noch nicht feststeht (z. B. nach einem Update). */
 @Composable
 private fun CongregationRequiredScreen(onSignOut: () -> Unit, selector: @Composable () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxSize().background(brush = Brush.backgroundBrush)
-            .verticalScroll(rememberScrollState()).imePadding(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Card(
-            modifier = Modifier.widthIn(min = 300.dp, max = 500.dp).padding(24.dp),
-            shape = RoundedCornerShape(24.dp),
-        ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                Text("Versammlung wählen", style = MaterialTheme.typography.headlineSmall)
-                selector()
-                Button(onClick = onSignOut, modifier = Modifier.fillMaxWidth()) {
-                    Text("Abmelden")
-                }
-            }
-        }
+    NightScreen(stepLabel = "ZUGANG", current = "Versammlung wählen") {
+        PanelTitle("Versammlung wählen", "Wähle deine Versammlung, um die App zu nutzen.")
+        Spacer(Modifier.height(14.dp))
+        selector()
+        Spacer(Modifier.weight(1f))
+        SecondaryButton(text = "Abmelden", onClick = onSignOut, modifier = Modifier.fillMaxWidth(), outlined = false)
     }
 }
 

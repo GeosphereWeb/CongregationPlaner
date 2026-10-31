@@ -10,11 +10,14 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -127,6 +130,38 @@ fun NightPanel(modifier: Modifier = Modifier, content: @Composable ColumnScope.(
                     .padding(start = 24.dp, end = 24.dp, top = 28.dp, bottom = 24.dp),
                 content = content,
             )
+        }
+    }
+}
+
+/** Überschrift mit Untertitel am Anfang einer [NightPanel]. */
+@Composable
+fun PanelTitle(title: String, subtitle: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(title, style = nightTextStyle(28.sp, FontWeight.Bold, letterSpacing = (-0.56).sp))
+        Text(subtitle, style = nightTextStyle(15.sp, color = NightColors.OnBackgroundMuted))
+    }
+}
+
+/**
+ * Gerüst der Anmelde-Bildschirme: [TeleprompterHeader] über einer [NightPanel], auf großen Fenstern
+ * auf 480 dp Breite zentriert und über der Tastatur.
+ */
+@Composable
+fun NightScreen(
+    stepLabel: String,
+    current: String,
+    modifier: Modifier = Modifier,
+    previous: List<String> = emptyList(),
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Box(
+        modifier = modifier.fillMaxSize().background(NightColors.Background),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        Column(modifier = Modifier.widthIn(max = 480.dp).fillMaxHeight().imePadding()) {
+            TeleprompterHeader(stepLabel = stepLabel, current = current, previous = previous)
+            NightPanel(modifier = Modifier.weight(1f), content = content)
         }
     }
 }
