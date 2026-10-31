@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -56,6 +57,7 @@ fun TeleprompterHeader(
 ) {
     Column(
         modifier = modifier.fillMaxWidth().background(NightColors.headerBrush)
+            .drawBehind { drawRect(NightColors.headerGlowBrush(size)) }
             .padding(start = 24.dp, end = 24.dp, top = 20.dp, bottom = 20.dp),
     ) {
         Row(

@@ -1,7 +1,10 @@
 package de.geosphere.congregationplaner.theming
 
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import kotlin.math.hypot
 
 /** Farb-Tokens des Nachtblau-Designs (Board „Farbpalette“). Container sind die abgedunkelten Chip-Hintergründe. */
 object NightColors {
@@ -40,4 +43,17 @@ object NightColors {
             0.45f to HeaderMiddle,
             1f to HeaderBottom,
         )
+
+    /** Schwacher Lavendel-Glanz links unten im Kopfbereich (Kreis bei 30 % / 88 %, läuft bei 60 % des Radius aus). */
+    fun headerGlowBrush(size: Size): Brush {
+        val center = Offset(size.width * 0.3f, size.height * 0.88f)
+        // Radius bis zur am weitesten entfernten Ecke, wie bei CSS-Standard `circle`
+        val radius = hypot(size.width * 0.7f, size.height * 0.88f)
+        return Brush.radialGradient(
+            0f to Lavender.copy(alpha = 0.09f),
+            0.6f to Lavender.copy(alpha = 0f),
+            center = center,
+            radius = radius,
+        )
+    }
 }
