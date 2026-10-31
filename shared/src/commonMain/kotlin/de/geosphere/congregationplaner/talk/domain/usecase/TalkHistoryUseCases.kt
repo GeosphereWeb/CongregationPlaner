@@ -34,7 +34,12 @@ class SaveTalkHistoryEntryUseCase(
             return Result.failure(TalkScheduleException.NotAllowed())
         }
         val planned = entry.plannedOn.distinct().sorted()
-        val cleaned = entry.copy(heldOn = (entry.heldOn + planned).distinct().sorted(), plannedOn = planned)
+        val heldOn = (entry.heldOn + planned).distinct().sorted()
+        val cleaned = entry.copy(
+            heldOn = heldOn,
+            plannedOn = planned,
+            speakers = entry.speakers.filterKeys { it in heldOn },
+        )
         val valid = cleaned.talkNumber in 1..Talk.MAX_NUMBER &&
             cleaned.heldOn.size in 1..TalkHistoryEntry.MAX_DATES
         if (!valid) return Result.failure(TalkScheduleException.InvalidTalkHistory())
@@ -60,7 +65,7 @@ class DeleteTalkHistoryEntryUseCase(
 
 /**
  * Hält die Vortragshistorie zu einem gespeicherten oder gelöschten Termin aktuell: Der Tag des Termins wird beim
- * Vortrag des Termins als geplanter Tag eingetragen und beim Vortrag des bisherigen Termins ([previous]) entfernt, wenn sich Vortrag
+ * Vortrag des Termins als geplanter Tag mit seinem Redner eingetragen und beim Vortrag des bisherigen Termins ([previous]) entfernt, wenn sich Vortrag
  * oder Tag geändert haben, der Termin gelöscht oder der Vortrag abgesagt wurde. Ein Vortrag ohne Tage verliert
  * seinen Eintrag. [current] ist `null`, wenn der Termin gelöscht wurde, [previous] `null` bei einem neuen Termin.
  */
@@ -80,9 +85,9 @@ class SyncTalkHistoryWithSlotUseCase(
 
         val stored = repository.observeAll(congregation).first().associateBy { it.talkNumber }
         val entries = stored.toMutableMap()
-        old?.let { (number, day) -> entries[number] = entries.entry(number).without(day) }
-        new?.let { (number, day) -> entries[number] = entries.entry(number).with(day) }
-        for (number in listOfNotNull(old?.first, new?.first).distinct()) {
+        old?.let { entries[it.number] = entries.entry(it.number).without(it.day) }
+        new?.let { entries[it.number] = entries.entry(it.number).with(it.day, it.speaker) }
+        for (number in listOfNotNull(old?.number, new?.number).distinct()) {
             val updated = entries.entry(number)
             if (updated == stored.entry(number)) continue
             val result = if (updated.heldOn.isEmpty()) {
@@ -98,14 +103,23 @@ class SyncTalkHistoryWithSlotUseCase(
     private fun Map<Int, TalkHistoryEntry>.entry(number: Int): TalkHistoryEntry =
         this[number] ?: TalkHistoryEntry(number, emptyList())
 
-    private fun TalkHistoryEntry.without(day: LocalDate) = copy(heldOn = heldOn - day, plannedOn = plannedOn - day)
+    private fun TalkHistoryEntry.without(day: LocalDate) =
+        copy(heldOn = heldOn - day, plannedOn = plannedOn - day, speakers = speakers - day)
 
-    private fun TalkHistoryEntry.with(day: LocalDate) = copy(
-        heldOn = (heldOn + day).distinct().sorted().takeLast(TalkHistoryEntry.MAX_DATES),
-        plannedOn = (plannedOn + day).distinct().sorted().takeLast(TalkHistoryEntry.MAX_DATES),
-    )
+    private fun TalkHistoryEntry.with(day: LocalDate, speaker: String?): TalkHistoryEntry {
+        val days = (heldOn + day).distinct().sorted().takeLast(TalkHistoryEntry.MAX_DATES)
+        val named = if (speaker == null) speakers - day else speakers + (day to speaker)
+        return copy(
+            heldOn = days,
+            plannedOn = (plannedOn + day).distinct().sorted().takeLast(TalkHistoryEntry.MAX_DATES),
+            speakers = named.filterKeys { it in days },
+        )
+    }
+
+    private data class HeldTalk(val number: Int, val day: LocalDate, val speaker: String?)
 
     // Nur ein Termin mit Vortrag, der nicht abgesagt ist, zählt als gehalten.
-    private fun TalkSlot.heldTalk(): Pair<Int, LocalDate>? =
-        talkNumber?.takeUnless { talkCancelled }?.let { it to date }
+    private fun TalkSlot.heldTalk(): HeldTalk? = talkNumber?.takeUnless { talkCancelled }?.let {
+        HeldTalk(it, date, speaker?.displayName ?: externalSpeaker?.displayName)
+    }
 }

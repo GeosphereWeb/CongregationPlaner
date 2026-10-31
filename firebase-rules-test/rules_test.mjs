@@ -14,6 +14,7 @@ function enc(value) {
   if (typeof value === 'boolean') return { booleanValue: value };
   if (typeof value === 'number') return { integerValue: String(value) };
   if (Array.isArray(value)) return { arrayValue: { values: value.map(enc) } };
+  if (typeof value === 'object') return { mapValue: fields(value) };
   return { stringValue: value };
 }
 
@@ -157,7 +158,9 @@ const HIST = `${CONG}/talkHistory`;
 const putHistory = (number, data, token = planner.token) => api('PATCH', `${HIST}/${number}`, fields(data), token);
 await expect('Vortragshistorie anlegen', putHistory('7', { heldOn: ['2026-03-01', '2026-10-25'] }), true);
 await expect('Vortragshistorie mit geplanten Tagen', putHistory('6', { heldOn: ['2026-03-01'], plannedOn: ['2026-03-01'] }), true);
-await expect('Vortragshistorie mit ungültigen geplanten Tagen', putHistory('6', { heldOn: ['2026-03-01'], plannedOn: 'x' }), false);
+await expect('Vortragshistorie mit Rednern', putHistory('6', { heldOn: ['2026-03-01'], speakers: { '2026-03-01': 'Muster, Max' } }), true);
+await expect('Vortragshistorie mit ungültigen Rednern', putHistory('6', { heldOn: ['2026-03-01'], speakers: 'x' }), false);
+await expect('Vortragshistorie mit ungültigen geplanten Tagen',putHistory('6', { heldOn: ['2026-03-01'], plannedOn: 'x' }), false);
 await expect('Vortragshistorie mit ungültiger Nummer', putHistory('abc', { heldOn: ['2026-03-01'] }), false);
 await expect('Vortragshistorie ohne Tage', putHistory('8', { heldOn: [] }), false);
 await expect('Vortragshistorie mit Zusatzfeld', putHistory('8', { heldOn: ['2026-03-01'], x: 'y' }), false);
