@@ -235,10 +235,12 @@ fun App() {
 
         // Erst nach erteilter Freigabe ist die App nutzbar; Rollen steuern die sichtbaren Bereiche.
         val accessState by userAccessViewModel.accessState.collectAsState()
+        val adminContacts by userAccessViewModel.adminContacts.collectAsState()
         val currentUser = (accessState as? UserAccessState.Authorized)?.user
         if (currentUser == null) {
             UserAccessGateScreen(
                 state = accessState,
+                adminContacts = adminContacts,
                 onRefresh = userAccessViewModel::refresh,
                 onChangeCongregation = selectionViewModel::clearSelection,
                 onSignOut = signOut,
