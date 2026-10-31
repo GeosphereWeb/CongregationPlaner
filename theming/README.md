@@ -38,7 +38,10 @@ fun MyScreen() {
 Das Modul hängt ab von:
 - Compose Multiplatform UI
 - Compose Material 3
+- Compose Resources (Schriften)
 - Kotlin Standard Library
+
+Die Schriften Space Grotesk und JetBrains Mono liegen unter `src/commonMain/composeResources/font` (SIL Open Font License, Lizenztexte in `licenses/`).
 
 Das Modul wird von allen App-Modulen benötigt und sollte als gemeinsame Quelle für Theme-Einstellungen verwendet werden.
 
