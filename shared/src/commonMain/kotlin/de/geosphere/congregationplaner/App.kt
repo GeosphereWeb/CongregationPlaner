@@ -3,12 +3,13 @@
 package de.geosphere.congregationplaner
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -44,11 +44,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import congregationplaner.shared.generated.resources.Res
 import congregationplaner.shared.generated.resources.dummy
 import de.geosphere.congregationplaner.auth.FirebaseAuthManager
@@ -63,8 +67,18 @@ import de.geosphere.congregationplaner.talk.presentation.TalkHistoryRoute
 import de.geosphere.congregationplaner.talk.presentation.TalkReferenceRoute
 import de.geosphere.congregationplaner.talk.presentation.TalkScheduleRoute
 import de.geosphere.congregationplaner.theming.AppTheme
+import de.geosphere.congregationplaner.theming.NightColors
+import de.geosphere.congregationplaner.theming.NightPhonePreview
+import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.theming.brushes.backgroundBrush
 import de.geosphere.congregationplaner.theming.customColors
+import de.geosphere.congregationplaner.theming.nightTextStyle
+import de.geosphere.congregationplaner.ui.button.PrimaryButton
+import de.geosphere.congregationplaner.ui.button.SecondaryButton
+import de.geosphere.congregationplaner.ui.field.FieldBox
+import de.geosphere.congregationplaner.ui.field.PasswordVisibilityButton
+import de.geosphere.congregationplaner.ui.header.NightPanel
+import de.geosphere.congregationplaner.ui.header.TeleprompterHeader
 import de.geosphere.congregationplaner.user.di.UserAccessGraph
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.UserAccessState
@@ -141,6 +155,8 @@ fun App() {
                 infoMessage = infoMessage,
                 canSignIn = selectedCongregation != null,
                 showCredentials = selectedCongregation != null && !selectionState.isPicking,
+                congregationName = selectionState.selected?.displayName,
+                previousSteps = selectedCongregation?.let { listOf("Kreis ${it.circuitId}") }.orEmpty(),
                 congregationSelector = { CongregationSelector(selectionViewModel, selectionState) },
                 onEmailChange = { email = it },
                 onPasswordChange = { password = it },
@@ -264,6 +280,10 @@ fun App() {
     }
 }
 
+/**
+ * Zweistufige Anmeldung im Nachtblau-Design: erst die Versammlung (über [congregationSelector]),
+ * danach Zugangsdaten. [congregationName] und [previousSteps] füllen den Kopfbereich in Schritt 2.
+ */
 @Suppress("LongMethod", "LongParameterList", "MagicNumber")
 @Composable
 fun LoginScreen(
@@ -280,31 +300,23 @@ fun LoginScreen(
     onGoogleClick: () -> Unit,
     canSignIn: Boolean = true,
     showCredentials: Boolean = true,
+    congregationName: String? = null,
+    previousSteps: List<String> = emptyList(),
     congregationSelector: @Composable () -> Unit = {},
 ) {
-    Column(
-        modifier = Modifier.fillMaxSize().background(
-            brush = Brush.linearGradient(listOf(Color(0xFF0B1220), Color(0xFF1E3A5F))),
-        ).verticalScroll(rememberScrollState()).imePadding(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+    Box(
+        modifier = Modifier.fillMaxSize().background(NightColors.Background),
+        contentAlignment = Alignment.TopCenter,
     ) {
-        Card(
-            modifier = Modifier.widthIn(min = 300.dp, max = 500.dp).padding(24.dp),
-            shape = RoundedCornerShape(24.dp),
-        ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                Text(
-                    text = "Congregation Planer",
-                    style = MaterialTheme.typography.headlineMedium,
-                )
-                Text(text = firebaseStatus)
-
-                congregationSelector()
+        Column(modifier = Modifier.widthIn(max = 480.dp).fillMaxHeight().imePadding()) {
+            TeleprompterHeader(
+                stepLabel = if (showCredentials) "SCHRITT 2 / 2" else "SCHRITT 1 / 2",
+                current = if (showCredentials) congregationName ?: "Anmelden" else "Welche Versammlung?",
+                previous = if (showCredentials) previousSteps else emptyList(),
+            )
+            NightPanel(modifier = Modifier.weight(1f)) {
                 if (showCredentials) {
+                    congregationSelector()
                     CredentialsForm(
                         email = email,
                         password = password,
@@ -318,9 +330,34 @@ fun LoginScreen(
                         onLoginClick = onLoginClick,
                         onGoogleClick = onGoogleClick,
                     )
+                } else {
+                    PanelTitle("Versammlung wählen", "Wähle deine Versammlung, bevor du dich anmeldest.")
+                    Spacer(Modifier.height(14.dp))
+                    congregationSelector()
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        text = "Anmeldung folgt, sobald die Versammlung feststeht.",
+                        modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                        textAlign = TextAlign.Center,
+                        style = nightTextStyle(13.sp, color = NightColors.OnBackgroundMuted),
+                    )
                 }
+                Text(
+                    text = firebaseStatus,
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                    textAlign = TextAlign.Center,
+                    style = nightTextStyle(11.sp, color = NightColors.OnBackgroundMuted, monospace = true),
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun PanelTitle(title: String, subtitle: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(title, style = nightTextStyle(28.sp, FontWeight.Bold, letterSpacing = (-0.56).sp))
+        Text(subtitle, style = nightTextStyle(15.sp, color = NightColors.OnBackgroundMuted))
     }
 }
 
@@ -340,85 +377,78 @@ private fun ColumnScope.CredentialsForm(
     onLoginClick: () -> Unit,
     onGoogleClick: () -> Unit,
 ) {
-    val title = if (authMode == AuthMode.LOGIN) "Anmeldung" else "Konto erstellen"
-    Text(title)
-
-    Text("E-Mail")
-    BasicTextField(
-        value = email,
-        onValueChange = onEmailChange,
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(
-            capitalization = KeyboardCapitalization.None,
-            autoCorrectEnabled = false,
-            keyboardType = KeyboardType.Email,
-        ),
-        modifier = Modifier.fillMaxWidth().height(48.dp).border(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outline,
-            shape = RoundedCornerShape(12.dp),
-        ).padding(horizontal = 12.dp, vertical = 10.dp),
-    )
-
-    Text("Passwort")
-    BasicTextField(
-        value = password,
-        onValueChange = onPasswordChange,
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(
-            capitalization = KeyboardCapitalization.None,
-            autoCorrectEnabled = false,
-            keyboardType = KeyboardType.Password,
-        ),
-        modifier = Modifier.fillMaxWidth().height(48.dp).border(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outline,
-            shape = RoundedCornerShape(12.dp),
-        ).padding(horizontal = 12.dp, vertical = 10.dp),
-        visualTransformation = PasswordVisualTransformation(),
-    )
-
-    if (loginError != null) {
-        Text(
-            text = loginError,
-            color = MaterialTheme.colorScheme.error,
+    val isLogin = authMode == AuthMode.LOGIN
+    var passwordVisible by remember { mutableStateOf(false) }
+    Column(modifier = Modifier.padding(top = 18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        PanelTitle(
+            title = if (isLogin) "Anmelden" else "Konto erstellen",
+            subtitle = if (isLogin) "Weiter zu deiner Versammlung." else "Lege dein Konto für diese Versammlung an.",
+        )
+        FieldBox(
+            label = "E-Mail",
+            value = email,
+            onValueChange = onEmailChange,
+            placeholder = "name@beispiel.de",
+            isError = loginError != null,
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.None,
+                autoCorrectEnabled = false,
+                keyboardType = KeyboardType.Email,
+            ),
+        )
+        FieldBox(
+            label = "Passwort",
+            value = password,
+            onValueChange = onPasswordChange,
+            isError = loginError != null,
+            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            trailing = { PasswordVisibilityButton(passwordVisible, onToggle = { passwordVisible = !passwordVisible }) },
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.None,
+                autoCorrectEnabled = false,
+                keyboardType = KeyboardType.Password,
+            ),
+        )
+        if (loginError != null) {
+            Text(loginError, style = nightTextStyle(14.sp, color = NightColors.Coral))
+        }
+        if (infoMessage != null) {
+            Text(infoMessage, style = nightTextStyle(14.sp, color = NightColors.Sky))
+        }
+        PrimaryButton(
+            text = if (isLogin) "Anmelden" else "Konto erstellen",
+            onClick = onLoginClick,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = canSignIn,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            HorizontalDivider(modifier = Modifier.weight(1f), color = NightColors.Border)
+            Text("oder", style = nightTextStyle(13.sp, FontWeight.Medium, NightColors.OnBackgroundMuted))
+            HorizontalDivider(modifier = Modifier.weight(1f), color = NightColors.Border)
+        }
+        SecondaryButton(
+            text = "Mit Google fortfahren",
+            onClick = onGoogleClick,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = canSignIn,
+            height = 56.dp,
         )
     }
-
-    if (infoMessage != null) {
+    Spacer(Modifier.weight(1f))
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Text(
-            text = infoMessage,
-            color = MaterialTheme.colorScheme.primary,
+            text = if (isLogin) "Noch kein Konto?" else "Bereits registriert?",
+            style = nightTextStyle(14.sp, color = NightColors.OnBackgroundMuted),
         )
-    }
-
-    Button(
-        onClick = onLoginClick,
-        enabled = canSignIn,
-        modifier = Modifier.fillMaxWidth().height(48.dp),
-    ) {
-        Text(if (authMode == AuthMode.LOGIN) "Anmelden" else "Konto erstellen")
-    }
-
-    Text(
-        text = "oder",
-        modifier = Modifier.align(Alignment.CenterHorizontally),
-    )
-
-    Button(
-        onClick = onGoogleClick,
-        enabled = canSignIn,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Text("Mit Google fortfahren")
-    }
-
-    Button(
-        onClick = onToggleMode,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Text(
-            if (authMode == AuthMode.LOGIN) "Neues Konto erstellen" else "Bereits registriert? Anmelden",
+        SecondaryButton(
+            text = if (isLogin) "Neues Konto erstellen" else "Anmelden",
+            onClick = onToggleMode,
+            outlined = false,
+            contentColor = NightColors.OnBackground,
         )
     }
 }
@@ -603,25 +633,36 @@ fun MobileLayout(
     }
 }
 
-@Preview(name = "Congregation Planer Login")
 @Composable
-fun AppPreview() {
-    AppTheme {
-        LoginScreen(
-            email = "demo@congregationplaner.de",
-            password = "Passwort123",
-            firebaseStatus = "Firebase verfügbar",
-            authMode = AuthMode.LOGIN,
-            loginError = null,
-            infoMessage = null,
-            onEmailChange = {},
-            onPasswordChange = {},
-            onToggleMode = {},
-            onLoginClick = {},
-            onGoogleClick = { },
-        )
-    }
+private fun LoginPreviewContent(authMode: AuthMode, loginError: String? = null) = NightPhonePreview {
+    LoginScreen(
+        email = "name@beispiel.de",
+        password = "geheimeswort",
+        firebaseStatus = "Firebase verfügbar",
+        authMode = authMode,
+        loginError = loginError,
+        infoMessage = null,
+        onEmailChange = {},
+        onPasswordChange = {},
+        onToggleMode = {},
+        onLoginClick = {},
+        onGoogleClick = {},
+        congregationName = "Berlin-Mitte",
+        previousSteps = listOf("Kreis 609a"),
+    )
 }
+
+@ThemePreviews
+@Composable
+private fun LoginPreview() = LoginPreviewContent(AuthMode.LOGIN)
+
+@ThemePreviews
+@Composable
+private fun LoginRegisterPreview() = LoginPreviewContent(AuthMode.REGISTER)
+
+@ThemePreviews
+@Composable
+private fun LoginErrorPreview() = LoginPreviewContent(AuthMode.LOGIN, loginError = "E-Mail oder Passwort ist falsch.")
 
 @Preview(name = "Mobile Layout", widthDp = 400, heightDp = 850)
 @Composable
