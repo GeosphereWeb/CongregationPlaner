@@ -3,15 +3,19 @@ package de.geosphere.congregationplaner.congregation.data
 import com.google.gson.JsonObject
 import de.geosphere.congregationplaner.auth.FirebaseAuthManager
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
+import de.geosphere.congregationplaner.congregation.domain.model.decodeYearlyMeetingTimes
+import de.geosphere.congregationplaner.congregation.domain.model.encodeYearlyMeetingTimes
 import de.geosphere.congregationplaner.congregation.domain.repository.CongregationMetadataRepository
 import de.geosphere.congregationplaner.firestore.FirestoreRestClient
 import de.geosphere.congregationplaner.firestore.FirestoreRestDocument
 import de.geosphere.congregationplaner.firestore.firestoreFields
 import de.geosphere.congregationplaner.firestore.firestoreString
+import de.geosphere.congregationplaner.firestore.firestoreStringArray
 import de.geosphere.congregationplaner.firestore.parseDocument
 import de.geosphere.congregationplaner.firestore.parseDocuments
 import de.geosphere.congregationplaner.firestore.pollingFlow
 import de.geosphere.congregationplaner.firestore.runCatchingIo
+import de.geosphere.congregationplaner.firestore.stringArrayField
 import de.geosphere.congregationplaner.firestore.stringField
 import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.LocalTime
@@ -56,6 +60,7 @@ internal class FirestoreRestCongregationMetadataRepository(
         midweekMeetingWeekday = fields.intField("midweek_meeting_weekday"),
         weekendMeetingTime = fields.timeField("weekend_meeting_time"),
         weekendMeetingWeekday = fields.intField("weekend_meeting_weekday"),
+        yearlyMeetingTimes = fields.stringArrayField("yearly_meeting_times").decodeYearlyMeetingTimes(),
     )
 
     private fun CongregationMetadata.toFirestoreJson(): String = firestoreFields(
@@ -65,6 +70,7 @@ internal class FirestoreRestCongregationMetadataRepository(
             add("midweek_meeting_weekday", firestoreInteger(midweekMeetingWeekday))
             add("weekend_meeting_time", firestoreString(weekendMeetingTime.toString()))
             add("weekend_meeting_weekday", firestoreInteger(weekendMeetingWeekday))
+            add("yearly_meeting_times", firestoreStringArray(yearlyMeetingTimes.encodeYearlyMeetingTimes()))
         },
     )
 
@@ -102,6 +108,7 @@ internal class FirestoreRestCongregationMetadataRepository(
             "midweek_meeting_weekday",
             "weekend_meeting_time",
             "weekend_meeting_weekday",
+            "yearly_meeting_times",
         )
     }
 }

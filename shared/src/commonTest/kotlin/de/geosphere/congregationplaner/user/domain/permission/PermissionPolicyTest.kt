@@ -1,6 +1,7 @@
 package de.geosphere.congregationplaner.user.domain.permission
 
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
+import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.UserPermission
 import de.geosphere.congregationplaner.user.domain.model.UserRole
@@ -37,6 +38,18 @@ class PermissionPolicyTest {
     }
 
     @Test
+    fun `congregation admin may edit only the own congregation`() {
+        val own = CongregationRef("r", "s", "b", "c", "609a")
+        val admin = AppUser(uid = "1", approved = true, role = UserRole.CONGREGATION_ADMIN, congregation = own)
+
+        assertTrue(congregationPolicy.canEdit(admin, congregation))
+        assertFalse(congregationPolicy.canEdit(admin, congregation.copy(id = "other")))
+        assertFalse(congregationPolicy.canEdit(admin.copy(approved = false), congregation))
+        assertFalse(congregationPolicy.canEdit(admin.copy(role = UserRole.MEMBER), congregation))
+        assertFalse(congregationPolicy.canDelete(admin, congregation))
+    }
+
+    @Test
     fun `unapproved congregation admin and other roles may not manage users`() {
         val users = listOf(AppUser(uid = "1", approved = false, role = UserRole.CONGREGATION_ADMIN)) +
             listOf(UserRole.MEMBER, UserRole.NONE).map { role -> AppUser(uid = "2", approved = true, role = role) }
@@ -67,6 +80,17 @@ class PermissionPolicyTest {
         assertTrue(userPolicy.canEditMember(admin, member))
         assertFalse(userPolicy.canEditMember(admin, admin))
         assertFalse(userPolicy.canEditMember(member, admin))
+    }
+
+    @Test
+    fun `admins may change permissions of members and their own`() {
+        val admin = AppUser(uid = "1", approved = true, role = UserRole.CONGREGATION_ADMIN)
+        val member = AppUser(uid = "2", approved = true)
+
+        assertTrue(userPolicy.canEditPermissions(admin, member))
+        assertTrue(userPolicy.canEditPermissions(admin, admin))
+        assertFalse(userPolicy.canEditPermissions(member, admin))
+        assertFalse(userPolicy.canEditPermissions(member, member))
     }
 
     @Test

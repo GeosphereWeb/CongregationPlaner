@@ -45,6 +45,7 @@ val sonarExclusions = listOf(
     // Reine Compose-Oberfläche ohne Unit-Tests: Lambdas in @Composable-Funktionen zählt Kover trotz Annotation mit
     "**/*Content.kt",
     "**/ListDetailNavigation.kt",
+    "**/YearlyMeetingTimesEditor.kt",
     // Exclude theming and ui modules from coverage
     "theming/**",
     "ui/**"

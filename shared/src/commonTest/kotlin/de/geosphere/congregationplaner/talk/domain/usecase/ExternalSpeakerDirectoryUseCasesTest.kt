@@ -8,6 +8,7 @@ import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.talk.testing.FakeExternalSpeakerDirectoryRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.UserPermission
 import de.geosphere.congregationplaner.user.domain.model.UserRole
 import de.geosphere.congregationplaner.user.testing.testCongregation
 import kotlinx.coroutines.flow.first
@@ -35,6 +36,7 @@ class ExternalSpeakerDirectoryUseCasesTest {
         uid = "1",
         approved = true,
         role = UserRole.CONGREGATION_ADMIN,
+        permissions = setOf(UserPermission.PLAN_TALKS),
         congregation = testCongregation,
     )
     private val member = AppUser(uid = "2", approved = true, congregation = testCongregation)

@@ -112,6 +112,9 @@ class UserManagementViewModel(
 
     fun canEdit(member: AppUser): Boolean = currentUser?.let { permissionPolicy.canEditMember(it, member) } ?: false
 
+    fun canEditPermissions(member: AppUser): Boolean =
+        currentUser?.let { permissionPolicy.canEditPermissions(it, member) } ?: false
+
     fun canEditProfile(member: AppUser): Boolean =
         currentUser?.let { permissionPolicy.canEditProfile(it, member) } ?: false
 
@@ -205,7 +208,7 @@ class UserManagementViewModel(
         } else {
             member.permissions + permission
         }
-        save(member.copy(permissions = permissions))
+        save(member.copy(permissions = permissions), permissionPolicy::canEditPermissions)
     }
 
     fun removeMember(member: AppUser) {
@@ -229,8 +232,8 @@ class UserManagementViewModel(
         mutableUiState.update { it.copy(errorMessage = null) }
     }
 
-    private fun save(member: AppUser) {
-        val congregation = checkedCongregation(member) ?: return
+    private fun save(member: AppUser, mayEdit: (AppUser, AppUser) -> Boolean = permissionPolicy::canEditMember) {
+        val congregation = checkedCongregation(member, mayEdit) ?: return
         markBusy(member.uid)
         viewModelScope.launch {
             updateMember(congregation, member)
@@ -246,9 +249,12 @@ class UserManagementViewModel(
     }
 
     /** Liefert die Versammlung, sofern der angemeldete Nutzer [member] ändern darf und für ihn nichts anderes läuft. */
-    private fun checkedCongregation(member: AppUser): CongregationRef? {
+    private fun checkedCongregation(
+        member: AppUser,
+        mayEdit: (AppUser, AppUser) -> Boolean = permissionPolicy::canEditMember,
+    ): CongregationRef? {
         if (member.uid in mutableUiState.value.busyMemberIds) return null
-        val congregation = currentUser?.takeIf { permissionPolicy.canEditMember(it, member) }?.congregation
+        val congregation = currentUser?.takeIf { mayEdit(it, member) }?.congregation
         if (congregation == null) mutableUiState.update { it.copy(errorMessage = MISSING_PERMISSION_MESSAGE) }
         return congregation
     }
