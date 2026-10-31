@@ -141,6 +141,18 @@ class UserManagementViewModelTest {
     }
 
     @Test
+    fun `admin may change the own permissions`() {
+        viewModel.onCurrentUserChanged(admin)
+
+        viewModel.togglePermission(admin, UserPermission.PLAN_TALKS)
+
+        val expected = admin.copy(permissions = admin.permissions + UserPermission.PLAN_TALKS)
+        assertEquals(listOf(expected), repository.updatedMembers)
+        assertTrue(viewModel.canEditPermissions(admin))
+        assertFalse(viewModel.canEdit(admin))
+    }
+
+    @Test
     fun `removing a member drops it from the list`() {
         viewModel.onCurrentUserChanged(admin)
 

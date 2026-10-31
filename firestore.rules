@@ -42,8 +42,8 @@ rules_version = '2';
 // Collection: region/.../congregation/{congId}/talkSchedule
 // Document ID: the date as yyyy-MM-dd (one day of the weekend meeting; the weekday
 //   is deliberately not checked because the meeting day can move at short notice).
-// Readable and writable only by planners of this congregation (global admin, approved
-//   congregation admin, or approved member with permission 'PLAN_TALKS').
+// Readable and writable only by planners of this congregation (global admin, or approved
+//   member with permission 'PLAN_TALKS'; the congregation admin role alone is not enough).
 // Fields:
 //   - time: string (required, 'HH:mm')
 //   - talkCancelled: bool (required)
@@ -125,11 +125,11 @@ service cloud.firestore {
           'VIEW_MEMBERS' in get(memberPath).data.permissions);
     }
 
-    // Planners of exactly this congregation: global admin, congregation admin or member with PLAN_TALKS.
+    // Planners of exactly this congregation: global admin or approved member with PLAN_TALKS. The role
+    // CONGREGATION_ADMIN alone does not grant it; an admin who plans needs the permission too.
     function canPlanTalks(regionId, subregionId, branchId, circuitId, congId) {
       let memberPath = /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/circuit/$(circuitId)/congregation/$(congId)/members/$(request.auth.uid);
       return isGlobalAdmin() ||
-        isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) ||
         (isAuthenticated() &&
           exists(memberPath) &&
           get(memberPath).data.approved == true &&
@@ -404,7 +404,14 @@ service cloud.firestore {
 
             match /congregation/{congId} {
               allow read: if true;
-              allow write: if isGlobalAdmin();
+              allow create, delete: if isGlobalAdmin();
+              // The congregation admin may change the meeting data of exactly this congregation.
+              allow update: if isGlobalAdmin() || (
+                isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) &&
+                request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                  'name', 'midweek_meeting_time', 'midweek_meeting_weekday',
+                  'weekend_meeting_time', 'weekend_meeting_weekday', 'yearly_meeting_times'])
+              );
 
               // ---------------------------------------------------------
               // Members of a congregation
@@ -420,11 +427,11 @@ service cloud.firestore {
                 allow create: if isValidSelfRegistration(uid) ||
                   isValidMemberWithoutAccount(regionId, subregionId, branchId, circuitId, congId);
 
-                // Admins maintain profiles, including their own, but cannot change their own
-                // access, so nobody locks themselves out.
+                // Admins maintain profiles and permissions, including their own, but cannot change their
+                // own approval or role, so nobody locks themselves out.
                 allow update: if isAuthenticated() &&
                   (isGlobalAdmin() || isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId)) &&
-                  (onlyFieldsChanged(profileFields()) ||
+                  (onlyFieldsChanged(profileFields().concat(['permissions'])) ||
                     (request.auth.uid != uid && onlyFieldsChanged(accessFields().concat(profileFields())))) &&
                   isValidMember(request.resource.data);
 

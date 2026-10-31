@@ -15,6 +15,7 @@ import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
+import de.geosphere.congregationplaner.user.domain.model.UserPermission
 import de.geosphere.congregationplaner.user.domain.model.UserRole
 import de.geosphere.congregationplaner.user.domain.usecase.ObserveMembersUseCase
 import de.geosphere.congregationplaner.user.testing.FakeUserRepository
@@ -40,6 +41,7 @@ class TalkScheduleUseCasesTest {
         uid = "1",
         approved = true,
         role = UserRole.CONGREGATION_ADMIN,
+        permissions = setOf(UserPermission.PLAN_TALKS),
         congregation = testCongregation,
     )
     private val member = AppUser(uid = "2", approved = true, congregation = testCongregation)
