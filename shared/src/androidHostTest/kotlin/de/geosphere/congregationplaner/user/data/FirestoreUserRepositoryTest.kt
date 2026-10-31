@@ -325,11 +325,11 @@ class FirestoreUserRepositoryTest {
     }
 
     @Test
-    fun `android factory creates firestore repository`() {
+    fun `android factory creates firestore repository with admin contacts`() {
         mockkStatic(FirebaseFirestore::class)
         try {
             every { FirebaseFirestore.getInstance() } returns mockk(relaxed = true)
-            assertIs<FirestoreUserRepository>(createUserRepository())
+            assertIs<AdminContactSyncingUserRepository>(createUserRepository())
         } finally {
             unmockkStatic(FirebaseFirestore::class)
         }

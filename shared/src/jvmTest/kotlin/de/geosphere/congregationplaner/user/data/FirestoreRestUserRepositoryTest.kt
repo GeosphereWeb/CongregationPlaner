@@ -286,8 +286,8 @@ class FirestoreRestUserRepositoryTest {
     }
 
     @Test
-    fun `desktop factory creates rest repository`() {
-        assertIs<FirestoreRestUserRepository>(createUserRepository())
+    fun `desktop factory creates rest repository with admin contacts`() {
+        assertIs<AdminContactSyncingUserRepository>(createUserRepository())
     }
 
     private fun runWithServer(
