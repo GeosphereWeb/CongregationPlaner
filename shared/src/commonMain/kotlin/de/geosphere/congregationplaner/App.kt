@@ -651,6 +651,10 @@ private fun LoginPreviewContent(
     )
 }
 
+@Preview(name = "Congregation Planer Login")
+@Composable
+fun AppPreview() = LoginPreviewContent(selectedState)
+
 /** Schritt 1: Auswahl läuft. */
 @ThemePreviews
 @Composable

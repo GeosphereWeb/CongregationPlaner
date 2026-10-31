@@ -202,8 +202,6 @@ internal fun CongregationSelector(
     )
 }
 
-private val previewRef = CongregationRef("EMEA", "europe", "central-europe", "609a", "berlin-mitte")
-
 @Composable
 private fun SelectorPreview(state: CongregationSelectionUiState) = NightPhonePreview {
     Box(Modifier.padding(24.dp).size(342.dp, 520.dp)) {
@@ -237,5 +235,10 @@ private fun CongregationSelectorPickingPreview() = SelectorPreview(
 @ThemePreviews
 @Composable
 private fun CongregationSelectorSelectedPreview() = SelectorPreview(
-    CongregationSelectionUiState(selected = SelectedCongregation(previewRef, "Berlin-Mitte")),
+    CongregationSelectionUiState(
+        selected = SelectedCongregation(
+            CongregationRef("EMEA", "europe", "central-europe", "609a", "berlin-mitte"),
+            "Berlin-Mitte",
+        ),
+    ),
 )
