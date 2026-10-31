@@ -174,12 +174,14 @@ service cloud.firestore {
         data.talkNumbers is list && data.talkNumbers.size() <= 200;
     }
 
-    // Talk history: one document per talk number holding the days the talk was given (plannedOn: from the planning).
+    // Talk history: one document per talk number holding the days the talk was given (plannedOn: from the planning,
+    // speakers: speaker name per day).
     function isValidTalkHistory(talkNumber, data) {
       return talkNumber.matches('[1-9][0-9]{0,3}') &&
-        data.keys().hasOnly(['heldOn', 'plannedOn']) && data.keys().hasAll(['heldOn']) &&
+        data.keys().hasOnly(['heldOn', 'plannedOn', 'speakers']) && data.keys().hasAll(['heldOn']) &&
         data.heldOn is list && data.heldOn.size() >= 1 && data.heldOn.size() <= 100 &&
-        (!('plannedOn' in data) || (data.plannedOn is list && data.plannedOn.size() <= 100));
+        (!('plannedOn' in data) || (data.plannedOn is list && data.plannedOn.size() <= 100)) &&
+        (!('speakers' in data) || (data.speakers is map && data.speakers.size() <= 100));
     }
 
     // A text that is either absent (null) or a string with minLen..maxLen characters.
