@@ -22,10 +22,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.geosphere.congregationplaner.theming.NightColors
@@ -88,12 +85,6 @@ internal fun UserAccessGateScreen(
             onSignOut = onSignOut,
         )
     }
-}
-
-private fun approvalMessage(email: String) = buildAnnotatedString {
-    append("Dein Konto ")
-    withStyle(SpanStyle(color = NightColors.OnBackground, fontWeight = FontWeight.Medium)) { append(email) }
-    append(" wurde angelegt, ist aber noch nicht freigegeben. Bitte wende dich an den Admin deiner Versammlung.")
 }
 
 @Composable
