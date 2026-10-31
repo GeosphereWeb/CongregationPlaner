@@ -16,12 +16,17 @@ import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.UserPermission
 import de.geosphere.congregationplaner.user.domain.model.UserRole
+import de.geosphere.congregationplaner.user.domain.repository.AdminContactRepository
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 
 actual fun createUserRepository(): UserRepository = FirestoreUserRepository(AndroidFirestoreProvider.firestore)
+    .withAdminContacts(FirestoreAdminContactRepository(AndroidFirestoreProvider.firestore))
+
+actual fun createAdminContactRepository(): AdminContactRepository =
+    FirestoreAdminContactRepository(AndroidFirestoreProvider.firestore)
 
 internal class FirestoreUserRepository(private val firestore: FirebaseFirestore) : UserRepository {
     override suspend fun getOrCreateUser(authUser: FirebaseUser, congregation: CongregationRef): Result<AppUser> =

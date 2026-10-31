@@ -2,15 +2,19 @@ package de.geosphere.congregationplaner.user.data
 
 import de.geosphere.congregationplaner.auth.FirebaseUser
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
+import de.geosphere.congregationplaner.user.domain.model.AdminContact
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.UserPermission
 import de.geosphere.congregationplaner.user.domain.model.UserRole
+import de.geosphere.congregationplaner.user.domain.repository.AdminContactRepository
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
 expect fun createUserRepository(): UserRepository
+
+expect fun createAdminContactRepository(): AdminContactRepository
 
 /** Globale Administratoren; das Dokument `admins/{uid}` wird manuell (z. B. in der Firebase-Konsole) angelegt. */
 internal const val ADMINS_COLLECTION_PATH = "admins"
@@ -68,4 +72,16 @@ fun unavailableUserRepository(platform: String): UserRepository = object : UserR
         unavailable()
 
     override suspend fun removeMember(congregation: CongregationRef, uid: String): Result<Unit> = unavailable()
+}
+
+fun unavailableAdminContactRepository(platform: String): AdminContactRepository = object : AdminContactRepository {
+    private fun <T> unavailable(): Result<T> =
+        Result.failure(UnsupportedOperationException("Firestore is not configured for $platform."))
+
+    override suspend fun getAdminContacts(congregation: CongregationRef): Result<List<AdminContact>> = unavailable()
+
+    override suspend fun putAdminContact(congregation: CongregationRef, contact: AdminContact): Result<Unit> =
+        unavailable()
+
+    override suspend fun deleteAdminContact(congregation: CongregationRef, uid: String): Result<Unit> = unavailable()
 }
