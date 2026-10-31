@@ -35,6 +35,7 @@ fun nightTextStyle(
     color: Color = NightColors.OnBackground,
     monospace: Boolean = false,
     letterSpacing: TextUnit = TextUnit.Unspecified,
+    lineHeight: TextUnit = TextUnit.Unspecified,
 ): TextStyle = TextStyle(
     fontFamily = if (monospace) jetBrainsMonoFamily() else spaceGroteskFamily(),
     fontSize = size,
@@ -42,4 +43,5 @@ fun nightTextStyle(
     fontWeight = if (monospace) FontWeight.Medium else weight,
     color = color,
     letterSpacing = letterSpacing,
+    lineHeight = lineHeight,
 )
