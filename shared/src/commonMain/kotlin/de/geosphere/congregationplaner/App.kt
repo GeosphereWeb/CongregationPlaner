@@ -54,7 +54,13 @@ import de.geosphere.congregationplaner.circuit.presentation.CircuitRoute
 import de.geosphere.congregationplaner.congregation.presentation.CongregationMetadataRoute
 import de.geosphere.congregationplaner.organization.InviteLinkInbox
 import de.geosphere.congregationplaner.organization.di.OrganizationGraph
+import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
+import de.geosphere.congregationplaner.organization.domain.model.OrgLevel
+import de.geosphere.congregationplaner.organization.domain.model.OrgUnit
+import de.geosphere.congregationplaner.organization.domain.model.SelectedCongregation
+import de.geosphere.congregationplaner.organization.presentation.CongregationSelectionUiState
 import de.geosphere.congregationplaner.organization.presentation.CongregationSelector
+import de.geosphere.congregationplaner.organization.presentation.OrgLevelSelection
 import de.geosphere.congregationplaner.talk.presentation.ExternalDirectoryRoute
 import de.geosphere.congregationplaner.talk.presentation.TalkHistoryRoute
 import de.geosphere.congregationplaner.talk.presentation.TalkReferenceRoute
@@ -595,8 +601,26 @@ fun MobileLayout(
     }
 }
 
+private val previewRef = CongregationRef("EMEA", "europe", "central-europe", "609a", "berlin-mitte")
+
+private val pickingState = CongregationSelectionUiState(
+    levels = listOf(
+        OrgLevelSelection(OrgLevel.REGION, listOf(OrgUnit("EMEA")), selectedId = "EMEA"),
+        OrgLevelSelection(OrgLevel.SUBREGION, listOf(OrgUnit("europe", "Europa")), selectedId = "europe"),
+        OrgLevelSelection(OrgLevel.BRANCH, isLoading = true),
+    ),
+)
+
+private val selectedState = CongregationSelectionUiState(
+    selected = SelectedCongregation(previewRef, "Berlin-Mitte"),
+)
+
 @Composable
-private fun LoginPreviewContent(authMode: AuthMode, loginError: String? = null) = NightPhonePreview {
+private fun LoginPreviewContent(
+    selection: CongregationSelectionUiState,
+    authMode: AuthMode = AuthMode.LOGIN,
+    loginError: String? = null,
+) = NightPhonePreview {
     LoginScreen(
         email = "name@beispiel.de",
         password = "geheimeswort",
@@ -609,22 +633,41 @@ private fun LoginPreviewContent(authMode: AuthMode, loginError: String? = null) 
         onToggleMode = {},
         onLoginClick = {},
         onGoogleClick = {},
-        congregationName = "Berlin-Mitte",
+        showCredentials = selection.selected != null,
+        congregationName = selection.selected?.displayName,
         previousSteps = listOf("Kreis 609a"),
+        congregationSelector = {
+            CongregationSelector(
+                state = selection,
+                onStartPicking = {},
+                onCancelPicking = {},
+                onSelectUnit = { _, _ -> },
+                onInviteLinkChange = {},
+                onApplyInviteLink = {},
+                onPasteInviteLink = {},
+                onRetry = {},
+            )
+        },
     )
 }
 
+/** Schritt 1: Auswahl läuft. */
 @ThemePreviews
 @Composable
-private fun LoginPreview() = LoginPreviewContent(AuthMode.LOGIN)
+private fun LoginSelectionPreview() = LoginPreviewContent(pickingState)
+
+/** Schritt 2: Versammlung gewählt, Anmeldung. */
+@ThemePreviews
+@Composable
+private fun LoginCongregationSelectedPreview() = LoginPreviewContent(selectedState)
 
 @ThemePreviews
 @Composable
-private fun LoginRegisterPreview() = LoginPreviewContent(AuthMode.REGISTER)
+private fun LoginRegisterPreview() = LoginPreviewContent(selectedState, AuthMode.REGISTER)
 
 @ThemePreviews
 @Composable
-private fun LoginErrorPreview() = LoginPreviewContent(AuthMode.LOGIN, loginError = "E-Mail oder Passwort ist falsch.")
+private fun LoginErrorPreview() = LoginPreviewContent(selectedState, loginError = "E-Mail oder Passwort ist falsch.")
 
 @Preview(name = "Mobile Layout", widthDp = 400, heightDp = 850)
 @Composable
