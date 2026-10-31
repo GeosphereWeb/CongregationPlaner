@@ -26,6 +26,7 @@ Der Test läuft auf eigenen Ports (Firestore 18080, Auth 19099, Hub 14400, Loggi
 - **Verzeichnis externer Redner** (`externalCircuits`, `externalCongregations`, `visitingSpeakers`): Anlegen und Lesen durch Planer, Formfehler (leere Namen, fehlende Verweise, Vortragsliste, Telefon zu lang, Zusatzfeld), Nutzer ohne `PLAN_TALKS`, die alte Liste `externalSpeakers` ist nicht mehr beschreibbar.
 - **Vortragshistorie** (`talkHistory`): Anlegen, Lesen und Löschen durch Planer, ungültige Nummer, leere Tage, geplante Tage (`plannedOn`), Redner (`speakers`), Zusatzfeld, Nutzer ohne `PLAN_TALKS`.
 - **Mitglieder lesen** (`members`): Planer mit und ohne `VIEW_MEMBERS`, das eigene Mitglied, `VIEW_MEMBERS` darf nicht schreiben, globale Admins.
+- **Admin-Kontakte** (`adminContacts`): Vor- und Nachname der Admins sind für jedes Mitglied der Versammlung lesbar, auch ohne Freigabe; Mitglieder-Dokumente bleiben gesperrt. Schreiben nur durch Admins, nur für freigegebene Admins, mit passendem Namen und ohne Zusatzfelder; fremde Versammlungen und Nutzer ohne Mitgliedsdokument sind ausgeschlossen.
 - **Vortragsliste und Wochenereignisse** (`talkCatalog`, `weekEvents`): Lesen für angemeldete Nutzer, Schreiben und Löschen nur für globale Admins, Formvalidierung (Nummer 1 bis 9999 ohne führende Null, Titel und Namen).
 
 Nicht abgedeckt sind bisher die Organisationsstruktur, die Selbstregistrierung und das Verwalten der Mitglieder durch Admins.

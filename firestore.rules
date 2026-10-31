@@ -251,6 +251,31 @@ service cloud.firestore {
           data.get('speakerMemberId', null) != data.get('chairmanMemberId', null));
     }
 
+    // May read the admin contacts of exactly this congregation: global admins and everybody with a member
+    // document there, approved or not, so that a new user can see whom to ask for approval.
+    function canReadAdminContacts(regionId, subregionId, branchId, circuitId, congId) {
+      let memberPath = /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/circuit/$(circuitId)/congregation/$(congId)/members/$(request.auth.uid);
+      return isGlobalAdmin() || (isAuthenticated() && exists(memberPath));
+    }
+
+    // Admin contacts only carry the name; nothing else of the member is exposed.
+    function isValidAdminContact(data) {
+      return data.keys().hasOnly(['firstName', 'lastName']) &&
+        data.keys().hasAll(['firstName', 'lastName']) &&
+        isShortString(data.firstName, 100) &&
+        isShortString(data.lastName, 100);
+    }
+
+    // The contact mirrors an approved congregation admin as the member document will look after this write.
+    function mirrorsAdminMember(regionId, subregionId, branchId, circuitId, congId, uid, data) {
+      let memberPath = /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/circuit/$(circuitId)/congregation/$(congId)/members/$(uid);
+      return existsAfter(memberPath) &&
+        getAfter(memberPath).data.approved == true &&
+        getAfter(memberPath).data.role == 'CONGREGATION_ADMIN' &&
+        getAfter(memberPath).data.get('firstName', '') == data.firstName &&
+        getAfter(memberPath).data.get('lastName', '') == data.lastName;
+    }
+
     function isNullableString(value, maxLen) {
       return value == null || (value is string && value.size() <= maxLen);
     }
@@ -442,6 +467,24 @@ service cloud.firestore {
                   isGlobalAdmin() ||
                   isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId)
                 );
+              }
+
+              // ---------------------------------------------------------
+              // Admin contacts: first and last name of the approved admins of this congregation. Readable
+              // before approval; maintained by admins together with the member document.
+              // ---------------------------------------------------------
+              match /adminContacts/{uid} {
+                allow read: if canReadAdminContacts(regionId, subregionId, branchId, circuitId, congId);
+
+                allow create, update: if (isGlobalAdmin() ||
+                    isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId)) &&
+                  isValidAdminContact(request.resource.data) &&
+                  mirrorsAdminMember(regionId, subregionId, branchId, circuitId, congId, uid, request.resource.data);
+
+                // Admins maintain contacts; everybody may drop their own (e.g. after leaving the congregation).
+                allow delete: if isGlobalAdmin() ||
+                  isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) ||
+                  (isAuthenticated() && request.auth.uid == uid);
               }
 
               // ---------------------------------------------------------
