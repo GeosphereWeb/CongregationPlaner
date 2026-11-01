@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.circuit.domain.model.Circuit
+import de.geosphere.congregationplaner.presentation.components.DetailPlaceholder
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 
@@ -26,13 +27,7 @@ internal fun CircuitDetail(
     onCancel: () -> Unit,
 ) {
     if (editor == null) {
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                "Wähle links einen Kreis aus oder lege einen neuen an.",
-                modifier = Modifier.padding(16.dp),
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        }
+        DetailPlaceholder("Wähle links einen Kreis aus oder lege einen neuen an.")
     } else if (!canEdit) {
         CircuitSummary(editor.circuit)
     } else {
