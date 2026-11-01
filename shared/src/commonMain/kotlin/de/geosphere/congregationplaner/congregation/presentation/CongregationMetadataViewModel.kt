@@ -21,6 +21,7 @@ data class CongregationPermissions(
     val canCreate: Boolean = false,
     val canManage: Boolean = false,
     val canEditSelection: Boolean = false,
+    val canEditMeetingTimes: Boolean = false,
 )
 
 data class CongregationMetadataUiState(
@@ -209,8 +210,17 @@ class CongregationMetadataViewModel(
             canCreate = permissionPolicy.canCreate(user),
             canManage = permissionPolicy.canManageGeneral(user),
             canEditSelection = editor?.let { canModify(user, it) } ?: false,
+            canEditMeetingTimes = editor?.let { canModifyMeetingTimes(user, it) } ?: false,
         )
     }
+
+    // Eine neue Versammlung legt der globale Admin samt Zeiten an; danach ändert nur der Versammlungsadmin die Zeiten.
+    private fun canModifyMeetingTimes(user: AppUser, congregation: CongregationMetadata): Boolean =
+        if (congregation.id.isBlank()) {
+            permissionPolicy.canCreate(user)
+        } else {
+            permissionPolicy.canEditMeetingTimes(user, congregation)
+        }
 
     private fun canModify(user: AppUser, congregation: CongregationMetadata): Boolean = if (congregation.id.isBlank()) {
         permissionPolicy.canCreate(user)

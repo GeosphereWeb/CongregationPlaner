@@ -58,14 +58,15 @@ Numbers are sequential and permanent. Never reuse or renumber an existing ADR, e
 <!-- Add one line per ADR, newest last: - [ADR-0001: Title](0001-title.md) — Status -->
 
 - [ADR-0001: Einladungslinks mit AES-GCM verschlüsseln](0001-encrypt-invite-links-with-aes-gcm.md) — Accepted
-- [ADR-0002: Vortragsplanung – Datenmodell und Berechtigung](0002-talk-schedule-data-model-and-permission.md) — Accepted
+- [ADR-0002: Vortragsplanung – Datenmodell und Berechtigung](0002-talk-schedule-data-model-and-permission.md) — Accepted (teilweise ersetzt durch ADR-0013)
 - [ADR-0003: Globale Vortragsliste mit Titel-Momentaufnahme im Termin](0003-global-talk-catalog.md) — Accepted
-- [ADR-0004: Lese-Berechtigung VIEW_MEMBERS für Mitgliederdaten](0004-view-members-permission.md) — Accepted (teilweise ersetzt durch ADR-0012)
+- [ADR-0004: Lese-Berechtigung VIEW_MEMBERS für Mitgliederdaten](0004-view-members-permission.md) — Accepted (teilweise ersetzt durch ADR-0012, ADR-0013)
 - [ADR-0005: Externe Redner je Versammlung ohne Verweis auf fremde Mitglieder](0005-external-speakers.md) — Superseded by ADR-0008
 - [ADR-0006: Pflegeoberflächen als Liste/Detail mit sofortiger Listenaktualisierung](0006-list-detail-maintenance-screens.md) — Accepted
 - [ADR-0007: Vortragshistorie je Versammlung als eigene Subcollection](0007-talk-history.md) — Accepted
 - [ADR-0008: Verzeichnis externer Redner mit eigener Hierarchie Kreis → Versammlung → Redner](0008-external-speaker-directory.md) — Accepted
-- [ADR-0009: Vortragsplanung getrennt von der Rolle Versammlungsadmin](0009-separate-planning-from-congregation-admin.md) — Accepted (teilweise ersetzt durch ADR-0012)
+- [ADR-0009: Vortragsplanung getrennt von der Rolle Versammlungsadmin](0009-separate-planning-from-congregation-admin.md) — Accepted (teilweise ersetzt durch ADR-0012, ADR-0013)
 - [ADR-0010: Nachtblau-Design als Tokens in `theming` und Bausteine in `uilib`](0010-night-design-tokens-and-login-components.md) — Accepted
-- [ADR-0011: Admin-Namen sind vor der Freigabe lesbar](0011-admin-contacts-visible-before-approval.md) — Accepted (teilweise ersetzt durch ADR-0012)
+- [ADR-0011: Admin-Namen sind vor der Freigabe lesbar](0011-admin-contacts-visible-before-approval.md) — Accepted (teilweise ersetzt durch ADR-0012, ADR-0013)
 - [ADR-0012: Eine Liste gleichrangiger Rollen je Mitglied](0012-congregation-roles-list.md) — Accepted
+- [ADR-0013: Der globale Admin hat keinen Einblick in Versammlungsdaten](0013-global-admin-without-congregation-data.md) — Accepted

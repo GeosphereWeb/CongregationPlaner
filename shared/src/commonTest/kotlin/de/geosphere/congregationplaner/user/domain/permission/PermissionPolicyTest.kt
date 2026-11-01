@@ -15,14 +15,47 @@ class PermissionPolicyTest {
     private val congregation = CongregationMetadata(id = "609a", name = "Berlin")
 
     @Test
-    fun `global admin may manage congregations and users`() {
-        val admin = AppUser(uid = "1", isGlobalAdmin = true)
+    fun `global admin manages congregations but has no access to their members`() {
+        val admin = AppUser(uid = "1", approved = true, isGlobalAdmin = true)
 
         assertTrue(congregationPolicy.canCreate(admin))
         assertTrue(congregationPolicy.canEdit(admin, congregation))
         assertTrue(congregationPolicy.canDelete(admin, congregation))
         assertTrue(congregationPolicy.canManageGeneral(admin))
-        assertTrue(userPolicy.canManageUsers(admin))
+        assertFalse(userPolicy.canManageUsers(admin))
+        assertFalse(userPolicy.canViewMembers(admin))
+        assertFalse(userPolicy.canCreateMemberWithoutAccount(admin))
+    }
+
+    @Test
+    fun `global admin changes the name but not the meeting times`() {
+        val admin = AppUser(uid = "1", approved = true, isGlobalAdmin = true)
+        val own = CongregationRef("r", "s", "b", "c", "609a")
+        val congregationAdmin = AppUser(
+            uid = "2",
+            approved = true,
+            roles = setOf(CongregationRole.CONGREGATION_ADMIN),
+            congregation = own,
+        )
+
+        assertTrue(congregationPolicy.canEdit(admin, congregation))
+        assertFalse(congregationPolicy.canEditMeetingTimes(admin, congregation))
+        assertTrue(congregationPolicy.canEditMeetingTimes(congregationAdmin, congregation))
+        assertFalse(congregationPolicy.canEditMeetingTimes(congregationAdmin, congregation.copy(id = "other")))
+        assertFalse(congregationPolicy.canEditMeetingTimes(congregationAdmin.copy(approved = false), congregation))
+    }
+
+    @Test
+    fun `global admin with roles uses them like everybody else`() {
+        val admin = AppUser(
+            uid = "1",
+            approved = true,
+            isGlobalAdmin = true,
+            roles = setOf(CongregationRole.TALK_PLANNER),
+        )
+
+        assertTrue(userPolicy.canViewMembers(admin))
+        assertFalse(userPolicy.canManageUsers(admin))
     }
 
     @Test
@@ -72,7 +105,7 @@ class PermissionPolicyTest {
         assertTrue(userPolicy.canViewMembers(talkPlanner))
         assertTrue(userPolicy.canViewMembers(taskPlanner))
         assertTrue(userPolicy.canViewMembers(admin))
-        assertTrue(userPolicy.canViewMembers(AppUser(uid = "4", isGlobalAdmin = true)))
+        assertFalse(userPolicy.canViewMembers(AppUser(uid = "4", approved = true, isGlobalAdmin = true)))
     }
 
     @Test

@@ -11,9 +11,8 @@ import dev.zacsweers.metro.Inject
 @Inject
 class UserPermissionPolicy {
 
-    // Darf der User die Mitglieder seiner Versammlung freigeben und Rollen vergeben?
-    fun canManageUsers(user: AppUser): Boolean =
-        user.isGlobalAdmin || (user.approved && CongregationRole.CONGREGATION_ADMIN in user.roles)
+    // Darf der User die Mitglieder seiner Versammlung freigeben und Rollen vergeben? Nur Versammlungsadmins (ADR-0013).
+    fun canManageUsers(user: AppUser): Boolean = user.approved && CongregationRole.CONGREGATION_ADMIN in user.roles
 
     // Darf der User die Mitglieder seiner Versammlung lesen (nicht ändern)? Das dürfen auch die Planer (ADR-0012).
     fun canViewMembers(user: AppUser): Boolean = canManageUsers(user) ||
