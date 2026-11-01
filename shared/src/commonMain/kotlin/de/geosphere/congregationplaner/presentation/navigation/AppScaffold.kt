@@ -14,7 +14,6 @@ import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
@@ -22,18 +21,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass
+import de.geosphere.congregationplaner.home.presentation.HomeContent
+import de.geosphere.congregationplaner.home.presentation.HomeUiState
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.organization.domain.model.SelectedCongregation
 import de.geosphere.congregationplaner.theming.AppTheme
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.ui.button.SecondaryButton
-import de.geosphere.congregationplaner.ui.header.NightPanel
-import de.geosphere.congregationplaner.ui.header.TeleprompterHeader
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.todayIn
-import kotlin.time.Clock
 
 /**
  * Der Rahmen der angemeldeten App mit den vier Hauptbereichen. Die Leiste liegt auf schmalen Fenstern unten und auf
@@ -48,6 +44,7 @@ fun AppScaffold(
     firebaseStatus: String,
     currentUser: AppUser,
     congregation: SelectedCongregation?,
+    home: HomeUiState,
     actions: AppNavigationActions,
 ) {
     val isWide = currentWindowAdaptiveInfo().windowSizeClass.isWidthAtLeastBreakpoint(
@@ -78,8 +75,12 @@ fun AppScaffold(
     ) {
         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
             when (state.destination) {
-                TopLevelDestination.HOME -> HomeContent(firebaseStatus, congregation)
-                TopLevelDestination.CONGREGATION -> CongregationArea(state, currentUser, isWide, congregation, actions)
+                TopLevelDestination.HOME -> HomeContent(firebaseStatus, congregation, home, state.visible, actions)
+                TopLevelDestination.CONGREGATION -> {
+                    val pending = home.summary.pendingApprovals
+                    CongregationArea(state, currentUser, isWide, congregation, pending, actions)
+                }
+
                 TopLevelDestination.GLOBAL_ADMIN -> GlobalArea(state, currentUser, isWide, congregation, actions)
                 TopLevelDestination.SETTINGS -> SettingsContent(actions.onSignOut)
             }
@@ -105,20 +106,6 @@ private fun nightNavigationItemColors() = NavigationSuiteDefaults.itemColors(
         unselectedTextColor = NightColors.OnBackgroundMuted,
     ),
 )
-
-@Composable
-private fun HomeContent(firebaseStatus: String, congregation: SelectedCongregation?) {
-    val header = remember(congregation) {
-        homeHeader(congregation, Clock.System.todayIn(TimeZone.currentSystemDefault()))
-    }
-    Column(Modifier.fillMaxSize()) {
-        TeleprompterHeader(header.stepLabel, header.current, previous = header.previous, compact = true)
-        NightPanel(Modifier.weight(1f)) {
-            Text(firebaseStatus, style = MaterialTheme.typography.bodySmall)
-            Text("Home Content")
-        }
-    }
-}
 
 @Composable
 private fun SettingsContent(onSignOut: () -> Unit) {
@@ -162,7 +149,14 @@ private val previewTalkTab = previewOverview.copy(congregationSection = Congrega
 
 @Composable
 private fun ScaffoldPreview(state: AppNavigationState) = AppTheme {
-    AppScaffold(state, "Firebase verfügbar", previewUser, previewCongregation, AppNavigationActions())
+    AppScaffold(
+        state,
+        "Firebase verfügbar",
+        previewUser,
+        previewCongregation,
+        HomeUiState(),
+        AppNavigationActions(),
+    )
 }
 
 @Preview(name = "Handy – Übersicht", widthDp = 360, heightDp = 720)
