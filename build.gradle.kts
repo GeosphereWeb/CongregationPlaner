@@ -52,6 +52,12 @@ val sonarExclusions = listOf(
     "**/AppScaffold.kt",
     "**/AreaScreens.kt",
     "**/NavigationIcons.kt",
+    // Gemeinsame Compose-Bausteine der Listen-/Detailansichten und die reinen Compose-Dateien der Pflegeseiten
+    "**/ListDetailPane.kt",
+    "**/SelectableListCard.kt",
+    "**/CircuitDetail.kt",
+    "**/CongregationDetail.kt",
+    "**/TalkScheduleScreen.kt",
     // Exclude theming and ui modules from coverage
     "theming/**",
     "ui/**"

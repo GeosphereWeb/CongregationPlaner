@@ -8,8 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -26,6 +24,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import de.geosphere.congregationplaner.presentation.components.DetailPane
+import de.geosphere.congregationplaner.presentation.components.DetailPlaceholder
+import de.geosphere.congregationplaner.presentation.components.ListPaneHeader
 import de.geosphere.congregationplaner.presentation.components.SelectableListCard
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.talk.domain.model.Talk
@@ -60,7 +61,7 @@ fun TalkHistoryScreen(viewModel: TalkHistoryViewModel, modifier: Modifier = Modi
 internal fun TalkHistoryContent(state: TalkHistoryUiState, actions: TalkHistoryActions, modifier: Modifier = Modifier) {
     val navigator = rememberListDetailNavigation(state, onClose = actions.onClose)
     Column(modifier = modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Vortragshistorie", style = MaterialTheme.typography.headlineSmall)
+        ListPaneHeader("Vortragshistorie")
         if (!state.canPlan) {
             Text("Dafür fehlt dir die Berechtigung.")
             return@Column
@@ -84,13 +85,10 @@ internal fun TalkHistoryContent(state: TalkHistoryUiState, actions: TalkHistoryA
             listPane = { AnimatedPane { TalkHistoryList(state, actions) } },
             detailPane = {
                 AnimatedPane {
-                    Column(
-                        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    DetailPane(
+                        showBack = navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Hidden,
+                        onBack = actions.onClose,
                     ) {
-                        if (navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Hidden) {
-                            TextButton(onClick = actions.onClose) { Text("Zurück zur Liste") }
-                        }
                         TalkHistoryDetail(state.selected)
                     }
                 }
@@ -123,15 +121,12 @@ private fun TalkHistoryList(state: TalkHistoryUiState, actions: TalkHistoryActio
 /** Zeigt die Tage eines Vortrags; geändert werden sie nur in der Planung am Wochenende. */
 @Composable
 private fun TalkHistoryDetail(row: TalkHistoryRow?) {
+    if (row == null) {
+        DetailPlaceholder("Wähle einen Vortrag aus, um zu sehen, wann er gehalten wurde.")
+        return
+    }
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (row == null) {
-                Text(
-                    "Wähle einen Vortrag aus, um zu sehen, wann er gehalten wurde.",
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-                return@Column
-            }
             Text("${row.talk.number} – ${row.talk.title}", style = MaterialTheme.typography.titleMedium)
             val days = row.entry?.heldOn.orEmpty()
             if (days.isEmpty()) Text("Noch nie gehalten.")

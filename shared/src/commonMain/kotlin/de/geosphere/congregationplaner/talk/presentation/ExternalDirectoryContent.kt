@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -33,6 +31,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import de.geosphere.congregationplaner.presentation.components.DetailPane
+import de.geosphere.congregationplaner.presentation.components.DetailPlaceholder
+import de.geosphere.congregationplaner.presentation.components.ListPaneHeader
 import de.geosphere.congregationplaner.presentation.components.SelectableListCard
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCircuit
@@ -101,7 +102,7 @@ internal fun ExternalDirectoryContent(
     val singlePane = navigator.scaffoldDirective.maxHorizontalPartitions == 1
 
     Column(modifier = modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Externe Redner", style = MaterialTheme.typography.headlineSmall)
+        ListPaneHeader("Externe Redner")
         if (!state.canPlan) {
             Text("Dafür fehlt dir die Berechtigung.")
             return@Column
@@ -128,13 +129,11 @@ internal fun ExternalDirectoryContent(
             },
             detailPane = {
                 AnimatedPane {
-                    Column(
-                        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    DetailPane(
+                        showBack = navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Hidden,
+                        onBack = actions.onClose,
+                        backEnabled = !isBusy,
                     ) {
-                        if (navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Hidden) {
-                            TextButton(onClick = actions.onClose, enabled = !isBusy) { Text("Zurück zur Liste") }
-                        }
                         ExternalDirectoryDetail(
                             state = state,
                             actions = actions.copy(onDiscard = if (singlePane) actions.onClose else actions.onDiscard),
@@ -253,13 +252,7 @@ private fun ExternalDirectoryDetail(
 ) {
     val directory = state.directory
     when (val editor = state.editor) {
-        null -> Card(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                "Wähle einen Kreis, eine Versammlung oder einen Redner aus.",
-                modifier = Modifier.padding(16.dp),
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        }
+        null -> DetailPlaceholder("Wähle einen Kreis, eine Versammlung oder einen Redner aus.")
 
         is ExternalDirectoryEditor.Circuit -> EditorCard(
             title = if (editor.original == null) "Neuer Kreis" else "Kreis bearbeiten",

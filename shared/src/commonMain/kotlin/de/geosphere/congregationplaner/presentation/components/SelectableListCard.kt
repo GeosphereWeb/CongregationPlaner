@@ -1,20 +1,22 @@
 package de.geosphere.congregationplaner.presentation.components
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 
@@ -32,27 +34,20 @@ internal fun SelectableListCard(
     canDelete: Boolean,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onSelect),
-        colors = CardDefaults.cardColors(
-            containerColor = if (selected) {
-                MaterialTheme.colorScheme.secondaryContainer
-            } else {
-                MaterialTheme.colorScheme.surface
-            },
-        ),
+    val shape = RoundedCornerShape(16.dp)
+    Column(
+        modifier = Modifier.fillMaxWidth()
+            .clip(shape)
+            .background(if (selected) NightColors.SurfaceActive else NightColors.Surface)
+            .border(1.dp, if (selected) NightColors.Lavender else NightColors.Border, shape)
+            .clickable(onClick = onSelect)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            content()
-            if (canDelete) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = onDelete, enabled = actionsEnabled) {
-                        Text("Löschen", color = MaterialTheme.colorScheme.error)
-                    }
-                }
+        content()
+        if (canDelete) {
+            TextButton(onClick = onDelete, enabled = actionsEnabled) {
+                Text("Löschen", color = NightColors.Coral)
             }
         }
     }

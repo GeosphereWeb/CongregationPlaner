@@ -8,8 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -26,6 +24,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import de.geosphere.congregationplaner.presentation.components.DetailPane
+import de.geosphere.congregationplaner.presentation.components.DetailPlaceholder
+import de.geosphere.congregationplaner.presentation.components.ListPaneHeader
 import de.geosphere.congregationplaner.presentation.components.SelectableListCard
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.talk.domain.model.Chairman
@@ -95,7 +96,7 @@ internal fun TalkScheduleContent(
     val onCancelEditing = if (singlePane) actions.onCancelEditing else actions.onDiscardChanges
 
     Column(modifier = modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Planung Wochenende", style = MaterialTheme.typography.headlineSmall)
+        ListPaneHeader("Planung Wochenende")
         if (!state.canPlan) {
             Text("Dafür fehlt dir die Berechtigung.")
             return@Column
@@ -153,15 +154,11 @@ internal fun TalkScheduleContent(
             },
             detailPane = {
                 AnimatedPane {
-                    Column(
-                        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    DetailPane(
+                        showBack = navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Hidden,
+                        onBack = actions.onCancelEditing,
+                        backEnabled = !state.isSaving,
                     ) {
-                        if (navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Hidden) {
-                            TextButton(onClick = actions.onCancelEditing, enabled = !state.isSaving) {
-                                Text("Zurück zur Liste")
-                            }
-                        }
                         if (editor != null) {
                             TalkSlotEditor(
                                 editor = editor,
@@ -181,7 +178,7 @@ internal fun TalkScheduleContent(
                                 onCancel = onCancelEditing,
                             )
                         } else {
-                            Text("Wähle einen Termin zum Bearbeiten aus.")
+                            DetailPlaceholder("Wähle einen Termin zum Bearbeiten aus.")
                         }
                     }
                 }

@@ -5,8 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -27,6 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.circuit.domain.model.Circuit
+import de.geosphere.congregationplaner.presentation.components.DetailPane
+import de.geosphere.congregationplaner.presentation.components.ListPaneHeader
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.theming.AppTheme
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
@@ -55,7 +55,7 @@ internal fun CircuitContent(
     val onCancelEditing = if (singlePane) onCancel else onDiscard
 
     Column(modifier = modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Kreise", style = MaterialTheme.typography.headlineSmall)
+        ListPaneHeader("Kreise")
         if (state.permissions.canCreate) {
             Button(onClick = onCreate, enabled = !state.isLoading && !isBusy) {
                 Text("Kreis hinzufügen")
@@ -88,15 +88,12 @@ internal fun CircuitContent(
                 },
                 detailPane = {
                     AnimatedPane {
-                        Column(
-                            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        DetailPane(
+                            showBack = navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] ==
+                                PaneAdaptedValue.Hidden,
+                            onBack = onCancel,
+                            backEnabled = !isBusy,
                         ) {
-                            if (navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Hidden) {
-                                TextButton(onClick = onCancel, enabled = !isBusy) {
-                                    Text("Zurück zur Liste")
-                                }
-                            }
                             CircuitDetail(
                                 editor = state.editor,
                                 canEdit = state.permissions.canEditSelection,
