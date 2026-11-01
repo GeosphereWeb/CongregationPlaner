@@ -182,6 +182,20 @@ fun AppScaffoldPhoneHomePreview() = ScaffoldPreview(previewOverview.copy(destina
 fun AppScaffoldPhoneSettingsPreview() =
     ScaffoldPreview(previewOverview.copy(destination = TopLevelDestination.SETTINGS))
 
-@Preview(name = "Tablet – zweite Spalte", widthDp = 1000, heightDp = 700)
+@Preview(name = "Handy – nur Vortragsplaner", widthDp = 360, heightDp = 720)
 @Composable
-fun AppScaffoldTabletPreview() = ScaffoldPreview(previewOverview)
+fun AppScaffoldPhoneTalkPlannerPreview() = ScaffoldPreview(
+    previewOverview.copy(visible = VisibleNavigation(CongregationSection.talkPlanning)),
+)
+
+@Preview(name = "Handy – Globale Verwaltung", widthDp = 360, heightDp = 720)
+@Composable
+fun AppScaffoldPhoneGlobalPreview() = ScaffoldPreview(
+    previewOverview.copy(destination = TopLevelDestination.GLOBAL_ADMIN),
+)
+
+@Preview(name = "Tablet – Planung am Wochenende gewählt", widthDp = 1000, heightDp = 700)
+@Composable
+fun AppScaffoldTabletPreview() = ScaffoldPreview(
+    previewOverview.copy(congregationSection = CongregationSection.WEEKEND_TALKS),
+)
