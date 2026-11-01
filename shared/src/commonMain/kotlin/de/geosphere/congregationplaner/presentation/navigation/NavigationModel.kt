@@ -52,3 +52,11 @@ data class VisibleNavigation(
         add(TopLevelDestination.SETTINGS)
     }
 }
+
+/** Aktionen der Navigation; gebündelt, damit die Composables überschaubare Signaturen behalten. */
+data class AppNavigationActions(
+    val onSelect: (TopLevelDestination) -> Unit = {},
+    val onOpenCongregationSection: (CongregationSection?) -> Unit = {},
+    val onOpenGlobalSection: (GlobalSection?) -> Unit = {},
+    val onSignOut: () -> Unit = {},
+)

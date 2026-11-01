@@ -2,28 +2,16 @@
 
 package de.geosphere.congregationplaner
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationDrawerItem
-import androidx.compose.material3.NavigationRail
-import androidx.compose.material3.NavigationRailItem
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -35,8 +23,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -46,12 +32,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import congregationplaner.shared.generated.resources.Res
-import congregationplaner.shared.generated.resources.dummy
 import de.geosphere.congregationplaner.auth.FirebaseAuthManager
 import de.geosphere.congregationplaner.auth.FirebaseSupport
-import de.geosphere.congregationplaner.circuit.presentation.CircuitRoute
-import de.geosphere.congregationplaner.congregation.presentation.CongregationMetadataRoute
 import de.geosphere.congregationplaner.organization.InviteLinkInbox
 import de.geosphere.congregationplaner.organization.di.OrganizationGraph
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
@@ -61,16 +43,13 @@ import de.geosphere.congregationplaner.organization.domain.model.SelectedCongreg
 import de.geosphere.congregationplaner.organization.presentation.CongregationSelectionUiState
 import de.geosphere.congregationplaner.organization.presentation.CongregationSelector
 import de.geosphere.congregationplaner.organization.presentation.OrgLevelSelection
-import de.geosphere.congregationplaner.talk.presentation.ExternalDirectoryRoute
-import de.geosphere.congregationplaner.talk.presentation.TalkHistoryRoute
-import de.geosphere.congregationplaner.talk.presentation.TalkReferenceRoute
-import de.geosphere.congregationplaner.talk.presentation.TalkScheduleRoute
+import de.geosphere.congregationplaner.presentation.navigation.AppNavigationActions
+import de.geosphere.congregationplaner.presentation.navigation.AppNavigationGraph
+import de.geosphere.congregationplaner.presentation.navigation.AppScaffold
 import de.geosphere.congregationplaner.theming.AppTheme
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.NightPhonePreview
 import de.geosphere.congregationplaner.theming.ThemePreviews
-import de.geosphere.congregationplaner.theming.brushes.backgroundBrush
-import de.geosphere.congregationplaner.theming.customColors
 import de.geosphere.congregationplaner.theming.nightTextStyle
 import de.geosphere.congregationplaner.ui.button.PrimaryButton
 import de.geosphere.congregationplaner.ui.button.SecondaryButton
@@ -79,14 +58,10 @@ import de.geosphere.congregationplaner.ui.field.PasswordVisibilityButton
 import de.geosphere.congregationplaner.ui.header.NightScreen
 import de.geosphere.congregationplaner.ui.header.PanelTitle
 import de.geosphere.congregationplaner.user.di.UserAccessGraph
-import de.geosphere.congregationplaner.user.domain.model.AppUser
-import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.UserAccessState
 import de.geosphere.congregationplaner.user.presentation.UserAccessGateScreen
-import de.geosphere.congregationplaner.user.presentation.UserManagementRoute
 import dev.zacsweers.metro.createGraph
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.painterResource
 
 enum class AuthMode {
     LOGIN,
@@ -97,7 +72,6 @@ enum class AuthMode {
 @Composable
 fun App() {
     AppTheme {
-        var selectedRoute by remember { mutableStateOf("home") }
         var firebaseStatus by remember { mutableStateOf("Firebase wird initialisiert...") }
         var isAuthenticated by remember { mutableStateOf(FirebaseAuthManager.isSignedIn()) }
         var authMode by remember { mutableStateOf(AuthMode.LOGIN) }
@@ -108,6 +82,7 @@ fun App() {
         val scope = rememberCoroutineScope()
         val userAccessViewModel = remember { createGraph<UserAccessGraph>().userAccessViewModel }
         val selectionViewModel = remember { createGraph<OrganizationGraph>().congregationSelectionViewModel }
+        val navigationViewModel = remember { createGraph<AppNavigationGraph>().appNavigationViewModel }
         val selectionState by selectionViewModel.uiState.collectAsState()
         val selectedCongregation = selectionState.selected?.ref
         val pendingInviteLink by InviteLinkInbox.pendingLink.collectAsState()
@@ -183,7 +158,6 @@ fun App() {
                                 password = ""
                             } else {
                                 isAuthenticated = true
-                                selectedRoute = "home"
                                 email = ""
                                 password = ""
                             }
@@ -203,7 +177,6 @@ fun App() {
                         val user = FirebaseAuthManager.signInWithGoogle()
                         if (user != null) {
                             isAuthenticated = true
-                            selectedRoute = "home"
                             email = ""
                             password = ""
                         } else {
@@ -237,6 +210,7 @@ fun App() {
         val accessState by userAccessViewModel.accessState.collectAsState()
         val adminContacts by userAccessViewModel.adminContacts.collectAsState()
         val currentUser = (accessState as? UserAccessState.Authorized)?.user
+        LaunchedEffect(currentUser) { navigationViewModel.onUserChanged(currentUser) }
         if (currentUser == null) {
             UserAccessGateScreen(
                 state = accessState,
@@ -248,36 +222,18 @@ fun App() {
             return@AppTheme
         }
 
-        val navigationItems = remember(currentUser) {
-            visibleNavigationItems(
-                canManageUsers = userAccessViewModel.canManageUsers(currentUser),
-                isGlobalAdmin = currentUser.isGlobalAdmin,
-            )
-        }
-        LaunchedEffect(navigationItems, selectedRoute) {
-            if (navigationItems.none { it.routeName == selectedRoute }) selectedRoute = NavigationItem.Home.routeName
-        }
-
-        // Platform-spezifisches Layout
-        if (HostPlatform.isDesktop) {
-            DesktopLayout(
-                selectedRoute = selectedRoute,
-                firebaseStatus = firebaseStatus,
-                currentUser = currentUser,
-                navigationItems = navigationItems,
-                onRouteChange = { selectedRoute = it },
+        val navigationState by navigationViewModel.uiState.collectAsState()
+        AppScaffold(
+            state = navigationState,
+            firebaseStatus = firebaseStatus,
+            currentUser = currentUser,
+            actions = AppNavigationActions(
+                onSelect = navigationViewModel::select,
+                onOpenCongregationSection = navigationViewModel::openCongregationSection,
+                onOpenGlobalSection = navigationViewModel::openGlobalSection,
                 onSignOut = signOut,
-            )
-        } else {
-            MobileLayout(
-                selectedRoute = selectedRoute,
-                firebaseStatus = firebaseStatus,
-                currentUser = currentUser,
-                navigationItems = navigationItems,
-                onRouteChange = { selectedRoute = it },
-                onSignOut = signOut,
-            )
-        }
+            ),
+        )
     }
 }
 
@@ -450,159 +406,6 @@ private fun CongregationRequiredScreen(onSignOut: () -> Unit, selector: @Composa
     }
 }
 
-@Composable
-@Suppress("LongParameterList")
-fun DesktopLayout(
-    selectedRoute: String,
-    firebaseStatus: String,
-    currentUser: AppUser,
-    navigationItems: List<NavigationItem>,
-    onRouteChange: (String) -> Unit,
-    onSignOut: () -> Unit,
-) {
-    Row(Modifier.fillMaxSize().background(brush = Brush.backgroundBrush)) {
-        // Elegante, schlanke NavigationRail für Desktop
-        NavigationRail(
-            modifier = Modifier.padding(horizontal = 8.dp),
-//            containerColor = MaterialTheme.colorScheme.surface,
-        ) {
-            navigationItems.let { items ->
-                items.forEach { item ->
-                    NavigationRailItem(
-                        icon = {
-                            Icon(
-                                painter = painterResource(item.iconRes),
-                                contentDescription = null,
-                                tint = MaterialTheme.customColors.success,
-                            )
-                        },
-                        label = { Text(item.label) },
-                        selected = selectedRoute == item.routeName,
-                        onClick = { onRouteChange(item.routeName) },
-                    )
-                }
-            }
-            Button(onClick = onSignOut) {
-                Text("Abmelden")
-            }
-        }
-
-        // Hauptinhalt
-        Scaffold(modifier = Modifier.weight(1f), containerColor = Color.Yellow) {
-            Column(modifier = Modifier.fillMaxSize().padding(it).background(Brush.backgroundBrush)) {
-                Text(firebaseStatus)
-                when (selectedRoute) {
-                    "home" -> Text("Home Content")
-
-                    "settings" -> Text("Settings Content")
-
-                    "leben_und_dienst" -> Text("leben_und_dienst \n Schätze \n uns verbessern \n leben als christ")
-
-                    "planung_wochenende" -> TalkScheduleRoute(currentUser)
-
-                    "talk_history" -> TalkHistoryRoute(currentUser)
-
-                    "external_speakers" -> ExternalDirectoryRoute(currentUser)
-
-                    "talk_reference" -> TalkReferenceRoute(currentUser)
-
-                    "circuit" -> CircuitRoute(currentUser)
-
-                    "versammlung_metadata" -> CongregationMetadataRoute(currentUser)
-
-                    "dienste" -> Text("Diensteta")
-
-                    "userverwaltung" -> UserManagementRoute(currentUser)
-
-                    else -> Text("Select a navigation item")
-                }
-            }
-        }
-    }
-}
-
-@Preview(name = "Desktop Layout", widthDp = 1280, heightDp = 800)
-@Composable
-fun DesktopLayoutPreview() {
-    AppTheme {
-        DesktopLayout(
-            selectedRoute = "home",
-            firebaseStatus = "Firebase verfügbar",
-            currentUser = previewAdmin,
-            navigationItems = NavigationItem.entries,
-            onRouteChange = {},
-            onSignOut = {},
-        )
-    }
-}
-
-@Composable
-@Suppress("LongParameterList")
-fun MobileLayout(
-    selectedRoute: String,
-    firebaseStatus: String,
-    currentUser: AppUser,
-    navigationItems: List<NavigationItem>,
-    onRouteChange: (String) -> Unit,
-    onSignOut: () -> Unit,
-) {
-    var drawerOpen by remember { mutableStateOf(false) }
-
-    ModalNavigationDrawer(
-        drawerContent = {
-            ModalDrawerSheet {
-                Text("Congregation Planer", modifier = Modifier.padding(16.dp))
-                HorizontalDivider()
-                navigationItems.let { items ->
-                    items.forEach { item ->
-                        NavigationDrawerItem(
-                            icon = {
-                                Icon(
-                                    painter = painterResource(Res.drawable.dummy),
-                                    contentDescription = null,
-                                )
-                            },
-                            label = { Text(item.label) },
-                            selected = selectedRoute == item.routeName,
-                            onClick = {
-                                onRouteChange(item.routeName)
-                                drawerOpen = false
-                            },
-                        )
-                    }
-                }
-                Button(
-                    onClick = onSignOut,
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                ) {
-                    Text("Abmelden")
-                }
-            }
-        },
-        scrimColor = Color.Black.copy(alpha = 0.32f),
-    ) {
-        Scaffold {
-            Box(Modifier.fillMaxSize().background(brush = Brush.backgroundBrush).padding(it)) {
-                Column(modifier = Modifier.padding(it)) {
-                    Text(firebaseStatus)
-                    when (selectedRoute) {
-                        "home" -> Text("Home Content")
-                        "settings" -> Text("Settings Content")
-                        "planung_wochenende" -> TalkScheduleRoute(currentUser)
-                        "talk_history" -> TalkHistoryRoute(currentUser)
-                        "external_speakers" -> ExternalDirectoryRoute(currentUser)
-                        "talk_reference" -> TalkReferenceRoute(currentUser)
-                        "circuit" -> CircuitRoute(currentUser)
-                        "versammlung_metadata" -> CongregationMetadataRoute(currentUser)
-                        "userverwaltung" -> UserManagementRoute(currentUser)
-                        else -> Text("Select a navigation item")
-                    }
-                }
-            }
-        }
-    }
-}
-
 private val previewRef = CongregationRef("EMEA", "europe", "central-europe", "609a", "berlin-mitte")
 
 private val pickingState = CongregationSelectionUiState(
@@ -674,27 +477,3 @@ private fun LoginRegisterPreview() = LoginPreviewContent(selectedState, AuthMode
 @ThemePreviews
 @Composable
 private fun LoginErrorPreview() = LoginPreviewContent(selectedState, loginError = "E-Mail oder Passwort ist falsch.")
-
-@Preview(name = "Mobile Layout", widthDp = 400, heightDp = 850)
-@Composable
-fun MobileLayoutPreview() {
-    AppTheme {
-        MobileLayout(
-            selectedRoute = "home",
-            firebaseStatus = "Firebase verfügbar",
-            currentUser = previewAdmin,
-            navigationItems = NavigationItem.entries,
-            onRouteChange = {},
-            onSignOut = {},
-        )
-    }
-}
-
-private val previewAdmin = AppUser(
-    uid = "preview-admin",
-    email = "admin@congregationplaner.de",
-    displayName = "Admin",
-    approved = true,
-    roles = setOf(CongregationRole.CONGREGATION_ADMIN),
-    isGlobalAdmin = true,
-)
