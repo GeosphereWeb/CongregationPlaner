@@ -82,4 +82,19 @@ class NavEntriesTest {
 
         assertEquals(listOf(false, true, false), entries.map { it.selected })
     }
+
+    @Test
+    fun `open approvals show as a badge on the user management`() {
+        val entries = congregationEntries(all, null, isWide = false, pendingApprovals = 3) {}.associateBy { it.label }
+
+        assertEquals("3 offen", entries.getValue("Userverwaltung").badge)
+        assertNull(entries.getValue("Allgemeine Versammlungsdaten").badge)
+    }
+
+    @Test
+    fun `without open approvals there is no badge`() {
+        val entries = congregationEntries(all, null, isWide = false, pendingApprovals = 0) {}
+
+        assertTrue(entries.all { it.badge == null })
+    }
 }
