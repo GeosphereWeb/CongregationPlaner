@@ -73,6 +73,7 @@ data class AppNavigationActions(
     val onSelect: (TopLevelDestination) -> Unit = {},
     val onOpenCongregationSection: (CongregationSection?) -> Unit = {},
     val onOpenGlobalSection: (GlobalSection?) -> Unit = {},
+    val onOpenTalkHistory: (Int) -> Unit = {},
     val onSignOut: () -> Unit = {},
     val onBack: () -> Unit = {},
 )
