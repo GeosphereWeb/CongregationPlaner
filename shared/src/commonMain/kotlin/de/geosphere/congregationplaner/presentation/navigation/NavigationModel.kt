@@ -18,13 +18,18 @@ enum class CongregationGroup(val label: String) {
  * Die Unterbereiche von „Versammlung“. [nested] markiert Einträge, die in der Übersicht eingerückt unter dem
  * vorigen Eintrag stehen (Userverwaltung unter den Versammlungsdaten, die Vortragsplanung unter der Planung).
  */
-enum class CongregationSection(val label: String, val group: CongregationGroup, val nested: Boolean = false) {
+enum class CongregationSection(
+    val label: String,
+    val group: CongregationGroup,
+    val nested: Boolean = false,
+    val tabLabel: String = label,
+) {
     GENERAL_DATA("Allgemeine Versammlungsdaten", CongregationGroup.ADMINISTRATION),
     USER_MANAGEMENT("Userverwaltung", CongregationGroup.ADMINISTRATION, nested = true),
     MIDWEEK_PLANNING("Planung unter der Woche", CongregationGroup.PLANNING),
-    WEEKEND_TALKS("Planung am Wochenende", CongregationGroup.PLANNING, nested = true),
+    WEEKEND_TALKS("Planung am Wochenende", CongregationGroup.PLANNING, nested = true, tabLabel = "Wochenende"),
     EXTERNAL_SPEAKERS("Externe Redner", CongregationGroup.PLANNING, nested = true),
-    TALK_HISTORY("Vortragshistorie", CongregationGroup.PLANNING, nested = true),
+    TALK_HISTORY("Vortragshistorie", CongregationGroup.PLANNING, nested = true, tabLabel = "Historie"),
     ;
 
     companion object {
@@ -59,4 +64,5 @@ data class AppNavigationActions(
     val onOpenCongregationSection: (CongregationSection?) -> Unit = {},
     val onOpenGlobalSection: (GlobalSection?) -> Unit = {},
     val onSignOut: () -> Unit = {},
+    val onBack: () -> Unit = {},
 )
