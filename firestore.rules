@@ -47,6 +47,7 @@ rules_version = '2';
 // Fields:
 //   - time: string (required, 'HH:mm')
 //   - talkCancelled: bool (required)
+//   - confirmed: bool (optional, missing counts as false): the planner has confirmed the slot.
 //   - weekEventId, weekEventName: string | null (<= 100 chars, both set or both null)
 //   - talkNumber: int | null (>= 1), talkTitle: string | null (1..200 chars); both set or both null.
 //     The title is a snapshot of the talk list so that old slots stay unchanged.
@@ -235,12 +236,13 @@ service cloud.firestore {
       let eventId = data.get('weekEventId', null);
       let eventName = data.get('weekEventName', null);
       return date.matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$') &&
-        data.keys().hasOnly(['time', 'talkCancelled', 'weekEventId', 'weekEventName', 'talkNumber', 'talkTitle',
+        data.keys().hasOnly(['time', 'talkCancelled', 'confirmed', 'weekEventId', 'weekEventName', 'talkNumber', 'talkTitle',
           'speakerMemberId', 'speakerLastName', 'speakerFirstName',
           'chairmanMemberId', 'chairmanLastName', 'chairmanFirstName', 'externalSpeakerId', 'speakerCongregation']) &&
         data.keys().hasAll(['time', 'talkCancelled']) &&
         data.time is string && data.time.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$') &&
         data.talkCancelled is bool &&
+        data.get('confirmed', false) is bool &&
         isNullableString(eventId, 100) &&
         isNullableString(eventName, 100) &&
         ((eventId == null) == (eventName == null)) &&

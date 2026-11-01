@@ -200,7 +200,9 @@ internal fun CongregationArea(
         onBack = { actions.onOpenCongregationSection(null) },
         tabs = if (inTalkPlanning) talkTabs.map { it.tabLabel to (it == selected) } else emptyList(),
         onSelectTab = { index -> actions.onOpenCongregationSection(talkTabs[index]) },
-        content = selected?.let { section -> { CongregationSectionContent(section, currentUser) } },
+        content = selected?.let { section ->
+            { CongregationSectionContent(section, currentUser, state.historyTalkNumber, actions.onOpenTalkHistory) }
+        },
     )
 }
 
@@ -227,15 +229,20 @@ internal fun GlobalArea(
 }
 
 @Composable
-private fun CongregationSectionContent(section: CongregationSection, currentUser: AppUser) {
+private fun CongregationSectionContent(
+    section: CongregationSection,
+    currentUser: AppUser,
+    historyTalkNumber: Int?,
+    onOpenHistory: (Int) -> Unit,
+) {
     when (section) {
         CongregationSection.GENERAL_DATA -> CongregationMetadataRoute(currentUser, ownOnly = true)
         CongregationSection.USER_MANAGEMENT -> UserManagementRoute(currentUser)
         CongregationSection.MIDWEEK_PLANNING ->
             Text("leben_und_dienst \n Schätze \n uns verbessern \n leben als christ", Modifier.padding(16.dp))
-        CongregationSection.WEEKEND_TALKS -> TalkScheduleRoute(currentUser)
+        CongregationSection.WEEKEND_TALKS -> TalkScheduleRoute(currentUser, onOpenHistory)
         CongregationSection.EXTERNAL_SPEAKERS -> ExternalDirectoryRoute(currentUser)
-        CongregationSection.TALK_HISTORY -> TalkHistoryRoute(currentUser)
+        CongregationSection.TALK_HISTORY -> TalkHistoryRoute(currentUser, historyTalkNumber)
     }
 }
 

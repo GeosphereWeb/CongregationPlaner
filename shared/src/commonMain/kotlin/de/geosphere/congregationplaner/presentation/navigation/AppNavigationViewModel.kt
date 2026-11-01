@@ -16,6 +16,8 @@ data class AppNavigationState(
     val destination: TopLevelDestination = TopLevelDestination.HOME,
     val congregationSection: CongregationSection? = null,
     val globalSection: GlobalSection? = null,
+    /** Der Vortrag, der in der Vortragshistorie vorausgewählt ist, solange man von der Planung dorthin gewechselt ist. */
+    val historyTalkNumber: Int? = null,
 ) {
     /** Zurück führt vom Unterbereich zur Übersicht und von dort zu Home; auf Home gibt es nichts mehr. */
     val canGoBack: Boolean get() = destination != TopLevelDestination.HOME
@@ -46,7 +48,12 @@ class AppNavigationViewModel(private val access: NavigationAccess) : ViewModel()
             if (destination !in state.visible.topLevel) {
                 state
             } else {
-                state.copy(destination = destination, congregationSection = null, globalSection = null)
+                state.copy(
+                    destination = destination,
+                    congregationSection = null,
+                    globalSection = null,
+                    historyTalkNumber = null,
+                )
             }
         }
     }
@@ -75,7 +82,26 @@ class AppNavigationViewModel(private val access: NavigationAccess) : ViewModel()
             if (section != null && section !in state.visible.congregationSections) {
                 state
             } else {
-                state.copy(destination = TopLevelDestination.CONGREGATION, congregationSection = section)
+                state.copy(
+                    destination = TopLevelDestination.CONGREGATION,
+                    congregationSection = section,
+                    historyTalkNumber = null,
+                )
+            }
+        }
+    }
+
+    /** Öffnet die Vortragshistorie mit dem Vortrag [number] vorausgewählt (aus der Planung am Wochenende). */
+    fun openTalkHistory(number: Int) {
+        mutableState.update { state ->
+            if (CongregationSection.TALK_HISTORY !in state.visible.congregationSections) {
+                state
+            } else {
+                state.copy(
+                    destination = TopLevelDestination.CONGREGATION,
+                    congregationSection = CongregationSection.TALK_HISTORY,
+                    historyTalkNumber = number,
+                )
             }
         }
     }
@@ -85,7 +111,11 @@ class AppNavigationViewModel(private val access: NavigationAccess) : ViewModel()
             if (section != null && section !in state.visible.globalSections) {
                 state
             } else {
-                state.copy(destination = TopLevelDestination.GLOBAL_ADMIN, globalSection = section)
+                state.copy(
+                    destination = TopLevelDestination.GLOBAL_ADMIN,
+                    globalSection = section,
+                    historyTalkNumber = null,
+                )
             }
         }
     }

@@ -245,6 +245,7 @@ fun App() {
                 onSelect = navigationViewModel::select,
                 onOpenCongregationSection = navigationViewModel::openCongregationSection,
                 onOpenGlobalSection = navigationViewModel::openGlobalSection,
+                onOpenTalkHistory = navigationViewModel::openTalkHistory,
                 onSignOut = signOut,
                 onBack = { navigationViewModel.back() },
             ),
