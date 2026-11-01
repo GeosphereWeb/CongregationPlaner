@@ -29,6 +29,7 @@ internal class FakeUserRepository(user: AppUser? = null, members: List<AppUser> 
     var updateResult: Result<Unit> = Result.success(Unit)
     var updateProfileResult: Result<Unit> = Result.success(Unit)
     var removeResult: Result<Unit> = Result.success(Unit)
+    var migrateResult: Result<Int> = Result.success(0)
 
     var loadCount = 0
         private set
@@ -38,6 +39,7 @@ internal class FakeUserRepository(user: AppUser? = null, members: List<AppUser> 
     val updatedMembers = mutableListOf<AppUser>()
     val updatedProfiles = mutableListOf<AppUser>()
     val removedUids = mutableListOf<String>()
+    val migratedCongregations = mutableListOf<CongregationRef>()
 
     override suspend fun getOrCreateUser(authUser: FirebaseUser, congregation: CongregationRef): Result<AppUser> {
         loadCount++
@@ -82,4 +84,7 @@ internal class FakeUserRepository(user: AppUser? = null, members: List<AppUser> 
 
     override suspend fun removeMember(congregation: CongregationRef, uid: String): Result<Unit> =
         removeResult.onSuccess { removedUids += uid }
+
+    override suspend fun migrateLegacyMembers(congregation: CongregationRef): Result<Int> =
+        migrateResult.also { migratedCongregations += congregation }
 }

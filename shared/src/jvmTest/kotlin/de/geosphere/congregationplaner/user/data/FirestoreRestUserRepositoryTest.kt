@@ -11,8 +11,6 @@ import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
-import de.geosphere.congregationplaner.user.domain.model.UserPermission
-import de.geosphere.congregationplaner.user.domain.model.UserRole
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import java.io.IOException
@@ -46,8 +44,6 @@ class FirestoreRestUserRepositoryTest {
                 email = "user@example.com",
                 displayName = "User",
                 approved = true,
-                role = UserRole.CONGREGATION_ADMIN,
-                permissions = setOf(UserPermission.DUMMY),
                 roles = setOf(CongregationRole.CONGREGATION_ADMIN),
                 congregation = congregation,
             ),
@@ -60,7 +56,7 @@ class FirestoreRestUserRepositoryTest {
     }
 
     @Test
-    fun `getOrCreateUser creates unapproved member with default permission when document is missing`() =
+    fun `getOrCreateUser creates an unapproved member without roles when the document is missing`() =
         runWithServer({ request ->
             if (request.method == "GET") {
                 FakeResponse(404)
@@ -76,8 +72,6 @@ class FirestoreRestUserRepositoryTest {
                     uid = "uid-1",
                     email = "user@example.com",
                     approved = false,
-                    role = UserRole.MEMBER,
-                    permissions = setOf(UserPermission.DUMMY),
                     congregation = congregation,
                 ),
                 user,
@@ -87,8 +81,9 @@ class FirestoreRestUserRepositoryTest {
             assertEquals(membersPath, create.path)
             assertEquals("documentId=uid-1", create.query)
             assertTrue(create.body.contains(""""approved":{"booleanValue":false}"""))
-            assertTrue(create.body.contains(""""role":{"stringValue":"MEMBER"}"""))
-            assertTrue(create.body.contains(""""permissions":{"arrayValue":{"values":[{"stringValue":"DUMMY"}]}}"""))
+            assertTrue(create.body.contains(""""roles":{"arrayValue":{"values":[]}}"""))
+            assertFalse(create.body.contains("\"role\""))
+            assertFalse(create.body.contains("permissions"))
             assertTrue(create.body.contains(""""displayName":{"nullValue":null}"""))
             assertTrue(create.body.contains(""""hasAccount":{"booleanValue":true}"""))
             assertTrue(create.body.contains(""""category":{"nullValue":null}"""))
@@ -149,7 +144,8 @@ class FirestoreRestUserRepositoryTest {
         assertEquals(membersPath, request.path)
         assertNull(request.query)
         assertTrue(request.body.contains(""""hasAccount":{"booleanValue":false}"""))
-        assertTrue(request.body.contains(""""permissions":{"arrayValue":{"values":[]}}"""))
+        assertTrue(request.body.contains(""""roles":{"arrayValue":{"values":[]}}"""))
+        assertFalse(request.body.contains("permissions"))
         assertTrue(request.body.contains(""""email":{"nullValue":null}"""))
     }
 
@@ -172,7 +168,7 @@ class FirestoreRestUserRepositoryTest {
         FakeResponse(200, """{"name":"x/members/uid-1","fields":{"role":{"stringValue":"ADMIN"}}}""")
     }) { _, repository ->
         assertEquals(
-            AppUser(uid = "uid-1", approved = false, role = UserRole.NONE, congregation = congregation),
+            AppUser(uid = "uid-1", approved = false, congregation = congregation),
             repository.observeUser(congregation, "uid-1").first(),
         )
     }
@@ -219,7 +215,13 @@ class FirestoreRestUserRepositoryTest {
     fun `updateMember patches only access fields of an existing member`() = runWithServer({
         FakeResponse(200, "{}")
     }) { server, repository ->
-        val member = AppUser(uid = "uid-1", email = "ignored", approved = true, role = UserRole.CONGREGATION_ADMIN)
+        val member =
+            AppUser(
+                uid = "uid-1",
+                email = "ignored",
+                approved = true,
+                roles = setOf(CongregationRole.CONGREGATION_ADMIN),
+            )
 
         assertEquals(member, repository.updateMember(congregation, member).getOrThrow())
 
@@ -227,12 +229,81 @@ class FirestoreRestUserRepositoryTest {
         assertEquals("PATCH", request.method)
         assertEquals("$membersPath/uid-1", request.path)
         assertEquals(
-            "updateMask.fieldPaths=approved&updateMask.fieldPaths=role&updateMask.fieldPaths=permissions" +
+            "updateMask.fieldPaths=approved&updateMask.fieldPaths=roles&updateMask.fieldPaths=role" +
+                "&updateMask.fieldPaths=permissions" +
                 "&currentDocument.exists=true",
             request.query,
         )
         assertFalse(request.body.contains("email"))
-        assertTrue(request.body.contains(""""permissions":{"arrayValue":{"values":[]}}"""))
+        assertTrue(
+            request.body.contains(""""roles":{"arrayValue":{"values":[{"stringValue":"CONGREGATION_ADMIN"}]}}"""),
+        )
+        assertFalse(request.body.contains("permissions"))
+    }
+
+    @Test
+    fun `stored roles win over the legacy fields`() = runWithServer({
+        FakeResponse(
+            200,
+            """{"name":"x/members/uid-1","fields":{
+                "role":{"stringValue":"CONGREGATION_ADMIN"},
+                "roles":{"arrayValue":{"values":[{"stringValue":"TASK_PLANNER"},{"stringValue":"BOSS"}]}}}}""",
+        )
+    }) { _, repository ->
+        val user = checkNotNull(repository.observeUser(congregation, "uid-1").first())
+
+        assertEquals(setOf(CongregationRole.TASK_PLANNER), user.roles)
+    }
+
+    @Test
+    fun `migrateLegacyMembers rewrites only documents without roles`() = runWithServer({ request ->
+        if (request.method == "GET") {
+            FakeResponse(
+                200,
+                """{"documents":[${memberDocument(
+                    approved = true,
+                    role = "CONGREGATION_ADMIN",
+                )},${currentMember()}]}""",
+            )
+        } else {
+            FakeResponse(200, "{}")
+        }
+    }) { server, repository ->
+        assertEquals(1, repository.migrateLegacyMembers(congregation).getOrThrow())
+
+        val patch = server.requests.single { it.method == "PATCH" }
+        assertEquals("$membersPath/uid-1", patch.path)
+        assertEquals(
+            "updateMask.fieldPaths=roles&updateMask.fieldPaths=role&updateMask.fieldPaths=permissions" +
+                "&currentDocument.exists=true",
+            patch.query,
+        )
+        assertTrue(patch.body.contains(""""roles":{"arrayValue":{"values":[{"stringValue":"CONGREGATION_ADMIN"}]}}"""))
+        assertFalse(patch.body.contains("permissions"))
+    }
+
+    @Test
+    fun `migrateLegacyMembers continues after a failed document`() = runWithServer({ request ->
+        when {
+            request.method == "GET" -> FakeResponse(
+                200,
+                """{"documents":[${memberDocument(
+                    true,
+                    "MEMBER",
+                )},${memberDocument(true, "CONGREGATION_ADMIN", id = "uid-2")}]}""",
+            )
+            request.path.endsWith("uid-1") -> FakeResponse(403)
+            else -> FakeResponse(200, "{}")
+        }
+    }) { server, repository ->
+        assertEquals(1, repository.migrateLegacyMembers(congregation).getOrThrow())
+
+        assertEquals(2, server.requests.count { it.method == "PATCH" })
+    }
+
+    @Test
+    fun `migrateLegacyMembers reports a failed listing`() = runWithServer({ FakeResponse(403) }) { _, repository ->
+        assertIs<IOException>(repository.migrateLegacyMembers(congregation).exceptionOrNull())
     }
 
     @Test
@@ -304,7 +375,14 @@ class FirestoreRestUserRepositoryTest {
         }
     }
 
-    private fun memberDocument(approved: Boolean, role: String): String = """{"name":"x/members/uid-1","fields":{
+    private fun currentMember(): String = """{"name":"x/members/uid-3","fields":{
+        "email":{"stringValue":"new@example.com"},
+        "approved":{"booleanValue":true},
+        "roles":{"arrayValue":{"values":[{"stringValue":"TALK_PLANNER"}]}}}}"""
+
+    // Ein Mitgliedsdokument im alten Format (`role`/`permissions`, kein `roles`).
+    private fun memberDocument(approved: Boolean, role: String, id: String = "uid-1"): String =
+        """{"name":"x/members/$id","fields":{
         "email":{"stringValue":"user@example.com"},
         "displayName":{"stringValue":"User"},
         "approved":{"booleanValue":$approved},

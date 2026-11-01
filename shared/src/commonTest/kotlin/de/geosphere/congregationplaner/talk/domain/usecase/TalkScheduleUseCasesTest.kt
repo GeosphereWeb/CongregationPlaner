@@ -11,13 +11,11 @@ import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermis
 import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
 import de.geosphere.congregationplaner.talk.testing.FakeWeekEventRepository
-import de.geosphere.congregationplaner.user.data.mappers.withLegacyRoles
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
+import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
-import de.geosphere.congregationplaner.user.domain.model.UserPermission
-import de.geosphere.congregationplaner.user.domain.model.UserRole
 import de.geosphere.congregationplaner.user.domain.usecase.ObserveMembersUseCase
 import de.geosphere.congregationplaner.user.testing.FakeUserRepository
 import de.geosphere.congregationplaner.user.testing.testCongregation
@@ -41,10 +39,9 @@ class TalkScheduleUseCasesTest {
     private val admin = AppUser(
         uid = "1",
         approved = true,
-        role = UserRole.CONGREGATION_ADMIN,
-        permissions = setOf(UserPermission.PLAN_TALKS),
+        roles = setOf(CongregationRole.CONGREGATION_ADMIN, CongregationRole.TALK_PLANNER),
         congregation = testCongregation,
-    ).withLegacyRoles()
+    )
     private val member = AppUser(uid = "2", approved = true, congregation = testCongregation)
 
     private val sunday = LocalDate(2026, 10, 25)

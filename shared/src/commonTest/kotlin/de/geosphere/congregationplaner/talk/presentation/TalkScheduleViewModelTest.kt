@@ -26,14 +26,11 @@ import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkHistoryRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
 import de.geosphere.congregationplaner.talk.testing.FakeWeekEventRepository
-import de.geosphere.congregationplaner.user.data.mappers.withLegacyRoles
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
-import de.geosphere.congregationplaner.user.domain.model.UserPermission
-import de.geosphere.congregationplaner.user.domain.model.UserRole
 import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
 import de.geosphere.congregationplaner.user.domain.usecase.ObserveMembersUseCase
 import de.geosphere.congregationplaner.user.testing.FakeUserRepository
@@ -60,21 +57,20 @@ class TalkScheduleViewModelTest {
     private val planner = AppUser(
         uid = "planner",
         approved = true,
-        permissions = setOf(UserPermission.PLAN_TALKS),
         roles = setOf(CongregationRole.TALK_PLANNER),
         congregation = testCongregation,
     )
     private val viewer = planner.copy(
         uid = "viewer",
-        permissions = setOf(UserPermission.PLAN_TALKS, UserPermission.VIEW_MEMBERS),
+        roles = setOf(CongregationRole.TALK_PLANNER, CongregationRole.TASK_PLANNER),
     )
     private val member = AppUser(uid = "member", approved = true, congregation = testCongregation)
     private val admin = AppUser(
         uid = "admin",
         approved = true,
-        role = UserRole.CONGREGATION_ADMIN,
+        roles = setOf(CongregationRole.CONGREGATION_ADMIN),
         congregation = testCongregation,
-    ).withLegacyRoles()
+    )
 
     private val october25 = TalkSlot(LocalDate(2026, 10, 25), LocalTime(17, 30))
     private val november1 = TalkSlot(LocalDate(2026, 11, 1), LocalTime(17, 30))
@@ -296,22 +292,21 @@ class TalkScheduleViewModelTest {
     }
 
     @Test
-    fun `planner without VIEW_MEMBERS does not load the speakers`() {
+    fun `talk planner sees the speakers of the members`() {
         viewModel.onCurrentUserChanged(planner)
 
         assertTrue(state.canPlan)
-        assertFalse(state.canViewMembers)
-        assertTrue(state.speakers.isEmpty())
-        assertTrue(state.chairmen.isEmpty())
-        assertNull(users.requestedCongregation)
+        assertTrue(state.canViewMembers)
+        assertEquals(listOf(maxMuster), state.speakers)
+        assertEquals(testCongregation, users.requestedCongregation)
     }
 
     @Test
-    fun `losing VIEW_MEMBERS clears the speakers`() {
+    fun `losing the planner role clears the speakers`() {
         viewModel.onCurrentUserChanged(viewer)
         assertEquals(listOf(maxMuster), state.speakers)
 
-        viewModel.onCurrentUserChanged(planner)
+        viewModel.onCurrentUserChanged(member)
 
         assertTrue(state.speakers.isEmpty())
         assertTrue(state.chairmen.isEmpty())

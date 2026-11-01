@@ -7,9 +7,8 @@ import de.geosphere.congregationplaner.circuit.domain.usecase.CreateCircuitUseCa
 import de.geosphere.congregationplaner.circuit.domain.usecase.DeleteCircuitUseCase
 import de.geosphere.congregationplaner.circuit.domain.usecase.ObserveCircuitsUseCase
 import de.geosphere.congregationplaner.circuit.domain.usecase.UpdateCircuitUseCase
-import de.geosphere.congregationplaner.user.data.mappers.withLegacyRoles
 import de.geosphere.congregationplaner.user.domain.model.AppUser
-import de.geosphere.congregationplaner.user.domain.model.UserRole
+import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.permission.CircuitPermissionPolicy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -30,7 +29,7 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalCoroutinesApi::class)
 class CircuitViewModelTest {
     private val admin = AppUser(uid = "admin", approved = true, isGlobalAdmin = true)
-    private val planer = AppUser(uid = "planer", approved = true, role = UserRole.CONGREGATION_ADMIN).withLegacyRoles()
+    private val planer = AppUser(uid = "planer", approved = true, roles = setOf(CongregationRole.CONGREGATION_ADMIN))
     private val north = Circuit(id = "609a", name = "Nord")
     private val south = Circuit(id = "610b", name = "Süd")
 

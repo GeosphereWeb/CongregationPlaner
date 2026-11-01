@@ -25,11 +25,17 @@ interface UserRepository {
     /** Legt eine Person ohne eigenes Konto mit einer von Firestore vergebenen ID an. */
     suspend fun createMemberWithoutAccount(congregation: CongregationRef, profile: MemberProfile): Result<AppUser>
 
-    /** Speichert Freigabe, Rolle und Berechtigungen; alle anderen Felder bleiben unverändert. */
+    /** Speichert Freigabe und Rollen; alle anderen Felder bleiben unverändert. */
     suspend fun updateMember(congregation: CongregationRef, member: AppUser): Result<AppUser>
 
     /** Speichert nur die persönlichen Angaben ([AppUser.profile]); alle anderen Felder bleiben unverändert. */
     suspend fun updateMemberProfile(congregation: CongregationRef, member: AppUser): Result<AppUser>
 
     suspend fun removeMember(congregation: CongregationRef, uid: String): Result<Unit>
+
+    /**
+     * Stellt Mitgliedsdokumente im alten Format (`role` und `permissions` statt `roles`) auf `roles` um und liefert
+     * die Anzahl der umgestellten Dokumente. Ein Fehler bei einem Dokument bricht die übrigen nicht ab.
+     */
+    suspend fun migrateLegacyMembers(congregation: CongregationRef): Result<Int>
 }

@@ -1,6 +1,7 @@
 package de.geosphere.congregationplaner.user.data
 
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Source
 import de.geosphere.congregationplaner.auth.AndroidFirestoreProvider
@@ -10,13 +11,12 @@ import de.geosphere.congregationplaner.firestore.logFirestoreFailure
 import de.geosphere.congregationplaner.firestore.observeDocuments
 import de.geosphere.congregationplaner.firestore.runFirestoreCatching
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
-import de.geosphere.congregationplaner.user.data.mappers.withLegacyRoles
+import de.geosphere.congregationplaner.user.data.mappers.memberRoles
+import de.geosphere.congregationplaner.user.data.mappers.toStoredRoles
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
-import de.geosphere.congregationplaner.user.domain.model.UserPermission
-import de.geosphere.congregationplaner.user.domain.model.UserRole
 import de.geosphere.congregationplaner.user.domain.repository.AdminContactRepository
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
 import kotlinx.coroutines.channels.awaitClose
@@ -107,6 +107,25 @@ internal class FirestoreUserRepository(private val firestore: FirebaseFirestore)
         runFirestoreCatching("remove member") {
             firestore.collection(congregation.membersPath).document(uid).delete().awaitResult()
         }
+
+    override suspend fun migrateLegacyMembers(congregation: CongregationRef): Result<Int> =
+        runFirestoreCatching("migrate legacy members") {
+            val snapshot = firestore.collection(congregation.membersPath).get(Source.SERVER).awaitResult()
+            snapshot.documents.filterNot { it.contains("roles") }.count { migrate(it, congregation) }
+        }
+
+    // Ein Fehler bei einem Dokument wird protokolliert und lässt die übrigen weiter umstellen.
+    private suspend fun migrate(document: DocumentSnapshot, congregation: CongregationRef): Boolean =
+        runFirestoreCatching("migrate member ${document.id}") {
+            val roles = toDomain(document, congregation).roles
+            document.reference.update(
+                mapOf(
+                    "roles" to roles.toStoredRoles(),
+                    "role" to FieldValue.delete(),
+                    "permissions" to FieldValue.delete(),
+                ),
+            ).awaitResult()
+        }.isSuccess
 }
 
 private fun toDomain(document: DocumentSnapshot, congregation: CongregationRef): AppUser = AppUser(
@@ -114,8 +133,11 @@ private fun toDomain(document: DocumentSnapshot, congregation: CongregationRef):
     email = document.getString("email"),
     displayName = document.getString("displayName"),
     approved = document.getBoolean("approved") ?: false,
-    role = UserRole.fromValue(document.getString("role")),
-    permissions = UserPermission.fromValues((document.get("permissions") as? List<*>).orEmpty().map { it as? String }),
+    roles = memberRoles(
+        storedRoles = document.takeIf { it.contains("roles") }?.stringList("roles"),
+        legacyRole = document.getString("role"),
+        legacyPermissions = document.stringList("permissions").orEmpty(),
+    ),
     congregation = congregation,
     hasAccount = document.getBoolean("hasAccount") ?: true,
     profile = MemberProfile(
@@ -128,18 +150,25 @@ private fun toDomain(document: DocumentSnapshot, congregation: CongregationRef):
         landlinePhone = document.getString("landlinePhone").orEmpty(),
         isSpeaker = document.getBoolean("isSpeaker") ?: false,
     ),
-).withLegacyRoles()
+)
+
+private fun DocumentSnapshot.stringList(field: String): List<String?>? = (get(field) as? List<*>)?.map { it as? String }
 
 private fun AppUser.toFirestoreFields(): Map<String, Any?> = mapOf(
     "email" to email,
     "displayName" to displayName,
     "hasAccount" to hasAccount,
-) + toAccessFields() + profile.toFirestoreFields()
+) + toRoleFields() + profile.toFirestoreFields()
 
-private fun AppUser.toAccessFields(): Map<String, Any> = mapOf(
+private fun AppUser.toRoleFields(): Map<String, Any> = mapOf(
     "approved" to approved,
-    "role" to role.name,
-    "permissions" to permissions.map { it.name }.sorted(),
+    "roles" to roles.toStoredRoles(),
+)
+
+// Beim Ändern verschwinden die veralteten Felder `role` und `permissions` von Altdokumenten.
+private fun AppUser.toAccessFields(): Map<String, Any> = toRoleFields() + mapOf(
+    "role" to FieldValue.delete(),
+    "permissions" to FieldValue.delete(),
 )
 
 private fun MemberProfile.toFirestoreFields(): Map<String, Any?> = mapOf(
