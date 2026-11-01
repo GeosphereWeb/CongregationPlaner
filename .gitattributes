@@ -1,3 +1,6 @@
+# LF is the default line ending on every platform (matches .editorconfig).
+* text=auto eol=lf
+
 # Ensure shell scripts and gradle wrapper are executable on all platforms
 gradlew text eol=lf
 gradlew.bat text eol=crlf
