@@ -75,6 +75,7 @@ fun App() {
         var firebaseStatus by remember { mutableStateOf("Firebase wird initialisiert...") }
         var isAuthenticated by remember { mutableStateOf(FirebaseAuthManager.isSignedIn()) }
         var authMode by remember { mutableStateOf(AuthMode.LOGIN) }
+        var globalLogin by remember { mutableStateOf(false) }
         var loginError by remember { mutableStateOf<String?>(null) }
         var infoMessage by remember { mutableStateOf<String?>(null) }
         var email by remember { mutableStateOf("") }
@@ -104,7 +105,8 @@ fun App() {
             InviteLinkInbox.consume()
         }
 
-        // Die Nutzerdaten liegen unterhalb der Versammlung; ohne gewählte Versammlung gibt es keinen Zugriff.
+        // Die Nutzerdaten liegen unterhalb der Versammlung; ohne gewählte Versammlung gibt es keinen Zugriff, außer für
+        // globale Admins (ADR-0013).
         LaunchedEffect(isAuthenticated, selectedCongregation) {
             if (!isAuthenticated) {
                 userAccessViewModel.onSignedOut()
@@ -127,11 +129,22 @@ fun App() {
                 authMode = authMode,
                 loginError = loginError,
                 infoMessage = infoMessage,
-                canSignIn = selectedCongregation != null,
-                showCredentials = selectedCongregation != null && !selectionState.isPicking,
-                congregationName = selectionState.selected?.displayName,
-                previousSteps = selectedCongregation?.let { listOf("Kreis ${it.circuitId}") }.orEmpty(),
-                congregationSelector = { CongregationSelector(selectionViewModel, selectionState) },
+                canSignIn = selectedCongregation != null || globalLogin,
+                showCredentials = globalLogin || (selectedCongregation != null && !selectionState.isPicking),
+                congregationName = if (globalLogin) "Globale Verwaltung" else selectionState.selected?.displayName,
+                previousSteps = if (globalLogin) {
+                    emptyList()
+                } else {
+                    selectedCongregation?.let { listOf("Kreis ${it.circuitId}") }.orEmpty()
+                },
+                congregationSelector = {
+                    if (globalLogin) {
+                        GlobalLoginHint(onChooseCongregation = { globalLogin = false })
+                    } else {
+                        CongregationSelector(selectionViewModel, selectionState)
+                    }
+                },
+                onGlobalAdminLogin = { globalLogin = true },
                 onEmailChange = { email = it },
                 onPasswordChange = { password = it },
                 onToggleMode = {
@@ -193,17 +206,10 @@ fun App() {
                 FirebaseAuthManager.signOut()
                 isAuthenticated = false
                 authMode = AuthMode.LOGIN
+                globalLogin = false
                 loginError = null
                 infoMessage = null
             }
-        }
-
-        // Wer schon angemeldet ist, aber (noch) keine Versammlung gewählt hat, wählt sie hier.
-        if (selectedCongregation == null) {
-            CongregationRequiredScreen(onSignOut = signOut) {
-                CongregationSelector(selectionViewModel, selectionState)
-            }
-            return@AppTheme
         }
 
         // Erst nach erteilter Freigabe ist die App nutzbar; Rollen steuern die sichtbaren Bereiche.
@@ -212,6 +218,13 @@ fun App() {
         val currentUser = (accessState as? UserAccessState.Authorized)?.user
         LaunchedEffect(currentUser) { navigationViewModel.onUserChanged(currentUser) }
         if (currentUser == null) {
+            // Wer schon angemeldet ist, aber (noch) keine Versammlung gewählt hat, wählt sie hier.
+            if (selectedCongregation == null && accessState == UserAccessState.CongregationRequired) {
+                CongregationRequiredScreen(onSignOut = signOut) {
+                    CongregationSelector(selectionViewModel, selectionState)
+                }
+                return@AppTheme
+            }
             UserAccessGateScreen(
                 state = accessState,
                 adminContacts = adminContacts,
@@ -261,6 +274,7 @@ fun LoginScreen(
     congregationName: String? = null,
     previousSteps: List<String> = emptyList(),
     congregationSelector: @Composable () -> Unit = {},
+    onGlobalAdminLogin: (() -> Unit)? = null,
 ) {
     NightScreen(
         stepLabel = if (showCredentials) "SCHRITT 2 / 2" else "SCHRITT 1 / 2",
@@ -287,6 +301,14 @@ fun LoginScreen(
             Spacer(Modifier.height(14.dp))
             congregationSelector()
             Spacer(Modifier.weight(1f))
+            onGlobalAdminLogin?.let { onClick ->
+                SecondaryButton(
+                    text = "Als globaler Admin anmelden",
+                    onClick = onClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    outlined = false,
+                )
+            }
             Text(
                 text = "Anmeldung folgt, sobald die Versammlung feststeht.",
                 modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
@@ -393,6 +415,23 @@ private fun ColumnScope.CredentialsForm(
             contentColor = NightColors.OnBackground,
         )
     }
+}
+
+/** Schritt 2 für globale Admins: Anmeldung ohne Versammlung, mit dem Weg zurück zur Auswahl. */
+@Composable
+private fun GlobalLoginHint(onChooseCongregation: () -> Unit) {
+    Text(
+        text = "Globale Admins melden sich ohne Versammlung an.",
+        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+        style = nightTextStyle(13.sp, color = NightColors.OnBackgroundMuted),
+    )
+    SecondaryButton(
+        text = "Doch eine Versammlung wählen",
+        onClick = onChooseCongregation,
+        modifier = Modifier.fillMaxWidth(),
+        outlined = false,
+    )
+    Spacer(Modifier.height(14.dp))
 }
 
 /** Für bereits angemeldete Nutzer, deren Versammlung noch nicht feststeht (z. B. nach einem Update). */
