@@ -20,13 +20,12 @@ import de.geosphere.congregationplaner.firestore.pollingFlow
 import de.geosphere.congregationplaner.firestore.runCatchingIo
 import de.geosphere.congregationplaner.firestore.stringArrayField
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
-import de.geosphere.congregationplaner.user.data.mappers.withLegacyRoles
+import de.geosphere.congregationplaner.user.data.mappers.memberRoles
+import de.geosphere.congregationplaner.user.data.mappers.toStoredRoles
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
-import de.geosphere.congregationplaner.user.domain.model.UserPermission
-import de.geosphere.congregationplaner.user.domain.model.UserRole
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
 import kotlinx.coroutines.flow.Flow
 import java.net.http.HttpClient
@@ -90,6 +89,23 @@ internal class FirestoreRestUserRepository(
         client.request("DELETE", documentUrl(congregation, uid))
     }
 
+    override suspend fun migrateLegacyMembers(congregation: CongregationRef): Result<Int> = runCatchingIo {
+        parseDocuments(client.request("GET", "${client.collectionUrl(congregation.membersPath)}?pageSize=1000"))
+            .filterNot { it.fields.has("roles") }
+            .count { document -> migrate(congregation, document) }
+    }
+
+    // Ein Fehler bei einem Dokument wird protokolliert und lässt die übrigen weiter umstellen.
+    private fun migrate(congregation: CongregationRef, document: FirestoreRestDocument): Boolean = runCatching {
+        val roles = document.toUser(congregation).roles
+        client.request(
+            method = "PATCH",
+            url = "${documentUrl(congregation, document.id)}?${client.updateMask(LEGACY_FIELD_NAMES)}" +
+                "&currentDocument.exists=true",
+            body = firestoreFields(JsonObject().apply { add("roles", firestoreStringArray(roles.toStoredRoles())) }),
+        )
+    }.onFailure { System.err.println("Failed to migrate member ${document.id}: ${it.message}") }.isSuccess
+
     private fun fetchUser(congregation: CongregationRef, uid: String): AppUser? =
         client.requestOrNull("GET", documentUrl(congregation, uid))?.let { parseDocument(it).toUser(congregation) }
 
@@ -106,8 +122,11 @@ internal class FirestoreRestUserRepository(
         email = fields.optionalStringField("email"),
         displayName = fields.optionalStringField("displayName"),
         approved = fields.booleanField("approved"),
-        role = UserRole.fromValue(fields.optionalStringField("role")),
-        permissions = UserPermission.fromValues(fields.stringArrayField("permissions")),
+        roles = memberRoles(
+            storedRoles = fields.takeIf { it.has("roles") }?.stringArrayField("roles"),
+            legacyRole = fields.optionalStringField("role"),
+            legacyPermissions = fields.stringArrayField("permissions"),
+        ),
         congregation = congregation,
         hasAccount = fields.optionalBooleanField("hasAccount") ?: true,
         profile = MemberProfile(
@@ -120,7 +139,7 @@ internal class FirestoreRestUserRepository(
             landlinePhone = fields.optionalStringField("landlinePhone").orEmpty(),
             isSpeaker = fields.booleanField("isSpeaker"),
         ),
-    ).withLegacyRoles()
+    )
 
     private fun AppUser.allFields(): JsonObject = accessFields().apply {
         add("email", firestoreNullableString(email))
@@ -131,8 +150,7 @@ internal class FirestoreRestUserRepository(
 
     private fun AppUser.accessFields(): JsonObject = JsonObject().apply {
         add("approved", firestoreBoolean(approved))
-        add("role", firestoreString(role.name))
-        add("permissions", firestoreStringArray(permissions.map { it.name }.sorted()))
+        add("roles", firestoreStringArray(roles.toStoredRoles()))
     }
 
     private fun MemberProfile.fields(): JsonObject = JsonObject().apply {
@@ -147,7 +165,9 @@ internal class FirestoreRestUserRepository(
     }
 
     private companion object {
-        val ACCESS_FIELD_NAMES = listOf("approved", "role", "permissions")
+        // `role` und `permissions` stehen nur in der Maske: Fehlt ein maskiertes Feld im Body, löscht Firestore es.
+        val ACCESS_FIELD_NAMES = listOf("approved", "roles", "role", "permissions")
+        val LEGACY_FIELD_NAMES = listOf("roles", "role", "permissions")
         val PROFILE_FIELD_NAMES =
             listOf(
                 "lastName",

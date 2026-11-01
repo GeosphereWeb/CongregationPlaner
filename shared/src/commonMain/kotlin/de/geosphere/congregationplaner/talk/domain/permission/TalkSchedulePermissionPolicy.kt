@@ -10,7 +10,7 @@ import dev.zacsweers.metro.Inject
  */
 @Inject
 class TalkSchedulePermissionPolicy {
-    // Auch Versammlungsadmins brauchen PLAN_TALKS; die Rolle allein berechtigt nicht zum Planen.
+    // Auch Versammlungsadmins brauchen die Rolle TALK_PLANNER; die Admin-Rolle allein berechtigt nicht zum Planen.
     fun canPlanTalks(user: AppUser): Boolean =
         user.isGlobalAdmin || (user.approved && CongregationRole.TALK_PLANNER in user.roles)
 }

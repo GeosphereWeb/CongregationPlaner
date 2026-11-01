@@ -2,11 +2,10 @@ package de.geosphere.congregationplaner.user.domain.usecase
 
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
+import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.MemberProfileException
-import de.geosphere.congregationplaner.user.domain.model.UserPermission
-import de.geosphere.congregationplaner.user.domain.model.UserRole
 import de.geosphere.congregationplaner.user.testing.FakeUserRepository
 import de.geosphere.congregationplaner.user.testing.testCongregation
 import kotlinx.coroutines.flow.first
@@ -50,17 +49,14 @@ class MemberUseCasesTest {
     }
 
     @Test
-    fun `update rejects members without id or with unassignable role`() = runBlocking {
+    fun `update rejects members without id`() = runBlocking {
         val repository = FakeUserRepository()
         val useCase = UpdateMemberUseCase(repository)
 
         assertIs<IllegalArgumentException>(useCase(testCongregation, AppUser(uid = " ")).exceptionOrNull())
-        assertIs<IllegalArgumentException>(
-            useCase(testCongregation, AppUser(uid = "1", role = UserRole.NONE)).exceptionOrNull(),
-        )
         assertTrue(repository.updatedMembers.isEmpty())
 
-        val member = AppUser(uid = "1", approved = true, role = UserRole.CONGREGATION_ADMIN)
+        val member = AppUser(uid = "1", approved = true, roles = setOf(CongregationRole.CONGREGATION_ADMIN))
         assertEquals(member, useCase(testCongregation, member).getOrThrow())
         assertEquals(listOf(member), repository.updatedMembers)
     }
@@ -73,8 +69,8 @@ class MemberUseCasesTest {
 
         listOf(
             member.copy(approved = true),
-            member.copy(role = UserRole.CONGREGATION_ADMIN),
-            member.copy(permissions = UserPermission.defaults),
+            member.copy(roles = setOf(CongregationRole.CONGREGATION_ADMIN)),
+            member.copy(roles = setOf(CongregationRole.TASK_PLANNER)),
         ).forEach { invalid ->
             assertIs<MemberProfileException.AccessWithoutAccount>(useCase(testCongregation, invalid).exceptionOrNull())
         }
@@ -170,4 +166,18 @@ class MemberUseCasesTest {
         baptized = baptized,
         appointment = if (elder) Appointment.ELDER else Appointment.NONE,
     )
+
+    @Test
+    fun `migrating legacy members returns the count and passes failures on`() = runBlocking {
+        val repository = FakeUserRepository()
+        val useCase = MigrateLegacyMemberRolesUseCase(repository)
+
+        repository.migrateResult = Result.success(3)
+        assertEquals(3, useCase(testCongregation).getOrThrow())
+        assertEquals(listOf(testCongregation), repository.migratedCongregations)
+
+        val failure = IllegalStateException("offline")
+        repository.migrateResult = Result.failure(failure)
+        assertEquals(failure, useCase(testCongregation).exceptionOrNull())
+    }
 }

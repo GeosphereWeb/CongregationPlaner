@@ -80,8 +80,8 @@ import de.geosphere.congregationplaner.ui.header.NightScreen
 import de.geosphere.congregationplaner.ui.header.PanelTitle
 import de.geosphere.congregationplaner.user.di.UserAccessGraph
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.UserAccessState
-import de.geosphere.congregationplaner.user.domain.model.UserRole
 import de.geosphere.congregationplaner.user.presentation.UserAccessGateScreen
 import de.geosphere.congregationplaner.user.presentation.UserManagementRoute
 import dev.zacsweers.metro.createGraph
@@ -695,6 +695,6 @@ private val previewAdmin = AppUser(
     email = "admin@congregationplaner.de",
     displayName = "Admin",
     approved = true,
-    role = UserRole.CONGREGATION_ADMIN,
+    roles = setOf(CongregationRole.CONGREGATION_ADMIN),
     isGlobalAdmin = true,
 )

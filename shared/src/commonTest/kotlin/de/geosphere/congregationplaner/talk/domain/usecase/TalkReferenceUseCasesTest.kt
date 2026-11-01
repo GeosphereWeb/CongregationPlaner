@@ -8,7 +8,7 @@ import de.geosphere.congregationplaner.talk.domain.permission.TalkReferenceDataP
 import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.testing.FakeWeekEventRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
-import de.geosphere.congregationplaner.user.domain.model.UserRole
+import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -18,7 +18,8 @@ import kotlin.test.assertTrue
 class TalkReferenceUseCasesTest {
     private val policy = TalkReferenceDataPolicy()
     private val admin = AppUser(uid = "admin", isGlobalAdmin = true)
-    private val congregationAdmin = AppUser(uid = "ca", approved = true, role = UserRole.CONGREGATION_ADMIN)
+    private val congregationAdmin =
+        AppUser(uid = "ca", approved = true, roles = setOf(CongregationRole.CONGREGATION_ADMIN))
 
     private val catalog = FakeTalkCatalogRepository()
     private val saveTalk = SaveTalkUseCase(catalog, policy)

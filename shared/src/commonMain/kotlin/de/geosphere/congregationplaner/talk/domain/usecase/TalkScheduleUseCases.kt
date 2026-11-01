@@ -44,7 +44,7 @@ data class TalkMembers(val speakers: List<Speaker>, val chairmen: List<Chairman>
 /**
  * Redner (Mitglieder mit `isSpeaker`) und Vorsitzende (Brüder mit Dienstamt) der Versammlung, jeweils mit
  * Familiennamen und nach Namen sortiert. Beide kommen aus einer gemeinsamen Beobachtung der Mitglieder. Das Lesen
- * der Mitglieder erfordert die Berechtigung `VIEW_MEMBERS` (oder Adminrechte), sonst lehnen die Rules ab.
+ * der Mitglieder erfordert Adminrechte oder eine Planerrolle (ADR-0012), sonst lehnen die Rules ab.
  */
 @Inject
 class ObserveTalkMembersUseCase(private val observeMembers: ObserveMembersUseCase) {
