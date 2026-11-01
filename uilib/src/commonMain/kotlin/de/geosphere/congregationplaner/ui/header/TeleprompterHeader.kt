@@ -46,7 +46,8 @@ internal fun fadeAlphas(count: Int): List<Float> = FADE_ALPHAS.takeLast(count)
 
 /**
  * Kopfbereich im Teleprompter-Stil: App-Name und Schrittanzeige oben, darunter die abgeschlossenen Schritte
- * ausgeblendet und der aktuelle Schritt zwischen zwei Linien hervorgehoben.
+ * ausgeblendet und der aktuelle Schritt zwischen zwei Linien hervorgehoben. [compact] verkleinert die Abstände für
+ * die Übersichten der angemeldeten App.
  */
 @Composable
 fun TeleprompterHeader(
@@ -54,14 +55,20 @@ fun TeleprompterHeader(
     current: String,
     modifier: Modifier = Modifier,
     previous: List<String> = emptyList(),
+    compact: Boolean = false,
 ) {
     Column(
         modifier = modifier.fillMaxWidth().background(NightColors.headerBrush)
             .drawBehind { drawRect(NightColors.headerGlowBrush(size)) }
-            .padding(start = 24.dp, end = 24.dp, top = 20.dp, bottom = 20.dp),
+            .padding(
+                start = if (compact) 20.dp else 24.dp,
+                end = if (compact) 20.dp else 24.dp,
+                top = if (compact) 8.dp else 20.dp,
+                bottom = if (compact) 12.dp else 20.dp,
+            ),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = if (compact) 6.dp else 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -79,7 +86,7 @@ fun TeleprompterHeader(
                 ),
             )
         }
-        Column(modifier = Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(modifier = Modifier.padding(top = if (compact) 8.dp else 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             val lines = previous.takeLast(FADE_ALPHAS.size)
             val alphas = fadeAlphas(lines.size)
             lines.forEachIndexed { index, text ->
@@ -118,17 +125,26 @@ private fun PlayMarker() {
 /**
  * Inhaltsfläche unter dem [TeleprompterHeader] mit abgerundeter Ecke oben links. Scrollt bei wenig Platz;
  * Kinder mit `weight(1f)` füllen die Resthöhe, sodass sich Aktionen am unteren Rand verankern lassen.
+ * Mit `scrollable = false` scrollt die Fläche nicht und der Inhalt bekommt die feste Höhe; das ist für Inhalte, die
+ * selbst scrollen (z. B. Listen).
  */
 @Composable
-fun NightPanel(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+fun NightPanel(
+    modifier: Modifier = Modifier,
+    scrollable: Boolean = true,
+    content: @Composable ColumnScope.() -> Unit,
+) {
     BoxWithConstraints(modifier = modifier.fillMaxWidth().background(NightColors.HeaderBottom)) {
         val minHeight = maxHeight
         Column(
             modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(topStart = 40.dp))
-                .background(NightColors.Background).verticalScroll(rememberScrollState()),
+                .background(NightColors.Background).then(
+                    if (scrollable) Modifier.verticalScroll(rememberScrollState()) else Modifier,
+                ),
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth().heightIn(min = minHeight)
+                modifier = (if (scrollable) Modifier.heightIn(min = minHeight) else Modifier.fillMaxSize())
+                    .fillMaxWidth()
                     .padding(start = 24.dp, end = 24.dp, top = 28.dp, bottom = 24.dp),
                 content = content,
             )
