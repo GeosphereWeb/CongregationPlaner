@@ -18,6 +18,8 @@ import kotlinx.datetime.LocalTime
  * @param externalSpeakerId Statt eines Mitglieds ein externer Redner aus der Liste der Versammlung; Name, Vorname
  *   und [speakerCongregation] (seine Versammlung) sind eine Momentaufnahme. Ein Termin hat höchstens eines von
  *   [speakerMemberId] und [externalSpeakerId].
+ * @param confirmed `true`, wenn der Planer den Termin bestätigt hat (z. B. weil der Redner zugesagt hat); ältere
+ *   Termine ohne das Feld gelten als nicht bestätigt.
  * @param chairmanMemberId Das Mitglied, das die Zusammenkunft leitet (Vorsitzender); Name und Vorname werden
  *   wie beim Redner als Momentaufnahme mitgespeichert, die drei Felder gehören zusammen.
  */
@@ -37,6 +39,7 @@ data class TalkSlot(
     val chairmanFirstName: String? = null,
     val externalSpeakerId: String? = null,
     val speakerCongregation: String? = null,
+    val confirmed: Boolean = false,
 ) {
     /** Dokument-ID in Firestore: ISO-Datum `yyyy-MM-dd`. */
     val id: String get() = date.toString()
