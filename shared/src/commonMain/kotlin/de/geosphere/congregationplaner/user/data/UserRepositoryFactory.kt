@@ -5,8 +5,6 @@ import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.user.domain.model.AdminContact
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
-import de.geosphere.congregationplaner.user.domain.model.UserPermission
-import de.geosphere.congregationplaner.user.domain.model.UserRole
 import de.geosphere.congregationplaner.user.domain.repository.AdminContactRepository
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
 import kotlinx.coroutines.flow.Flow
@@ -20,16 +18,13 @@ expect fun createAdminContactRepository(): AdminContactRepository
 internal const val ADMINS_COLLECTION_PATH = "admins"
 
 /**
- * Neue Mitglieder starten ohne Freigabe als einfaches Mitglied mit den Standardberechtigungen; die persönlichen
- * Angaben pflegt anschließend der Admin.
+ * Neue Mitglieder starten ohne Freigabe und ohne Rolle; die persönlichen Angaben pflegt anschließend der Admin.
  */
 internal fun FirebaseUser.toNewAppUser(congregation: CongregationRef): AppUser = AppUser(
     uid = uid,
     email = email,
     displayName = displayName,
     approved = false,
-    role = UserRole.MEMBER,
-    permissions = UserPermission.defaults,
     congregation = congregation,
 )
 
@@ -37,8 +32,6 @@ internal fun FirebaseUser.toNewAppUser(congregation: CongregationRef): AppUser =
 internal fun MemberProfile.toNewMemberWithoutAccount(uid: String, congregation: CongregationRef): AppUser = AppUser(
     uid = uid,
     approved = false,
-    role = UserRole.MEMBER,
-    permissions = emptySet(),
     congregation = congregation,
     hasAccount = false,
     profile = this,
@@ -72,6 +65,8 @@ fun unavailableUserRepository(platform: String): UserRepository = object : UserR
         unavailable()
 
     override suspend fun removeMember(congregation: CongregationRef, uid: String): Result<Unit> = unavailable()
+
+    override suspend fun migrateLegacyMembers(congregation: CongregationRef): Result<Int> = unavailable()
 }
 
 fun unavailableAdminContactRepository(platform: String): AdminContactRepository = object : AdminContactRepository {

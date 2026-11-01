@@ -1,9 +1,6 @@
 package de.geosphere.congregationplaner.user.data.mappers
 
-import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
-import de.geosphere.congregationplaner.user.domain.model.UserPermission
-import de.geosphere.congregationplaner.user.domain.model.UserRole
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -11,52 +8,68 @@ class LegacyRoleMapperTest {
 
     @Test
     fun `plain member has no roles`() {
-        assertEquals(emptySet(), legacyRoles(UserRole.MEMBER, setOf(UserPermission.DUMMY)))
+        assertEquals(emptySet(), legacyRoles("MEMBER", listOf("DUMMY")))
     }
 
     @Test
-    fun `unknown role has no roles`() {
-        assertEquals(emptySet(), legacyRoles(UserRole.NONE, emptySet()))
+    fun `unknown or missing role has no roles`() {
+        assertEquals(emptySet(), legacyRoles("NONE", emptyList()))
+        assertEquals(emptySet(), legacyRoles(null, emptyList()))
     }
 
     @Test
     fun `admin role maps to congregation admin`() {
-        assertEquals(setOf(CongregationRole.CONGREGATION_ADMIN), legacyRoles(UserRole.CONGREGATION_ADMIN, emptySet()))
+        assertEquals(setOf(CongregationRole.CONGREGATION_ADMIN), legacyRoles("CONGREGATION_ADMIN", emptyList()))
     }
 
     @Test
     fun `plan talks maps to talk planner`() {
-        assertEquals(
-            setOf(CongregationRole.TALK_PLANNER),
-            legacyRoles(UserRole.MEMBER, setOf(UserPermission.PLAN_TALKS)),
-        )
+        assertEquals(setOf(CongregationRole.TALK_PLANNER), legacyRoles("MEMBER", listOf("PLAN_TALKS")))
     }
 
     @Test
     fun `view members alone grants no role`() {
-        assertEquals(emptySet(), legacyRoles(UserRole.MEMBER, setOf(UserPermission.VIEW_MEMBERS)))
+        assertEquals(emptySet(), legacyRoles("MEMBER", listOf("VIEW_MEMBERS")))
     }
 
     @Test
     fun `admin who plans talks gets both roles`() {
         assertEquals(
             setOf(CongregationRole.CONGREGATION_ADMIN, CongregationRole.TALK_PLANNER),
-            legacyRoles(UserRole.CONGREGATION_ADMIN, setOf(UserPermission.PLAN_TALKS)),
+            legacyRoles("CONGREGATION_ADMIN", listOf("PLAN_TALKS", null)),
         )
     }
 
     @Test
-    fun `withLegacyRoles replaces the stored roles`() {
-        val user = AppUser(role = UserRole.CONGREGATION_ADMIN).withLegacyRoles()
-
-        assertEquals(setOf(CongregationRole.CONGREGATION_ADMIN), user.roles)
+    fun `stored roles win over the legacy fields`() {
+        assertEquals(
+            setOf(CongregationRole.TASK_PLANNER),
+            memberRoles(listOf("TASK_PLANNER"), "CONGREGATION_ADMIN", listOf("PLAN_TALKS")),
+        )
+        assertEquals(emptySet(), memberRoles(emptyList(), "CONGREGATION_ADMIN", listOf("PLAN_TALKS")))
     }
 
     @Test
-    fun `unknown role names are ignored`() {
+    fun `missing stored roles fall back to the legacy fields`() {
+        assertEquals(
+            setOf(CongregationRole.CONGREGATION_ADMIN),
+            memberRoles(null, "CONGREGATION_ADMIN", emptyList()),
+        )
+    }
+
+    @Test
+    fun `unknown stored role names are ignored`() {
         assertEquals(
             setOf(CongregationRole.TASK_PLANNER),
-            CongregationRole.fromValues(listOf("TASK_PLANNER", "bogus", null)),
+            memberRoles(listOf("TASK_PLANNER", "bogus", null), null, emptyList()),
+        )
+    }
+
+    @Test
+    fun `stored roles are written sorted by name`() {
+        assertEquals(
+            listOf("CONGREGATION_ADMIN", "TALK_PLANNER"),
+            setOf(CongregationRole.TALK_PLANNER, CongregationRole.CONGREGATION_ADMIN).toStoredRoles(),
         )
     }
 }

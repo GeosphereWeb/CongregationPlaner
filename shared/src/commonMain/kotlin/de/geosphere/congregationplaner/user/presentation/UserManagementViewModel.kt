@@ -5,11 +5,11 @@ import androidx.lifecycle.viewModelScope
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.presentation.components.ListDetailState
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
-import de.geosphere.congregationplaner.user.domain.model.UserPermission
-import de.geosphere.congregationplaner.user.domain.model.UserRole
 import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
 import de.geosphere.congregationplaner.user.domain.usecase.CreateMemberWithoutAccountUseCase
+import de.geosphere.congregationplaner.user.domain.usecase.MigrateLegacyMemberRolesUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.ObserveMembersUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.RemoveMemberUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.UpdateMemberProfileUseCase
@@ -49,12 +49,14 @@ data class UserManagementUiState(
 
 /** Verwaltung der Mitglieder der Versammlung des angemeldeten Versammlungsadmins. */
 @Inject
+@Suppress("LongParameterList") // Metro injiziert je Operation einen UseCase.
 class UserManagementViewModel(
     private val observeMembers: ObserveMembersUseCase,
     private val updateMember: UpdateMemberUseCase,
     private val createMemberWithoutAccount: CreateMemberWithoutAccountUseCase,
     private val updateMemberProfile: UpdateMemberProfileUseCase,
     private val removeMemberUseCase: RemoveMemberUseCase,
+    private val migrateLegacyMemberRoles: MigrateLegacyMemberRolesUseCase,
     private val permissionPolicy: UserPermissionPolicy,
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(UserManagementUiState())
@@ -91,6 +93,8 @@ class UserManagementViewModel(
         }
         mutableUiState.update { it.copy(isLoading = true) }
         observeJob = viewModelScope.launch {
+            // Stellt Mitglieder im alten Format auf Rollen um (ADR-0012); die Beobachtung liefert sie danach neu.
+            launch { migrateLegacyMemberRoles(congregation) }
             observeMembers(congregation)
                 .catch { exception ->
                     val message = exception.message ?: "Mitglieder konnten nicht geladen werden."
@@ -112,8 +116,26 @@ class UserManagementViewModel(
 
     fun canEdit(member: AppUser): Boolean = currentUser?.let { permissionPolicy.canEditMember(it, member) } ?: false
 
-    fun canEditPermissions(member: AppUser): Boolean =
-        currentUser?.let { permissionPolicy.canEditPermissions(it, member) } ?: false
+    fun canEditRoles(member: AppUser): Boolean = currentUser?.let { permissionPolicy.canEditRoles(it, member) } ?: false
+
+    /**
+     * Warum die Admin-Rolle von [member] nicht entfernt werden kann, sonst `null`: Der Admin sperrt sich nicht selbst
+     * aus, und eine Versammlung behält mindestens einen freigegebenen Admin.
+     */
+    fun adminRoleLockReason(member: AppUser): String? {
+        if (CongregationRole.CONGREGATION_ADMIN !in member.roles) return null
+        val approvedAdmins = mutableUiState.value.members.count {
+            it.approved && CongregationRole.CONGREGATION_ADMIN in it.roles
+        }
+        return when {
+            member.uid == currentUser?.uid -> "Die eigene Admin-Rolle bleibt bestehen."
+            member.approved && approvedAdmins <= 1 -> "Eine Versammlung braucht mindestens einen Admin."
+            else -> null
+        }
+    }
+
+    fun canToggleRole(member: AppUser, role: CongregationRole): Boolean = canEditRoles(member) &&
+        (role != CongregationRole.CONGREGATION_ADMIN || adminRoleLockReason(member) == null)
 
     fun canEditProfile(member: AppUser): Boolean =
         currentUser?.let { permissionPolicy.canEditProfile(it, member) } ?: false
@@ -200,15 +222,13 @@ class UserManagementViewModel(
 
     fun setApproved(member: AppUser, approved: Boolean) = save(member.copy(approved = approved))
 
-    fun setRole(member: AppUser, role: UserRole) = save(member.copy(role = role))
-
-    fun togglePermission(member: AppUser, permission: UserPermission) {
-        val permissions = if (permission in member.permissions) {
-            member.permissions - permission
-        } else {
-            member.permissions + permission
+    fun toggleRole(member: AppUser, role: CongregationRole) {
+        if (!canToggleRole(member, role)) {
+            mutableUiState.update { it.copy(errorMessage = MISSING_PERMISSION_MESSAGE) }
+            return
         }
-        save(member.copy(permissions = permissions), permissionPolicy::canEditPermissions)
+        val roles = if (role in member.roles) member.roles - role else member.roles + role
+        save(member.copy(roles = roles), permissionPolicy::canEditRoles)
     }
 
     fun removeMember(member: AppUser) {

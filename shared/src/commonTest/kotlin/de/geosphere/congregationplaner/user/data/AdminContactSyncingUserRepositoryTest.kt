@@ -2,8 +2,8 @@ package de.geosphere.congregationplaner.user.data
 
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
-import de.geosphere.congregationplaner.user.domain.model.UserRole
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
 import de.geosphere.congregationplaner.user.testing.FakeAdminContactRepository
 import de.geosphere.congregationplaner.user.testing.FakeUserRepository
@@ -34,10 +34,10 @@ class AdminContactSyncingUserRepositoryTest {
     private val admin = AppUser(
         uid = "a1",
         approved = true,
-        role = UserRole.CONGREGATION_ADMIN,
+        roles = setOf(CongregationRole.CONGREGATION_ADMIN),
         profile = MemberProfile(firstName = "Anna", lastName = "Admin"),
     )
-    private val member = AppUser(uid = "m1", approved = true, role = UserRole.MEMBER)
+    private val member = AppUser(uid = "m1", approved = true)
 
     @Test
     fun `promoting a member saves the member before publishing the contact`() = runBlocking {
@@ -48,7 +48,7 @@ class AdminContactSyncingUserRepositoryTest {
 
     @Test
     fun `demoting an admin removes the contact before saving the member`() = runBlocking {
-        repository.updateMember(testCongregation, admin.copy(role = UserRole.MEMBER)).getOrThrow()
+        repository.updateMember(testCongregation, admin.copy(roles = emptySet())).getOrThrow()
 
         assertEquals(listOf("delete a1", "update a1"), log)
     }
