@@ -183,7 +183,7 @@ class TalkScheduleViewModelTest {
     }
 
     @Test
-    fun `planner with VIEW_MEMBERS sees the speakers and selects one as snapshot`() {
+    fun `talk planner sees the speakers and selects one as snapshot`() {
         viewModel.onCurrentUserChanged(viewer)
 
         assertTrue(state.canViewMembers)
@@ -202,7 +202,7 @@ class TalkScheduleViewModelTest {
     }
 
     @Test
-    fun `planner with VIEW_MEMBERS sees the chairmen and selects one as snapshot`() {
+    fun `talk planner sees the chairmen and selects one as snapshot`() {
         viewModel.onCurrentUserChanged(viewer)
 
         assertEquals(listOf(antonAlt), state.chairmen)
@@ -259,7 +259,7 @@ class TalkScheduleViewModelTest {
     }
 
     @Test
-    fun `external speakers load for planners even without VIEW_MEMBERS`() {
+    fun `external speakers load for planners`() {
         viewModel.onCurrentUserChanged(planner)
 
         assertEquals(listOf(externalSpeaker), state.externalSpeakers)
@@ -343,7 +343,7 @@ class TalkScheduleViewModelTest {
     }
 
     @Test
-    fun `congregation admin may not plan without PLAN_TALKS`() {
+    fun `congregation admin may not plan without the talk planner role`() {
         viewModel.onCurrentUserChanged(admin)
         viewModel.newSlot()
 
@@ -352,7 +352,7 @@ class TalkScheduleViewModelTest {
     }
 
     @Test
-    fun `congregation admin with PLAN_TALKS may plan`() {
+    fun `congregation admin with the talk planner role may plan`() {
         viewModel.onCurrentUserChanged(admin.copy(roles = setOf(CongregationRole.TALK_PLANNER)))
         viewModel.newSlot()
 

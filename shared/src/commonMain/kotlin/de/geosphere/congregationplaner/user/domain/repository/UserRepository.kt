@@ -32,10 +32,4 @@ interface UserRepository {
     suspend fun updateMemberProfile(congregation: CongregationRef, member: AppUser): Result<AppUser>
 
     suspend fun removeMember(congregation: CongregationRef, uid: String): Result<Unit>
-
-    /**
-     * Stellt Mitgliedsdokumente im alten Format (`role` und `permissions` statt `roles`) auf `roles` um und liefert
-     * die Anzahl der umgestellten Dokumente. Ein Fehler bei einem Dokument bricht die übrigen nicht ab.
-     */
-    suspend fun migrateLegacyMembers(congregation: CongregationRef): Result<Int>
 }

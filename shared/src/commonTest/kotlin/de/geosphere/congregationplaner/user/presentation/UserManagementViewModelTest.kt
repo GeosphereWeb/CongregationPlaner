@@ -8,7 +8,6 @@ import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
 import de.geosphere.congregationplaner.user.domain.usecase.CreateMemberWithoutAccountUseCase
-import de.geosphere.congregationplaner.user.domain.usecase.MigrateLegacyMemberRolesUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.ObserveMembersUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.RemoveMemberUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.UpdateMemberProfileUseCase
@@ -59,7 +58,6 @@ class UserManagementViewModelTest {
         CreateMemberWithoutAccountUseCase(repository),
         UpdateMemberProfileUseCase(repository),
         RemoveMemberUseCase(repository),
-        MigrateLegacyMemberRolesUseCase(repository),
         UserPermissionPolicy(),
     )
 
@@ -396,26 +394,5 @@ class UserManagementViewModelTest {
 
         assertTrue(viewModel.canToggleRole(unapproved, CongregationRole.CONGREGATION_ADMIN))
         assertNull(viewModel.adminRoleLockReason(pending))
-    }
-
-    @Test
-    fun `legacy members are migrated once when an admin opens the list`() {
-        viewModel.onCurrentUserChanged(admin)
-        viewModel.onCurrentUserChanged(admin.copy(displayName = "Admin 2"))
-
-        assertEquals(listOf(testCongregation), repository.migratedCongregations)
-
-        val member = AppUser(uid = "m", approved = true, congregation = testCongregation)
-        val other = FakeUserRepository(members = emptyList())
-        UserManagementViewModel(
-            ObserveMembersUseCase(other),
-            UpdateMemberUseCase(other),
-            CreateMemberWithoutAccountUseCase(other),
-            UpdateMemberProfileUseCase(other),
-            RemoveMemberUseCase(other),
-            MigrateLegacyMemberRolesUseCase(other),
-            UserPermissionPolicy(),
-        ).onCurrentUserChanged(member)
-        assertTrue(other.migratedCongregations.isEmpty())
     }
 }

@@ -9,7 +9,6 @@ import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
 import de.geosphere.congregationplaner.user.domain.usecase.CreateMemberWithoutAccountUseCase
-import de.geosphere.congregationplaner.user.domain.usecase.MigrateLegacyMemberRolesUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.ObserveMembersUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.RemoveMemberUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.UpdateMemberProfileUseCase
@@ -49,14 +48,12 @@ data class UserManagementUiState(
 
 /** Verwaltung der Mitglieder der Versammlung des angemeldeten Versammlungsadmins. */
 @Inject
-@Suppress("LongParameterList") // Metro injiziert je Operation einen UseCase.
 class UserManagementViewModel(
     private val observeMembers: ObserveMembersUseCase,
     private val updateMember: UpdateMemberUseCase,
     private val createMemberWithoutAccount: CreateMemberWithoutAccountUseCase,
     private val updateMemberProfile: UpdateMemberProfileUseCase,
     private val removeMemberUseCase: RemoveMemberUseCase,
-    private val migrateLegacyMemberRoles: MigrateLegacyMemberRolesUseCase,
     private val permissionPolicy: UserPermissionPolicy,
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(UserManagementUiState())
@@ -93,8 +90,6 @@ class UserManagementViewModel(
         }
         mutableUiState.update { it.copy(isLoading = true) }
         observeJob = viewModelScope.launch {
-            // Stellt Mitglieder im alten Format auf Rollen um (ADR-0012); die Beobachtung liefert sie danach neu.
-            launch { migrateLegacyMemberRoles(congregation) }
             observeMembers(congregation)
                 .catch { exception ->
                     val message = exception.message ?: "Mitglieder konnten nicht geladen werden."

@@ -166,18 +166,4 @@ class MemberUseCasesTest {
         baptized = baptized,
         appointment = if (elder) Appointment.ELDER else Appointment.NONE,
     )
-
-    @Test
-    fun `migrating legacy members returns the count and passes failures on`() = runBlocking {
-        val repository = FakeUserRepository()
-        val useCase = MigrateLegacyMemberRolesUseCase(repository)
-
-        repository.migrateResult = Result.success(3)
-        assertEquals(3, useCase(testCongregation).getOrThrow())
-        assertEquals(listOf(testCongregation), repository.migratedCongregations)
-
-        val failure = IllegalStateException("offline")
-        repository.migrateResult = Result.failure(failure)
-        assertEquals(failure, useCase(testCongregation).exceptionOrNull())
-    }
 }
