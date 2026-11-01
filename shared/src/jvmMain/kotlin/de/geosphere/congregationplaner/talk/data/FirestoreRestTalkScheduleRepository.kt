@@ -56,6 +56,7 @@ internal class FirestoreRestTalkScheduleRepository(
         weekEventId = fields.optionalStringField("weekEventId"),
         weekEventName = fields.optionalStringField("weekEventName"),
         talkCancelled = fields.booleanField("talkCancelled"),
+        confirmed = fields.booleanField("confirmed"),
         talkNumber = fields.optionalIntField("talkNumber"),
         talkTitle = fields.optionalStringField("talkTitle"),
         speakerMemberId = fields.optionalStringField("speakerMemberId"),
@@ -72,6 +73,8 @@ internal class FirestoreRestTalkScheduleRepository(
         JsonObject().apply {
             add("time", firestoreString(time.toString()))
             add("talkCancelled", firestoreBoolean(talkCancelled))
+            // Nur gesetzt schreiben (fehlend = false), damit ältere Rules den Termin weiter annehmen.
+            if (confirmed) add("confirmed", firestoreBoolean(true))
             add("weekEventId", firestoreNullableString(weekEventId))
             add("weekEventName", firestoreNullableString(weekEventName))
             add("talkNumber", firestoreNullableInteger(talkNumber))

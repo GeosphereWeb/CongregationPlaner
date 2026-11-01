@@ -54,6 +54,7 @@ class FirestoreTalkRepositoriesTest {
         "c1",
         "Alt",
         "Anton",
+        confirmed = true,
     )
 
     init {
@@ -116,6 +117,7 @@ class FirestoreTalkRepositoriesTest {
             every { id } returns "2026-10-25"
             every { getString("time") } returns "17:30"
             every { getBoolean("talkCancelled") } returns false
+            every { getBoolean("confirmed") } returns false
             every { getString("weekEventId") } returns null
             every { getString("weekEventName") } returns null
             every { getLong("talkNumber") } returns null
@@ -153,6 +155,7 @@ class FirestoreTalkRepositoriesTest {
             mapOf(
                 "time" to "17:30",
                 "talkCancelled" to true,
+                "confirmed" to true,
                 "weekEventId" to "kongress",
                 "weekEventName" to "Kongress",
                 "talkNumber" to 12,
@@ -266,6 +269,7 @@ class FirestoreTalkRepositoriesTest {
         every { this@mockk.id } returns id
         every { getString("time") } returns "17:30"
         every { getBoolean("talkCancelled") } returns true
+        every { getBoolean("confirmed") } returns true
         every { getString("weekEventId") } returns "kongress"
         every { getString("weekEventName") } returns "Kongress"
         every { getLong("talkNumber") } returns 12L
@@ -285,6 +289,7 @@ class FirestoreTalkRepositoriesTest {
         every { this@mockk.id } returns id
         every { getString("time") } returns "10:00"
         every { getBoolean("talkCancelled") } returns null
+        every { getBoolean("confirmed") } returns null
         every { getString("weekEventId") } returns null
         every { getString("weekEventName") } returns null
         every { getLong("talkNumber") } returns null
