@@ -22,6 +22,7 @@ import de.geosphere.congregationplaner.theming.ThemePreviews
 @Suppress("LongParameterList")
 internal fun CongregationEditor(
     congregation: CongregationMetadata,
+    canEditMeetingTimes: Boolean,
     isSaving: Boolean,
     isBusy: Boolean,
     isDirty: Boolean,
@@ -45,31 +46,14 @@ internal fun CongregationEditor(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )
-            Text(
-                "Zeiten ${rememberCurrentYear()} (gelten auch für Jahre ohne Abweichung)",
-                style = MaterialTheme.typography.titleSmall,
-            )
-            WeekdaySelector(
-                label = "Wochentag der Zusammenkunft unter der Woche",
-                weekday = congregation.midweekMeetingWeekday,
-                onWeekdayChange = { onChange(congregation.copy(midweekMeetingWeekday = it)) },
-            )
-            MeetingTimeInput(
-                label = "Uhrzeit der Zusammenkunft unter der Woche",
-                time = congregation.midweekMeetingTime,
-                onTimeChange = { onChange(congregation.copy(midweekMeetingTime = it)) },
-            )
-            WeekdaySelector(
-                label = "Wochentag der Wochenend-Zusammenkunft",
-                weekday = congregation.weekendMeetingWeekday,
-                onWeekdayChange = { onChange(congregation.copy(weekendMeetingWeekday = it)) },
-            )
-            MeetingTimeInput(
-                label = "Uhrzeit der Wochenend-Zusammenkunft",
-                time = congregation.weekendMeetingTime,
-                onTimeChange = { onChange(congregation.copy(weekendMeetingTime = it)) },
-            )
-            YearlyMeetingTimesEditor(congregation, onChange)
+            if (canEditMeetingTimes) {
+                MeetingTimesFields(congregation, onChange)
+            } else {
+                Text(
+                    "Die Zusammenkunftszeiten pflegt der Versammlungsadmin der Versammlung.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = onSave, enabled = !isBusy && isDirty) {
                     Text(if (isSaving) "Speichert …" else "Speichern")
@@ -87,6 +71,7 @@ internal fun CongregationEditor(
 private fun CongregationEditorPreview() = PreviewThemeWrapper {
     CongregationEditor(
         congregation = previewCongregations.first(),
+        canEditMeetingTimes = true,
         isSaving = false,
         isBusy = false,
         isDirty = true,
@@ -94,4 +79,35 @@ private fun CongregationEditorPreview() = PreviewThemeWrapper {
         onSave = {},
         onCancel = {},
     )
+}
+
+@Composable
+private fun MeetingTimesFields(congregation: CongregationMetadata, onChange: (CongregationMetadata) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            "Zeiten ${rememberCurrentYear()} (gelten auch für Jahre ohne Abweichung)",
+            style = MaterialTheme.typography.titleSmall,
+        )
+        WeekdaySelector(
+            label = "Wochentag der Zusammenkunft unter der Woche",
+            weekday = congregation.midweekMeetingWeekday,
+            onWeekdayChange = { onChange(congregation.copy(midweekMeetingWeekday = it)) },
+        )
+        MeetingTimeInput(
+            label = "Uhrzeit der Zusammenkunft unter der Woche",
+            time = congregation.midweekMeetingTime,
+            onTimeChange = { onChange(congregation.copy(midweekMeetingTime = it)) },
+        )
+        WeekdaySelector(
+            label = "Wochentag der Wochenend-Zusammenkunft",
+            weekday = congregation.weekendMeetingWeekday,
+            onWeekdayChange = { onChange(congregation.copy(weekendMeetingWeekday = it)) },
+        )
+        MeetingTimeInput(
+            label = "Uhrzeit der Wochenend-Zusammenkunft",
+            time = congregation.weekendMeetingTime,
+            onTimeChange = { onChange(congregation.copy(weekendMeetingTime = it)) },
+        )
+        YearlyMeetingTimesEditor(congregation, onChange)
+    }
 }
