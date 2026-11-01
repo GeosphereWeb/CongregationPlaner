@@ -8,6 +8,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import de.geosphere.congregationplaner.auth.FirebaseAndroidContextHolder
 import de.geosphere.congregationplaner.auth.FirebaseSupport
 import de.geosphere.congregationplaner.organization.InviteLinkInbox
@@ -31,6 +34,12 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             App()
+        }
+
+        // Immersive fullscreen: bars reappear transiently on edge swipe.
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            hide(WindowInsetsCompat.Type.systemBars())
         }
     }
 
