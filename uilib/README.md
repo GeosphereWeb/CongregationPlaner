@@ -60,14 +60,17 @@ ElevatedAppCard {
 ```kotlin
 import de.geosphere.congregationplaner.ui.appbar.*
 
-// App TopBar mit Navigation
-AppTopBar(
-    title = "Mein Screen",
-    onNavigationClick = { navController.popBackStack() }
+// Obere Leiste eines Unterbereichs mit Zurück-Pfeil
+NightTopBar(
+    title = "Vortragsplanung",
+    backIcon = backIcon,
+    backDescription = "Zurück zu Versammlung",
+    onBack = { },
+    subtitle = "Berlin-Mitte",
 )
 
-// Simple TopBar ohne Navigation
-SimpleAppTopBar(title = "Home")
+// Tabs darunter
+NightTabRow(labels = listOf("Wochenende", "Historie"), selectedIndex = 0, onSelect = { })
 ```
 
 ### Dialog Components (`dialog/`)
