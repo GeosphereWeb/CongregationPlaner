@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
+import de.geosphere.congregationplaner.presentation.components.DetailPlaceholder
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 
@@ -28,13 +29,7 @@ internal fun CongregationDetail(
     onCancel: () -> Unit,
 ) {
     if (congregation == null) {
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                "Wähle links eine Versammlung aus oder lege eine neue an.",
-                modifier = Modifier.padding(16.dp),
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        }
+        DetailPlaceholder("Wähle links eine Versammlung aus oder lege eine neue an.")
     } else if (!canEdit) {
         CongregationSummary(congregation)
     } else {

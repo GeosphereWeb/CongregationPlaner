@@ -8,9 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -37,7 +35,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import de.geosphere.congregationplaner.presentation.components.DetailPane
+import de.geosphere.congregationplaner.presentation.components.DetailPlaceholder
 import de.geosphere.congregationplaner.presentation.components.ListDetailState
+import de.geosphere.congregationplaner.presentation.components.ListPaneHeader
 import de.geosphere.congregationplaner.presentation.components.SelectableListCard
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.talk.domain.model.Talk
@@ -109,7 +110,7 @@ internal fun TalkReferenceContent(
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     Column(modifier = modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Vortragsliste & Ereignisse", style = MaterialTheme.typography.headlineSmall)
+        ListPaneHeader("Vortragsliste & Ereignisse")
         if (!catalogState.canManage) {
             Text("Dafür fehlt dir die Berechtigung.")
             return@Column
@@ -153,25 +154,16 @@ private fun ReferenceListDetail(
         listPane = { AnimatedPane { list() } },
         detailPane = {
             AnimatedPane {
-                Column(
-                    modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                DetailPane(
+                    showBack = navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Hidden,
+                    onBack = onClose,
+                    backEnabled = !state.isSaving,
                 ) {
-                    if (navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Hidden) {
-                        TextButton(onClick = onClose, enabled = !state.isSaving) { Text("Zurück zur Liste") }
-                    }
                     detail()
                 }
             }
         },
     )
-}
-
-@Composable
-private fun DetailPlaceholder(text: String) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Text(text, modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.bodyLarge)
-    }
 }
 
 @Composable
