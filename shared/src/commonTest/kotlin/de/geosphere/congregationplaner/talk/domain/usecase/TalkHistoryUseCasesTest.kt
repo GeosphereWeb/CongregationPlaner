@@ -5,10 +5,8 @@ import de.geosphere.congregationplaner.talk.domain.model.TalkScheduleException
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.talk.testing.FakeTalkHistoryRepository
-import de.geosphere.congregationplaner.user.data.mappers.withLegacyRoles
 import de.geosphere.congregationplaner.user.domain.model.AppUser
-import de.geosphere.congregationplaner.user.domain.model.UserPermission
-import de.geosphere.congregationplaner.user.domain.model.UserRole
+import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.testing.testCongregation
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -33,10 +31,9 @@ class TalkHistoryUseCasesTest {
     private val admin = AppUser(
         uid = "1",
         approved = true,
-        role = UserRole.CONGREGATION_ADMIN,
-        permissions = setOf(UserPermission.PLAN_TALKS),
+        roles = setOf(CongregationRole.CONGREGATION_ADMIN, CongregationRole.TALK_PLANNER),
         congregation = testCongregation,
-    ).withLegacyRoles()
+    )
     private val member = AppUser(uid = "2", approved = true, congregation = testCongregation)
 
     private val spring = LocalDate(2026, 3, 1)

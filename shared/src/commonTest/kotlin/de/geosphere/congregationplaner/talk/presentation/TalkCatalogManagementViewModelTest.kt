@@ -7,7 +7,7 @@ import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkCatalogUse
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveTalkUseCase
 import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
-import de.geosphere.congregationplaner.user.domain.model.UserRole
+import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -25,7 +25,8 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalCoroutinesApi::class)
 class TalkCatalogManagementViewModelTest {
     private val admin = AppUser(uid = "admin", isGlobalAdmin = true)
-    private val congregationAdmin = AppUser(uid = "ca", approved = true, role = UserRole.CONGREGATION_ADMIN)
+    private val congregationAdmin =
+        AppUser(uid = "ca", approved = true, roles = setOf(CongregationRole.CONGREGATION_ADMIN))
     private val first = Talk(1, "Erster Vortrag")
     private val second = Talk(2, "Zweiter Vortrag", active = false)
 

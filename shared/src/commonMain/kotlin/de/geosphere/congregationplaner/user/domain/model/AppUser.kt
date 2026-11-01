@@ -8,15 +8,12 @@ import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
  * @param uid Die ID aus Firebase Authentication; dient als Dokument-ID. Bei Personen ohne Konto ist es
  *   eine von Firestore vergebene ID.
  * @param approved Gibt an, ob der Versammlungsadmin den Nutzer freigeschaltet hat.
- * @param role Die Rolle innerhalb der Versammlung.
- * @param permissions Einzelne Berechtigungen des Nutzers innerhalb der Versammlung.
- * @param roles Die Rollen des Nutzers (ADR-0012); die Policies prüfen nur noch sie. Die Data-Schicht leitet sie
- *   vorerst aus [role] und [permissions] ab.
+ * @param roles Die Rollen des Nutzers in der Versammlung (ADR-0012); ohne Rolle ist er ein einfaches Mitglied.
  * @param congregation Die Versammlung, zu der das Mitglied gehört.
  * @param isGlobalAdmin Globale Administratoren (Dokument in `admins/{uid}`) verwalten Kreise und
  *   Versammlungen und haben in jeder Versammlung Zugriff.
  * @param hasAccount `false` für Personen (z. B. Kinder), die der Admin ohne eigenes Login erfasst hat;
- *   sie sind nie freigegeben und haben keine Rolle oder Berechtigungen.
+ *   sie sind nie freigegeben und haben keine Rolle.
  * @param profile Persönliche Angaben, die der Admin pflegt.
  */
 data class AppUser(
@@ -24,8 +21,6 @@ data class AppUser(
     val email: String? = null,
     val displayName: String? = null,
     val approved: Boolean = false,
-    val role: UserRole = UserRole.MEMBER,
-    val permissions: Set<UserPermission> = emptySet(),
     val roles: Set<CongregationRole> = emptySet(),
     val congregation: CongregationRef? = null,
     val isGlobalAdmin: Boolean = false,

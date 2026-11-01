@@ -2,7 +2,7 @@ package de.geosphere.congregationplaner.user.domain.permission
 
 import de.geosphere.congregationplaner.circuit.domain.model.Circuit
 import de.geosphere.congregationplaner.user.domain.model.AppUser
-import de.geosphere.congregationplaner.user.domain.model.UserRole
+import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -23,7 +23,9 @@ class CircuitPermissionPolicyTest {
 
     @Test
     fun `congregation roles get no circuit permissions`() {
-        UserRole.entries.map { role -> AppUser(uid = "2", approved = true, role = role) }.forEach { user ->
+        CongregationRole.entries.map { role ->
+            AppUser(uid = "2", approved = true, roles = setOf(role))
+        }.forEach { user ->
             assertFalse(policy.canCreate(user), "canCreate for $user")
             assertFalse(policy.canEdit(user, circuit), "canEdit for $user")
             assertFalse(policy.canDelete(user, circuit), "canDelete for $user")

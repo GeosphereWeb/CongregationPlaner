@@ -1,15 +1,14 @@
 package de.geosphere.congregationplaner.user.presentation
 
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
-import de.geosphere.congregationplaner.user.data.mappers.withLegacyRoles
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
+import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
-import de.geosphere.congregationplaner.user.domain.model.UserPermission
-import de.geosphere.congregationplaner.user.domain.model.UserRole
 import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
 import de.geosphere.congregationplaner.user.domain.usecase.CreateMemberWithoutAccountUseCase
+import de.geosphere.congregationplaner.user.domain.usecase.MigrateLegacyMemberRolesUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.ObserveMembersUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.RemoveMemberUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.UpdateMemberProfileUseCase
@@ -35,13 +34,12 @@ class UserManagementViewModelTest {
         uid = "admin",
         displayName = "Admin",
         approved = true,
-        role = UserRole.CONGREGATION_ADMIN,
+        roles = setOf(CongregationRole.CONGREGATION_ADMIN),
         congregation = testCongregation,
-    ).withLegacyRoles()
+    )
     private val pending = AppUser(
         uid = "neu",
         email = "neu@example.com",
-        permissions = UserPermission.defaults,
         congregation = testCongregation,
     )
 
@@ -61,6 +59,7 @@ class UserManagementViewModelTest {
         CreateMemberWithoutAccountUseCase(repository),
         UpdateMemberProfileUseCase(repository),
         RemoveMemberUseCase(repository),
+        MigrateLegacyMemberRolesUseCase(repository),
         UserPermissionPolicy(),
     )
 
@@ -105,24 +104,22 @@ class UserManagementViewModelTest {
     }
 
     @Test
-    fun `admin approves members and changes roles and permissions`() {
+    fun `admin approves members and changes roles`() {
         viewModel.onCurrentUserChanged(admin)
 
         viewModel.setApproved(pending, true)
-        viewModel.setRole(pending, UserRole.CONGREGATION_ADMIN)
-        viewModel.togglePermission(pending, UserPermission.DUMMY)
-        viewModel.togglePermission(pending.copy(permissions = emptySet()), UserPermission.DUMMY)
+        viewModel.toggleRole(pending, CongregationRole.TALK_PLANNER)
+        viewModel.toggleRole(pending.copy(roles = setOf(CongregationRole.TALK_PLANNER)), CongregationRole.TALK_PLANNER)
 
         assertEquals(
             listOf(
                 pending.copy(approved = true),
-                pending.copy(role = UserRole.CONGREGATION_ADMIN),
-                pending.copy(permissions = emptySet()),
-                pending.copy(permissions = setOf(UserPermission.DUMMY)),
+                pending.copy(roles = setOf(CongregationRole.TALK_PLANNER)),
+                pending.copy(roles = emptySet()),
             ),
             repository.updatedMembers,
         )
-        assertEquals(pending.copy(permissions = setOf(UserPermission.DUMMY)), viewModel.uiState.value.members.first())
+        assertEquals(pending, viewModel.uiState.value.members.first())
         assertTrue(viewModel.uiState.value.busyMemberIds.isEmpty())
     }
 
@@ -130,7 +127,7 @@ class UserManagementViewModelTest {
     fun `admin cannot modify the own membership`() {
         viewModel.onCurrentUserChanged(admin)
 
-        viewModel.setRole(admin, UserRole.MEMBER)
+        viewModel.toggleRole(admin, CongregationRole.CONGREGATION_ADMIN)
         viewModel.removeMember(admin)
 
         assertTrue(repository.updatedMembers.isEmpty())
@@ -142,15 +139,18 @@ class UserManagementViewModelTest {
     }
 
     @Test
-    fun `admin may change the own permissions`() {
+    fun `admin may change the own roles but keeps the admin role`() {
         viewModel.onCurrentUserChanged(admin)
 
-        viewModel.togglePermission(admin, UserPermission.PLAN_TALKS)
+        viewModel.toggleRole(admin, CongregationRole.TALK_PLANNER)
 
-        val expected = admin.copy(permissions = admin.permissions + UserPermission.PLAN_TALKS)
+        val expected = admin.copy(roles = admin.roles + CongregationRole.TALK_PLANNER)
         assertEquals(listOf(expected), repository.updatedMembers)
-        assertTrue(viewModel.canEditPermissions(admin))
+        assertTrue(viewModel.canEditRoles(admin))
         assertFalse(viewModel.canEdit(admin))
+        assertFalse(viewModel.canToggleRole(admin, CongregationRole.CONGREGATION_ADMIN))
+        assertTrue(viewModel.canToggleRole(admin, CongregationRole.TASK_PLANNER))
+        assertEquals("Die eigene Admin-Rolle bleibt bestehen.", viewModel.adminRoleLockReason(admin))
     }
 
     @Test
@@ -206,7 +206,7 @@ class UserManagementViewModelTest {
     @Test
     fun `losing the admin role stops managing members`() {
         viewModel.onCurrentUserChanged(admin)
-        viewModel.onCurrentUserChanged(admin.copy(role = UserRole.MEMBER, roles = emptySet()))
+        viewModel.onCurrentUserChanged(admin.copy(roles = emptySet()))
 
         val state = viewModel.uiState.value
         assertFalse(state.canManage)
@@ -352,10 +352,70 @@ class UserManagementViewModelTest {
         viewModel.onCurrentUserChanged(admin)
         viewModel.addMemberWithoutAccount()
 
-        viewModel.onCurrentUserChanged(admin.copy(role = UserRole.MEMBER, roles = emptySet()))
+        viewModel.onCurrentUserChanged(admin.copy(roles = emptySet()))
         viewModel.saveProfile()
 
         assertNull(viewModel.uiState.value.editor)
         assertTrue(repository.createdMembers.isEmpty())
+    }
+
+    @Test
+    fun `the last approved admin keeps the admin role`() {
+        repository = FakeUserRepository(members = listOf(admin))
+        viewModel = createViewModel()
+        val globalAdmin = AppUser(uid = "global", isGlobalAdmin = true, congregation = testCongregation)
+        viewModel.onCurrentUserChanged(globalAdmin)
+
+        assertFalse(viewModel.canToggleRole(admin, CongregationRole.CONGREGATION_ADMIN))
+        assertEquals("Eine Versammlung braucht mindestens einen Admin.", viewModel.adminRoleLockReason(admin))
+        viewModel.toggleRole(admin, CongregationRole.CONGREGATION_ADMIN)
+
+        assertTrue(repository.updatedMembers.isEmpty())
+        assertEquals("Dafür fehlt dir die Berechtigung.", viewModel.uiState.value.errorMessage)
+    }
+
+    @Test
+    fun `an admin may remove the admin role of another admin`() {
+        val other = admin.copy(uid = "other")
+        repository = FakeUserRepository(members = listOf(admin, other))
+        viewModel = createViewModel()
+        viewModel.onCurrentUserChanged(admin)
+
+        assertTrue(viewModel.canToggleRole(other, CongregationRole.CONGREGATION_ADMIN))
+        viewModel.toggleRole(other, CongregationRole.CONGREGATION_ADMIN)
+
+        assertEquals(listOf(other.copy(roles = emptySet())), repository.updatedMembers)
+    }
+
+    @Test
+    fun `an unapproved admin does not count and can lose the role`() {
+        val unapproved = admin.copy(uid = "unapproved", approved = false)
+        repository = FakeUserRepository(members = listOf(admin, unapproved))
+        viewModel = createViewModel()
+        viewModel.onCurrentUserChanged(admin)
+
+        assertTrue(viewModel.canToggleRole(unapproved, CongregationRole.CONGREGATION_ADMIN))
+        assertNull(viewModel.adminRoleLockReason(pending))
+    }
+
+    @Test
+    fun `legacy members are migrated once when an admin opens the list`() {
+        viewModel.onCurrentUserChanged(admin)
+        viewModel.onCurrentUserChanged(admin.copy(displayName = "Admin 2"))
+
+        assertEquals(listOf(testCongregation), repository.migratedCongregations)
+
+        val member = AppUser(uid = "m", approved = true, congregation = testCongregation)
+        val other = FakeUserRepository(members = emptyList())
+        UserManagementViewModel(
+            ObserveMembersUseCase(other),
+            UpdateMemberUseCase(other),
+            CreateMemberWithoutAccountUseCase(other),
+            UpdateMemberProfileUseCase(other),
+            RemoveMemberUseCase(other),
+            MigrateLegacyMemberRolesUseCase(other),
+            UserPermissionPolicy(),
+        ).onCurrentUserChanged(member)
+        assertTrue(other.migratedCongregations.isEmpty())
     }
 }

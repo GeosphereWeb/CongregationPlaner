@@ -8,7 +8,7 @@ class AdminContactTest {
     private val admin = AppUser(
         uid = "a1",
         approved = true,
-        role = UserRole.CONGREGATION_ADMIN,
+        roles = setOf(CongregationRole.CONGREGATION_ADMIN),
         profile = MemberProfile(firstName = "Anna", lastName = "Admin"),
     )
 
@@ -20,8 +20,8 @@ class AdminContactTest {
     @Test
     fun `unapproved admin and plain members have no contact`() {
         assertNull(admin.copy(approved = false).adminContact())
-        assertNull(admin.copy(role = UserRole.MEMBER).adminContact())
-        assertNull(admin.copy(role = UserRole.NONE).adminContact())
+        assertNull(admin.copy(roles = emptySet()).adminContact())
+        assertNull(admin.copy(roles = setOf(CongregationRole.TALK_PLANNER)).adminContact())
     }
 
     @Test

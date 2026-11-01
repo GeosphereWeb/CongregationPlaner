@@ -1,11 +1,9 @@
 package de.geosphere.congregationplaner.user.presentation
 
-import de.geosphere.congregationplaner.user.data.mappers.withLegacyRoles
 import de.geosphere.congregationplaner.user.domain.model.AdminContact
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.UserAccessState
-import de.geosphere.congregationplaner.user.domain.model.UserRole
 import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
 import de.geosphere.congregationplaner.user.domain.usecase.GetAdminContactsUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.ObserveUserAccessUseCase
@@ -79,7 +77,6 @@ class UserAccessViewModelTest {
 
         val approved = pending.copy(
             approved = true,
-            role = UserRole.CONGREGATION_ADMIN,
             roles = setOf(CongregationRole.CONGREGATION_ADMIN),
         )
         repository.user.value = approved
@@ -103,9 +100,9 @@ class UserAccessViewModelTest {
     @Test
     fun `user management permission is delegated to policy`() {
         assertTrue(
-            viewModel.canManageUsers(AppUser(approved = true, role = UserRole.CONGREGATION_ADMIN).withLegacyRoles()),
+            viewModel.canManageUsers(AppUser(approved = true, roles = setOf(CongregationRole.CONGREGATION_ADMIN))),
         )
-        assertFalse(viewModel.canManageUsers(AppUser(approved = true, role = UserRole.MEMBER)))
+        assertFalse(viewModel.canManageUsers(AppUser(approved = true)))
     }
 
     @Test

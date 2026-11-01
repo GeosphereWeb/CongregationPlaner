@@ -7,7 +7,7 @@ import de.geosphere.congregationplaner.talk.domain.usecase.ObserveWeekEventsUseC
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveWeekEventUseCase
 import de.geosphere.congregationplaner.talk.testing.FakeWeekEventRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
-import de.geosphere.congregationplaner.user.domain.model.UserRole
+import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -25,7 +25,8 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalCoroutinesApi::class)
 class WeekEventManagementViewModelTest {
     private val admin = AppUser(uid = "admin", isGlobalAdmin = true)
-    private val congregationAdmin = AppUser(uid = "ca", approved = true, role = UserRole.CONGREGATION_ADMIN)
+    private val congregationAdmin =
+        AppUser(uid = "ca", approved = true, roles = setOf(CongregationRole.CONGREGATION_ADMIN))
     private val besuch = WeekEvent("besuch", "Besuch")
     private val kongress = WeekEvent("kongress", "Kongress", cancelsTalk = true)
 

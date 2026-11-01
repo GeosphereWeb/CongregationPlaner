@@ -4,6 +4,7 @@ import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.EventListener
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.ListenerRegistration
@@ -20,8 +21,6 @@ import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
-import de.geosphere.congregationplaner.user.domain.model.UserPermission
-import de.geosphere.congregationplaner.user.domain.model.UserRole
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -74,8 +73,6 @@ class FirestoreUserRepositoryTest {
                 "user@example.com",
                 "User",
                 approved = true,
-                role = UserRole.CONGREGATION_ADMIN,
-                permissions = setOf(UserPermission.DUMMY),
                 roles = setOf(CongregationRole.CONGREGATION_ADMIN),
                 congregation = congregation,
             ),
@@ -84,7 +81,7 @@ class FirestoreUserRepositoryTest {
     }
 
     @Test
-    fun `getOrCreateUser creates unapproved member when document is missing`() = runBlocking {
+    fun `getOrCreateUser creates an unapproved member without roles when the document is missing`() = runBlocking {
         val missing = mockk<DocumentSnapshot> { every { exists() } returns false }
         val fields = slot<Any>()
         every { document.get(Source.SERVER) } returns successTask(missing)
@@ -98,8 +95,6 @@ class FirestoreUserRepositoryTest {
                 "user@example.com",
                 "User",
                 approved = false,
-                role = UserRole.MEMBER,
-                permissions = setOf(UserPermission.DUMMY),
                 congregation = congregation,
             ),
             user,
@@ -109,8 +104,7 @@ class FirestoreUserRepositoryTest {
                 "email" to "user@example.com",
                 "displayName" to "User",
                 "approved" to false,
-                "role" to "MEMBER",
-                "permissions" to listOf("DUMMY"),
+                "roles" to emptyList<String>(),
                 "hasAccount" to true,
             ) + defaultProfileFields,
             fields.captured,
@@ -171,7 +165,6 @@ class FirestoreUserRepositoryTest {
             AppUser(
                 uid = "generated-1",
                 approved = false,
-                role = UserRole.MEMBER,
                 congregation = congregation,
                 hasAccount = false,
                 profile = profile,
@@ -183,8 +176,7 @@ class FirestoreUserRepositoryTest {
                 "email" to null,
                 "displayName" to null,
                 "approved" to false,
-                "role" to "MEMBER",
-                "permissions" to emptyList<String>(),
+                "roles" to emptyList<String>(),
                 "hasAccount" to false,
             ) + defaultProfileFields + mapOf("lastName" to "Muster", "firstName" to "Lena", "category" to "CHILD"),
             fields.captured,
@@ -248,7 +240,6 @@ class FirestoreUserRepositoryTest {
                 "user@example.com",
                 "User",
                 approved = false,
-                role = UserRole.NONE,
                 congregation = congregation,
             ),
             repository.observeUser(congregation, "uid-1").first(),
@@ -303,16 +294,88 @@ class FirestoreUserRepositoryTest {
     }
 
     @Test
-    fun `updateMember writes only access fields`() = runBlocking {
+    fun `updateMember writes the roles and drops the legacy fields`() = runBlocking {
         val fields = slot<Map<String, Any>>()
         every { document.update(capture(fields)) } returns successTask<Void?>(null)
-        val member = AppUser(uid = "uid-1", email = "ignored", approved = true, role = UserRole.CONGREGATION_ADMIN)
+        val member =
+            AppUser(
+                uid = "uid-1",
+                email = "ignored",
+                approved = true,
+                roles = setOf(CongregationRole.CONGREGATION_ADMIN),
+            )
 
         assertEquals(member, repository.updateMember(congregation, member).getOrThrow())
         assertEquals(
-            mapOf("approved" to true, "role" to "CONGREGATION_ADMIN", "permissions" to emptyList<String>()),
+            mapOf(
+                "approved" to true,
+                "roles" to listOf("CONGREGATION_ADMIN"),
+                "role" to FieldValue.delete(),
+                "permissions" to FieldValue.delete(),
+            ),
             fields.captured,
         )
+    }
+
+    @Test
+    fun `stored roles win over the legacy fields`() = runBlocking {
+        every { document.get(Source.SERVER) } returns successTask(
+            memberSnapshot(
+                approved = true,
+                role = "CONGREGATION_ADMIN",
+                permissions = listOf("PLAN_TALKS"),
+                roles = listOf("TASK_PLANNER", "BOSS", 1),
+            ),
+        )
+
+        val user = repository.getOrCreateUser(authUser, congregation).getOrThrow()
+
+        assertEquals(setOf(CongregationRole.TASK_PLANNER), user.roles)
+    }
+
+    @Test
+    fun `migrateLegacyMembers rewrites only documents without roles`() = withMockedLog {
+        val migrated = mockk<DocumentReference>()
+        val fields = slot<Map<String, Any>>()
+        every { migrated.update(capture(fields)) } returns successTask<Void?>(null)
+        val legacy = memberSnapshot(approved = true, role = "CONGREGATION_ADMIN", permissions = listOf("PLAN_TALKS"))
+        every { legacy.reference } returns migrated
+        val current = memberSnapshot(approved = true, role = null, permissions = null, roles = listOf("TALK_PLANNER"))
+        every { collection.get(Source.SERVER) } returns successTask(
+            mockk<QuerySnapshot> { every { documents } returns listOf(legacy, current) },
+        )
+
+        assertEquals(1, runBlocking { repository.migrateLegacyMembers(congregation).getOrThrow() })
+
+        assertEquals(
+            mapOf(
+                "roles" to listOf("CONGREGATION_ADMIN", "TALK_PLANNER"),
+                "role" to FieldValue.delete(),
+                "permissions" to FieldValue.delete(),
+            ),
+            fields.captured,
+        )
+    }
+
+    @Test
+    fun `migrateLegacyMembers continues after a failed document and reports a failed listing`() = withMockedLog {
+        val broken = mockk<DocumentReference>()
+        every { broken.update(any<Map<String, Any>>()) } returns failedTask(IllegalStateException("denied"))
+        val ok = mockk<DocumentReference>()
+        every { ok.update(any<Map<String, Any>>()) } returns successTask<Void?>(null)
+        val first = memberSnapshot(approved = true, role = "MEMBER", permissions = null)
+        every { first.reference } returns broken
+        val second = memberSnapshot(approved = true, role = "CONGREGATION_ADMIN", permissions = null)
+        every { second.reference } returns ok
+        every { collection.get(Source.SERVER) } returns successTask(
+            mockk<QuerySnapshot> { every { documents } returns listOf(first, second) },
+        )
+
+        assertEquals(1, runBlocking { repository.migrateLegacyMembers(congregation).getOrThrow() })
+
+        val error = IllegalStateException("offline")
+        every { collection.get(Source.SERVER) } returns failedTask(error)
+        runBlocking { assertFailure(error, repository.migrateLegacyMembers(congregation)) }
     }
 
     @Test
@@ -350,6 +413,7 @@ class FirestoreUserRepositoryTest {
         role: String?,
         permissions: List<Any>?,
         profile: Map<String, Any> = emptyMap(),
+        roles: List<Any>? = null,
     ): DocumentSnapshot = mockk {
         every { exists() } returns true
         every { id } returns "uid-1"
@@ -357,6 +421,8 @@ class FirestoreUserRepositoryTest {
         every { getString(any()) } answers { profile[firstArg()] as? String }
         every { getBoolean(any()) } answers { profile[firstArg()] as? Boolean }
         every { this@mockk.get("permissions") } returns permissions
+        every { contains("roles") } returns (roles != null)
+        every { this@mockk.get("roles") } returns roles
         every { getString("email") } returns "user@example.com"
         every { getString("displayName") } returns "User"
         every { getString("role") } returns role

@@ -45,20 +45,19 @@ import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
+import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
-import de.geosphere.congregationplaner.user.domain.model.UserPermission
-import de.geosphere.congregationplaner.user.domain.model.UserRole
 import kotlinx.coroutines.delay
 
 /** Callbacks der Userverwaltung; gebündelt, damit die Composables überschaubare Signaturen behalten. */
 internal data class UserManagementActions(
     val canEdit: (AppUser) -> Boolean = { false },
     val canEditProfile: (AppUser) -> Boolean = { false },
-    val canEditPermissions: (AppUser) -> Boolean = { false },
+    val canToggleRole: (AppUser, CongregationRole) -> Boolean = { _, _ -> false },
+    val adminRoleLockReason: (AppUser) -> String? = { null },
     val onApprovedChange: (AppUser, Boolean) -> Unit = { _, _ -> },
-    val onRoleChange: (AppUser, UserRole) -> Unit = { _, _ -> },
-    val onTogglePermission: (AppUser, UserPermission) -> Unit = { _, _ -> },
+    val onToggleRole: (AppUser, CongregationRole) -> Unit = { _, _ -> },
     val onRemove: (AppUser) -> Unit = {},
     val onEditProfile: (AppUser) -> Unit = {},
     val onAddMemberWithoutAccount: () -> Unit = {},
@@ -78,10 +77,10 @@ fun UserManagementScreen(viewModel: UserManagementViewModel, modifier: Modifier 
         actions = UserManagementActions(
             canEdit = viewModel::canEdit,
             canEditProfile = viewModel::canEditProfile,
-            canEditPermissions = viewModel::canEditPermissions,
+            canToggleRole = viewModel::canToggleRole,
+            adminRoleLockReason = viewModel::adminRoleLockReason,
             onApprovedChange = viewModel::setApproved,
-            onRoleChange = viewModel::setRole,
-            onTogglePermission = viewModel::togglePermission,
+            onToggleRole = viewModel::toggleRole,
             onRemove = viewModel::removeMember,
             onEditProfile = viewModel::editProfile,
             onAddMemberWithoutAccount = viewModel::addMemberWithoutAccount,
@@ -150,8 +149,8 @@ internal fun UserManagementContent(
                             MemberCard(
                                 member = member,
                                 isCurrentUser = member.uid == state.currentUserId,
+                                isBusy = isBusy,
                                 enabled = actions.canEdit(member) && !isBusy,
-                                permissionsEnabled = actions.canEditPermissions(member) && !isBusy,
                                 selected = editor?.member?.uid == member.uid,
                                 canSelect = actions.canEditProfile(member) && !isBusy,
                                 actions = actions,
@@ -237,8 +236,8 @@ private const val COPIED_FEEDBACK_MILLIS = 2_000L
 private fun MemberCard(
     member: AppUser,
     isCurrentUser: Boolean,
+    isBusy: Boolean,
     enabled: Boolean,
-    permissionsEnabled: Boolean,
     selected: Boolean,
     canSelect: Boolean,
     actions: UserManagementActions,
@@ -278,7 +277,7 @@ private fun MemberCard(
             }
             ProfileSummary(member.profile)
             if (member.hasAccount) {
-                AccessSettings(member, enabled, permissionsEnabled, actions)
+                AccessSettings(member, isBusy, actions)
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (enabled) {
@@ -313,41 +312,24 @@ private fun ProfileSummary(profile: MemberProfile) {
 }
 
 @Composable
-private fun AccessSettings(
-    member: AppUser,
-    enabled: Boolean,
-    permissionsEnabled: Boolean,
-    actions: UserManagementActions,
-) {
+private fun AccessSettings(member: AppUser, isBusy: Boolean, actions: UserManagementActions) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            "Rolle:",
+            "Rollen:",
             style = MaterialTheme.typography.labelLarge,
             modifier = Modifier.align(Alignment.CenterVertically),
         )
-        UserRole.assignable.forEach { role ->
+        CongregationRole.entries.forEach { role ->
             FilterChip(
-                selected = member.role == role,
-                onClick = { if (member.role != role) actions.onRoleChange(member, role) },
+                selected = role in member.roles,
+                onClick = { actions.onToggleRole(member, role) },
                 label = { Text(role.label) },
-                enabled = enabled,
+                enabled = actions.canToggleRole(member, role) && !isBusy,
             )
         }
     }
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            "Berechtigungen:",
-            style = MaterialTheme.typography.labelLarge,
-            modifier = Modifier.align(Alignment.CenterVertically),
-        )
-        UserPermission.entries.forEach { permission ->
-            FilterChip(
-                selected = permission in member.permissions,
-                onClick = { actions.onTogglePermission(member, permission) },
-                label = { Text(permission.label) },
-                enabled = permissionsEnabled,
-            )
-        }
+    actions.adminRoleLockReason(member)?.let { reason ->
+        Text(reason, style = MaterialTheme.typography.bodySmall)
     }
 }
 
@@ -357,12 +339,12 @@ private fun UserManagementPreview() = PreviewThemeWrapper {
     UserManagementContent(
         state = UserManagementUiState(
             members = listOf(
-                AppUser(uid = "1", email = "neu@congregationplaner.de", permissions = UserPermission.defaults),
+                AppUser(uid = "1", email = "neu@congregationplaner.de"),
                 AppUser(
                     uid = "2",
                     displayName = "Admin",
                     approved = true,
-                    role = UserRole.CONGREGATION_ADMIN,
+                    roles = setOf(CongregationRole.CONGREGATION_ADMIN, CongregationRole.TALK_PLANNER),
                     profile = MemberProfile(
                         lastName = "Muster",
                         firstName = "Max",
@@ -387,7 +369,7 @@ private fun UserManagementPreview() = PreviewThemeWrapper {
         actions = UserManagementActions(
             canEdit = { it.uid != "2" },
             canEditProfile = { true },
-            canEditPermissions = { true },
+            canToggleRole = { _, _ -> true },
         ),
     )
 }

@@ -9,7 +9,7 @@ data class AdminContact(val uid: String, val firstName: String, val lastName: St
 }
 
 /** Der Kontakt, den dieses Mitglied haben soll; nur freigegebene Versammlungsadmins haben einen. */
-fun AppUser.adminContact(): AdminContact? = if (approved && role == UserRole.CONGREGATION_ADMIN) {
+fun AppUser.adminContact(): AdminContact? = if (approved && CongregationRole.CONGREGATION_ADMIN in roles) {
     AdminContact(uid, profile.firstName, profile.lastName)
 } else {
     null
