@@ -20,6 +20,7 @@ import de.geosphere.congregationplaner.firestore.pollingFlow
 import de.geosphere.congregationplaner.firestore.runCatchingIo
 import de.geosphere.congregationplaner.firestore.stringArrayField
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
+import de.geosphere.congregationplaner.user.data.mappers.withLegacyRoles
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
@@ -119,7 +120,7 @@ internal class FirestoreRestUserRepository(
             landlinePhone = fields.optionalStringField("landlinePhone").orEmpty(),
             isSpeaker = fields.booleanField("isSpeaker"),
         ),
-    )
+    ).withLegacyRoles()
 
     private fun AppUser.allFields(): JsonObject = accessFields().apply {
         add("email", firestoreNullableString(email))

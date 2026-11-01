@@ -17,6 +17,7 @@ import de.geosphere.congregationplaner.testing.successTask
 import de.geosphere.congregationplaner.testing.withMockedLog
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
+import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.UserPermission
@@ -75,6 +76,7 @@ class FirestoreUserRepositoryTest {
                 approved = true,
                 role = UserRole.CONGREGATION_ADMIN,
                 permissions = setOf(UserPermission.DUMMY),
+                roles = setOf(CongregationRole.CONGREGATION_ADMIN),
                 congregation = congregation,
             ),
             repository.getOrCreateUser(authUser, congregation).getOrThrow(),

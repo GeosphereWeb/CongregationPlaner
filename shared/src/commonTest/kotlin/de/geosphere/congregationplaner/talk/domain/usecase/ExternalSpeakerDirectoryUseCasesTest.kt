@@ -7,6 +7,7 @@ import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.talk.testing.FakeExternalSpeakerDirectoryRepository
+import de.geosphere.congregationplaner.user.data.mappers.withLegacyRoles
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.UserPermission
 import de.geosphere.congregationplaner.user.domain.model.UserRole
@@ -38,7 +39,7 @@ class ExternalSpeakerDirectoryUseCasesTest {
         role = UserRole.CONGREGATION_ADMIN,
         permissions = setOf(UserPermission.PLAN_TALKS),
         congregation = testCongregation,
-    )
+    ).withLegacyRoles()
     private val member = AppUser(uid = "2", approved = true, congregation = testCongregation)
     private val withoutCongregation = admin.copy(congregation = null)
 
