@@ -10,8 +10,11 @@ class TalkSchedulePermissionPolicyTest {
     private val policy = TalkSchedulePermissionPolicy()
 
     @Test
-    fun `global admin may plan talks`() {
-        assertTrue(policy.canPlanTalks(AppUser(uid = "1", isGlobalAdmin = true)))
+    fun `global admin may not plan talks without the role`() {
+        val globalAdmin = AppUser(uid = "1", approved = true, isGlobalAdmin = true)
+
+        assertFalse(policy.canPlanTalks(globalAdmin))
+        assertTrue(policy.canPlanTalks(globalAdmin.copy(roles = setOf(CongregationRole.TALK_PLANNER))))
     }
 
     @Test

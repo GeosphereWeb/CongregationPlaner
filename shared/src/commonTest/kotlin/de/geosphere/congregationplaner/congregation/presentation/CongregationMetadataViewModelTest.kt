@@ -298,6 +298,33 @@ class CongregationMetadataViewModelTest {
     }
 
     @Test
+    fun `the global admin edits the name of a congregation but not its meeting times`() {
+        val viewModel = createViewModel()
+        viewModel.onCurrentUserChanged(admin)
+
+        viewModel.editCongregation(berlin)
+        assertTrue(viewModel.uiState.value.permissions.canEditSelection)
+        assertFalse(viewModel.uiState.value.permissions.canEditMeetingTimes)
+
+        viewModel.createCongregation()
+        assertTrue(viewModel.uiState.value.permissions.canEditMeetingTimes)
+    }
+
+    @Test
+    fun `the congregation admin edits the meeting times of the own congregation`() {
+        val viewModel = createViewModel()
+        val own = CongregationRef("r", "s", "b", "c", "609a")
+        viewModel.onCurrentUserChanged(planer.copy(congregation = own))
+
+        viewModel.editCongregation(berlin)
+        assertTrue(viewModel.uiState.value.permissions.canEditMeetingTimes)
+
+        viewModel.editCongregation(hamburg)
+        assertFalse(viewModel.uiState.value.permissions.canEditMeetingTimes)
+        assertFalse(viewModel.uiState.value.permissions.canEditSelection)
+    }
+
+    @Test
     fun `own only shows just the congregation of the user`() {
         val viewModel = createViewModel()
         val own = CongregationRef("r", "s", "b", "c", "609a")

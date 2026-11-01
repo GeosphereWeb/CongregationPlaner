@@ -85,21 +85,31 @@ class NavigationAccessTest {
     }
 
     @Test
-    fun `a global admin additionally sees the global administration`() {
+    fun `a global admin sees only the global administration`() {
         val visible = access.visibleFor(AppUser(uid = "g", approved = true, isGlobalAdmin = true))
 
         assertEquals(
-            listOf(
-                TopLevelDestination.HOME,
-                TopLevelDestination.CONGREGATION,
-                TopLevelDestination.GLOBAL_ADMIN,
-                TopLevelDestination.SETTINGS,
-            ),
+            listOf(TopLevelDestination.HOME, TopLevelDestination.GLOBAL_ADMIN, TopLevelDestination.SETTINGS),
             visible.topLevel,
         )
         assertEquals(GlobalSection.entries, visible.globalSections)
-        // Heute behalten globale Admins ihre Rechte: Verwaltung und Vortragsplanung, aber keine Wochenplanung.
-        assertEquals(CongregationSection.entries - CongregationSection.MIDWEEK_PLANNING, visible.congregationSections)
+        assertEquals(emptyList(), visible.congregationSections)
+    }
+
+    @Test
+    fun `a global admin with a congregation role also sees that area`() {
+        val visible = access.visibleFor(
+            AppUser(
+                uid = "g",
+                approved = true,
+                isGlobalAdmin = true,
+                roles = setOf(CongregationRole.TALK_PLANNER),
+            ),
+        )
+
+        assertEquals(TopLevelDestination.GLOBAL_ADMIN, visible.topLevel[2])
+        assertEquals(CongregationSection.talkPlanning, visible.congregationSections)
+        assertEquals(GlobalSection.entries, visible.globalSections)
     }
 
     @Test
