@@ -1,7 +1,6 @@
 package de.geosphere.congregationplaner.user.data
 
 import com.google.firebase.firestore.DocumentSnapshot
-import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Source
 import de.geosphere.congregationplaner.auth.AndroidFirestoreProvider
@@ -11,10 +10,10 @@ import de.geosphere.congregationplaner.firestore.logFirestoreFailure
 import de.geosphere.congregationplaner.firestore.observeDocuments
 import de.geosphere.congregationplaner.firestore.runFirestoreCatching
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
-import de.geosphere.congregationplaner.user.data.mappers.memberRoles
 import de.geosphere.congregationplaner.user.data.mappers.toStoredRoles
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
+import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.repository.AdminContactRepository
@@ -107,25 +106,6 @@ internal class FirestoreUserRepository(private val firestore: FirebaseFirestore)
         runFirestoreCatching("remove member") {
             firestore.collection(congregation.membersPath).document(uid).delete().awaitResult()
         }
-
-    override suspend fun migrateLegacyMembers(congregation: CongregationRef): Result<Int> =
-        runFirestoreCatching("migrate legacy members") {
-            val snapshot = firestore.collection(congregation.membersPath).get(Source.SERVER).awaitResult()
-            snapshot.documents.filterNot { it.contains("roles") }.count { migrate(it, congregation) }
-        }
-
-    // Ein Fehler bei einem Dokument wird protokolliert und lässt die übrigen weiter umstellen.
-    private suspend fun migrate(document: DocumentSnapshot, congregation: CongregationRef): Boolean =
-        runFirestoreCatching("migrate member ${document.id}") {
-            val roles = toDomain(document, congregation).roles
-            document.reference.update(
-                mapOf(
-                    "roles" to roles.toStoredRoles(),
-                    "role" to FieldValue.delete(),
-                    "permissions" to FieldValue.delete(),
-                ),
-            ).awaitResult()
-        }.isSuccess
 }
 
 private fun toDomain(document: DocumentSnapshot, congregation: CongregationRef): AppUser = AppUser(
@@ -133,11 +113,7 @@ private fun toDomain(document: DocumentSnapshot, congregation: CongregationRef):
     email = document.getString("email"),
     displayName = document.getString("displayName"),
     approved = document.getBoolean("approved") ?: false,
-    roles = memberRoles(
-        storedRoles = document.takeIf { it.contains("roles") }?.stringList("roles"),
-        legacyRole = document.getString("role"),
-        legacyPermissions = document.stringList("permissions").orEmpty(),
-    ),
+    roles = CongregationRole.fromValues(document.stringList("roles").orEmpty()),
     congregation = congregation,
     hasAccount = document.getBoolean("hasAccount") ?: true,
     profile = MemberProfile(
@@ -158,17 +134,11 @@ private fun AppUser.toFirestoreFields(): Map<String, Any?> = mapOf(
     "email" to email,
     "displayName" to displayName,
     "hasAccount" to hasAccount,
-) + toRoleFields() + profile.toFirestoreFields()
+) + toAccessFields() + profile.toFirestoreFields()
 
-private fun AppUser.toRoleFields(): Map<String, Any> = mapOf(
+private fun AppUser.toAccessFields(): Map<String, Any> = mapOf(
     "approved" to approved,
     "roles" to roles.toStoredRoles(),
-)
-
-// Beim Ändern verschwinden die veralteten Felder `role` und `permissions` von Altdokumenten.
-private fun AppUser.toAccessFields(): Map<String, Any> = toRoleFields() + mapOf(
-    "role" to FieldValue.delete(),
-    "permissions" to FieldValue.delete(),
 )
 
 private fun MemberProfile.toFirestoreFields(): Map<String, Any?> = mapOf(

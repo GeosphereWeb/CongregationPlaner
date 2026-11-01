@@ -4,7 +4,6 @@ import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.EventListener
-import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.ListenerRegistration
@@ -64,7 +63,7 @@ class FirestoreUserRepositoryTest {
     @Test
     fun `getOrCreateUser reads existing member from server`() = runBlocking {
         every { document.get(Source.SERVER) } returns successTask(
-            memberSnapshot(approved = true, role = "CONGREGATION_ADMIN", permissions = listOf("DUMMY", "UNKNOWN", 1)),
+            memberSnapshot(approved = true, roles = listOf("CONGREGATION_ADMIN", "BOSS", 1)),
         )
 
         assertEquals(
@@ -294,7 +293,7 @@ class FirestoreUserRepositoryTest {
     }
 
     @Test
-    fun `updateMember writes the roles and drops the legacy fields`() = runBlocking {
+    fun `updateMember writes only approval and roles`() = runBlocking {
         val fields = slot<Map<String, Any>>()
         every { document.update(capture(fields)) } returns successTask<Void?>(null)
         val member =
@@ -310,72 +309,20 @@ class FirestoreUserRepositoryTest {
             mapOf(
                 "approved" to true,
                 "roles" to listOf("CONGREGATION_ADMIN"),
-                "role" to FieldValue.delete(),
-                "permissions" to FieldValue.delete(),
             ),
             fields.captured,
         )
     }
 
     @Test
-    fun `stored roles win over the legacy fields`() = runBlocking {
+    fun `a document without roles has no roles even with the old fields`() = runBlocking {
         every { document.get(Source.SERVER) } returns successTask(
-            memberSnapshot(
-                approved = true,
-                role = "CONGREGATION_ADMIN",
-                permissions = listOf("PLAN_TALKS"),
-                roles = listOf("TASK_PLANNER", "BOSS", 1),
-            ),
+            memberSnapshot(approved = true, role = "CONGREGATION_ADMIN", permissions = listOf("PLAN_TALKS")),
         )
 
         val user = repository.getOrCreateUser(authUser, congregation).getOrThrow()
 
-        assertEquals(setOf(CongregationRole.TASK_PLANNER), user.roles)
-    }
-
-    @Test
-    fun `migrateLegacyMembers rewrites only documents without roles`() = withMockedLog {
-        val migrated = mockk<DocumentReference>()
-        val fields = slot<Map<String, Any>>()
-        every { migrated.update(capture(fields)) } returns successTask<Void?>(null)
-        val legacy = memberSnapshot(approved = true, role = "CONGREGATION_ADMIN", permissions = listOf("PLAN_TALKS"))
-        every { legacy.reference } returns migrated
-        val current = memberSnapshot(approved = true, role = null, permissions = null, roles = listOf("TALK_PLANNER"))
-        every { collection.get(Source.SERVER) } returns successTask(
-            mockk<QuerySnapshot> { every { documents } returns listOf(legacy, current) },
-        )
-
-        assertEquals(1, runBlocking { repository.migrateLegacyMembers(congregation).getOrThrow() })
-
-        assertEquals(
-            mapOf(
-                "roles" to listOf("CONGREGATION_ADMIN", "TALK_PLANNER"),
-                "role" to FieldValue.delete(),
-                "permissions" to FieldValue.delete(),
-            ),
-            fields.captured,
-        )
-    }
-
-    @Test
-    fun `migrateLegacyMembers continues after a failed document and reports a failed listing`() = withMockedLog {
-        val broken = mockk<DocumentReference>()
-        every { broken.update(any<Map<String, Any>>()) } returns failedTask(IllegalStateException("denied"))
-        val ok = mockk<DocumentReference>()
-        every { ok.update(any<Map<String, Any>>()) } returns successTask<Void?>(null)
-        val first = memberSnapshot(approved = true, role = "MEMBER", permissions = null)
-        every { first.reference } returns broken
-        val second = memberSnapshot(approved = true, role = "CONGREGATION_ADMIN", permissions = null)
-        every { second.reference } returns ok
-        every { collection.get(Source.SERVER) } returns successTask(
-            mockk<QuerySnapshot> { every { documents } returns listOf(first, second) },
-        )
-
-        assertEquals(1, runBlocking { repository.migrateLegacyMembers(congregation).getOrThrow() })
-
-        val error = IllegalStateException("offline")
-        every { collection.get(Source.SERVER) } returns failedTask(error)
-        runBlocking { assertFailure(error, repository.migrateLegacyMembers(congregation)) }
+        assertEquals(emptySet(), user.roles)
     }
 
     @Test
@@ -410,8 +357,8 @@ class FirestoreUserRepositoryTest {
 
     private fun memberSnapshot(
         approved: Boolean?,
-        role: String?,
-        permissions: List<Any>?,
+        role: String? = null,
+        permissions: List<Any>? = null,
         profile: Map<String, Any> = emptyMap(),
         roles: List<Any>? = null,
     ): DocumentSnapshot = mockk {
