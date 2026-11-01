@@ -4,7 +4,9 @@ import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class AppNavigationViewModelTest {
     private val viewModel = AppNavigationViewModel(navigationAccess())
@@ -99,5 +101,59 @@ class AppNavigationViewModelTest {
 
         assertEquals(TopLevelDestination.GLOBAL_ADMIN, state.destination)
         assertEquals(GlobalSection.TALK_REFERENCE, state.globalSection)
+    }
+
+    @Test
+    fun `back goes from the section to the overview and then home`() {
+        viewModel.onUserChanged(admin)
+        viewModel.openCongregationSection(CongregationSection.USER_MANAGEMENT)
+        assertTrue(state.canGoBack)
+
+        assertTrue(viewModel.back())
+        assertEquals(TopLevelDestination.CONGREGATION, state.destination)
+        assertNull(state.congregationSection)
+
+        assertTrue(viewModel.back())
+        assertEquals(TopLevelDestination.HOME, state.destination)
+        assertFalse(state.canGoBack)
+    }
+
+    @Test
+    fun `back on home is left to the system`() {
+        viewModel.onUserChanged(admin)
+
+        assertFalse(viewModel.back())
+        assertEquals(TopLevelDestination.HOME, state.destination)
+    }
+
+    @Test
+    fun `back works the same way in the global administration`() {
+        viewModel.onUserChanged(AppUser(uid = "g", approved = true, isGlobalAdmin = true))
+        viewModel.openGlobalSection(GlobalSection.CIRCUITS)
+
+        assertTrue(viewModel.back())
+        assertEquals(TopLevelDestination.GLOBAL_ADMIN, state.destination)
+        assertNull(state.globalSection)
+
+        assertTrue(viewModel.back())
+        assertEquals(TopLevelDestination.HOME, state.destination)
+    }
+
+    @Test
+    fun `back from the overview of settings goes home`() {
+        viewModel.onUserChanged(admin)
+        viewModel.select(TopLevelDestination.SETTINGS)
+
+        assertTrue(viewModel.back())
+        assertEquals(TopLevelDestination.HOME, state.destination)
+    }
+
+    @Test
+    fun `the talk planning sections are tabs of one area`() {
+        assertEquals(
+            listOf("Wochenende", "Externe Redner", "Historie"),
+            CongregationSection.talkPlanning.map { it.tabLabel },
+        )
+        assertEquals("Allgemeine Versammlungsdaten", CongregationSection.GENERAL_DATA.tabLabel)
     }
 }
