@@ -240,6 +240,7 @@ fun App() {
             state = navigationState,
             firebaseStatus = firebaseStatus,
             currentUser = currentUser,
+            congregation = selectionState.selected,
             actions = AppNavigationActions(
                 onSelect = navigationViewModel::select,
                 onOpenCongregationSection = navigationViewModel::openCongregationSection,
