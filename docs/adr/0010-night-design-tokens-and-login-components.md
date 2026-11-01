@@ -3,6 +3,8 @@
 ## Status
 Accepted
 
+Ergänzt durch [ADR-0014](0014-night-design-as-material-theme.md)
+
 ## Context
 Das Login-Design (Boards „Login-Ablauf“ und „Farbpalette“) braucht eigene Farben, zwei Schriften (Space Grotesk, JetBrains Mono) und wiederverwendbare Bausteine. `AppTheme` nutzt `MaterialTheme` derzeit nicht, ein helles Design ist noch offen.
 
