@@ -65,7 +65,7 @@ Bei Repository-/DB-Anbindung sind Interface + UseCase-Schicht Pflicht. Repositor
 ## Windows-Umgebung
 
 - Entwicklung läuft unter Windows (PowerShell und Git Bash). iOS-Tasks (`iosSimulatorArm64Test`, Xcode) sind dort nicht ausführbar.
-- Zeilenenden: `.editorconfig` verlangt LF, `.gitattributes` erzwingt nur für `gradlew`/`*.sh` (LF) und `gradlew.bat` (CRLF). Die Git-Warnung „LF will be replaced by CRLF“ ist harmlos; Zeilenenden bestehender Dateien nicht ändern.
+- Zeilenenden: LF ist überall Standard (`.editorconfig` `end_of_line = lf`; `.gitattributes` setzt `* text=auto eol=lf`, nur `gradlew.bat` bleibt CRLF). Neue und geänderte Dateien immer mit LF speichern; die Git-Warnung „LF will be replaced by CRLF“ sollte damit nicht mehr auftreten.
 
 ## Git, Commits und PRs
 
