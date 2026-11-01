@@ -8,8 +8,8 @@ import de.geosphere.congregationplaner.user.domain.model.AppUser
 import dev.zacsweers.metro.createGraph
 
 @Composable
-internal fun CongregationMetadataRoute(currentUser: AppUser) {
+internal fun CongregationMetadataRoute(currentUser: AppUser, ownOnly: Boolean = false) {
     val viewModel = remember { createGraph<CongregationMetadataGraph>().congregationMetadataViewModel }
-    LaunchedEffect(viewModel, currentUser) { viewModel.onCurrentUserChanged(currentUser) }
+    LaunchedEffect(viewModel, currentUser, ownOnly) { viewModel.onCurrentUserChanged(currentUser, ownOnly) }
     CongregationMetadataScreen(viewModel)
 }

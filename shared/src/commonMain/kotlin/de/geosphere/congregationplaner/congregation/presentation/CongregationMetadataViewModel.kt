@@ -48,6 +48,8 @@ class CongregationMetadataViewModel(
     val uiState = mutableUiState.asStateFlow()
 
     private var currentUser: AppUser? = null
+    private var allCongregations: List<CongregationMetadata> = emptyList()
+    private var ownCongregationOnly = false
 
     init {
         viewModelScope.launch {
@@ -60,16 +62,28 @@ class CongregationMetadataViewModel(
                         )
                     }
                 }.collect { congregations ->
+                    allCongregations = congregations
                     updateState {
-                        it.copy(congregations = congregations, isLoading = false, errorMessage = null)
+                        it.copy(congregations = visibleCongregations(), isLoading = false, errorMessage = null)
                     }
                 }
         }
     }
 
-    fun onCurrentUserChanged(user: AppUser?) {
+    /**
+     * Mit [ownOnly] zeigt die Liste nur die eigene Versammlung des Nutzers (Bereich „Versammlung“); sonst alle
+     * (Globale Verwaltung).
+     */
+    fun onCurrentUserChanged(user: AppUser?, ownOnly: Boolean = false) {
         currentUser = user
-        updateState { it }
+        ownCongregationOnly = ownOnly
+        updateState { it.copy(congregations = visibleCongregations()) }
+    }
+
+    private fun visibleCongregations(): List<CongregationMetadata> {
+        if (!ownCongregationOnly) return allCongregations
+        val ownId = currentUser?.congregation?.congregationId
+        return allCongregations.filter { it.id == ownId }
     }
 
     fun createCongregation() {
