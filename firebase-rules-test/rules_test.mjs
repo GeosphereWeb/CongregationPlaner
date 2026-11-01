@@ -225,6 +225,38 @@ await expect('Versammlungsadmin ohne PLAN_TALKS schreibt Termin', putSlot('2026-
 await expect('Versammlungsadmin ohne PLAN_TALKS liest Termine', api('GET', SLOT, undefined, congAdmin.token), false);
 await expect('Versammlungsadmin mit PLAN_TALKS schreibt Termin', putSlot('2026-11-08', base, adminPlanner.token), true);
 
+// ---------- Admin-Kontakte: Namen der Admins, auch vor der Freigabe lesbar ----------
+const pending = await signUp('pending@test.de');
+await api('PATCH', `${CONG}/members/${pending.uid}`, fields({ email: 'pending@test.de', displayName: 'p', approved: false, role: 'MEMBER', permissions: ['DUMMY'] }), owner);
+const outsider = await signUp('outsider@test.de');
+const namedAdmin = await signUp('named@test.de');
+await api('PATCH', `${CONG}/members/${namedAdmin.uid}`, fields({ email: 'named@test.de', displayName: 'n', approved: true, role: 'CONGREGATION_ADMIN', permissions: [], firstName: 'Anna', lastName: 'Admin' }), owner);
+const CONTACTS = `${CONG}/adminContacts`;
+const contact = (firstName, lastName) => fields({ firstName, lastName });
+const putContact = (uid, data, token) => api('PATCH', `${CONTACTS}/${uid}`, data, token);
+await expect('Admin-Kontakt passend zum Admin anlegen', putContact(namedAdmin.uid, contact('Anna', 'Admin'), namedAdmin.token), true);
+await expect('Admin-Kontakt mit falschem Namen', putContact(namedAdmin.uid, contact('Anna', 'Andere'), namedAdmin.token), false);
+await expect('Admin-Kontakt mit Zusatzfeld E-Mail', putContact(namedAdmin.uid, fields({ firstName: 'Anna', lastName: 'Admin', email: 'named@test.de' }), namedAdmin.token), false);
+await expect('Admin-Kontakt für ein Mitglied, das kein Admin ist', putContact(plain.uid, contact('', ''), congAdmin.token), false);
+await expect('Admin-Kontakt für eine nicht freigegebene Person', putContact(pending.uid, contact('', ''), congAdmin.token), false);
+await expect('Admin-Kontakt ohne Namen eines Admins ohne Namen', putContact(congAdmin.uid, contact('', ''), congAdmin.token), true);
+await expect('Admin-Kontakt von einem anderen Versammlungsadmin pflegen', putContact(namedAdmin.uid, contact('Anna', 'Admin'), congAdmin.token), true);
+await expect('Admin-Kontakt von Global Admin pflegen', putContact(namedAdmin.uid, contact('Anna', 'Admin'), admin.token), true);
+await expect('Admin-Kontakt schreiben ohne Freigabe', putContact(namedAdmin.uid, contact('Anna', 'Admin'), pending.token), false);
+await expect('Admin-Kontakt schreiben als normales Mitglied', putContact(namedAdmin.uid, contact('Anna', 'Admin'), plain.token), false);
+await expect('Admin-Kontakt lesen ohne Freigabe', api('GET', `${CONTACTS}/${namedAdmin.uid}`, undefined, pending.token), true);
+await expect('Admin-Kontakte auflisten ohne Freigabe', api('GET', CONTACTS, undefined, pending.token), true);
+await expect('Admin-Kontakt lesen als Freigegebener', api('GET', `${CONTACTS}/${namedAdmin.uid}`, undefined, plain.token), true);
+await expect('Admin-Kontakt lesen ohne Mitglied der Versammlung', api('GET', `${CONTACTS}/${namedAdmin.uid}`, undefined, outsider.token), false);
+await expect('Admin-Kontakt lesen ohne Anmeldung', api('GET', `${CONTACTS}/${namedAdmin.uid}`), false);
+await expect('Admin-Kontakt lesen in einer fremden Versammlung', api('GET', `${OTHER_CONG}/adminContacts/${namedAdmin.uid}`, undefined, pending.token), false);
+await expect('Nutzer ohne Freigabe liest weiterhin keine Mitglieder', api('GET', `${CONG}/members/${namedAdmin.uid}`, undefined, pending.token), false);
+await expect('Nutzer ohne Freigabe listet keine Mitglieder', api('GET', `${CONG}/members`, undefined, pending.token), false);
+await expect('Admin-Kontakt löschen ohne Freigabe', api('DELETE', `${CONTACTS}/${namedAdmin.uid}`, undefined, pending.token), false);
+await expect('Admin-Kontakt eines anderen löschen ohne Freigabe', api('DELETE', `${CONTACTS}/${namedAdmin.uid}`, undefined, pending.token), false);
+await expect('eigenen Admin-Kontakt löschen auch ohne Admin-Rolle', api('DELETE', `${CONTACTS}/${pending.uid}`, undefined, pending.token), true);
+await expect('Admin-Kontakt löschen als Versammlungsadmin', api('DELETE', `${CONTACTS}/${namedAdmin.uid}`, undefined, congAdmin.token), true);
+
 console.log(`${count} checks, ${failures.length} failures`);
 failures.forEach((failure) => console.log(`FAILURE: ${failure}`));
 process.exitCode = failures.length === 0 ? 0 : 1;

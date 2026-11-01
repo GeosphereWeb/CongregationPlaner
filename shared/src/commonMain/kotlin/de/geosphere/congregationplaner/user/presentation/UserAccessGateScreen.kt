@@ -34,6 +34,7 @@ import de.geosphere.congregationplaner.ui.button.SecondaryButton
 import de.geosphere.congregationplaner.ui.chip.StatusChip
 import de.geosphere.congregationplaner.ui.chip.StatusTone
 import de.geosphere.congregationplaner.ui.header.NightScreen
+import de.geosphere.congregationplaner.user.domain.model.AdminContact
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.UserAccessState
 
@@ -43,6 +44,7 @@ import de.geosphere.congregationplaner.user.domain.model.UserAccessState
 @Composable
 internal fun UserAccessGateScreen(
     state: UserAccessState,
+    adminContacts: AdminContactsState,
     onRefresh: () -> Unit,
     onChangeCongregation: () -> Unit,
     onSignOut: () -> Unit,
@@ -65,6 +67,7 @@ internal fun UserAccessGateScreen(
             chipTone = StatusTone.Gold,
             title = "Fast geschafft",
             message = approvalMessage(state.user.email.orEmpty()),
+            adminContacts = adminContacts,
             hint = "Sobald die Freigabe erteilt ist, geht es ohne neue Anmeldung weiter.",
             primaryAction = "Status prüfen",
             onPrimaryAction = onRefresh,
@@ -78,6 +81,7 @@ internal fun UserAccessGateScreen(
             chipTone = StatusTone.Coral,
             title = "Zugriff konnte nicht geprüft werden",
             message = AnnotatedString(state.message),
+            adminContacts = null,
             hint = null,
             primaryAction = "Erneut versuchen",
             onPrimaryAction = onRefresh,
@@ -95,6 +99,7 @@ private fun GateContent(
     chipTone: StatusTone,
     title: String,
     message: AnnotatedString,
+    adminContacts: AdminContactsState?,
     hint: String?,
     primaryAction: String,
     onPrimaryAction: () -> Unit,
@@ -106,6 +111,7 @@ private fun GateContent(
             StatusChip(chipText, chipTone)
             Text(title, style = nightTextStyle(28.sp, FontWeight.Bold, letterSpacing = (-0.56).sp))
             Text(message, style = nightTextStyle(16.sp, color = NightColors.OnBackgroundBody, lineHeight = 24.sp))
+            if (adminContacts != null) AdminContactList(adminContacts)
             if (hint != null) HintCard(hint)
         }
         Spacer(Modifier.weight(1f))
@@ -113,6 +119,34 @@ private fun GateContent(
             PrimaryButton(primaryAction, onPrimaryAction, Modifier.fillMaxWidth())
             SecondaryButton("Andere Versammlung wählen", onChangeCongregation, Modifier.fillMaxWidth())
             SecondaryButton("Abmelden", onSignOut, Modifier.fillMaxWidth(), outlined = false)
+        }
+    }
+}
+
+/** Die Admins der Versammlung, an die sich der Nutzer wenden kann, bis er freigegeben ist. */
+@Composable
+@Suppress("MagicNumber")
+private fun AdminContactList(state: AdminContactsState) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            "ADMINS DEINER VERSAMMLUNG",
+            style = nightTextStyle(
+                11.sp,
+                color = NightColors.OnBackgroundMuted,
+                monospace = true,
+                letterSpacing = 0.88.sp,
+            ),
+        )
+        val muted = nightTextStyle(15.sp, color = NightColors.OnBackgroundMuted)
+        when (state) {
+            AdminContactsState.Loading -> Text("Admins werden geladen …", style = muted)
+            AdminContactsState.Failed ->
+                Text("Admins konnten nicht geladen werden.", style = nightTextStyle(15.sp, color = NightColors.Coral))
+            is AdminContactsState.Loaded -> if (state.contacts.isEmpty()) {
+                Text(NO_ADMIN_TEXT, style = muted)
+            } else {
+                state.contacts.forEach { Text(it.displayName(), style = nightTextStyle(16.sp, FontWeight.Medium)) }
+            }
         }
     }
 }
@@ -141,14 +175,33 @@ private fun HintCard(text: String) {
 }
 
 @Composable
-private fun GatePreview(state: UserAccessState) = NightPhonePreview {
-    UserAccessGateScreen(state = state, onRefresh = {}, onChangeCongregation = {}, onSignOut = {})
-}
+private fun GatePreview(state: UserAccessState, adminContacts: AdminContactsState = AdminContactsState.Loading) =
+    NightPhonePreview {
+        UserAccessGateScreen(
+            state = state,
+            adminContacts = adminContacts,
+            onRefresh = {},
+            onChangeCongregation = {},
+            onSignOut = {},
+        )
+    }
+
+private val previewApproval = UserAccessState.NeedsApproval(AppUser(uid = "1", email = "name@beispiel.de"))
 
 @ThemePreviews
 @Composable
-private fun UserAccessGateNeedsApprovalPreview() =
-    GatePreview(UserAccessState.NeedsApproval(AppUser(uid = "1", email = "name@beispiel.de")))
+private fun UserAccessGateNeedsApprovalPreview() = GatePreview(
+    previewApproval,
+    AdminContactsState.Loaded(listOf(AdminContact("a", "Anna", "Admin"), AdminContact("b", "Bernd", "Beispiel"))),
+)
+
+@ThemePreviews
+@Composable
+private fun UserAccessGateNoAdminPreview() = GatePreview(previewApproval, AdminContactsState.Loaded(emptyList()))
+
+@ThemePreviews
+@Composable
+private fun UserAccessGateAdminsFailedPreview() = GatePreview(previewApproval, AdminContactsState.Failed)
 
 @ThemePreviews
 @Composable
