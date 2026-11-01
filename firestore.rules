@@ -27,10 +27,8 @@ rules_version = '2';
 //   - approved: bool (required) - set by the congregation admin
 //   - roles: list<string> (required, <= 10 distinct values from ['CONGREGATION_ADMIN', 'TALK_PLANNER',
 //     'TASK_PLANNER']; empty for a plain member, see ADR-0012)
-//   - role: string, permissions: list<string> (deprecated and optional: a read-only fallback for old documents
-//     that have no `roles` yet; the migration removes them)
 //   - hasAccount: bool (optional, immutable, default true) - false for persons
-//     without an account; they are never approved and have no role or permissions
+//     without an account; they are never approved and have no role
 // Profile fields (optional because older documents do not have them yet;
 // maintained by admins only):
 //   - lastName, firstName: string (<= 100 chars)
@@ -105,17 +103,9 @@ service cloud.firestore {
         hasRole(get(memberPath).data, 'CONGREGATION_ADMIN');
     }
 
-    // The member document grants the role. Old documents without `roles` fall back to the deprecated fields
-    // `role` (admin) and `permissions` ('PLAN_TALKS' = talk planner); they have no task planner.
+    // The member document grants the role through its `roles` list (ADR-0012).
     function hasRole(data, wanted) {
-      return ('roles' in data)
-        ? wanted in data.roles
-        : ((wanted == 'CONGREGATION_ADMIN' && data.get('role', null) == 'CONGREGATION_ADMIN') ||
-          (wanted == 'TALK_PLANNER' && 'PLAN_TALKS' in data.get('permissions', [])));
-    }
-
-    function isValidRole(role) {
-      return role in ['CONGREGATION_ADMIN', 'MEMBER'];
+      return wanted in data.get('roles', []);
     }
 
     function isValidRoles(roles) {
@@ -125,15 +115,8 @@ service cloud.firestore {
         roles.toSet().hasOnly(['CONGREGATION_ADMIN', 'TALK_PLANNER', 'TASK_PLANNER']);
     }
 
-    function isValidPermissions(permissions) {
-      return permissions is list &&
-        permissions.size() <= 10 &&
-        permissions.toSet().hasOnly(['DUMMY', 'PLAN_TALKS', 'VIEW_MEMBERS']);
-    }
-
     // May read (never write) the members of exactly this congregation: admins and approved planners (talk or task).
     // Global admins have no access to the members (ADR-0013).
-    // Old documents without `roles` still use the deprecated permission 'VIEW_MEMBERS'.
     function canViewMembers(regionId, subregionId, branchId, circuitId, congId) {
       let memberPath = /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/circuit/$(circuitId)/congregation/$(congId)/members/$(request.auth.uid);
       return isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) ||
@@ -141,9 +124,7 @@ service cloud.firestore {
           exists(memberPath) &&
           get(memberPath).data.approved == true &&
           (hasRole(get(memberPath).data, 'TALK_PLANNER') ||
-            hasRole(get(memberPath).data, 'TASK_PLANNER') ||
-            (!('roles' in get(memberPath).data) &&
-              'VIEW_MEMBERS' in get(memberPath).data.get('permissions', []))));
+            hasRole(get(memberPath).data, 'TASK_PLANNER')));
     }
 
     // Planners of exactly this congregation: approved members with the role TALK_PLANNER. The role CONGREGATION_ADMIN
@@ -308,9 +289,8 @@ service cloud.firestore {
       return isShortString(value, 30) && value.matches('^[0-9+ ()/-]*$');
     }
 
-    // `role` and `permissions` are deprecated; the update rule only lets them change together with `roles`.
     function roleFields() {
-      return ['roles', 'role', 'permissions'];
+      return ['roles'];
     }
 
     function accessFields() {
@@ -364,14 +344,12 @@ service cloud.firestore {
         isNullableString(data.displayName, 200) &&
         data.approved is bool &&
         isValidRoles(data.roles) &&
-        (!('role' in data) || isValidRole(data.role)) &&
-        (!('permissions' in data) || isValidPermissions(data.permissions)) &&
         data.get('hasAccount', true) is bool &&
         (data.get('hasAccount', true) == true || hasNoAccess(data)) &&
         isValidProfile(data);
     }
 
-    // A user may only register themselves: unapproved, without roles and without the deprecated fields,
+    // A user may only register themselves: unapproved, without roles,
     // with the e-mail address from their auth token.
     function isValidSelfRegistration(uid) {
       let data = request.resource.data;
@@ -380,8 +358,6 @@ service cloud.firestore {
         isValidMember(data) &&
         data.approved == false &&
         data.roles.size() == 0 &&
-        !('role' in data) &&
-        !('permissions' in data) &&
         data.email == request.auth.token.get('email', null) &&
         data.get('hasAccount', true) == true &&
         hasDefaultProfile(data);
@@ -490,7 +466,7 @@ service cloud.firestore {
                   isValidMemberWithoutAccount(regionId, subregionId, branchId, circuitId, congId);
 
                 // Admins maintain profiles and roles of every member. In their own document they may change the
-                // roles (and migrate an old document) but neither the approval nor remove their own admin role,
+                // roles but neither the approval nor remove their own admin role,
                 // so nobody locks themselves out. The approval of others is set here too.
                 allow update: if isAuthenticated() &&
                   isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) &&
