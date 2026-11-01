@@ -20,10 +20,10 @@ import de.geosphere.congregationplaner.firestore.pollingFlow
 import de.geosphere.congregationplaner.firestore.runCatchingIo
 import de.geosphere.congregationplaner.firestore.stringArrayField
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
-import de.geosphere.congregationplaner.user.data.mappers.memberRoles
 import de.geosphere.congregationplaner.user.data.mappers.toStoredRoles
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
+import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
@@ -89,23 +89,6 @@ internal class FirestoreRestUserRepository(
         client.request("DELETE", documentUrl(congregation, uid))
     }
 
-    override suspend fun migrateLegacyMembers(congregation: CongregationRef): Result<Int> = runCatchingIo {
-        parseDocuments(client.request("GET", "${client.collectionUrl(congregation.membersPath)}?pageSize=1000"))
-            .filterNot { it.fields.has("roles") }
-            .count { document -> migrate(congregation, document) }
-    }
-
-    // Ein Fehler bei einem Dokument wird protokolliert und lässt die übrigen weiter umstellen.
-    private fun migrate(congregation: CongregationRef, document: FirestoreRestDocument): Boolean = runCatching {
-        val roles = document.toUser(congregation).roles
-        client.request(
-            method = "PATCH",
-            url = "${documentUrl(congregation, document.id)}?${client.updateMask(LEGACY_FIELD_NAMES)}" +
-                "&currentDocument.exists=true",
-            body = firestoreFields(JsonObject().apply { add("roles", firestoreStringArray(roles.toStoredRoles())) }),
-        )
-    }.onFailure { System.err.println("Failed to migrate member ${document.id}: ${it.message}") }.isSuccess
-
     private fun fetchUser(congregation: CongregationRef, uid: String): AppUser? =
         client.requestOrNull("GET", documentUrl(congregation, uid))?.let { parseDocument(it).toUser(congregation) }
 
@@ -122,11 +105,7 @@ internal class FirestoreRestUserRepository(
         email = fields.optionalStringField("email"),
         displayName = fields.optionalStringField("displayName"),
         approved = fields.booleanField("approved"),
-        roles = memberRoles(
-            storedRoles = fields.takeIf { it.has("roles") }?.stringArrayField("roles"),
-            legacyRole = fields.optionalStringField("role"),
-            legacyPermissions = fields.stringArrayField("permissions"),
-        ),
+        roles = CongregationRole.fromValues(fields.stringArrayField("roles")),
         congregation = congregation,
         hasAccount = fields.optionalBooleanField("hasAccount") ?: true,
         profile = MemberProfile(
@@ -165,9 +144,7 @@ internal class FirestoreRestUserRepository(
     }
 
     private companion object {
-        // `role` und `permissions` stehen nur in der Maske: Fehlt ein maskiertes Feld im Body, löscht Firestore es.
-        val ACCESS_FIELD_NAMES = listOf("approved", "roles", "role", "permissions")
-        val LEGACY_FIELD_NAMES = listOf("roles", "role", "permissions")
+        val ACCESS_FIELD_NAMES = listOf("approved", "roles")
         val PROFILE_FIELD_NAMES =
             listOf(
                 "lastName",

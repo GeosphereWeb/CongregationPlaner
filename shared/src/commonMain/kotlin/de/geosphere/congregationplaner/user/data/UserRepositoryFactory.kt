@@ -65,8 +65,6 @@ fun unavailableUserRepository(platform: String): UserRepository = object : UserR
         unavailable()
 
     override suspend fun removeMember(congregation: CongregationRef, uid: String): Result<Unit> = unavailable()
-
-    override suspend fun migrateLegacyMembers(congregation: CongregationRef): Result<Int> = unavailable()
 }
 
 fun unavailableAdminContactRepository(platform: String): AdminContactRepository = object : AdminContactRepository {
