@@ -5,6 +5,7 @@ import de.geosphere.congregationplaner.congregation.domain.repository.Congregati
 import de.geosphere.congregationplaner.congregation.domain.usecase.DeleteCongregationUseCase
 import de.geosphere.congregationplaner.congregation.domain.usecase.ObserveCongregationsUseCase
 import de.geosphere.congregationplaner.congregation.domain.usecase.SaveCongregationUseCase
+import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.permission.CongregationPermissionPolicy
@@ -294,6 +295,21 @@ class CongregationMetadataViewModelTest {
             deletedIds += congregationId
             return deleteResult
         }
+    }
+
+    @Test
+    fun `own only shows just the congregation of the user`() {
+        val viewModel = createViewModel()
+        val own = CongregationRef("r", "s", "b", "c", "609a")
+
+        viewModel.onCurrentUserChanged(planer.copy(congregation = own), ownOnly = true)
+        assertEquals(listOf(berlin), viewModel.uiState.value.congregations)
+
+        viewModel.onCurrentUserChanged(planer.copy(congregation = own), ownOnly = false)
+        assertEquals(listOf(berlin, hamburg), viewModel.uiState.value.congregations)
+
+        viewModel.onCurrentUserChanged(planer, ownOnly = true)
+        assertTrue(viewModel.uiState.value.congregations.isEmpty())
     }
 
     private companion object {
