@@ -50,7 +50,7 @@ async function expect(name, pending, allowed) {
 
 // Mitgliedsdokument im neuen Format (ADR-0012): nur `roles`.
 const memberDoc = (email, roles) => fields({ email, displayName: email, approved: true, roles });
-// Altdokument ohne `roles`, nur mit den veralteten Feldern `role` und `permissions`.
+// Dokument im alten Format (ohne `roles`, nur `role`/`permissions`): seit CP-44 hat es keine Rechte mehr.
 const legacyDoc = (email, role, permissions, extra = {}) =>
   fields({ email, displayName: email, approved: true, role, permissions, ...extra });
 
@@ -72,11 +72,9 @@ await api('PATCH', `${CONG}/members/${adminPlanner.uid}`, fields({ email: 'admin
 // Ein eigener Admin für die Tests, in denen ein Admin die eigene Rollenliste ändert.
 const selfAdmin = await signUp('selfadmin@test.de');
 await api('PATCH', `${CONG}/members/${selfAdmin.uid}`, memberDoc('selfadmin@test.de', ['CONGREGATION_ADMIN']), owner);
-// Altdokumente (Rückfall auf `role` und `permissions`).
+// Dokumente im alten Format; die Rules kennen den Rückfall nicht mehr.
 const legacyAdmin = await signUp('legacyadmin@test.de');
 await api('PATCH', `${CONG}/members/${legacyAdmin.uid}`, legacyDoc('legacyadmin@test.de', 'CONGREGATION_ADMIN', [], { firstName: 'Leo', lastName: 'Legacy' }), owner);
-const legacyAdmin2 = await signUp('legacyadmin2@test.de');
-await api('PATCH', `${CONG}/members/${legacyAdmin2.uid}`, legacyDoc('legacyadmin2@test.de', 'CONGREGATION_ADMIN', []), owner);
 const legacyPlanner = await signUp('legacyplanner@test.de');
 await api('PATCH', `${CONG}/members/${legacyPlanner.uid}`, legacyDoc('legacyplanner@test.de', 'MEMBER', ['DUMMY', 'PLAN_TALKS']), owner);
 const legacyViewer = await signUp('legacyviewer@test.de');
@@ -204,8 +202,6 @@ await expect(
 await expect('Mitglied ohne Rolle listet Mitglieder', api('GET', MEMBERS, undefined, plain.token), false);
 await expect('Mitglied ohne Rolle liest ein fremdes Mitglied', api('GET', `${MEMBERS}/${planner.uid}`, undefined, plain.token), false);
 await expect('Global Admin listet Mitglieder nicht', api('GET', MEMBERS, undefined, admin.token), false);
-await expect('Altdokument mit VIEW_MEMBERS listet Mitglieder', api('GET', MEMBERS, undefined, legacyViewer.token), true);
-await expect('Altdokument mit PLAN_TALKS gilt als Vortragsplaner und listet Mitglieder', api('GET', MEMBERS, undefined, legacyPlanner.token), true);
 
 // ---------- Vortragsliste und Wochenereignisse ----------
 const talk = (title = 'T', active = true) => fields({ title, active });
@@ -260,8 +256,6 @@ await expect('Versammlungsadmin ohne Planerrolle schreibt Termin', putSlot('2026
 await expect('Versammlungsadmin ohne Planerrolle liest Termine', api('GET', SLOT, undefined, congAdmin.token), false);
 await expect('Aufgabenplaner schreibt keinen Termin', putSlot('2026-11-08', base, taskPlanner.token), false);
 await expect('Versammlungsadmin mit Vortragsplaner-Rolle schreibt Termin', putSlot('2026-11-08', base, adminPlanner.token), true);
-await expect('Altdokument mit PLAN_TALKS schreibt Termin', putSlot('2026-11-08', base, legacyPlanner.token), true);
-await expect('Altdokument eines Admins ohne Planerrolle schreibt keinen Termin', putSlot('2026-11-08', base, legacyAdmin2.token), false);
 
 // ---------- Selbstregistrierung: ohne Rollen und ohne die veralteten Felder ----------
 const registerBody = (email, extra = {}) => fields({ email, displayName: 'n', approved: false, roles: [], ...extra });
@@ -278,15 +272,6 @@ await expect('Selbstregistrierung mit dem alten Feld role', api('PATCH', registe
 await expect('Selbstregistrierung ohne roles', api('PATCH', registerPath(newcomer5), fields({ email: 'newcomer5@test.de', displayName: 'n', approved: false }), newcomer5.token), false);
 await expect('Selbstregistrierung mit fremder E-Mail-Adresse', api('PATCH', registerPath(newcomer5), registerBody('other@test.de'), newcomer5.token), false);
 
-// ---------- Migration von Altdokumenten (role/permissions → roles) ----------
-const migrated = (email, roles) => fields({ email, displayName: email, approved: true, roles });
-await expect('Admin migriert das Altdokument eines Planers', api('PATCH', `${CONG}/members/${legacyPlanner.uid}`, migrated('legacyplanner@test.de', ['TALK_PLANNER']), congAdmin.token), true);
-await expect('Das migrierte Altdokument plant weiter', putSlot('2026-11-15', base, legacyPlanner.token), true);
-await expect('Admin migriert ein Altdokument ohne roles zu ungültigen Rollen', api('PATCH', `${CONG}/members/${legacyViewer.uid}`, migrated('legacyviewer@test.de', ['BOSS']), congAdmin.token), false);
-await expect('Admin migriert das eigene Altdokument', api('PATCH', `${CONG}/members/${legacyAdmin.uid}`, fields({ email: 'legacyadmin@test.de', displayName: 'legacyadmin@test.de', approved: true, roles: ['CONGREGATION_ADMIN'], firstName: 'Leo', lastName: 'Legacy' }), legacyAdmin.token), true);
-await expect('Admin migriert das eigene Altdokument ohne Admin-Rolle', api('PATCH', `${CONG}/members/${legacyAdmin2.uid}`, migrated('legacyadmin2@test.de', []), legacyAdmin2.token), false);
-await expect('Altdokument ohne roles wird ohne Migration nicht geändert', api('PATCH', `${CONG}/members/${legacyViewer.uid}?updateMask.fieldPaths=firstName`, { fields: { firstName: { stringValue: 'X' } } }, congAdmin.token), false);
-await expect('Altdokument eines Admins ändert die Versammlung', api('PATCH', `${CONG}${mask('midweek_meeting_time')}`, time('18:45'), legacyAdmin2.token), true);
 
 // ---------- Admin-Kontakte: Namen der Admins, auch vor der Freigabe lesbar ----------
 const pending = await signUp('pending@test.de');
@@ -301,7 +286,6 @@ await expect('Admin-Kontakt passend zum Admin anlegen', putContact(namedAdmin.ui
 await expect('Admin-Kontakt mit falschem Namen', putContact(namedAdmin.uid, contact('Anna', 'Andere'), namedAdmin.token), false);
 await expect('Admin-Kontakt mit Zusatzfeld E-Mail', putContact(namedAdmin.uid, fields({ firstName: 'Anna', lastName: 'Admin', email: 'named@test.de' }), namedAdmin.token), false);
 await expect('Admin-Kontakt für ein Mitglied, das kein Admin ist', putContact(plain.uid, contact('', ''), congAdmin.token), false);
-await expect('Admin-Kontakt für einen Admin im Altformat (Rückfall)', putContact(legacyAdmin2.uid, contact('', ''), congAdmin.token), true);
 await expect('Admin-Kontakt für einen Admin im neuen Format', putContact(selfAdmin.uid, contact('', ''), congAdmin.token), true);
 await expect('Admin-Kontakt für eine nicht freigegebene Person', putContact(pending.uid, contact('', ''), congAdmin.token), false);
 await expect('Admin-Kontakt ohne Namen eines Admins ohne Namen', putContact(congAdmin.uid, contact('', ''), congAdmin.token), true);
@@ -357,6 +341,17 @@ await expect('Global Admin mit Planerrolle plant über die Rolle', putSlot('2026
 await expect('Global Admin mit Planerrolle liest Mitglieder über die Rolle', api('GET', MEMBERS, undefined, dualAdmin.token), true);
 await expect('Global Admin mit Planerrolle ändert trotzdem kein Mitglied', api('PATCH', `${MEMBERS}/${plain.uid}${approvedMask}`, falseApproved, dualAdmin.token), false);
 await expect('Global Admin mit Planerrolle pflegt weiter die Vortragsliste', api('PATCH', 'talkCatalog/77', talk('Dual'), dualAdmin.token), true);
+
+// ---------- Alte Felder role/permissions: kein Rückfall mehr (CP-44) ----------
+await expect('Admin im alten Format ändert die Versammlung nicht', api('PATCH', `${CONG}${mask('midweek_meeting_time')}`, time('18:45'), legacyAdmin.token), false);
+await expect('PLAN_TALKS im alten Format schreibt keinen Termin', putSlot('2026-11-15', base, legacyPlanner.token), false);
+await expect('VIEW_MEMBERS im alten Format listet keine Mitglieder', api('GET', MEMBERS, undefined, legacyViewer.token), false);
+await expect('Admin-Kontakt für einen Admin im alten Format', putContact(legacyAdmin.uid, contact('Leo', 'Legacy'), congAdmin.token), false);
+await expect(
+  'Admin schreibt ein Mitglied mit den alten Feldern',
+  api('PATCH', `${MEMBERS}/${plain.uid}`, fields({ email: 'plain@test.de', displayName: 'plain@test.de', approved: true, roles: [], role: 'MEMBER', permissions: ['DUMMY'] }), congAdmin.token),
+  false,
+);
 
 console.log(`${count} checks, ${failures.length} failures`);
 failures.forEach((failure) => console.log(`FAILURE: ${failure}`));
