@@ -13,6 +13,7 @@ import de.geosphere.congregationplaner.talk.domain.usecase.SaveExternalCongregat
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveVisitingSpeakerUseCase
 import de.geosphere.congregationplaner.talk.testing.FakeExternalSpeakerDirectoryRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.UserPermission
 import de.geosphere.congregationplaner.user.testing.testCongregation
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +37,7 @@ class ExternalDirectoryViewModelTest {
         uid = "planner",
         approved = true,
         permissions = setOf(UserPermission.PLAN_TALKS),
+        roles = setOf(CongregationRole.TALK_PLANNER),
         congregation = testCongregation,
     )
     private val member = AppUser(uid = "member", approved = true, congregation = testCongregation)

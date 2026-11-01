@@ -11,6 +11,7 @@ import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermis
 import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
 import de.geosphere.congregationplaner.talk.testing.FakeWeekEventRepository
+import de.geosphere.congregationplaner.user.data.mappers.withLegacyRoles
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
@@ -43,7 +44,7 @@ class TalkScheduleUseCasesTest {
         role = UserRole.CONGREGATION_ADMIN,
         permissions = setOf(UserPermission.PLAN_TALKS),
         congregation = testCongregation,
-    )
+    ).withLegacyRoles()
     private val member = AppUser(uid = "2", approved = true, congregation = testCongregation)
 
     private val sunday = LocalDate(2026, 10, 25)
