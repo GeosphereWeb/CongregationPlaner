@@ -232,6 +232,7 @@ fun App() {
                 onOpenCongregationSection = navigationViewModel::openCongregationSection,
                 onOpenGlobalSection = navigationViewModel::openGlobalSection,
                 onSignOut = signOut,
+                onBack = { navigationViewModel.back() },
             ),
         )
     }
