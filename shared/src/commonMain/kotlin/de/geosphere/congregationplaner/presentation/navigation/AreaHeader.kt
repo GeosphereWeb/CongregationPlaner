@@ -24,9 +24,13 @@ private val MONTHS = listOf(
     "Dezember",
 )
 
+internal fun germanWeekdayName(date: LocalDate): String = WEEKDAYS[date.dayOfWeek.isoDayNumber - 1]
+
+internal fun germanMonthName(date: LocalDate): String = MONTHS[date.month.ordinal]
+
 /** „Sonntag, 1. November“ */
 internal fun germanDayAndMonth(date: LocalDate): String =
-    "${WEEKDAYS[date.dayOfWeek.isoDayNumber - 1]}, ${date.day}. ${MONTHS[date.month.ordinal]}"
+    "${germanWeekdayName(date)}, ${date.day}. ${germanMonthName(date)}"
 
 /** Globale Admins haben keine Versammlung ([congregation] ist `null`, ADR-0013); die Zeile bleibt dann leer. */
 internal fun homeHeader(congregation: SelectedCongregation?, today: LocalDate) = AreaHeader(

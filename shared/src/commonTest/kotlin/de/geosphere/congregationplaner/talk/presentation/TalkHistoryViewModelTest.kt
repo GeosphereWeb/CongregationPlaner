@@ -145,4 +145,13 @@ class TalkHistoryViewModelTest {
         assertTrue(state.rows.isEmpty())
         assertNull(state.selected)
     }
+
+    @Test
+    fun `a talk can be selected by its number`() {
+        viewModel.onCurrentUserChanged(planner)
+
+        viewModel.selectTalkNumber(first.number)
+
+        assertEquals(first, state.selected?.talk)
+    }
 }
