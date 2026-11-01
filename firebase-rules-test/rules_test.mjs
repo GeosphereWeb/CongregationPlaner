@@ -48,24 +48,39 @@ async function expect(name, pending, allowed) {
   if (!ok) failures.push(`${name}: expected ${allowed ? 200 : 403}, got ${status} ${text.slice(0, 160)}`);
 }
 
-const memberDoc = (email, permissions) =>
-  fields({ email, displayName: email, approved: true, role: 'MEMBER', permissions });
+// Mitgliedsdokument im neuen Format (ADR-0012): nur `roles`.
+const memberDoc = (email, roles) => fields({ email, displayName: email, approved: true, roles });
+// Altdokument ohne `roles`, nur mit den veralteten Feldern `role` und `permissions`.
+const legacyDoc = (email, role, permissions, extra = {}) =>
+  fields({ email, displayName: email, approved: true, role, permissions, ...extra });
 
 // ---------- Nutzer und Daten (Seeding mit dem Owner-Token umgeht die Rules) ----------
 const admin = await signUp('admin@test.de');
 const planner = await signUp('planner@test.de');
-const viewer = await signUp('viewer@test.de');
+const taskPlanner = await signUp('taskplanner@test.de');
 const plain = await signUp('plain@test.de');
 
 const owner = 'owner';
 await api('PATCH', `admins/${admin.uid}`, { fields: {} }, owner);
-await api('PATCH', `${CONG}/members/${planner.uid}`, memberDoc('planner@test.de', ['DUMMY', 'PLAN_TALKS']), owner);
-await api('PATCH', `${CONG}/members/${viewer.uid}`, memberDoc('viewer@test.de', ['PLAN_TALKS', 'VIEW_MEMBERS']), owner);
-await api('PATCH', `${CONG}/members/${plain.uid}`, memberDoc('plain@test.de', ['DUMMY']), owner);
+await api('PATCH', `${CONG}/members/${planner.uid}`, memberDoc('planner@test.de', ['TALK_PLANNER']), owner);
+await api('PATCH', `${CONG}/members/${taskPlanner.uid}`, memberDoc('taskplanner@test.de', ['TASK_PLANNER']), owner);
+await api('PATCH', `${CONG}/members/${plain.uid}`, memberDoc('plain@test.de', []), owner);
 const congAdmin = await signUp('congadmin@test.de');
-await api('PATCH', `${CONG}/members/${congAdmin.uid}`, fields({ email: 'congadmin@test.de', displayName: 'ca', approved: true, role: 'CONGREGATION_ADMIN', permissions: [] }), owner);
+await api('PATCH', `${CONG}/members/${congAdmin.uid}`, fields({ email: 'congadmin@test.de', displayName: 'ca', approved: true, roles: ['CONGREGATION_ADMIN'] }), owner);
 const adminPlanner = await signUp('adminplanner@test.de');
-await api('PATCH', `${CONG}/members/${adminPlanner.uid}`, fields({ email: 'adminplanner@test.de', displayName: 'ap', approved: true, role: 'CONGREGATION_ADMIN', permissions: ['PLAN_TALKS'] }), owner);
+await api('PATCH', `${CONG}/members/${adminPlanner.uid}`, fields({ email: 'adminplanner@test.de', displayName: 'ap', approved: true, roles: ['CONGREGATION_ADMIN', 'TALK_PLANNER'] }), owner);
+// Ein eigener Admin für die Tests, in denen ein Admin die eigene Rollenliste ändert.
+const selfAdmin = await signUp('selfadmin@test.de');
+await api('PATCH', `${CONG}/members/${selfAdmin.uid}`, memberDoc('selfadmin@test.de', ['CONGREGATION_ADMIN']), owner);
+// Altdokumente (Rückfall auf `role` und `permissions`).
+const legacyAdmin = await signUp('legacyadmin@test.de');
+await api('PATCH', `${CONG}/members/${legacyAdmin.uid}`, legacyDoc('legacyadmin@test.de', 'CONGREGATION_ADMIN', [], { firstName: 'Leo', lastName: 'Legacy' }), owner);
+const legacyAdmin2 = await signUp('legacyadmin2@test.de');
+await api('PATCH', `${CONG}/members/${legacyAdmin2.uid}`, legacyDoc('legacyadmin2@test.de', 'CONGREGATION_ADMIN', []), owner);
+const legacyPlanner = await signUp('legacyplanner@test.de');
+await api('PATCH', `${CONG}/members/${legacyPlanner.uid}`, legacyDoc('legacyplanner@test.de', 'MEMBER', ['DUMMY', 'PLAN_TALKS']), owner);
+const legacyViewer = await signUp('legacyviewer@test.de');
+await api('PATCH', `${CONG}/members/${legacyViewer.uid}`, legacyDoc('legacyviewer@test.de', 'MEMBER', ['DUMMY', 'VIEW_MEMBERS']), owner);
 const OTHER_CONG ='region/R/subregion/S/branch/B/circuit/C/congregation/OTHER';
 await api('PATCH', CONG, fields({ name: 'Berlin', midweek_meeting_time: '19:00', midweek_meeting_weekday: 3 }), owner);
 await api('PATCH', OTHER_CONG, fields({ name: 'Hamburg', midweek_meeting_time: '19:00', midweek_meeting_weekday: 3 }), owner);
@@ -116,8 +131,8 @@ await expect('ungültiges Datum 2026-2-1', putSlot('2026-2-1', base), false);
 await expect('unbekanntes Feld', putSlot('2026-10-25', { ...base, extra: 'x' }), false);
 await expect('ungültige Uhrzeit', putSlot('2026-10-25', { time: '25:00', talkCancelled: false }), false);
 await expect('Planer liest Termin', api('GET', `${SLOT}/2026-10-25`, undefined, planner.token), true);
-await expect('Nutzer ohne PLAN_TALKS schreibt Termin', putSlot('2026-11-01', base, plain.token), false);
-await expect('Nutzer ohne PLAN_TALKS liest Termin', api('GET', `${SLOT}/2026-10-25`, undefined, plain.token), false);
+await expect('Nutzer ohne Planerrolle schreibt Termin', putSlot('2026-11-01', base, plain.token), false);
+await expect('Nutzer ohne Planerrolle liest Termin', api('GET', `${SLOT}/2026-10-25`, undefined, plain.token), false);
 await expect('Planer löscht Termin', api('DELETE', `${SLOT}/2026-10-25`, undefined, planner.token), true);
 
 // ---------- Verzeichnis externer Redner (Kreis → Versammlung → Redner) ----------
@@ -148,9 +163,9 @@ await expect('externer Redner mit Vortragsliste als Text', post(EXT_SPEAKERS, { 
 await expect('externer Redner mit zu langer Telefonnummer', post(EXT_SPEAKERS, { ...validSpeaker, phone: '1'.repeat(31) }), false);
 await expect('externer Redner mit Zusatzfeld', post(EXT_SPEAKERS, { ...validSpeaker, x: 'y' }), false);
 await expect('externes Verzeichnis lesen als Planer', api('GET', EXT_SPEAKERS, undefined, planner.token), true);
-await expect('externe Kreise lesen ohne PLAN_TALKS', api('GET', EXT_CIRCUITS, undefined, plain.token), false);
-await expect('externe Redner lesen ohne PLAN_TALKS', api('GET', EXT_SPEAKERS, undefined, plain.token), false);
-await expect('externen Redner anlegen ohne PLAN_TALKS', post(EXT_SPEAKERS, validSpeaker, plain.token), false);
+await expect('externe Kreise lesen ohne Planerrolle', api('GET', EXT_CIRCUITS, undefined, plain.token), false);
+await expect('externe Redner lesen ohne Planerrolle', api('GET', EXT_SPEAKERS, undefined, plain.token), false);
+await expect('externen Redner anlegen ohne Planerrolle', post(EXT_SPEAKERS, validSpeaker, plain.token), false);
 await expect('alte Liste externalSpeakers ist nicht mehr beschreibbar', post(`${CONG}/externalSpeakers`, validSpeaker), false);
 
 // ---------- Vortragshistorie ----------
@@ -165,24 +180,32 @@ await expect('Vortragshistorie mit ungültiger Nummer', putHistory('abc', { held
 await expect('Vortragshistorie ohne Tage', putHistory('8', { heldOn: [] }), false);
 await expect('Vortragshistorie mit Zusatzfeld', putHistory('8', { heldOn: ['2026-03-01'], x: 'y' }), false);
 await expect('Vortragshistorie lesen als Planer', api('GET', HIST, undefined, planner.token), true);
-await expect('Vortragshistorie lesen ohne PLAN_TALKS', api('GET', HIST, undefined, plain.token), false);
-await expect('Vortragshistorie anlegen ohne PLAN_TALKS', putHistory('9', { heldOn: ['2026-03-01'] }, plain.token), false);
+await expect('Vortragshistorie lesen ohne Planerrolle', api('GET', HIST, undefined, plain.token), false);
+await expect('Vortragshistorie anlegen ohne Planerrolle', putHistory('9', { heldOn: ['2026-03-01'] }, plain.token), false);
 await expect('Planer löscht Vortragshistorie', api('DELETE', `${HIST}/7`, undefined, planner.token), true);
 
-// ---------- Mitglieder lesen (VIEW_MEMBERS) ----------
+// ---------- Mitglieder lesen (Planerrollen) ----------
 const MEMBERS = `${CONG}/members`;
-await expect('Planer ohne VIEW_MEMBERS listet Mitglieder', api('GET', MEMBERS, undefined, planner.token), false);
-await expect('Planer liest das eigene Mitglied', api('GET', `${MEMBERS}/${planner.uid}`, undefined, planner.token), true);
-await expect('Planer ohne VIEW_MEMBERS liest ein fremdes Mitglied', api('GET', `${MEMBERS}/${plain.uid}`, undefined, planner.token), false);
-await expect('VIEW_MEMBERS listet Mitglieder', api('GET', MEMBERS, undefined, viewer.token), true);
-await expect('VIEW_MEMBERS liest ein fremdes Mitglied', api('GET', `${MEMBERS}/${plain.uid}`, undefined, viewer.token), true);
+await expect('Vortragsplaner listet Mitglieder', api('GET', MEMBERS, undefined, planner.token), true);
+await expect('Vortragsplaner liest das eigene Mitglied', api('GET', `${MEMBERS}/${planner.uid}`, undefined, planner.token), true);
+await expect('Vortragsplaner liest ein fremdes Mitglied', api('GET', `${MEMBERS}/${plain.uid}`, undefined, planner.token), true);
+await expect('Aufgabenplaner listet Mitglieder', api('GET', MEMBERS, undefined, taskPlanner.token), true);
+await expect('Aufgabenplaner liest ein fremdes Mitglied', api('GET', `${MEMBERS}/${plain.uid}`, undefined, taskPlanner.token), true);
 await expect(
-  'VIEW_MEMBERS schreibt ein Mitglied nicht',
-  api('PATCH', `${MEMBERS}/${plain.uid}?updateMask.fieldPaths=approved`, { fields: { approved: { booleanValue: false } } }, viewer.token),
+  'Vortragsplaner schreibt ein Mitglied nicht',
+  api('PATCH', `${MEMBERS}/${plain.uid}?updateMask.fieldPaths=approved`, { fields: { approved: { booleanValue: false } } }, planner.token),
   false,
 );
-await expect('Nutzer ohne Rechte listet Mitglieder', api('GET', MEMBERS, undefined, plain.token), false);
+await expect(
+  'Aufgabenplaner schreibt ein Mitglied nicht',
+  api('PATCH', `${MEMBERS}/${plain.uid}?updateMask.fieldPaths=approved`, { fields: { approved: { booleanValue: false } } }, taskPlanner.token),
+  false,
+);
+await expect('Mitglied ohne Rolle listet Mitglieder', api('GET', MEMBERS, undefined, plain.token), false);
+await expect('Mitglied ohne Rolle liest ein fremdes Mitglied', api('GET', `${MEMBERS}/${planner.uid}`, undefined, plain.token), false);
 await expect('Global Admin listet Mitglieder', api('GET', MEMBERS, undefined, admin.token), true);
+await expect('Altdokument mit VIEW_MEMBERS listet Mitglieder', api('GET', MEMBERS, undefined, legacyViewer.token), true);
+await expect('Altdokument mit PLAN_TALKS gilt als Vortragsplaner und listet Mitglieder', api('GET', MEMBERS, undefined, legacyPlanner.token), true);
 
 // ---------- Vortragsliste und Wochenereignisse ----------
 const talk = (title = 'T', active = true) => fields({ title, active });
@@ -214,23 +237,63 @@ await expect('Versammlungsadmin ändert Zeiten einer fremden Versammlung', api('
 await expect('Versammlungsadmin löscht die eigene Versammlung', api('DELETE', CONG, undefined, congAdmin.token), false);
 await expect('Planer ändert Zeiten der Versammlung', api('PATCH', `${CONG}${mask('midweek_meeting_time')}`, time('18:30'), planner.token), false);
 
-// ---------- Versammlungsadmin ändert das eigene Mitglied: Berechtigungen ja, Rolle und Freigabe nein ----------
-const ownMember = `${CONG}/members/${congAdmin.uid}`;
-await expect('Versammlungsadmin ändert eigene Berechtigungen', api('PATCH', `${CONG}/members/${adminPlanner.uid}?updateMask.fieldPaths=permissions`, { fields: { permissions: { arrayValue: { values: [{ stringValue: 'PLAN_TALKS' }] } } } }, adminPlanner.token), true);
-await expect('Versammlungsadmin ändert eigene Rolle', api('PATCH', `${ownMember}?updateMask.fieldPaths=role`, { fields: { role: { stringValue: 'MEMBER' } } }, congAdmin.token), false);
-await expect('Versammlungsadmin ändert eigene Freigabe', api('PATCH', `${ownMember}?updateMask.fieldPaths=approved`, { fields: { approved: { booleanValue: false } } }, congAdmin.token), false);
+// ---------- Admin ändert das eigene Mitglied: Rollenliste ja (aber nie ohne Admin-Rolle), Freigabe nein ----------
+const rolesMask = (uid) => `${CONG}/members/${uid}?updateMask.fieldPaths=roles`;
+const rolesBody = (...roles) => ({ fields: { roles: { arrayValue: { values: roles.map((stringValue) => ({ stringValue })) } } } });
+await expect('Admin ergänzt die eigene Planerrolle', api('PATCH', rolesMask(selfAdmin.uid), rolesBody('CONGREGATION_ADMIN', 'TALK_PLANNER'), selfAdmin.token), true);
+await expect('Admin ergänzt die eigene Aufgabenplaner-Rolle', api('PATCH', rolesMask(selfAdmin.uid), rolesBody('CONGREGATION_ADMIN', 'TALK_PLANNER', 'TASK_PLANNER'), selfAdmin.token), true);
+await expect('Admin entfernt die eigene Planerrolle', api('PATCH', rolesMask(selfAdmin.uid), rolesBody('CONGREGATION_ADMIN'), selfAdmin.token), true);
+await expect('Admin entfernt die eigene Admin-Rolle', api('PATCH', rolesMask(selfAdmin.uid), rolesBody('TALK_PLANNER'), selfAdmin.token), false);
+await expect('Admin leert die eigene Rollenliste', api('PATCH', rolesMask(selfAdmin.uid), rolesBody(), selfAdmin.token), false);
+await expect('Admin ändert die eigene Freigabe', api('PATCH', `${CONG}/members/${selfAdmin.uid}?updateMask.fieldPaths=approved`, { fields: { approved: { booleanValue: false } } }, selfAdmin.token), false);
+await expect('Rollenliste mit unbekannter Rolle', api('PATCH', rolesMask(selfAdmin.uid), rolesBody('CONGREGATION_ADMIN', 'BOSS'), selfAdmin.token), false);
+await expect('Rollenliste mit doppelter Rolle', api('PATCH', rolesMask(selfAdmin.uid), rolesBody('CONGREGATION_ADMIN', 'CONGREGATION_ADMIN'), selfAdmin.token), false);
+await expect('Admin vergibt einem Mitglied Rollen', api('PATCH', rolesMask(plain.uid), rolesBody('TASK_PLANNER'), congAdmin.token), true);
+await expect('Admin nimmt einem Mitglied die Rollen wieder', api('PATCH', rolesMask(plain.uid), rolesBody(), congAdmin.token), true);
+await expect('Admin nimmt einem anderen Admin die Admin-Rolle', api('PATCH', rolesMask(adminPlanner.uid), rolesBody('TALK_PLANNER'), congAdmin.token), true);
+await api('PATCH', rolesMask(adminPlanner.uid), rolesBody('CONGREGATION_ADMIN', 'TALK_PLANNER'), owner);
+await expect('Vortragsplaner vergibt sich eine Rolle', api('PATCH', rolesMask(planner.uid), rolesBody('TALK_PLANNER', 'CONGREGATION_ADMIN'), planner.token), false);
+await expect('Mitglied ohne Rolle vergibt sich eine Rolle', api('PATCH', rolesMask(plain.uid), rolesBody('TASK_PLANNER'), plain.token), false);
 
-// ---------- Planen nur mit PLAN_TALKS: die Rolle Versammlungsadmin allein genügt nicht ----------
-await expect('Versammlungsadmin ohne PLAN_TALKS schreibt Termin', putSlot('2026-11-08', base, congAdmin.token), false);
-await expect('Versammlungsadmin ohne PLAN_TALKS liest Termine', api('GET', SLOT, undefined, congAdmin.token), false);
-await expect('Versammlungsadmin mit PLAN_TALKS schreibt Termin', putSlot('2026-11-08', base, adminPlanner.token), true);
+// ---------- Planen nur als Vortragsplaner: die Rolle Versammlungsadmin allein genügt nicht ----------
+await expect('Versammlungsadmin ohne Planerrolle schreibt Termin', putSlot('2026-11-08', base, congAdmin.token), false);
+await expect('Versammlungsadmin ohne Planerrolle liest Termine', api('GET', SLOT, undefined, congAdmin.token), false);
+await expect('Aufgabenplaner schreibt keinen Termin', putSlot('2026-11-08', base, taskPlanner.token), false);
+await expect('Versammlungsadmin mit Vortragsplaner-Rolle schreibt Termin', putSlot('2026-11-08', base, adminPlanner.token), true);
+await expect('Altdokument mit PLAN_TALKS schreibt Termin', putSlot('2026-11-08', base, legacyPlanner.token), true);
+await expect('Altdokument eines Admins ohne Planerrolle schreibt keinen Termin', putSlot('2026-11-08', base, legacyAdmin2.token), false);
+
+// ---------- Selbstregistrierung: ohne Rollen und ohne die veralteten Felder ----------
+const registerBody = (email, extra = {}) => fields({ email, displayName: 'n', approved: false, roles: [], ...extra });
+const newcomer = await signUp('newcomer@test.de');
+const newcomer2 = await signUp('newcomer2@test.de');
+const newcomer3 = await signUp('newcomer3@test.de');
+const newcomer4 = await signUp('newcomer4@test.de');
+const newcomer5 = await signUp('newcomer5@test.de');
+const registerPath = (user) => `${CONG}/members/${user.uid}`;
+await expect('Selbstregistrierung mit roles []', api('PATCH', registerPath(newcomer), registerBody('newcomer@test.de'), newcomer.token), true);
+await expect('Selbstregistrierung mit Rolle', api('PATCH', registerPath(newcomer2), registerBody('newcomer2@test.de', { roles: ['CONGREGATION_ADMIN'] }), newcomer2.token), false);
+await expect('Selbstregistrierung freigegeben', api('PATCH', registerPath(newcomer3), registerBody('newcomer3@test.de', { approved: true }), newcomer3.token), false);
+await expect('Selbstregistrierung mit dem alten Feld role', api('PATCH', registerPath(newcomer4), registerBody('newcomer4@test.de', { role: 'MEMBER' }), newcomer4.token), false);
+await expect('Selbstregistrierung ohne roles', api('PATCH', registerPath(newcomer5), fields({ email: 'newcomer5@test.de', displayName: 'n', approved: false }), newcomer5.token), false);
+await expect('Selbstregistrierung mit fremder E-Mail-Adresse', api('PATCH', registerPath(newcomer5), registerBody('other@test.de'), newcomer5.token), false);
+
+// ---------- Migration von Altdokumenten (role/permissions → roles) ----------
+const migrated = (email, roles) => fields({ email, displayName: email, approved: true, roles });
+await expect('Admin migriert das Altdokument eines Planers', api('PATCH', `${CONG}/members/${legacyPlanner.uid}`, migrated('legacyplanner@test.de', ['TALK_PLANNER']), congAdmin.token), true);
+await expect('Das migrierte Altdokument plant weiter', putSlot('2026-11-15', base, legacyPlanner.token), true);
+await expect('Admin migriert ein Altdokument ohne roles zu ungültigen Rollen', api('PATCH', `${CONG}/members/${legacyViewer.uid}`, migrated('legacyviewer@test.de', ['BOSS']), congAdmin.token), false);
+await expect('Admin migriert das eigene Altdokument', api('PATCH', `${CONG}/members/${legacyAdmin.uid}`, fields({ email: 'legacyadmin@test.de', displayName: 'legacyadmin@test.de', approved: true, roles: ['CONGREGATION_ADMIN'], firstName: 'Leo', lastName: 'Legacy' }), legacyAdmin.token), true);
+await expect('Admin migriert das eigene Altdokument ohne Admin-Rolle', api('PATCH', `${CONG}/members/${legacyAdmin2.uid}`, migrated('legacyadmin2@test.de', []), legacyAdmin2.token), false);
+await expect('Altdokument ohne roles wird ohne Migration nicht geändert', api('PATCH', `${CONG}/members/${legacyViewer.uid}?updateMask.fieldPaths=firstName`, { fields: { firstName: { stringValue: 'X' } } }, congAdmin.token), false);
+await expect('Altdokument eines Admins ändert die Versammlung', api('PATCH', `${CONG}${mask('midweek_meeting_time')}`, time('18:45'), legacyAdmin2.token), true);
 
 // ---------- Admin-Kontakte: Namen der Admins, auch vor der Freigabe lesbar ----------
 const pending = await signUp('pending@test.de');
-await api('PATCH', `${CONG}/members/${pending.uid}`, fields({ email: 'pending@test.de', displayName: 'p', approved: false, role: 'MEMBER', permissions: ['DUMMY'] }), owner);
+await api('PATCH', `${CONG}/members/${pending.uid}`, fields({ email: 'pending@test.de', displayName: 'p', approved: false, roles: [] }), owner);
 const outsider = await signUp('outsider@test.de');
 const namedAdmin = await signUp('named@test.de');
-await api('PATCH', `${CONG}/members/${namedAdmin.uid}`, fields({ email: 'named@test.de', displayName: 'n', approved: true, role: 'CONGREGATION_ADMIN', permissions: [], firstName: 'Anna', lastName: 'Admin' }), owner);
+await api('PATCH', `${CONG}/members/${namedAdmin.uid}`, fields({ email: 'named@test.de', displayName: 'n', approved: true, roles: ['CONGREGATION_ADMIN'], firstName: 'Anna', lastName: 'Admin' }), owner);
 const CONTACTS = `${CONG}/adminContacts`;
 const contact = (firstName, lastName) => fields({ firstName, lastName });
 const putContact = (uid, data, token) => api('PATCH', `${CONTACTS}/${uid}`, data, token);
@@ -238,6 +301,8 @@ await expect('Admin-Kontakt passend zum Admin anlegen', putContact(namedAdmin.ui
 await expect('Admin-Kontakt mit falschem Namen', putContact(namedAdmin.uid, contact('Anna', 'Andere'), namedAdmin.token), false);
 await expect('Admin-Kontakt mit Zusatzfeld E-Mail', putContact(namedAdmin.uid, fields({ firstName: 'Anna', lastName: 'Admin', email: 'named@test.de' }), namedAdmin.token), false);
 await expect('Admin-Kontakt für ein Mitglied, das kein Admin ist', putContact(plain.uid, contact('', ''), congAdmin.token), false);
+await expect('Admin-Kontakt für einen Admin im Altformat (Rückfall)', putContact(legacyAdmin2.uid, contact('', ''), congAdmin.token), true);
+await expect('Admin-Kontakt für einen Admin im neuen Format', putContact(selfAdmin.uid, contact('', ''), congAdmin.token), true);
 await expect('Admin-Kontakt für eine nicht freigegebene Person', putContact(pending.uid, contact('', ''), congAdmin.token), false);
 await expect('Admin-Kontakt ohne Namen eines Admins ohne Namen', putContact(congAdmin.uid, contact('', ''), congAdmin.token), true);
 await expect('Admin-Kontakt von einem anderen Versammlungsadmin pflegen', putContact(namedAdmin.uid, contact('Anna', 'Admin'), congAdmin.token), true);
