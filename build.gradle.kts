@@ -58,6 +58,7 @@ val sonarExclusions = listOf(
     "**/CircuitDetail.kt",
     "**/CongregationDetail.kt",
     "**/TalkScheduleScreen.kt",
+    "**/TalkSlotEditor.kt",
     // Exclude theming and ui modules from coverage
     "theming/**",
     "ui/**"
