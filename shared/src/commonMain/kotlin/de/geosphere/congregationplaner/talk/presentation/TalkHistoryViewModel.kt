@@ -73,6 +73,11 @@ class TalkHistoryViewModel(
         mutableUiState.update { it.copy(selectedNumber = talk.number) }
     }
 
+    /** Wählt einen Vortrag über seine Nummer, z. B. beim Wechsel aus der Planung am Wochenende. */
+    fun selectTalkNumber(number: Int) {
+        mutableUiState.update { it.copy(selectedNumber = number) }
+    }
+
     fun closeDetail() {
         mutableUiState.update { it.copy(selectedNumber = null) }
     }

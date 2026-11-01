@@ -156,4 +156,35 @@ class AppNavigationViewModelTest {
         )
         assertEquals("Allgemeine Versammlungsdaten", CongregationSection.GENERAL_DATA.tabLabel)
     }
+
+    @Test
+    fun `opening the talk history preselects the talk`() {
+        viewModel.onUserChanged(planner)
+
+        viewModel.openTalkHistory(12)
+
+        assertEquals(TopLevelDestination.CONGREGATION, state.destination)
+        assertEquals(CongregationSection.TALK_HISTORY, state.congregationSection)
+        assertEquals(12, state.historyTalkNumber)
+    }
+
+    @Test
+    fun `the preselected talk is dropped when another section is opened`() {
+        viewModel.onUserChanged(planner)
+        viewModel.openTalkHistory(12)
+
+        viewModel.openCongregationSection(CongregationSection.WEEKEND_TALKS)
+
+        assertNull(state.historyTalkNumber)
+    }
+
+    @Test
+    fun `without the right to see the history nothing is opened`() {
+        viewModel.onUserChanged(admin)
+
+        viewModel.openTalkHistory(12)
+
+        assertEquals(TopLevelDestination.HOME, state.destination)
+        assertNull(state.historyTalkNumber)
+    }
 }

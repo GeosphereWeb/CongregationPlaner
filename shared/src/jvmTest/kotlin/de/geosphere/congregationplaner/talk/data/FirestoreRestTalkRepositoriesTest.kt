@@ -20,7 +20,14 @@ import kotlin.test.assertTrue
 class FirestoreRestTalkRepositoriesTest {
     private val congregation = CongregationRef("EMEA", "europe", "central-europe", "609a", "berlin")
     private val slotsPath = "${FakeFirestoreRestServer.DOCUMENTS_PATH}/${congregation.talkSchedulePath}"
-    private val slot = TalkSlot(LocalDate(2026, 10, 25), LocalTime(17, 30), "kongress", "Kongress", true)
+    private val slot = TalkSlot(
+        LocalDate(2026, 10, 25),
+        LocalTime(17, 30),
+        "kongress",
+        "Kongress",
+        true,
+        confirmed = true,
+    )
 
     @Test
     fun `observeYear lists the collection, keeps only that year and sorts by date`() = runWithServer(
@@ -89,6 +96,7 @@ class FirestoreRestTalkRepositoriesTest {
         assertEquals("$slotsPath/2026-10-25", request.path)
         assertTrue(request.body.contains(""""time":{"stringValue":"17:30"}"""))
         assertTrue(request.body.contains(""""talkCancelled":{"booleanValue":true}"""))
+        assertTrue(request.body.contains(""""confirmed":{"booleanValue":true}"""))
         assertTrue(request.body.contains(""""weekEventId":{"stringValue":"kongress"}"""))
     }
 
@@ -253,6 +261,7 @@ class FirestoreRestTalkRepositoriesTest {
     private fun document(id: String) = """{"name":"x/talkSchedule/$id","fields":{
         "time":{"stringValue":"17:30"},
         "talkCancelled":{"booleanValue":true},
+        "confirmed":{"booleanValue":true},
         "weekEventId":{"stringValue":"kongress"},
         "weekEventName":{"stringValue":"Kongress"}}}"""
 
