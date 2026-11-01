@@ -48,6 +48,9 @@ val sonarExclusions = listOf(
     "**/YearlyMeetingTimesEditor.kt",
     "**/CongregationSelector.kt",
     "**/UserAccessGateScreen.kt",
+    // Compose-Rahmen und Vektor-Icons der Hauptnavigation; Auswahl und Sichtbarkeit sind in AppNavigationViewModel getestet
+    "**/AppScaffold.kt",
+    "**/NavigationIcons.kt",
     // Exclude theming and ui modules from coverage
     "theming/**",
     "ui/**"
