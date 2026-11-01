@@ -3,6 +3,7 @@
 ## Status
 Accepted
 Teilweise ersetzt durch [ADR-0012](0012-congregation-roles-list.md)
+Teilweise ersetzt durch [ADR-0013](0013-global-admin-without-congregation-data.md)
 
 ## Context
 Planer wählen den Redner aus den Mitgliedern ihrer Versammlung. Die Mitgliedsdokumente enthalten aber auch Kontakt- und Zugangsdaten und waren bisher nur für Admins lesbar. Die Rules können Felder eines Dokuments nicht einzeln freigeben, ein Planer soll die Mitglieder nur lesen und nie ändern können.
