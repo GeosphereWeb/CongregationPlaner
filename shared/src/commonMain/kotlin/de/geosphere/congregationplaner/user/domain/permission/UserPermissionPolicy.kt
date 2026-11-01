@@ -1,8 +1,8 @@
 package de.geosphere.congregationplaner.user.domain.permission
 
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.UserPermission
-import de.geosphere.congregationplaner.user.domain.model.UserRole
 import dev.zacsweers.metro.Inject
 
 /**
@@ -14,7 +14,7 @@ class UserPermissionPolicy {
 
     // Darf der User die Mitglieder seiner Versammlung freigeben und Rollen/Berechtigungen vergeben?
     fun canManageUsers(user: AppUser): Boolean =
-        user.isGlobalAdmin || (user.approved && user.role == UserRole.CONGREGATION_ADMIN)
+        user.isGlobalAdmin || (user.approved && CongregationRole.CONGREGATION_ADMIN in user.roles)
 
     // Darf der User die Mitglieder seiner Versammlung lesen (nicht ändern)? Das ist eine eigene Berechtigung.
     fun canViewMembers(user: AppUser): Boolean =

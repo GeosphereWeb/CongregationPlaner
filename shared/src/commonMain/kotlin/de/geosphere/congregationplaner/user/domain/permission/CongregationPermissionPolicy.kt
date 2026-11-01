@@ -2,7 +2,7 @@ package de.geosphere.congregationplaner.user.domain.permission
 
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
 import de.geosphere.congregationplaner.user.domain.model.AppUser
-import de.geosphere.congregationplaner.user.domain.model.UserRole
+import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import dev.zacsweers.metro.Inject
 
 /**
@@ -20,7 +20,7 @@ class CongregationPermissionPolicy {
     fun canEdit(user: AppUser, congregation: CongregationMetadata): Boolean = user.isGlobalAdmin ||
         (
             user.approved &&
-                user.role == UserRole.CONGREGATION_ADMIN &&
+                CongregationRole.CONGREGATION_ADMIN in user.roles &&
                 congregation.id.isNotBlank() &&
                 user.congregation?.congregationId == congregation.id
             )

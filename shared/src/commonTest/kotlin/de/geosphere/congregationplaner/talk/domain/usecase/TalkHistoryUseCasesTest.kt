@@ -5,6 +5,7 @@ import de.geosphere.congregationplaner.talk.domain.model.TalkScheduleException
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.talk.testing.FakeTalkHistoryRepository
+import de.geosphere.congregationplaner.user.data.mappers.withLegacyRoles
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.UserPermission
 import de.geosphere.congregationplaner.user.domain.model.UserRole
@@ -35,7 +36,7 @@ class TalkHistoryUseCasesTest {
         role = UserRole.CONGREGATION_ADMIN,
         permissions = setOf(UserPermission.PLAN_TALKS),
         congregation = testCongregation,
-    )
+    ).withLegacyRoles()
     private val member = AppUser(uid = "2", approved = true, congregation = testCongregation)
 
     private val spring = LocalDate(2026, 3, 1)

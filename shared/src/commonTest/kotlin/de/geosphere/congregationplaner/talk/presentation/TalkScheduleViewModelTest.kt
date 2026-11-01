@@ -26,8 +26,10 @@ import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkHistoryRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
 import de.geosphere.congregationplaner.talk.testing.FakeWeekEventRepository
+import de.geosphere.congregationplaner.user.data.mappers.withLegacyRoles
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
+import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.UserPermission
@@ -59,6 +61,7 @@ class TalkScheduleViewModelTest {
         uid = "planner",
         approved = true,
         permissions = setOf(UserPermission.PLAN_TALKS),
+        roles = setOf(CongregationRole.TALK_PLANNER),
         congregation = testCongregation,
     )
     private val viewer = planner.copy(
@@ -71,7 +74,7 @@ class TalkScheduleViewModelTest {
         approved = true,
         role = UserRole.CONGREGATION_ADMIN,
         congregation = testCongregation,
-    )
+    ).withLegacyRoles()
 
     private val october25 = TalkSlot(LocalDate(2026, 10, 25), LocalTime(17, 30))
     private val november1 = TalkSlot(LocalDate(2026, 11, 1), LocalTime(17, 30))
@@ -355,7 +358,7 @@ class TalkScheduleViewModelTest {
 
     @Test
     fun `congregation admin with PLAN_TALKS may plan`() {
-        viewModel.onCurrentUserChanged(admin.copy(permissions = setOf(UserPermission.PLAN_TALKS)))
+        viewModel.onCurrentUserChanged(admin.copy(roles = setOf(CongregationRole.TALK_PLANNER)))
         viewModel.newSlot()
 
         assertTrue(state.canPlan)

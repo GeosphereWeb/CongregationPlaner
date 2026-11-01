@@ -7,6 +7,7 @@ import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkCatalogUse
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkHistoryUseCase
 import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkHistoryRepository
+import de.geosphere.congregationplaner.user.data.mappers.withLegacyRoles
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.UserPermission
 import de.geosphere.congregationplaner.user.domain.model.UserRole
@@ -34,7 +35,7 @@ class TalkHistoryViewModelTest {
         role = UserRole.CONGREGATION_ADMIN,
         permissions = setOf(UserPermission.PLAN_TALKS),
         congregation = testCongregation,
-    )
+    ).withLegacyRoles()
     private val member = AppUser(uid = "member", approved = true, congregation = testCongregation)
 
     private val first = Talk(1, "Erster Vortrag")
