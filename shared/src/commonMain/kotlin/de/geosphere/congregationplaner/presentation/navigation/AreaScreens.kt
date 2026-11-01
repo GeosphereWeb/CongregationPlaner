@@ -12,24 +12,23 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryTabRow
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.circuit.presentation.CircuitRoute
 import de.geosphere.congregationplaner.congregation.presentation.CongregationMetadataRoute
+import de.geosphere.congregationplaner.organization.domain.model.SelectedCongregation
 import de.geosphere.congregationplaner.talk.presentation.ExternalDirectoryRoute
 import de.geosphere.congregationplaner.talk.presentation.TalkHistoryRoute
 import de.geosphere.congregationplaner.talk.presentation.TalkReferenceRoute
 import de.geosphere.congregationplaner.talk.presentation.TalkScheduleRoute
+import de.geosphere.congregationplaner.ui.appbar.NightTabRow
+import de.geosphere.congregationplaner.ui.appbar.NightTopBar
+import de.geosphere.congregationplaner.ui.header.NightPanel
+import de.geosphere.congregationplaner.ui.header.TeleprompterHeader
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.presentation.UserManagementRoute
 
@@ -83,28 +82,30 @@ internal fun EntryList(entries: List<NavEntry>, modifier: Modifier = Modifier) {
 }
 
 /** Obere Leiste mit Zurück-Pfeil und, falls gewünscht, Tabs; die Hauptleiste bleibt sichtbar. */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SectionScreen(
     title: String,
+    subtitle: String?,
+    backTo: TopLevelDestination,
     onBack: () -> Unit,
     tabs: List<Pair<String, Boolean>> = emptyList(),
     onSelectTab: (Int) -> Unit = {},
     content: @Composable () -> Unit,
 ) {
     Column(Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text(title) },
-            navigationIcon = {
-                IconButton(onClick = onBack) { Icon(arrowBackIcon, contentDescription = "Zurück") }
-            },
+        NightTopBar(
+            title = title,
+            backIcon = arrowBackIcon,
+            backDescription = "Zurück zu ${backTo.label}",
+            onBack = onBack,
+            subtitle = subtitle,
         )
         if (tabs.isNotEmpty()) {
-            PrimaryTabRow(selectedTabIndex = tabs.indexOfFirst { it.second }.coerceAtLeast(0)) {
-                tabs.forEachIndexed { index, (label, selected) ->
-                    Tab(selected = selected, onClick = { onSelectTab(index) }, text = { Text(label) })
-                }
-            }
+            NightTabRow(
+                labels = tabs.map { it.first },
+                selectedIndex = tabs.indexOfFirst { it.second }.coerceAtLeast(0),
+                onSelect = onSelectTab,
+            )
         }
         Box(Modifier.weight(1f).fillMaxWidth()) { content() }
     }
@@ -115,6 +116,9 @@ private fun SectionScreen(
 private fun AreaLayout(
     isWide: Boolean,
     entries: List<NavEntry>,
+    header: AreaHeader,
+    area: TopLevelDestination,
+    subtitle: String?,
     selectedTitle: String?,
     onBack: () -> Unit,
     tabs: List<Pair<String, Boolean>> = emptyList(),
@@ -130,9 +134,17 @@ private fun AreaLayout(
             }
         }
 
-        content == null || selectedTitle == null -> EntryList(entries, Modifier.fillMaxSize())
+        content == null || selectedTitle == null -> Column(Modifier.fillMaxSize()) {
+            TeleprompterHeader(
+                stepLabel = header.stepLabel,
+                current = header.current,
+                previous = header.previous,
+                compact = true,
+            )
+            NightPanel(Modifier.weight(1f), scrollable = false) { EntryList(entries, Modifier.weight(1f)) }
+        }
 
-        else -> SectionScreen(selectedTitle, onBack, tabs, onSelectTab, content)
+        else -> SectionScreen(selectedTitle, subtitle, area, onBack, tabs, onSelectTab, content)
     }
 }
 
@@ -141,6 +153,7 @@ internal fun CongregationArea(
     state: AppNavigationState,
     currentUser: AppUser,
     isWide: Boolean,
+    congregation: SelectedCongregation?,
     actions: AppNavigationActions,
 ) {
     val selected = state.congregationSection
@@ -159,6 +172,9 @@ internal fun CongregationArea(
     AreaLayout(
         isWide = isWide,
         entries = entries,
+        header = congregationHeader(congregation),
+        area = TopLevelDestination.CONGREGATION,
+        subtitle = congregation?.displayName,
         selectedTitle = if (inTalkPlanning) "Vortragsplanung" else selected?.label,
         onBack = { actions.onOpenCongregationSection(null) },
         tabs = if (inTalkPlanning) talkTabs.map { it.tabLabel to (it == selected) } else emptyList(),
@@ -172,6 +188,7 @@ internal fun GlobalArea(
     state: AppNavigationState,
     currentUser: AppUser,
     isWide: Boolean,
+    congregation: SelectedCongregation?,
     actions: AppNavigationActions,
 ) {
     val selected = state.globalSection
@@ -185,6 +202,9 @@ internal fun GlobalArea(
     AreaLayout(
         isWide = isWide,
         entries = entries,
+        header = globalHeader(),
+        area = TopLevelDestination.GLOBAL_ADMIN,
+        subtitle = congregation?.displayName,
         selectedTitle = selected?.label,
         onBack = { actions.onOpenGlobalSection(null) },
         content = selected?.let { section -> { GlobalSectionContent(section, currentUser) } },
