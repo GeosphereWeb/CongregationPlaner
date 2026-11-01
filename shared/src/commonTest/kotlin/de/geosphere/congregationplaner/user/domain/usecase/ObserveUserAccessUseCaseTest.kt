@@ -28,6 +28,7 @@ class ObserveUserAccessUseCaseTest {
     @Test
     fun `missing congregation requires a selection`() = runBlocking {
         ObserveUserAccessUseCase(FakeUserRepository(AppUser()))(authUser, null).test {
+            assertEquals(UserAccessState.Loading, awaitItem())
             assertEquals(UserAccessState.CongregationRequired, awaitItem())
             awaitComplete()
         }
@@ -68,6 +69,48 @@ class ObserveUserAccessUseCaseTest {
             )
             cancelAndIgnoreRemainingEvents()
         }
+    }
+
+    @Test
+    fun `global admin needs no congregation and gets no member document`() = runBlocking {
+        val repository = FakeUserRepository()
+        repository.globalAdminResult = Result.success(true)
+
+        ObserveUserAccessUseCase(repository)(authUser, null).test {
+            assertEquals(UserAccessState.Loading, awaitItem())
+            assertEquals(
+                UserAccessState.Authorized(
+                    AppUser(uid = "uid-1", email = "user@example.com", approved = true, isGlobalAdmin = true),
+                ),
+                awaitItem(),
+            )
+            awaitComplete()
+        }
+        assertEquals(0, repository.loadCount)
+    }
+
+    @Test
+    fun `global admin in a congregation without member document is not made a member`() = runBlocking {
+        val repository = FakeUserRepository()
+        repository.globalAdminResult = Result.success(true)
+
+        ObserveUserAccessUseCase(repository)(authUser, testCongregation).test {
+            assertEquals(UserAccessState.Loading, awaitItem())
+            assertEquals(
+                UserAccessState.Authorized(
+                    AppUser(
+                        uid = "uid-1",
+                        email = "user@example.com",
+                        approved = true,
+                        congregation = testCongregation,
+                        isGlobalAdmin = true,
+                    ),
+                ),
+                awaitItem(),
+            )
+            cancelAndIgnoreRemainingEvents()
+        }
+        assertEquals(0, repository.loadCount)
     }
 
     @Test

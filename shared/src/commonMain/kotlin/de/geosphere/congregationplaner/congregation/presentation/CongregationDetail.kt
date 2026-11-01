@@ -19,6 +19,7 @@ import de.geosphere.congregationplaner.theming.ThemePreviews
 internal fun CongregationDetail(
     congregation: CongregationMetadata?,
     canEdit: Boolean,
+    canEditMeetingTimes: Boolean,
     isSaving: Boolean,
     isBusy: Boolean,
     isDirty: Boolean,
@@ -39,6 +40,7 @@ internal fun CongregationDetail(
     } else {
         CongregationEditor(
             congregation = congregation,
+            canEditMeetingTimes = canEditMeetingTimes,
             isSaving = isSaving,
             isBusy = isBusy,
             isDirty = isDirty,
@@ -76,6 +78,7 @@ private fun CongregationDetailReadOnlyPreview() = PreviewThemeWrapper {
     CongregationDetail(
         congregation = previewCongregations.first(),
         canEdit = false,
+        canEditMeetingTimes = false,
         isSaving = false,
         isBusy = false,
         isDirty = false,
@@ -91,6 +94,7 @@ private fun CongregationDetailPreview() = PreviewThemeWrapper {
     CongregationDetail(
         congregation = previewCongregations.first(),
         canEdit = true,
+        canEditMeetingTimes = true,
         isSaving = false,
         isBusy = false,
         isDirty = false,

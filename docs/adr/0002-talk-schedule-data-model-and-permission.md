@@ -2,6 +2,7 @@
 
 ## Status
 Accepted
+Teilweise ersetzt durch [ADR-0013](0013-global-admin-without-congregation-data.md)
 
 ## Context
 Jede Versammlung plant ihre wöchentlichen Vorträge selbst. Ein Termin braucht einen eindeutigen Schlüssel, der Versammlungstag kann sich kurzfristig verschieben, und die Liste der Wochenereignisse (z. B. Kongress) ist für alle Versammlungen und Kreise gleich. Planen soll nur dürfen, wer dafür freigegeben ist; Bestandsadmins besitzen keine Einzelberechtigungen.

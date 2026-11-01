@@ -3,6 +3,7 @@
 ## Status
 Accepted
 Teilweise ersetzt durch [ADR-0012](0012-congregation-roles-list.md)
+Teilweise ersetzt durch [ADR-0013](0013-global-admin-without-congregation-data.md)
 
 ## Context
 Bisher durften neben globalen Admins auch alle freigegebenen Versammlungsadmins Vorträge planen (ADR-0002). Versammlungsadmins verwalten aber Mitglieder und Metadaten der Versammlung, nicht zwingend die Vortragsplanung. Die Rechte sollen stärker getrennt sein, ein Admin soll trotzdem zugleich Planer sein können.

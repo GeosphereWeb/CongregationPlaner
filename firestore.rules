@@ -44,8 +44,8 @@ rules_version = '2';
 // Collection: region/.../congregation/{congId}/talkSchedule
 // Document ID: the date as yyyy-MM-dd (one day of the weekend meeting; the weekday
 //   is deliberately not checked because the meeting day can move at short notice).
-// Readable and writable only by planners of this congregation (global admin, or approved
-//   member with the role 'TALK_PLANNER'; the role 'CONGREGATION_ADMIN' alone is not enough).
+// Readable and writable only by planners of this congregation (approved members with the role
+//   'TALK_PLANNER'; the role 'CONGREGATION_ADMIN' alone is not enough, and global admins have no access, ADR-0013).
 // Fields:
 //   - time: string (required, 'HH:mm')
 //   - talkCancelled: bool (required)
@@ -132,11 +132,11 @@ service cloud.firestore {
     }
 
     // May read (never write) the members of exactly this congregation: admins and approved planners (talk or task).
+    // Global admins have no access to the members (ADR-0013).
     // Old documents without `roles` still use the deprecated permission 'VIEW_MEMBERS'.
     function canViewMembers(regionId, subregionId, branchId, circuitId, congId) {
       let memberPath = /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/circuit/$(circuitId)/congregation/$(congId)/members/$(request.auth.uid);
-      return isGlobalAdmin() ||
-        isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) ||
+      return isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) ||
         (isAuthenticated() &&
           exists(memberPath) &&
           get(memberPath).data.approved == true &&
@@ -146,15 +146,14 @@ service cloud.firestore {
               'VIEW_MEMBERS' in get(memberPath).data.get('permissions', []))));
     }
 
-    // Planners of exactly this congregation: global admin or approved member with the role TALK_PLANNER. The role
-    // CONGREGATION_ADMIN alone does not grant it; an admin who plans needs the planner role too.
+    // Planners of exactly this congregation: approved members with the role TALK_PLANNER. The role CONGREGATION_ADMIN
+    // alone does not grant it, and global admins have no access (ADR-0013).
     function canPlanTalks(regionId, subregionId, branchId, circuitId, congId) {
       let memberPath = /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/circuit/$(circuitId)/congregation/$(congId)/members/$(request.auth.uid);
-      return isGlobalAdmin() ||
-        (isAuthenticated() &&
-          exists(memberPath) &&
-          get(memberPath).data.approved == true &&
-          hasRole(get(memberPath).data, 'TALK_PLANNER'));
+      return isAuthenticated() &&
+        exists(memberPath) &&
+        get(memberPath).data.approved == true &&
+        hasRole(get(memberPath).data, 'TALK_PLANNER');
     }
 
     function isValidWeekEvent(data) {
@@ -391,7 +390,7 @@ service cloud.firestore {
     // Admins record persons without an account (e.g. children) with a name.
     function isValidMemberWithoutAccount(regionId, subregionId, branchId, circuitId, congId) {
       let data = request.resource.data;
-      return (isGlobalAdmin() || isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId)) &&
+      return isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) &&
         isValidMember(data) &&
         data.get('hasAccount', true) == false &&
         data.email == null &&
@@ -466,8 +465,10 @@ service cloud.firestore {
             match /congregation/{congId} {
               allow read: if true;
               allow create, delete: if isGlobalAdmin();
-              // The congregation admin may change the meeting data of exactly this congregation.
-              allow update: if isGlobalAdmin() || (
+              // Global admins may change the name only; the congregation admin may also change the meeting times of
+              // exactly this congregation (ADR-0013).
+              allow update: if (isGlobalAdmin() &&
+                  request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])) || (
                 isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) &&
                 request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                   'name', 'midweek_meeting_time', 'midweek_meeting_weekday',
@@ -492,7 +493,7 @@ service cloud.firestore {
                 // roles (and migrate an old document) but neither the approval nor remove their own admin role,
                 // so nobody locks themselves out. The approval of others is set here too.
                 allow update: if isAuthenticated() &&
-                  (isGlobalAdmin() || isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId)) &&
+                  isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) &&
                   (request.auth.uid == uid
                     ? (onlyFieldsChanged(profileFields().concat(roleFields())) && keepsOwnAdminRole())
                     : onlyFieldsChanged(accessFields().concat(profileFields()))) &&
@@ -500,7 +501,6 @@ service cloud.firestore {
 
                 allow delete: if isAuthenticated() && (
                   request.auth.uid == uid ||
-                  isGlobalAdmin() ||
                   isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId)
                 );
               }
@@ -512,14 +512,12 @@ service cloud.firestore {
               match /adminContacts/{uid} {
                 allow read: if canReadAdminContacts(regionId, subregionId, branchId, circuitId, congId);
 
-                allow create, update: if (isGlobalAdmin() ||
-                    isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId)) &&
+                allow create, update: if isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) &&
                   isValidAdminContact(request.resource.data) &&
                   mirrorsAdminMember(regionId, subregionId, branchId, circuitId, congId, uid, request.resource.data);
 
                 // Admins maintain contacts; everybody may drop their own (e.g. after leaving the congregation).
-                allow delete: if isGlobalAdmin() ||
-                  isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) ||
+                allow delete: if isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) ||
                   (isAuthenticated() && request.auth.uid == uid);
               }
 

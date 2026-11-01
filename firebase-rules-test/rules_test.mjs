@@ -203,7 +203,7 @@ await expect(
 );
 await expect('Mitglied ohne Rolle listet Mitglieder', api('GET', MEMBERS, undefined, plain.token), false);
 await expect('Mitglied ohne Rolle liest ein fremdes Mitglied', api('GET', `${MEMBERS}/${planner.uid}`, undefined, plain.token), false);
-await expect('Global Admin listet Mitglieder', api('GET', MEMBERS, undefined, admin.token), true);
+await expect('Global Admin listet Mitglieder nicht', api('GET', MEMBERS, undefined, admin.token), false);
 await expect('Altdokument mit VIEW_MEMBERS listet Mitglieder', api('GET', MEMBERS, undefined, legacyViewer.token), true);
 await expect('Altdokument mit PLAN_TALKS gilt als Vortragsplaner und listet Mitglieder', api('GET', MEMBERS, undefined, legacyPlanner.token), true);
 
@@ -306,7 +306,7 @@ await expect('Admin-Kontakt für einen Admin im neuen Format', putContact(selfAd
 await expect('Admin-Kontakt für eine nicht freigegebene Person', putContact(pending.uid, contact('', ''), congAdmin.token), false);
 await expect('Admin-Kontakt ohne Namen eines Admins ohne Namen', putContact(congAdmin.uid, contact('', ''), congAdmin.token), true);
 await expect('Admin-Kontakt von einem anderen Versammlungsadmin pflegen', putContact(namedAdmin.uid, contact('Anna', 'Admin'), congAdmin.token), true);
-await expect('Admin-Kontakt von Global Admin pflegen', putContact(namedAdmin.uid, contact('Anna', 'Admin'), admin.token), true);
+await expect('Admin-Kontakt von Global Admin pflegen', putContact(namedAdmin.uid, contact('Anna', 'Admin'), admin.token), false);
 await expect('Admin-Kontakt schreiben ohne Freigabe', putContact(namedAdmin.uid, contact('Anna', 'Admin'), pending.token), false);
 await expect('Admin-Kontakt schreiben als normales Mitglied', putContact(namedAdmin.uid, contact('Anna', 'Admin'), plain.token), false);
 await expect('Admin-Kontakt lesen ohne Freigabe', api('GET', `${CONTACTS}/${namedAdmin.uid}`, undefined, pending.token), true);
@@ -321,6 +321,42 @@ await expect('Admin-Kontakt löschen ohne Freigabe', api('DELETE', `${CONTACTS}/
 await expect('Admin-Kontakt eines anderen löschen ohne Freigabe', api('DELETE', `${CONTACTS}/${namedAdmin.uid}`, undefined, pending.token), false);
 await expect('eigenen Admin-Kontakt löschen auch ohne Admin-Rolle', api('DELETE', `${CONTACTS}/${pending.uid}`, undefined, pending.token), true);
 await expect('Admin-Kontakt löschen als Versammlungsadmin', api('DELETE', `${CONTACTS}/${namedAdmin.uid}`, undefined, congAdmin.token), true);
+
+
+// ---------- Globaler Admin ohne Einblick in Versammlungsdaten (ADR-0013) ----------
+const approvedMask = '?updateMask.fieldPaths=approved';
+const falseApproved = { fields: { approved: { booleanValue: false } } };
+await expect('Global Admin liest ein Mitglied nicht', api('GET', `${MEMBERS}/${plain.uid}`, undefined, admin.token), false);
+await expect('Global Admin ändert ein Mitglied nicht', api('PATCH', `${MEMBERS}/${plain.uid}${approvedMask}`, falseApproved, admin.token), false);
+await expect('Global Admin löscht ein Mitglied nicht', api('DELETE', `${MEMBERS}/${plain.uid}`, undefined, admin.token), false);
+await expect(
+  'Global Admin erfasst keine Person ohne Konto',
+  call('POST', `${FS}/${MEMBERS}`, fields({ email: null, displayName: null, approved: false, roles: [], hasAccount: false, lastName: 'Muster', firstName: 'Lena' }), admin.token),
+  false,
+);
+await expect('Global Admin plant keinen Termin', putSlot('2026-12-06', base, admin.token), false);
+await expect('Global Admin liest keine Termine', api('GET', SLOT, undefined, admin.token), false);
+await expect('Global Admin liest keine Vortragshistorie', api('GET', HIST, undefined, admin.token), false);
+await expect('Global Admin liest kein Redner-Verzeichnis', api('GET', EXT_SPEAKERS, undefined, admin.token), false);
+await expect('Global Admin legt keinen externen Redner an', post(EXT_SPEAKERS, validSpeaker, admin.token), false);
+await expect('Global Admin liest weiter die Admin-Kontakte', api('GET', CONTACTS, undefined, admin.token), true);
+await expect('Global Admin ändert den Namen der Versammlung', api('PATCH', `${CONG}${mask('name')}`, { fields: { name: { stringValue: 'Berlin-Mitte' } } }, admin.token), true);
+await expect('Global Admin ändert die Zeiten der Versammlung nicht', api('PATCH', `${CONG}${mask('midweek_meeting_time')}`, time('18:15'), admin.token), false);
+await expect('Global Admin ändert ein fremdes Feld der Versammlung nicht', api('PATCH', `${CONG}${mask('secret')}`, { fields: { secret: { stringValue: 'x' } } }, admin.token), false);
+const NEW_CONG = 'region/R/subregion/S/branch/B/circuit/C/congregation/NEW';
+await expect('Global Admin legt eine Versammlung an', api('PATCH', NEW_CONG, fields({ name: 'Neu', midweek_meeting_time: '19:00', midweek_meeting_weekday: 3 }), admin.token), true);
+await expect('Global Admin löscht eine Versammlung', api('DELETE', NEW_CONG, undefined, admin.token), true);
+await expect('Global Admin pflegt weiter die Kreise', api('PATCH', 'region/R2', { fields: {} }, admin.token), true);
+await expect('Normaler Nutzer pflegt keine Kreise', api('PATCH', 'region/R3', { fields: {} }, plain.token), false);
+
+// Doppelrolle: ein globaler Admin, der zugleich Vortragsplaner einer Versammlung ist, plant über seine Rolle.
+const dualAdmin = await signUp('dualadmin@test.de');
+await api('PATCH', `admins/${dualAdmin.uid}`, { fields: {} }, owner);
+await api('PATCH', `${MEMBERS}/${dualAdmin.uid}`, memberDoc('dualadmin@test.de', ['TALK_PLANNER']), owner);
+await expect('Global Admin mit Planerrolle plant über die Rolle', putSlot('2026-12-13', base, dualAdmin.token), true);
+await expect('Global Admin mit Planerrolle liest Mitglieder über die Rolle', api('GET', MEMBERS, undefined, dualAdmin.token), true);
+await expect('Global Admin mit Planerrolle ändert trotzdem kein Mitglied', api('PATCH', `${MEMBERS}/${plain.uid}${approvedMask}`, falseApproved, dualAdmin.token), false);
+await expect('Global Admin mit Planerrolle pflegt weiter die Vortragsliste', api('PATCH', 'talkCatalog/77', talk('Dual'), dualAdmin.token), true);
 
 console.log(`${count} checks, ${failures.length} failures`);
 failures.forEach((failure) => console.log(`FAILURE: ${failure}`));
