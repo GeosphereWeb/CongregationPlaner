@@ -127,6 +127,9 @@ await expect('Wochenereignis nur mit ID', putSlot('2026-10-25', { ...base, weekE
 await expect('ungültiges Datum 2026-13-01', putSlot('2026-13-01', base), false);
 await expect('ungültiges Datum 2026-2-1', putSlot('2026-2-1', base), false);
 await expect('unbekanntes Feld', putSlot('2026-10-25', { ...base, extra: 'x' }), false);
+await expect('Termin bestätigt', putSlot('2026-10-25', { ...base, confirmed: true }), true);
+await expect('Termin nicht bestätigt', putSlot('2026-10-25', { ...base, confirmed: false }), true);
+await expect('Bestätigung kein Bool', putSlot('2026-10-25', { ...base, confirmed: 'ja' }), false);
 await expect('ungültige Uhrzeit', putSlot('2026-10-25', { time: '25:00', talkCancelled: false }), false);
 await expect('Planer liest Termin', api('GET', `${SLOT}/2026-10-25`, undefined, planner.token), true);
 await expect('Nutzer ohne Planerrolle schreibt Termin', putSlot('2026-11-01', base, plain.token), false);
