@@ -1,7 +1,6 @@
 package de.geosphere.congregationplaner.presentation.navigation
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.circuit.presentation.CircuitRoute
 import de.geosphere.congregationplaner.congregation.presentation.CongregationMetadataRoute
@@ -25,58 +25,75 @@ import de.geosphere.congregationplaner.talk.presentation.ExternalDirectoryRoute
 import de.geosphere.congregationplaner.talk.presentation.TalkHistoryRoute
 import de.geosphere.congregationplaner.talk.presentation.TalkReferenceRoute
 import de.geosphere.congregationplaner.talk.presentation.TalkScheduleRoute
+import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.ui.appbar.NightTabRow
 import de.geosphere.congregationplaner.ui.appbar.NightTopBar
 import de.geosphere.congregationplaner.ui.header.NightPanel
 import de.geosphere.congregationplaner.ui.header.TeleprompterHeader
+import de.geosphere.congregationplaner.ui.nav.NavCardRow
+import de.geosphere.congregationplaner.ui.nav.NavColumnItem
+import de.geosphere.congregationplaner.ui.nav.SectionLabel
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.presentation.UserManagementRoute
 
 private val secondColumnWidth = 280.dp
 
-/** Ein Eintrag der Übersicht bzw. der zweiten Spalte; [group] gliedert die Liste, [nested] rückt den Eintrag ein. */
-internal data class NavEntry(
-    val label: String,
-    val group: String? = null,
-    val nested: Boolean = false,
-    val selected: Boolean = false,
-    val onClick: () -> Unit = {},
-)
-
 /**
- * Liste der Bereiche mit Gruppenüberschriften. Auf dem Handy ist sie die Übersicht, auf großen Fenstern die feste
- * zweite Spalte neben der Hauptleiste.
+ * Liste der Bereiche mit Gruppenüberschriften. Auf dem Handy ist sie die Übersicht (Karten), auf großen Fenstern die
+ * feste zweite Spalte neben der Hauptleiste, mit [header] als Kopf.
  */
 @Composable
-internal fun EntryList(entries: List<NavEntry>, modifier: Modifier = Modifier) {
-    Column(modifier.verticalScroll(rememberScrollState()).padding(16.dp)) {
-        var lastGroup: String? = null
+internal fun EntryList(entries: List<NavEntry>, isWide: Boolean, header: AreaHeader, modifier: Modifier = Modifier) {
+    val columnModifier = if (isWide) {
+        modifier.background(Brush.verticalGradient(listOf(NightColors.HeaderMiddle, NightColors.SurfaceDetail)))
+    } else {
+        modifier
+    }
+    Column(columnModifier.verticalScroll(rememberScrollState()).padding(horizontal = if (isWide) 16.dp else 0.dp)) {
+        if (isWide) ColumnHeader(header)
+        var lastGroup: CongregationGroup? = null
         entries.forEach { entry ->
             if (entry.group != null && entry.group != lastGroup) {
-                Text(
-                    entry.group.uppercase(),
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
+                SectionLabel(
+                    entry.group.label,
+                    tone = entry.group.tone,
+                    modifier = Modifier.padding(top = 20.dp, bottom = 8.dp),
                 )
             }
             lastGroup = entry.group
-            Text(
-                entry.label,
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .then(
-                        if (entry.selected) {
-                            Modifier.background(
-                                MaterialTheme.colorScheme.secondaryContainer,
-                            )
-                        } else {
-                            Modifier
-                        },
-                    )
-                    .clickable(onClick = entry.onClick)
-                    .padding(start = if (entry.nested) 24.dp else 8.dp, top = 12.dp, bottom = 12.dp, end = 8.dp),
-            )
+            when {
+                entry.heading -> Text(
+                    entry.label,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = NightColors.OnBackgroundMuted,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                )
+
+                isWide -> NavColumnItem(entry.label, entry.onClick, selected = entry.selected, nested = entry.nested)
+
+                else -> NavCardRow(
+                    title = entry.label,
+                    onClick = entry.onClick,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                    supportingText = entry.supportingText,
+                    supportingTone = entry.tone,
+                    selected = entry.selected,
+                    nested = entry.nested,
+                    accent = entry.group?.tone?.content ?: NightColors.Border,
+                    badge = entry.badge,
+                )
+            }
+        }
+    }
+}
+
+/** Kopf der zweiten Spalte: Name der Versammlung bzw. des Bereichs und darunter der Kreis. */
+@Composable
+private fun ColumnHeader(header: AreaHeader) {
+    Column(Modifier.padding(top = 24.dp, bottom = 4.dp, start = 4.dp)) {
+        Text(header.current, style = MaterialTheme.typography.headlineSmall, color = NightColors.OnBackground)
+        if (header.stepLabel.isNotBlank()) {
+            Text(header.stepLabel, style = MaterialTheme.typography.labelSmall, color = NightColors.OnBackgroundMuted)
         }
     }
 }
@@ -127,7 +144,12 @@ private fun AreaLayout(
 ) {
     when {
         isWide -> Row(Modifier.fillMaxSize()) {
-            EntryList(entries, Modifier.width(secondColumnWidth).fillMaxHeight())
+            EntryList(
+                entries = entries,
+                isWide = true,
+                header = header,
+                modifier = Modifier.width(secondColumnWidth).fillMaxHeight(),
+            )
             VerticalDivider()
             Box(Modifier.weight(1f).fillMaxHeight()) {
                 if (content != null) content() else Text("Wähle einen Bereich.", Modifier.padding(16.dp))
@@ -141,7 +163,9 @@ private fun AreaLayout(
                 previous = header.previous,
                 compact = true,
             )
-            NightPanel(Modifier.weight(1f), scrollable = false) { EntryList(entries, Modifier.weight(1f)) }
+            NightPanel(Modifier.weight(1f), scrollable = false) {
+                EntryList(entries, isWide = false, header = header, modifier = Modifier.weight(1f))
+            }
         }
 
         else -> SectionScreen(selectedTitle, subtitle, area, onBack, tabs, onSelectTab, content)
@@ -157,15 +181,12 @@ internal fun CongregationArea(
     actions: AppNavigationActions,
 ) {
     val selected = state.congregationSection
-    val entries = state.visible.congregationSections.map { section ->
-        NavEntry(
-            label = section.label,
-            group = section.group.label,
-            nested = section.nested,
-            selected = section == selected,
-            onClick = { actions.onOpenCongregationSection(section) },
-        )
-    }
+    val entries = congregationEntries(
+        sections = state.visible.congregationSections,
+        selected = selected,
+        isWide = isWide,
+        onOpen = actions.onOpenCongregationSection,
+    )
     // Die Vortragsplanung ist auf dem Handy ein Bereich mit Tabs, auf großen Fenstern stehen die Teile in der Spalte.
     val talkTabs = state.visible.congregationSections.filter { it in CongregationSection.talkPlanning }
     val inTalkPlanning = !isWide && selected != null && selected in talkTabs
@@ -175,7 +196,7 @@ internal fun CongregationArea(
         header = congregationHeader(congregation),
         area = TopLevelDestination.CONGREGATION,
         subtitle = congregation?.displayName,
-        selectedTitle = if (inTalkPlanning) "Vortragsplanung" else selected?.label,
+        selectedTitle = if (inTalkPlanning) TALK_PLANNING_LABEL else selected?.label,
         onBack = { actions.onOpenCongregationSection(null) },
         tabs = if (inTalkPlanning) talkTabs.map { it.tabLabel to (it == selected) } else emptyList(),
         onSelectTab = { index -> actions.onOpenCongregationSection(talkTabs[index]) },
@@ -192,13 +213,7 @@ internal fun GlobalArea(
     actions: AppNavigationActions,
 ) {
     val selected = state.globalSection
-    val entries = state.visible.globalSections.map { section ->
-        NavEntry(
-            label = section.label,
-            selected = section == selected,
-            onClick = { actions.onOpenGlobalSection(section) },
-        )
-    }
+    val entries = globalEntries(state.visible.globalSections, selected, actions.onOpenGlobalSection)
     AreaLayout(
         isWide = isWide,
         entries = entries,

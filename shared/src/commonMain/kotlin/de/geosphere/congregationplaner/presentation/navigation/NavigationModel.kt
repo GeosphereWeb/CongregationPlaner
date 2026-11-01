@@ -23,10 +23,20 @@ enum class CongregationSection(
     val group: CongregationGroup,
     val nested: Boolean = false,
     val tabLabel: String = label,
+    val supportingText: String? = null,
 ) {
-    GENERAL_DATA("Allgemeine Versammlungsdaten", CongregationGroup.ADMINISTRATION),
-    USER_MANAGEMENT("Userverwaltung", CongregationGroup.ADMINISTRATION, nested = true),
-    MIDWEEK_PLANNING("Planung unter der Woche", CongregationGroup.PLANNING),
+    GENERAL_DATA(
+        "Allgemeine Versammlungsdaten",
+        CongregationGroup.ADMINISTRATION,
+        supportingText = "Name, Zusammenkunftszeiten",
+    ),
+    USER_MANAGEMENT(
+        "Userverwaltung",
+        CongregationGroup.ADMINISTRATION,
+        nested = true,
+        supportingText = "Mitglieder, Rollen, Freigaben",
+    ),
+    MIDWEEK_PLANNING("Planung unter der Woche", CongregationGroup.PLANNING, supportingText = "Aufgabenplaner"),
     WEEKEND_TALKS("Planung am Wochenende", CongregationGroup.PLANNING, nested = true, tabLabel = "Wochenende"),
     EXTERNAL_SPEAKERS("Externe Redner", CongregationGroup.PLANNING, nested = true),
     TALK_HISTORY("Vortragshistorie", CongregationGroup.PLANNING, nested = true, tabLabel = "Historie"),
