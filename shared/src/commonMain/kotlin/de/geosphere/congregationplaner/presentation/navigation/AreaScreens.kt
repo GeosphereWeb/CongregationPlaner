@@ -178,6 +178,7 @@ internal fun CongregationArea(
     currentUser: AppUser,
     isWide: Boolean,
     congregation: SelectedCongregation?,
+    pendingApprovals: Int?,
     actions: AppNavigationActions,
 ) {
     val selected = state.congregationSection
@@ -185,6 +186,7 @@ internal fun CongregationArea(
         sections = state.visible.congregationSections,
         selected = selected,
         isWide = isWide,
+        pendingApprovals = pendingApprovals,
         onOpen = actions.onOpenCongregationSection,
     )
     // Die Vortragsplanung ist auf dem Handy ein Bereich mit Tabs, auf großen Fenstern stehen die Teile in der Spalte.

@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -53,7 +55,7 @@ fun SectionLabel(text: String, modifier: Modifier = Modifier, tone: StatusTone? 
 
 /**
  * Karte der Übersicht auf dem Handy. [nested] rückt sie ein und setzt links eine Kante in [accent]; [badge] ist eine
- * kurze Marke wie „1 offen“; [supportingTone] färbt den Untertext.
+ * kurze Marke wie „1 offen“; [supportingTone] färbt den Untertext; [indicator] setzt einen Statuspunkt vor den Titel.
  */
 @Composable
 @Suppress("LongParameterList")
@@ -68,6 +70,7 @@ fun NavCardRow(
     accent: Color = NightColors.Border,
     badge: String? = null,
     badgeTone: StatusTone = StatusTone.Gold,
+    indicator: StatusTone? = null,
 ) {
     val shape = if (nested) NESTED_CARD_SHAPE else CARD_SHAPE
     Row(
@@ -83,6 +86,7 @@ fun NavCardRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (indicator != null) Box(Modifier.size(8.dp).background(indicator.content, CircleShape))
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.titleMedium, color = NightColors.OnBackground)
             if (supportingText != null) {

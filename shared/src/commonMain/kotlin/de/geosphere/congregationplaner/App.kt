@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.geosphere.congregationplaner.auth.FirebaseAuthManager
 import de.geosphere.congregationplaner.auth.FirebaseSupport
+import de.geosphere.congregationplaner.home.di.HomeGraph
 import de.geosphere.congregationplaner.organization.InviteLinkInbox
 import de.geosphere.congregationplaner.organization.di.OrganizationGraph
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
@@ -84,6 +85,7 @@ fun App() {
         val userAccessViewModel = remember { createGraph<UserAccessGraph>().userAccessViewModel }
         val selectionViewModel = remember { createGraph<OrganizationGraph>().congregationSelectionViewModel }
         val navigationViewModel = remember { createGraph<AppNavigationGraph>().appNavigationViewModel }
+        val homeViewModel = remember { createGraph<HomeGraph>().homeViewModel }
         val selectionState by selectionViewModel.uiState.collectAsState()
         val selectedCongregation = selectionState.selected?.ref
         val pendingInviteLink by InviteLinkInbox.pendingLink.collectAsState()
@@ -217,6 +219,7 @@ fun App() {
         val adminContacts by userAccessViewModel.adminContacts.collectAsState()
         val currentUser = (accessState as? UserAccessState.Authorized)?.user
         LaunchedEffect(currentUser) { navigationViewModel.onUserChanged(currentUser) }
+        LaunchedEffect(currentUser) { homeViewModel.onCurrentUserChanged(currentUser) }
         if (currentUser == null) {
             // Wer schon angemeldet ist, aber (noch) keine Versammlung gewählt hat, wählt sie hier.
             if (selectedCongregation == null && accessState == UserAccessState.CongregationRequired) {
@@ -236,11 +239,13 @@ fun App() {
         }
 
         val navigationState by navigationViewModel.uiState.collectAsState()
+        val homeState by homeViewModel.uiState.collectAsState()
         AppScaffold(
             state = navigationState,
             firebaseStatus = firebaseStatus,
             currentUser = currentUser,
             congregation = selectionState.selected,
+            home = homeState,
             actions = AppNavigationActions(
                 onSelect = navigationViewModel::select,
                 onOpenCongregationSection = navigationViewModel::openCongregationSection,
