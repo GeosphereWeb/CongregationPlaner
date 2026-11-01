@@ -2,6 +2,7 @@
 
 ## Status
 Accepted
+Teilweise ersetzt durch [ADR-0012](0012-congregation-roles-list.md)
 
 ## Context
 Wer sich neu registriert, wartet auf die Freigabe durch einen Versammlungsadmin und muss wissen, an wen er sich wenden kann. Nutzer ohne Freigabe dürfen keine Mitglieder lesen, und Firestore-Rules schränken nur ganze Dokumente ein, nicht einzelne Felder. Cloud Functions gibt es im Projekt nicht.

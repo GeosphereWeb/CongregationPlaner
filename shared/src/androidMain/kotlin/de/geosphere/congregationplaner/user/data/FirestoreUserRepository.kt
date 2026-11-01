@@ -10,6 +10,7 @@ import de.geosphere.congregationplaner.firestore.logFirestoreFailure
 import de.geosphere.congregationplaner.firestore.observeDocuments
 import de.geosphere.congregationplaner.firestore.runFirestoreCatching
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
+import de.geosphere.congregationplaner.user.data.mappers.withLegacyRoles
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
@@ -127,7 +128,7 @@ private fun toDomain(document: DocumentSnapshot, congregation: CongregationRef):
         landlinePhone = document.getString("landlinePhone").orEmpty(),
         isSpeaker = document.getBoolean("isSpeaker") ?: false,
     ),
-)
+).withLegacyRoles()
 
 private fun AppUser.toFirestoreFields(): Map<String, Any?> = mapOf(
     "email" to email,

@@ -8,6 +8,7 @@ import de.geosphere.congregationplaner.testing.FakeFirestoreRestServer.RecordedR
 import de.geosphere.congregationplaner.testing.withFirestoreRestConfig
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
+import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.UserPermission
@@ -47,6 +48,7 @@ class FirestoreRestUserRepositoryTest {
                 approved = true,
                 role = UserRole.CONGREGATION_ADMIN,
                 permissions = setOf(UserPermission.DUMMY),
+                roles = setOf(CongregationRole.CONGREGATION_ADMIN),
                 congregation = congregation,
             ),
             user,

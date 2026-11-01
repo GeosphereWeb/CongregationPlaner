@@ -5,6 +5,7 @@ import de.geosphere.congregationplaner.congregation.domain.repository.Congregati
 import de.geosphere.congregationplaner.congregation.domain.usecase.DeleteCongregationUseCase
 import de.geosphere.congregationplaner.congregation.domain.usecase.ObserveCongregationsUseCase
 import de.geosphere.congregationplaner.congregation.domain.usecase.SaveCongregationUseCase
+import de.geosphere.congregationplaner.user.data.mappers.withLegacyRoles
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.UserRole
 import de.geosphere.congregationplaner.user.domain.permission.CongregationPermissionPolicy
@@ -27,7 +28,7 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalCoroutinesApi::class)
 class CongregationMetadataViewModelTest {
     private val admin = AppUser(uid = "admin", approved = true, isGlobalAdmin = true)
-    private val planer = AppUser(uid = "planer", approved = true, role = UserRole.CONGREGATION_ADMIN)
+    private val planer = AppUser(uid = "planer", approved = true, role = UserRole.CONGREGATION_ADMIN).withLegacyRoles()
     private val berlin = CongregationMetadata(id = "609a", name = "Berlin")
     private val hamburg = CongregationMetadata(id = "610b", name = "Hamburg")
 

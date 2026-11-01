@@ -1,6 +1,7 @@
 package de.geosphere.congregationplaner.user.presentation
 
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
+import de.geosphere.congregationplaner.user.data.mappers.withLegacyRoles
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
@@ -36,7 +37,7 @@ class UserManagementViewModelTest {
         approved = true,
         role = UserRole.CONGREGATION_ADMIN,
         congregation = testCongregation,
-    )
+    ).withLegacyRoles()
     private val pending = AppUser(
         uid = "neu",
         email = "neu@example.com",
@@ -205,7 +206,7 @@ class UserManagementViewModelTest {
     @Test
     fun `losing the admin role stops managing members`() {
         viewModel.onCurrentUserChanged(admin)
-        viewModel.onCurrentUserChanged(admin.copy(role = UserRole.MEMBER))
+        viewModel.onCurrentUserChanged(admin.copy(role = UserRole.MEMBER, roles = emptySet()))
 
         val state = viewModel.uiState.value
         assertFalse(state.canManage)
@@ -351,7 +352,7 @@ class UserManagementViewModelTest {
         viewModel.onCurrentUserChanged(admin)
         viewModel.addMemberWithoutAccount()
 
-        viewModel.onCurrentUserChanged(admin.copy(role = UserRole.MEMBER))
+        viewModel.onCurrentUserChanged(admin.copy(role = UserRole.MEMBER, roles = emptySet()))
         viewModel.saveProfile()
 
         assertNull(viewModel.uiState.value.editor)

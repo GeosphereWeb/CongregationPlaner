@@ -1,7 +1,7 @@
 package de.geosphere.congregationplaner.talk.domain.permission
 
 import de.geosphere.congregationplaner.user.domain.model.AppUser
-import de.geosphere.congregationplaner.user.domain.model.UserPermission
+import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import dev.zacsweers.metro.Inject
 
 /**
@@ -12,5 +12,5 @@ import dev.zacsweers.metro.Inject
 class TalkSchedulePermissionPolicy {
     // Auch Versammlungsadmins brauchen PLAN_TALKS; die Rolle allein berechtigt nicht zum Planen.
     fun canPlanTalks(user: AppUser): Boolean =
-        user.isGlobalAdmin || (user.approved && UserPermission.PLAN_TALKS in user.permissions)
+        user.isGlobalAdmin || (user.approved && CongregationRole.TALK_PLANNER in user.roles)
 }
