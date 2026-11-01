@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner.presentation.navigation
 
+import de.geosphere.congregationplaner.home.presentation.approvalsBadge
 import de.geosphere.congregationplaner.ui.chip.StatusTone
 
 internal const val TALK_PLANNING_LABEL = "Vortragsplanung"
@@ -33,6 +34,7 @@ internal fun congregationEntries(
     sections: List<CongregationSection>,
     selected: CongregationSection?,
     isWide: Boolean,
+    pendingApprovals: Int? = null,
     onOpen: (CongregationSection) -> Unit,
 ): List<NavEntry> = buildList {
     val talk = sections.filter { it in CongregationSection.talkPlanning }
@@ -46,6 +48,7 @@ internal fun congregationEntries(
                     selected = section == selected,
                     supportingText = section.supportingText,
                     tone = if (section == CongregationSection.MIDWEEK_PLANNING) StatusTone.Sky else null,
+                    badge = approvalsBadge(pendingApprovals).takeIf { section == CongregationSection.USER_MANAGEMENT },
                     onClick = { onOpen(section) },
                 ),
             )

@@ -55,6 +55,9 @@ data class TalkSlot(
     val chairman: Chairman?
         get() = chairmanMemberId?.let { Chairman(it, chairmanLastName.orEmpty(), chairmanFirstName.orEmpty()) }
 
+    /** `true`, wenn ein Mitglied oder ein externer Redner eingeteilt ist. */
+    val hasSpeaker: Boolean get() = speakerMemberId != null || externalSpeakerId != null
+
     companion object {
         const val MAX_WEEK_EVENT_NAME_LENGTH = 100
         const val MAX_TALK_TITLE_LENGTH = 200
