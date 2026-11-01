@@ -15,12 +15,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass
 import de.geosphere.congregationplaner.theming.AppTheme
-import de.geosphere.congregationplaner.theming.brushes.backgroundBrush
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 
@@ -54,7 +52,7 @@ fun AppScaffold(
             }
         },
     ) {
-        Box(Modifier.fillMaxSize().background(Brush.backgroundBrush)) {
+        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
             when (state.destination) {
                 TopLevelDestination.HOME -> HomeContent(firebaseStatus)
                 TopLevelDestination.CONGREGATION -> CongregationArea(state, currentUser, isWide, actions)

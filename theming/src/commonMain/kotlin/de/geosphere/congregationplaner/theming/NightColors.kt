@@ -14,6 +14,15 @@ object NightColors {
     val Border = Color(0xFF26304D)
     val BorderStrong = Color(0xFF2E3A5C)
 
+    /** Navigationsleiste unten. */
+    val NavBar = Color(0xFF10162A)
+
+    /** Detailbereich und zweite Spalte. */
+    val SurfaceDetail = Color(0xFF0E1428)
+
+    /** Menüs und Dialoge. */
+    val SurfaceRaised = Color(0xFF1C2440)
+
     val HeaderTop = Color(0xFF0C0819)
     val HeaderMiddle = Color(0xFF160F26)
     val HeaderBottom = Color(0xFF2B1C48)
@@ -34,6 +43,7 @@ object NightColors {
     val OnBackground = Color(0xFFE8ECF5)
     val OnBackgroundBody = Color(0xFFC3CADB)
     val OnBackgroundMuted = Color(0xFF8F9AB5)
+    val OnBackgroundDisabled = Color(0xFF4A5578)
     val Placeholder = Color(0xFF7C87A3)
 
     /** Verlauf des Kopfbereichs, von oben nach unten. */
