@@ -16,7 +16,10 @@ data class AppNavigationState(
     val destination: TopLevelDestination = TopLevelDestination.HOME,
     val congregationSection: CongregationSection? = null,
     val globalSection: GlobalSection? = null,
-)
+) {
+    /** Zurück führt vom Unterbereich zur Übersicht und von dort zu Home; auf Home gibt es nichts mehr. */
+    val canGoBack: Boolean get() = destination != TopLevelDestination.HOME
+}
 
 /** Hält die Auswahl und setzt sie auf Home bzw. die Übersicht zurück, wenn ein Bereich nicht mehr sichtbar ist. */
 @Inject
@@ -45,6 +48,25 @@ class AppNavigationViewModel(private val access: NavigationAccess) : ViewModel()
             } else {
                 state.copy(destination = destination, congregationSection = null, globalSection = null)
             }
+        }
+    }
+
+    /**
+     * Ein Schritt zurück: Unterbereich → Übersicht → Home. Liefert `false`, wenn die App schon auf Home steht und das
+     * System-Zurück greifen soll.
+     */
+    fun back(): Boolean {
+        val state = mutableState.value
+        return when {
+            state.destination == TopLevelDestination.CONGREGATION && state.congregationSection != null ->
+                true.also { openCongregationSection(null) }
+
+            state.destination == TopLevelDestination.GLOBAL_ADMIN && state.globalSection != null ->
+                true.also { openGlobalSection(null) }
+
+            state.destination != TopLevelDestination.HOME -> true.also { select(TopLevelDestination.HOME) }
+
+            else -> false
         }
     }
 
