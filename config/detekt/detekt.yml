@@ -136,6 +136,7 @@ complexity:
     ignoreDefaultParameters: false
     ignoreDataClasses: true
     ignoreAnnotatedParameter: []
+    ignoreAnnotated: ['Composable']
   MethodOverloading:
     active: false
     threshold: 6
@@ -741,9 +742,6 @@ style:
     active: true
     allowedNames: ''
     ignoreAnnotated: ['Preview', 'ThemePreviews']
-  UnusedPrivateFunction:
-    active: true
-    ignoreAnnotated: ['Preview']
   UnusedPrivateProperty:
     active: true
     allowedNames: '_|ignored|expected|serialVersionUID'
