@@ -77,6 +77,7 @@ kotlin {
             implementation(libs.compose.material3.adaptive.navigation)
             implementation(libs.compose.material3.adaptiveNavigationSuite)
             implementation(libs.compose.ui)
+            implementation(libs.compose.ui.backhandler)
             implementation(libs.compose.components.resources)
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.kotlinx.datetime)
