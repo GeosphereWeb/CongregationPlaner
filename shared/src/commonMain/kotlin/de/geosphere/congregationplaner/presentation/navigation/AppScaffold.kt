@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -32,6 +33,7 @@ import de.geosphere.congregationplaner.ui.button.SecondaryButton
 import de.geosphere.congregationplaner.ui.common.topCutoutInset
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
+import de.geosphere.congregationplaner.user.presentation.OwnProfileSection
 
 /**
  * Der Rahmen der angemeldeten App mit den vier Hauptbereichen. Die Leiste liegt auf schmalen Fenstern unten und auf
@@ -84,7 +86,7 @@ fun AppScaffold(
                 }
 
                 TopLevelDestination.GLOBAL_ADMIN -> GlobalArea(state, currentUser, isWide, congregation, actions)
-                TopLevelDestination.SETTINGS -> SettingsContent(actions.onSignOut)
+                TopLevelDestination.SETTINGS -> SettingsContent(currentUser, actions.onSignOut)
             }
         }
     }
@@ -110,7 +112,7 @@ private fun nightNavigationItemColors() = NavigationSuiteDefaults.itemColors(
 )
 
 @Composable
-private fun SettingsContent(onSignOut: () -> Unit) {
+private fun SettingsContent(currentUser: AppUser, onSignOut: () -> Unit) {
     val padding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 24.dp, top = maxOf(24.dp, topCutoutInset()))
     Column(Modifier.fillMaxSize().padding(padding)) {
         Text("Einstellungen", style = MaterialTheme.typography.headlineSmall)
@@ -120,6 +122,7 @@ private fun SettingsContent(onSignOut: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 8.dp),
         )
+        OwnProfileSection(currentUser, Modifier.padding(top = 24.dp).widthIn(max = 480.dp))
         SecondaryButton(
             text = "Abmelden",
             onClick = onSignOut,
