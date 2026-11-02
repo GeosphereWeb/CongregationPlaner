@@ -118,6 +118,8 @@ sealed class TalkScheduleException(message: String) : Exception(message) {
     class InvalidNote :
         TalkScheduleException("Die Notiz darf höchstens ${TalkSlot.MAX_NOTE_LENGTH} Zeichen haben.")
 
+    class CongregationNotFound : TalkScheduleException("Die Versammlungsdaten wurden nicht gefunden.")
+
     class InvalidChairman :
         TalkScheduleException(
             "Der Vorsitzende ist ungültig: Familienname erforderlich, Namen mit höchstens " +

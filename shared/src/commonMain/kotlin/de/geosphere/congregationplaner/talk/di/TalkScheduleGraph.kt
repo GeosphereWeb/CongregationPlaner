@@ -1,5 +1,7 @@
 package de.geosphere.congregationplaner.talk.di
 
+import de.geosphere.congregationplaner.congregation.data.createCongregationMetadataRepository
+import de.geosphere.congregationplaner.congregation.domain.repository.CongregationMetadataRepository
 import de.geosphere.congregationplaner.talk.data.createExternalSpeakerDirectoryRepository
 import de.geosphere.congregationplaner.talk.data.createTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.data.createTalkHistoryRepository
@@ -35,6 +37,10 @@ interface TalkScheduleGraph {
 
     @Provides
     fun provideTalkHistoryRepository(): TalkHistoryRepository = createTalkHistoryRepository()
+
+    // Wochentag und Uhrzeit der Zusammenkunft am Wochenende für „Jahr anlegen“.
+    @Provides
+    fun provideCongregationMetadataRepository(): CongregationMetadataRepository = createCongregationMetadataRepository()
 
     // Die Redner stammen aus den Mitgliedern der Versammlung.
     @Provides

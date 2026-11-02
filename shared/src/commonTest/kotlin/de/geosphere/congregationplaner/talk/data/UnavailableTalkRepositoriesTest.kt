@@ -30,6 +30,8 @@ class UnavailableTalkRepositoriesTest {
         assertIs<UnsupportedOperationException>(save)
         assertEquals("Firestore is not configured for iOS.", save.message)
         assertIs<UnsupportedOperationException>(repository.deleteSlot(congregation, slot.date).exceptionOrNull())
+        val create = repository.createMissingSlots(congregation, listOf(slot)).exceptionOrNull()
+        assertIs<UnsupportedOperationException>(create)
     }
 
     @Test
