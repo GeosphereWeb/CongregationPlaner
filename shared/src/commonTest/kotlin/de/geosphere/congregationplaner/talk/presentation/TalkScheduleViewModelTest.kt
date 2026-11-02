@@ -1,5 +1,7 @@
 package de.geosphere.congregationplaner.talk.presentation
 
+import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
+import de.geosphere.congregationplaner.congregation.testing.FakeCongregationMetadataRepository
 import de.geosphere.congregationplaner.talk.domain.model.Chairman
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCircuit
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCongregation
@@ -11,6 +13,7 @@ import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
+import de.geosphere.congregationplaner.talk.domain.usecase.CreateYearSlotsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.MoveTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalDirectoryUseCase
@@ -116,6 +119,7 @@ class TalkScheduleViewModelTest {
     private lateinit var users: FakeUserRepository
     private lateinit var externals: FakeExternalSpeakerDirectoryRepository
     private lateinit var history: FakeTalkHistoryRepository
+    private lateinit var congregations: FakeCongregationMetadataRepository
     private lateinit var viewModel: TalkScheduleViewModel
 
     @BeforeTest
@@ -131,6 +135,9 @@ class TalkScheduleViewModelTest {
             listOf(VisitingSpeaker("e1", "g1", "Extern", "Eva")),
         )
         history = FakeTalkHistoryRepository()
+        congregations = FakeCongregationMetadataRepository(
+            listOf(CongregationMetadata(id = testCongregation.congregationId)),
+        )
         val policy = TalkSchedulePermissionPolicy()
         val save = SaveTalkSlotUseCase(repository, policy)
         val delete = DeleteTalkSlotUseCase(repository, policy)
@@ -141,6 +148,7 @@ class TalkScheduleViewModelTest {
             ObserveTalkMembersUseCase(ObserveMembersUseCase(users)),
             ObserveExternalSpeakersUseCase(ObserveExternalDirectoryUseCase(externals)),
             MoveTalkSlotUseCase(save, delete),
+            CreateYearSlotsUseCase(repository, congregations, policy),
             delete,
             SyncTalkHistoryWithSlotUseCase(history, policy),
             policy,
@@ -155,6 +163,69 @@ class TalkScheduleViewModelTest {
     }
 
     private val state get() = viewModel.uiState.value
+
+    @Test
+    fun `create year asks first and creates the missing slots after the confirmation`() {
+        viewModel.onCurrentUserChanged(planner)
+
+        viewModel.askCreateYear()
+
+        assertTrue(state.confirmCreateYear)
+        assertTrue(repository.createdSlots.isEmpty())
+
+        viewModel.createYear()
+
+        assertFalse(state.confirmCreateYear)
+        assertFalse(state.isSaving)
+        // Die beiden vorhandenen Termine liegen an Sonntagen und bleiben unverändert.
+        assertEquals(50, repository.createdSlots.size)
+        assertEquals("50 Termine für 2026 angelegt, 2 waren schon vorhanden.", state.infoMessage)
+        assertEquals(october25, state.slots.single { it.date == october25.date })
+        assertEquals(november1, state.slots.single { it.date == november1.date })
+        assertEquals(52, state.slots.size)
+    }
+
+    @Test
+    fun `dismissing the question or the info message changes nothing else`() {
+        viewModel.onCurrentUserChanged(planner)
+        viewModel.askCreateYear()
+
+        viewModel.dismissCreateYear()
+
+        assertFalse(state.confirmCreateYear)
+        assertTrue(repository.createdSlots.isEmpty())
+
+        viewModel.askCreateYear()
+        viewModel.createYear()
+        viewModel.dismissInfo()
+        assertNull(state.infoMessage)
+    }
+
+    @Test
+    fun `create year shows the error and keeps the existing slots`() {
+        viewModel.onCurrentUserChanged(planner)
+        repository.createMissingResult = Result.failure(IllegalStateException("denied"))
+
+        viewModel.askCreateYear()
+        viewModel.createYear()
+
+        assertEquals("denied", state.errorMessage)
+        assertNull(state.infoMessage)
+        assertFalse(state.isSaving)
+        assertEquals(listOf(october25, november1), state.slots)
+    }
+
+    @Test
+    fun `create year is not possible without the permission to plan`() {
+        viewModel.onCurrentUserChanged(member)
+
+        viewModel.askCreateYear()
+        viewModel.createYear()
+
+        assertFalse(state.confirmCreateYear)
+        assertTrue(repository.createdSlots.isEmpty())
+        assertEquals("Dafür fehlt dir die Berechtigung.", state.errorMessage)
+    }
 
     @Test
     fun `planner sees the slots of the year and the week events`() {
