@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -179,6 +180,15 @@ internal fun TalkSlotEditor(
             checked = slot.confirmed,
             enabled = complete && !slot.talkCancelled,
         ) { onChange(slot.copy(confirmed = it)) }
+
+        OutlinedTextField(
+            value = slot.note.orEmpty(),
+            onValueChange = { onChange(slot.copy(note = it.take(TalkSlot.MAX_NOTE_LENGTH).ifEmpty { null })) },
+            label = { Text("Notiz") },
+            supportingText = { Text("${slot.note.orEmpty().length} / $TalkSlot.MAX_NOTE_LENGTH") },
+            minLines = 2,
+            modifier = Modifier.fillMaxWidth(),
+        )
 
         EditorActions(
             saveText = if (isSaving) "Speichert …" else "Speichern",

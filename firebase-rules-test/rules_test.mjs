@@ -130,6 +130,10 @@ await expect('unbekanntes Feld', putSlot('2026-10-25', { ...base, extra: 'x' }),
 await expect('Termin bestätigt', putSlot('2026-10-25', { ...base, confirmed: true }), true);
 await expect('Termin nicht bestätigt', putSlot('2026-10-25', { ...base, confirmed: false }), true);
 await expect('Bestätigung kein Bool', putSlot('2026-10-25', { ...base, confirmed: 'ja' }), false);
+await expect('Notiz gültig', putSlot('2026-10-25', { ...base, note: 'Redner bringt Beamer mit' }), true);
+await expect('Notiz 500 Zeichen', putSlot('2026-10-25', { ...base, note: 'x'.repeat(500) }), true);
+await expect('Notiz 501 Zeichen', putSlot('2026-10-25', { ...base, note: 'x'.repeat(501) }), false);
+await expect('Notiz kein String', putSlot('2026-10-25', { ...base, note: 5 }), false);
 await expect('ungültige Uhrzeit', putSlot('2026-10-25', { time: '25:00', talkCancelled: false }), false);
 await expect('Planer liest Termin', api('GET', `${SLOT}/2026-10-25`, undefined, planner.token), true);
 await expect('Nutzer ohne Planerrolle schreibt Termin', putSlot('2026-11-01', base, plain.token), false);

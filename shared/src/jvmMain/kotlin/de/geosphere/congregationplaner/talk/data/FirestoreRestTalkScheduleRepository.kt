@@ -67,6 +67,7 @@ internal class FirestoreRestTalkScheduleRepository(
         chairmanFirstName = fields.optionalStringField("chairmanFirstName"),
         externalSpeakerId = fields.optionalStringField("externalSpeakerId"),
         speakerCongregation = fields.optionalStringField("speakerCongregation"),
+        note = fields.optionalStringField("note"),
     )
 
     private fun TalkSlot.toBody(): String = firestoreFields(
@@ -75,6 +76,7 @@ internal class FirestoreRestTalkScheduleRepository(
             add("talkCancelled", firestoreBoolean(talkCancelled))
             // Nur gesetzt schreiben (fehlend = false), damit ältere Rules den Termin weiter annehmen.
             if (confirmed) add("confirmed", firestoreBoolean(true))
+            note?.let { add("note", firestoreString(it)) }
             add("weekEventId", firestoreNullableString(weekEventId))
             add("weekEventName", firestoreNullableString(weekEventName))
             add("talkNumber", firestoreNullableInteger(talkNumber))
