@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.NightPreviewWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
+import de.geosphere.congregationplaner.ui.common.topCutoutInset
 
 private val TOUCH_TARGET = 44.dp
 
@@ -45,7 +46,7 @@ fun NightTopBar(
     Row(
         modifier = modifier.fillMaxWidth()
             .background(Brush.verticalGradient(listOf(NightColors.HeaderTop, NightColors.HeaderMiddle)))
-            .padding(horizontal = 8.dp, vertical = 8.dp),
+            .padding(start = 8.dp, end = 8.dp, top = maxOf(8.dp, topCutoutInset()), bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onBack, modifier = Modifier.size(TOUCH_TARGET)) {
