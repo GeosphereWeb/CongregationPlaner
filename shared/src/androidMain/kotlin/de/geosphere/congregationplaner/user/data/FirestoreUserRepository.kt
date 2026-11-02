@@ -102,6 +102,15 @@ internal class FirestoreUserRepository(private val firestore: FirebaseFirestore)
             member
         }
 
+    override suspend fun updateOwnName(congregation: CongregationRef, member: AppUser): Result<AppUser> =
+        runFirestoreCatching("update own name") {
+            firestore.collection(congregation.membersPath)
+                .document(member.uid)
+                .update(mapOf("lastName" to member.profile.lastName, "firstName" to member.profile.firstName))
+                .awaitResult()
+            member
+        }
+
     override suspend fun removeMember(congregation: CongregationRef, uid: String): Result<Unit> =
         runFirestoreCatching("remove member") {
             firestore.collection(congregation.membersPath).document(uid).delete().awaitResult()
