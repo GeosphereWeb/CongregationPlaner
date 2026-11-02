@@ -161,6 +161,32 @@ class MemberUseCasesTest {
         assertEquals(listOf("1"), repository.removedUids)
     }
 
+    @Test
+    fun `own name needs a congregation and both names within the limit`() = runBlocking {
+        val repository = FakeUserRepository()
+        val useCase = UpdateOwnNameUseCase(repository)
+        val member = AppUser(uid = "1", approved = true, congregation = testCongregation)
+
+        assertIs<IllegalStateException>(useCase(member.copy(congregation = null), "Muster", "Max").exceptionOrNull())
+        assertIs<MemberProfileException.MissingName>(useCase(member, " ", "Max").exceptionOrNull())
+        assertIs<MemberProfileException.MissingName>(useCase(member, "Muster", "").exceptionOrNull())
+        val tooLong = "x".repeat(MemberProfile.MAX_NAME_LENGTH + 1)
+        assertIs<MemberProfileException.NameTooLong>(useCase(member, tooLong, "Max").exceptionOrNull())
+        assertTrue(repository.updatedOwnNames.isEmpty())
+    }
+
+    @Test
+    fun `own name is trimmed and keeps every other profile field`() = runBlocking {
+        val repository = FakeUserRepository()
+        val profile = MemberProfile(category = MemberCategory.BROTHER, mobilePhone = "0170", isSpeaker = true)
+        val member = AppUser(uid = "1", approved = true, congregation = testCongregation, profile = profile)
+
+        val saved = UpdateOwnNameUseCase(repository)(member, " Muster ", " Max ").getOrThrow()
+
+        assertEquals(profile.copy(lastName = "Muster", firstName = "Max"), saved.profile)
+        assertEquals(listOf(saved), repository.updatedOwnNames)
+    }
+
     private fun profile(category: MemberCategory, baptized: Boolean = false, elder: Boolean = false) = MemberProfile(
         category = category,
         baptized = baptized,

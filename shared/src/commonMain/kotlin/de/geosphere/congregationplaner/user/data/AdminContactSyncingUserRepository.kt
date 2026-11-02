@@ -42,6 +42,14 @@ internal class AdminContactSyncingUserRepository(
         return Result.success(updated)
     }
 
+    // Ein Admin, der seinen Namen ändert, zieht den öffentlich lesbaren Kontakt mit.
+    override suspend fun updateOwnName(congregation: CongregationRef, member: AppUser): Result<AppUser> {
+        val updated = users.updateOwnName(congregation, member).getOrElse { return Result.failure(it) }
+        val contact = member.adminContact()
+        if (contact != null) contacts.putAdminContact(congregation, contact).getOrElse { return Result.failure(it) }
+        return Result.success(updated)
+    }
+
     override suspend fun removeMember(congregation: CongregationRef, uid: String): Result<Unit> {
         contacts.deleteAdminContact(congregation, uid).getOrElse { return Result.failure(it) }
         return users.removeMember(congregation, uid)

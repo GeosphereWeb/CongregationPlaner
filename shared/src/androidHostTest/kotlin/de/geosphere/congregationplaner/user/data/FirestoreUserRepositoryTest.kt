@@ -213,6 +213,21 @@ class FirestoreUserRepositoryTest {
     }
 
     @Test
+    fun `updateOwnName writes only the two names`() = withMockedLog {
+        val fields = slot<Map<String, Any?>>()
+        every { document.update(capture(fields)) } returns successTask<Void?>(null)
+        val profile = MemberProfile(lastName = "Muster", firstName = "Max", category = MemberCategory.BROTHER)
+        val member = AppUser(uid = "uid-1", approved = true, profile = profile)
+
+        runBlocking { assertEquals(member, repository.updateOwnName(congregation, member).getOrThrow()) }
+        assertEquals(mapOf("lastName" to "Muster", "firstName" to "Max"), fields.captured)
+
+        val error = IllegalStateException("denied")
+        every { document.update(any<Map<String, Any?>>()) } returns failedTask(error)
+        runBlocking { assertFailure(error, repository.updateOwnName(congregation, member)) }
+    }
+
+    @Test
     fun `getOrCreateUser returns failure when firestore fails`() = withMockedLog {
         val error = IllegalStateException("offline")
         every { document.get(Source.SERVER) } returns failedTask(error)
