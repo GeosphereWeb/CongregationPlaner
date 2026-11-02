@@ -124,12 +124,16 @@ Release-Builds nutzen immer direkt Firebase, der Emulator wird nur in debuggbare
 
 ### 1. Emulator starten
 
-Voraussetzung: [Firebase CLI](https://firebase.google.com/docs/cli) (`npm install -g firebase-tools`) und ein
-Ordner mit `firebase.json`, in dem Auth (`9099`) und Firestore (`8080`) konfiguriert sind. Dort:
+Voraussetzung: [Firebase CLI](https://firebase.google.com/docs/cli) (`npm install -g firebase-tools`). Das
+`firebase.json` im Repo-Root startet Auth (`9099`), Firestore (`8080`) und die UI (`4000`) und lädt dabei die
+`firestore.rules` des Repos, damit neue Felder lokal gespeichert werden können. Aus dem Repo-Root:
 
 ```bash
-firebase emulators:start --only auth,firestore --import ./emulator-data --export-on-exit
+firebase emulators:start --only auth,firestore --project <deine-Projekt-ID> --import ./emulator-data --export-on-exit
 ```
+
+Nach einer Änderung an `firestore.rules` den Emulator neu starten. `./emulator-data` ist per `.gitignore`
+ausgeschlossen; die Rules prüft zusätzlich `node firebase-rules-test/run.mjs`.
 
 `--import` und `--export-on-exit` sorgen dafür, dass Auth-Konten **und** Firestore-Daten einen Neustart überleben.
 Ohne diese Optionen sind nach jedem Neustart alle Konten und Daten weg, und der Login schlägt fehl.
