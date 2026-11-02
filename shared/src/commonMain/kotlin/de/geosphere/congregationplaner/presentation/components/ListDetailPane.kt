@@ -21,8 +21,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.constrainHeight
+import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.presentation.navigation.arrowBackIcon
 import de.geosphere.congregationplaner.theming.AppTheme
@@ -31,9 +35,32 @@ import de.geosphere.congregationplaner.ui.button.SecondaryButton
 
 private val WIDE_PADDING = PaddingValues(horizontal = 32.dp, vertical = 28.dp)
 
+/** Der Rand, den jede Pflegeseite (`padding(16.dp)`) um Kopf und Liste/Detail legt. */
+private val PAGE_PADDING = 16.dp
+
+/**
+ * Lässt den Inhalt [end] und [bottom] über den Rand des Elternelements hinausragen, ohne dessen Größe zu ändern.
+ * So reicht der Detailbereich bis an den Fensterrand, obwohl die Seite einen Rand um alles legt.
+ */
+private fun Modifier.bleed(end: Dp, bottom: Dp): Modifier = layout { measurable, constraints ->
+    val extraWidth = if (constraints.hasBoundedWidth) end.roundToPx() else 0
+    val extraHeight = if (constraints.hasBoundedHeight) bottom.roundToPx() else 0
+    val placeable = measurable.measure(
+        constraints.copy(
+            minWidth = constraints.minWidth + extraWidth,
+            maxWidth = constraints.maxWidth + extraWidth,
+            minHeight = constraints.minHeight + extraHeight,
+            maxHeight = constraints.maxHeight + extraHeight,
+        ),
+    )
+    val width = constraints.constrainWidth(placeable.width - extraWidth)
+    val height = constraints.constrainHeight(placeable.height - extraHeight)
+    layout(width, height) { placeable.place(0, 0) }
+}
+
 /**
  * Detailbereich einer Listen-/Detailansicht. Auf großen Fenstern (Liste sichtbar) liegt er auf `SurfaceDetail` mit
- * 28 × 32 dp Innenabstand; auf dem Handy ([showBack]) erscheint oben „Zurück zur Liste“, weil die Liste verdeckt ist.
+ * 28 × 32 dp Innenabstand und ragt rechts und unten über den Seitenrand bis an den Fensterrand; auf dem Handy ([showBack]) erscheint oben „Zurück zur Liste“, weil die Liste verdeckt ist.
  */
 @Composable
 fun DetailPane(
@@ -44,7 +71,9 @@ fun DetailPane(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
-        modifier = modifier.fillMaxSize()
+        modifier = modifier
+            .then(if (showBack) Modifier else Modifier.bleed(end = PAGE_PADDING, bottom = PAGE_PADDING))
+            .fillMaxSize()
             .then(if (showBack) Modifier else Modifier.background(NightColors.SurfaceDetail))
             .verticalScroll(rememberScrollState())
             .padding(if (showBack) PaddingValues(0.dp) else WIDE_PADDING),
