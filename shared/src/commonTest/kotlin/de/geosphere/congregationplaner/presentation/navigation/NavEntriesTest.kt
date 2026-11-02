@@ -71,7 +71,8 @@ class NavEntriesTest {
         assertEquals("Mitglieder, Rollen, Freigaben", entries.getValue("Userverwaltung").supportingText)
         assertEquals(StatusTone.Sky, entries.getValue("Planung unter der Woche").tone)
         assertEquals("Aufgabenplaner", entries.getValue("Planung unter der Woche").supportingText)
-        assertTrue(entries.getValue("Userverwaltung").nested)
+        assertFalse(entries.getValue("Allgemeine Versammlungsdaten").nested)
+        assertFalse(entries.getValue("Userverwaltung").nested)
         assertEquals(StatusTone.Gold, CongregationGroup.ADMINISTRATION.tone)
         assertNull(CongregationGroup.PLANNING.tone)
     }

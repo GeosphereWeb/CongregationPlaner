@@ -16,7 +16,7 @@ enum class CongregationGroup(val label: String) {
 
 /**
  * Die Unterbereiche von „Versammlung“. [nested] markiert Einträge, die in der Übersicht eingerückt unter dem
- * vorigen Eintrag stehen (Userverwaltung unter den Versammlungsdaten, die Vortragsplanung unter der Planung).
+ * vorigen Eintrag stehen (die Teile der Vortragsplanung unter der Planung).
  */
 enum class CongregationSection(
     val label: String,
@@ -33,7 +33,6 @@ enum class CongregationSection(
     USER_MANAGEMENT(
         "Userverwaltung",
         CongregationGroup.ADMINISTRATION,
-        nested = true,
         supportingText = "Mitglieder, Rollen, Freigaben",
     ),
     MIDWEEK_PLANNING("Planung unter der Woche", CongregationGroup.PLANNING, supportingText = "Aufgabenplaner"),
