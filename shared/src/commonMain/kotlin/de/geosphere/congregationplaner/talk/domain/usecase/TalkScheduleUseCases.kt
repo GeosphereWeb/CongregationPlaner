@@ -91,12 +91,14 @@ private fun TalkSlot.trimmed(): TalkSlot = copy(
     chairmanLastName = chairmanLastName?.trim(),
     chairmanFirstName = chairmanFirstName?.trim(),
     speakerCongregation = speakerCongregation?.trim(),
+    note = note?.trim()?.ifEmpty { null },
 )
 
 private fun TalkSlot.validationError(): TalkScheduleException? = when {
     !hasValidWeekEvent() -> TalkScheduleException.InvalidWeekEvent()
     !hasValidTalk() -> TalkScheduleException.InvalidTalk()
     !hasValidSpeaker() -> TalkScheduleException.InvalidSpeaker()
+    (note?.length ?: 0) > TalkSlot.MAX_NOTE_LENGTH -> TalkScheduleException.InvalidNote()
     !hasValidMember(chairmanMemberId, chairmanLastName, chairmanFirstName) -> TalkScheduleException.InvalidChairman()
     speakerMemberId != null && speakerMemberId == chairmanMemberId -> TalkScheduleException.SpeakerIsChairman()
     else -> null

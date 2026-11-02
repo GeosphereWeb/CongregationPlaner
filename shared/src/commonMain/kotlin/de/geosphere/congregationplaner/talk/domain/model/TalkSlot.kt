@@ -20,6 +20,7 @@ import kotlinx.datetime.LocalTime
  *   [speakerMemberId] und [externalSpeakerId].
  * @param confirmed `true`, wenn der Planer den Termin bestätigt hat (z. B. weil der Redner zugesagt hat); ältere
  *   Termine ohne das Feld gelten als nicht bestätigt.
+ * @param note Freie Notiz des Planers zum Termin (höchstens [MAX_NOTE_LENGTH] Zeichen); `null` = keine.
  * @param chairmanMemberId Das Mitglied, das die Zusammenkunft leitet (Vorsitzender); Name und Vorname werden
  *   wie beim Redner als Momentaufnahme mitgespeichert, die drei Felder gehören zusammen.
  */
@@ -40,6 +41,7 @@ data class TalkSlot(
     val externalSpeakerId: String? = null,
     val speakerCongregation: String? = null,
     val confirmed: Boolean = false,
+    val note: String? = null,
 ) {
     /** Dokument-ID in Firestore: ISO-Datum `yyyy-MM-dd`. */
     val id: String get() = date.toString()
@@ -62,6 +64,7 @@ data class TalkSlot(
         const val MAX_WEEK_EVENT_NAME_LENGTH = 100
         const val MAX_TALK_TITLE_LENGTH = 200
         const val MAX_PERSON_NAME_LENGTH = 100
+        const val MAX_NOTE_LENGTH = 500
     }
 }
 
@@ -111,6 +114,9 @@ sealed class TalkScheduleException(message: String) : Exception(message) {
             "Der Redner ist ungültig: Familienname erforderlich, Namen mit höchstens " +
                 "${TalkSlot.MAX_PERSON_NAME_LENGTH} Zeichen.",
         )
+
+    class InvalidNote :
+        TalkScheduleException("Die Notiz darf höchstens ${TalkSlot.MAX_NOTE_LENGTH} Zeichen haben.")
 
     class InvalidChairman :
         TalkScheduleException(

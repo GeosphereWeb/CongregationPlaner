@@ -90,6 +90,19 @@ class TalkScheduleUseCasesTest {
     }
 
     @Test
+    fun `save trims the note and rejects a note that is too long`() = runBlocking {
+        val tooLong = slot().copy(note = "x".repeat(TalkSlot.MAX_NOTE_LENGTH + 1))
+        assertIs<TalkScheduleException.InvalidNote>(save(admin, tooLong).exceptionOrNull())
+        assertTrue(repository.savedSlots.isEmpty())
+
+        save(admin, slot().copy(note = "  Beamer  "))
+        save(admin, slot().copy(note = "   "))
+
+        assertEquals("Beamer", repository.savedSlots[0].note)
+        assertEquals(null, repository.savedSlots[1].note)
+    }
+
+    @Test
     fun `save checks number and title of the talk together and trims the title`() = runBlocking {
         val invalid = listOf(
             slot().copy(talkNumber = 0, talkTitle = "Titel"),
