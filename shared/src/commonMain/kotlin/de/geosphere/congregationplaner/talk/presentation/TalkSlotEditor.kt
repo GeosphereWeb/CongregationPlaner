@@ -185,7 +185,7 @@ internal fun TalkSlotEditor(
             value = slot.note.orEmpty(),
             onValueChange = { onChange(slot.copy(note = it.take(TalkSlot.MAX_NOTE_LENGTH).ifEmpty { null })) },
             label = { Text("Notiz") },
-            supportingText = { Text("${slot.note.orEmpty().length} / $TalkSlot.MAX_NOTE_LENGTH") },
+            supportingText = { Text("${slot.note.orEmpty().length} / ${TalkSlot.MAX_NOTE_LENGTH}") },
             minLines = 2,
             modifier = Modifier.fillMaxWidth(),
         )
