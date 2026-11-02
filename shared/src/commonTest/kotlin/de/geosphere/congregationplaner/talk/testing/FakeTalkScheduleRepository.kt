@@ -14,6 +14,7 @@ internal class FakeTalkScheduleRepository(slots: List<TalkSlot> = emptyList()) :
     val slots = MutableStateFlow(slots)
 
     var saveResult: Result<Unit> = Result.success(Unit)
+    var createMissingResult: Result<Unit> = Result.success(Unit)
     var deleteResult: Result<Unit> = Result.success(Unit)
 
     /** Lässt [observeYear] mit diesem Fehler enden. */
@@ -27,6 +28,7 @@ internal class FakeTalkScheduleRepository(slots: List<TalkSlot> = emptyList()) :
     var requestedYear: Int? = null
         private set
     val savedSlots = mutableListOf<TalkSlot>()
+    val createdSlots = mutableListOf<TalkSlot>()
     val deletedDates = mutableListOf<LocalDate>()
 
     override fun observeYear(congregation: CongregationRef, year: Int): Flow<List<TalkSlot>> {
@@ -41,6 +43,17 @@ internal class FakeTalkScheduleRepository(slots: List<TalkSlot> = emptyList()) :
         return saveResult.map {
             savedSlots += slot
             slot
+        }
+    }
+
+    override suspend fun createMissingSlots(congregation: CongregationRef, slots: List<TalkSlot>): Result<Int> {
+        requestedCongregation = congregation
+        return createMissingResult.map {
+            val existing = this.slots.value.map { slot -> slot.date }.toSet()
+            val missing = slots.filter { slot -> slot.date !in existing }
+            createdSlots += missing
+            this.slots.value = (this.slots.value + missing).sortedBy { slot -> slot.date }
+            missing.size
         }
     }
 
