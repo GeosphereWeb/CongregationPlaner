@@ -13,6 +13,7 @@ import de.geosphere.congregationplaner.talk.domain.model.TalkScheduleException
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
+import de.geosphere.congregationplaner.talk.domain.usecase.CreateYearSlotsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.MoveTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalSpeakersUseCase
@@ -55,6 +56,9 @@ data class TalkScheduleUiState(
     /** Ohne diese Berechtigung können die Redner nicht geladen werden. */
     val canViewMembers: Boolean = false,
     val editor: TalkSlotEditorState? = null,
+    /** `true`, solange die Rückfrage zu „Jahr anlegen“ offen ist. */
+    val confirmCreateYear: Boolean = false,
+    val infoMessage: String? = null,
     override val errorMessage: String? = null,
     override val isSaving: Boolean = false,
 ) : ListDetailState {
@@ -70,6 +74,7 @@ class TalkScheduleViewModel(
     private val observeTalkMembers: ObserveTalkMembersUseCase,
     private val loadExternalSpeakers: ObserveExternalSpeakersUseCase,
     private val moveSlot: MoveTalkSlotUseCase,
+    private val createYearSlots: CreateYearSlotsUseCase,
     private val deleteSlot: DeleteTalkSlotUseCase,
     private val syncHistory: SyncTalkHistoryWithSlotUseCase,
     private val permissionPolicy: TalkSchedulePermissionPolicy,
@@ -230,6 +235,35 @@ class TalkScheduleViewModel(
                     fail(exception, "Termin konnte nicht gespeichert werden.")
                 }
         }
+    }
+
+    /** Öffnet die Rückfrage; angelegt wird erst nach [createYear]. */
+    fun askCreateYear() {
+        if (mutableUiState.value.isSaving || !checkAllowed()) return
+        mutableUiState.update { it.copy(confirmCreateYear = true, errorMessage = null, infoMessage = null) }
+    }
+
+    fun dismissCreateYear() {
+        mutableUiState.update { it.copy(confirmCreateYear = false) }
+    }
+
+    /** Legt alle fehlenden Termine am Wochenende des gewählten Jahres an; vorhandene bleiben unverändert. */
+    fun createYear() {
+        val state = mutableUiState.value
+        if (state.isSaving || !checkAllowed()) return
+        val user = currentUser ?: return
+        val year = state.year
+        mutableUiState.update { it.copy(confirmCreateYear = false, isSaving = true, errorMessage = null) }
+        viewModelScope.launch {
+            createYearSlots(user, year)
+                .onSuccess { result ->
+                    mutableUiState.update { it.copy(isSaving = false, infoMessage = yearSlotsMessage(year, result)) }
+                }.onFailure { exception -> fail(exception, "Termine konnten nicht angelegt werden.") }
+        }
+    }
+
+    fun dismissInfo() {
+        mutableUiState.update { it.copy(infoMessage = null) }
     }
 
     fun delete(slot: TalkSlot) {

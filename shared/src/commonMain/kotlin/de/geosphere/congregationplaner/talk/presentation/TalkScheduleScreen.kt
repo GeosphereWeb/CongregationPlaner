@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -69,6 +70,10 @@ internal data class TalkScheduleActions(
     val onCancelEditing: () -> Unit = {},
     val onDiscardChanges: () -> Unit = {},
     val onDismissError: () -> Unit = {},
+    val onAskCreateYear: () -> Unit = {},
+    val onConfirmCreateYear: () -> Unit = {},
+    val onDismissCreateYear: () -> Unit = {},
+    val onDismissInfo: () -> Unit = {},
 )
 
 @Composable
@@ -99,6 +104,10 @@ fun TalkScheduleScreen(
             onCancelEditing = viewModel::cancelEditing,
             onDiscardChanges = viewModel::discardChanges,
             onDismissError = viewModel::dismissError,
+            onAskCreateYear = viewModel::askCreateYear,
+            onConfirmCreateYear = viewModel::createYear,
+            onDismissCreateYear = viewModel::dismissCreateYear,
+            onDismissInfo = viewModel::dismissInfo,
         ),
     )
 }
@@ -142,6 +151,13 @@ internal fun TalkScheduleContent(
             }
         }
 
+        state.infoMessage?.let { message ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(message, modifier = Modifier.weight(1f))
+                TextButton(onClick = actions.onDismissInfo) { Text("OK") }
+            }
+        }
+
         if (state.isLoading) {
             CircularProgressIndicator()
             return@Column
@@ -163,6 +179,14 @@ internal fun TalkScheduleContent(
                                 onClick = actions.onNewSlot,
                                 enabled = !state.isSaving,
                                 leading = { Icon(addIcon, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                            )
+                        }
+                        item {
+                            SecondaryButton(
+                                text = "Alle Termine ${state.year} anlegen",
+                                onClick = actions.onAskCreateYear,
+                                enabled = !state.isSaving,
+                                outlined = false,
                             )
                         }
                         if (state.slots.isEmpty()) {
@@ -220,6 +244,21 @@ internal fun TalkScheduleContent(
                     }
                 }
             },
+        )
+    }
+
+    if (state.confirmCreateYear) {
+        AlertDialog(
+            onDismissRequest = actions.onDismissCreateYear,
+            title = { Text("Alle Termine ${state.year} anlegen?") },
+            text = {
+                Text(
+                    "Für jeden Tag am Wochenende des Jahres wird ein Termin angelegt (Wochentag und Uhrzeit aus den " +
+                        "Versammlungsdaten). Bestehende Termine bleiben unverändert.",
+                )
+            },
+            confirmButton = { TextButton(onClick = actions.onConfirmCreateYear) { Text("Anlegen") } },
+            dismissButton = { TextButton(onClick = actions.onDismissCreateYear) { Text("Abbrechen") } },
         )
     }
 }
