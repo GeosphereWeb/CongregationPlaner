@@ -55,6 +55,7 @@ class FirestoreTalkRepositoriesTest {
         "Alt",
         "Anton",
         confirmed = true,
+        note = "Beamer",
     )
 
     init {
@@ -118,6 +119,7 @@ class FirestoreTalkRepositoriesTest {
             every { getString("time") } returns "17:30"
             every { getBoolean("talkCancelled") } returns false
             every { getBoolean("confirmed") } returns false
+            every { getString("note") } returns null
             every { getString("weekEventId") } returns null
             every { getString("weekEventName") } returns null
             every { getLong("talkNumber") } returns null
@@ -156,6 +158,7 @@ class FirestoreTalkRepositoriesTest {
                 "time" to "17:30",
                 "talkCancelled" to true,
                 "confirmed" to true,
+                "note" to "Beamer",
                 "weekEventId" to "kongress",
                 "weekEventName" to "Kongress",
                 "talkNumber" to 12,
@@ -270,6 +273,7 @@ class FirestoreTalkRepositoriesTest {
         every { getString("time") } returns "17:30"
         every { getBoolean("talkCancelled") } returns true
         every { getBoolean("confirmed") } returns true
+        every { getString("note") } returns "Beamer"
         every { getString("weekEventId") } returns "kongress"
         every { getString("weekEventName") } returns "Kongress"
         every { getLong("talkNumber") } returns 12L
@@ -290,6 +294,7 @@ class FirestoreTalkRepositoriesTest {
         every { getString("time") } returns "10:00"
         every { getBoolean("talkCancelled") } returns null
         every { getBoolean("confirmed") } returns null
+        every { getString("note") } returns null
         every { getString("weekEventId") } returns null
         every { getString("weekEventName") } returns null
         every { getLong("talkNumber") } returns null

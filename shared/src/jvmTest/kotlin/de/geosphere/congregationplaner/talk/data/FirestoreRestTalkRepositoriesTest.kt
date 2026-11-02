@@ -27,6 +27,7 @@ class FirestoreRestTalkRepositoriesTest {
         "Kongress",
         true,
         confirmed = true,
+        note = "Beamer",
     )
 
     @Test
@@ -97,6 +98,7 @@ class FirestoreRestTalkRepositoriesTest {
         assertTrue(request.body.contains(""""time":{"stringValue":"17:30"}"""))
         assertTrue(request.body.contains(""""talkCancelled":{"booleanValue":true}"""))
         assertTrue(request.body.contains(""""confirmed":{"booleanValue":true}"""))
+        assertTrue(request.body.contains(""""note":{"stringValue":"Beamer"}"""))
         assertTrue(request.body.contains(""""weekEventId":{"stringValue":"kongress"}"""))
     }
 
@@ -262,6 +264,7 @@ class FirestoreRestTalkRepositoriesTest {
         "time":{"stringValue":"17:30"},
         "talkCancelled":{"booleanValue":true},
         "confirmed":{"booleanValue":true},
+        "note":{"stringValue":"Beamer"},
         "weekEventId":{"stringValue":"kongress"},
         "weekEventName":{"stringValue":"Kongress"}}}"""
 
