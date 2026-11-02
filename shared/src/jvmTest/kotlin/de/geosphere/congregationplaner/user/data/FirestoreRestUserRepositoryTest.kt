@@ -307,6 +307,30 @@ class FirestoreRestUserRepositoryTest {
     }
 
     @Test
+    fun `updateOwnName patches only the two names of an existing member`() = runWithServer({
+        FakeResponse(200, "{}")
+    }) { server, repository ->
+        val member = AppUser(
+            uid = "uid-1",
+            approved = true,
+            profile = MemberProfile(lastName = "Muster", firstName = "Max", mobilePhone = "0170"),
+        )
+
+        assertEquals(member, repository.updateOwnName(congregation, member).getOrThrow())
+
+        val request = server.requests.single()
+        assertEquals("PATCH", request.method)
+        assertEquals("$membersPath/uid-1", request.path)
+        assertEquals(
+            "updateMask.fieldPaths=lastName&updateMask.fieldPaths=firstName&currentDocument.exists=true",
+            request.query,
+        )
+        assertTrue(request.body.contains(""""lastName":{"stringValue":"Muster"}"""))
+        assertTrue(request.body.contains(""""firstName":{"stringValue":"Max"}"""))
+        assertFalse(request.body.contains("mobilePhone"))
+    }
+
+    @Test
     fun `removeMember deletes the member document and reports failures`() {
         runWithServer({ FakeResponse(200, "{}") }) { server, repository ->
             repository.removeMember(congregation, "uid-1").getOrThrow()

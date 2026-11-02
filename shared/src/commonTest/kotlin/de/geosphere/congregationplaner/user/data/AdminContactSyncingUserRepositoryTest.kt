@@ -27,6 +27,9 @@ class AdminContactSyncingUserRepositoryTest {
         override suspend fun updateMemberProfile(congregation: CongregationRef, member: AppUser) =
             users.updateMemberProfile(congregation, member).also { log += "profile ${member.uid}" }
 
+        override suspend fun updateOwnName(congregation: CongregationRef, member: AppUser) =
+            users.updateOwnName(congregation, member).also { log += "name ${member.uid}" }
+
         override suspend fun removeMember(congregation: CongregationRef, uid: String) =
             users.removeMember(congregation, uid).also { log += "remove $uid" }
     }.withAdminContacts(contacts)
@@ -102,6 +105,20 @@ class AdminContactSyncingUserRepositoryTest {
         repository.updateMemberProfile(testCongregation, member).getOrThrow()
 
         assertEquals(listOf("profile m1"), log)
+    }
+
+    @Test
+    fun `an admin who changes the own name republishes the contact`() = runBlocking {
+        repository.updateOwnName(testCongregation, admin).getOrThrow()
+
+        assertEquals(listOf("name a1", "put a1 Anna Admin"), log)
+    }
+
+    @Test
+    fun `a plain member who changes the own name leaves the contacts alone`() = runBlocking {
+        repository.updateOwnName(testCongregation, member).getOrThrow()
+
+        assertEquals(listOf("name m1"), log)
     }
 
     @Test

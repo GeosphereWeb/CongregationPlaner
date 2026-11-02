@@ -59,6 +59,8 @@ val sonarExclusions = listOf(
     "**/CongregationDetail.kt",
     "**/TalkScheduleScreen.kt",
     "**/TalkSlotEditor.kt",
+    // Reines Compose-Formular „Mein Profil“; Eingaben und Speichern sind in OwnProfileViewModel getestet
+    "**/OwnProfileSection.kt",
     // Exclude theming and ui modules from coverage
     "theming/**",
     "ui/**"

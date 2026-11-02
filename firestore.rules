@@ -30,8 +30,8 @@ rules_version = '2';
 //   - hasAccount: bool (optional, immutable, default true) - false for persons
 //     without an account; they are never approved and have no role
 // Profile fields (optional because older documents do not have them yet;
-// maintained by admins only):
-//   - lastName, firstName: string (<= 100 chars)
+// maintained by admins, except the own first and last name):
+//   - lastName, firstName: string (<= 100 chars); a member may change the own two names, see `members` below
 //   - category: string | null ('BROTHER' | 'SISTER' | 'CHILD')
 //   - baptized: bool (default false; never true for 'CHILD')
 //   - appointment: string ('NONE' | 'MINISTERIAL_SERVANT' | 'ELDER';
@@ -472,11 +472,13 @@ service cloud.firestore {
                 // Admins maintain profiles and roles of every member. In their own document they may change the
                 // roles but neither the approval nor remove their own admin role,
                 // so nobody locks themselves out. The approval of others is set here too.
+                // Every member may change the own first and last name (and nothing else).
                 allow update: if isAuthenticated() &&
-                  isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) &&
-                  (request.auth.uid == uid
-                    ? (onlyFieldsChanged(profileFields().concat(roleFields())) && keepsOwnAdminRole())
-                    : onlyFieldsChanged(accessFields().concat(profileFields()))) &&
+                  ((isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) &&
+                    (request.auth.uid == uid
+                      ? (onlyFieldsChanged(profileFields().concat(roleFields())) && keepsOwnAdminRole())
+                      : onlyFieldsChanged(accessFields().concat(profileFields())))) ||
+                   (request.auth.uid == uid && onlyFieldsChanged(['lastName', 'firstName']))) &&
                   isValidMember(request.resource.data);
 
                 allow delete: if isAuthenticated() && (

@@ -64,6 +64,8 @@ fun unavailableUserRepository(platform: String): UserRepository = object : UserR
     override suspend fun updateMemberProfile(congregation: CongregationRef, member: AppUser): Result<AppUser> =
         unavailable()
 
+    override suspend fun updateOwnName(congregation: CongregationRef, member: AppUser): Result<AppUser> = unavailable()
+
     override suspend fun removeMember(congregation: CongregationRef, uid: String): Result<Unit> = unavailable()
 }
 

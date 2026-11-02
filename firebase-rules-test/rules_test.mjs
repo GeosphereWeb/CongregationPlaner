@@ -258,6 +258,20 @@ await api('PATCH', rolesMask(adminPlanner.uid), rolesBody('CONGREGATION_ADMIN', 
 await expect('Vortragsplaner vergibt sich eine Rolle', api('PATCH', rolesMask(planner.uid), rolesBody('TALK_PLANNER', 'CONGREGATION_ADMIN'), planner.token), false);
 await expect('Mitglied ohne Rolle vergibt sich eine Rolle', api('PATCH', rolesMask(plain.uid), rolesBody('TASK_PLANNER'), plain.token), false);
 
+// ---------- Eigener Name: jedes Mitglied darf nur Vor- und Nachnamen im eigenen Dokument ändern ----------
+const ownName = (uid, ...names) => `${CONG}/members/${uid}?${names.map((n) => `updateMask.fieldPaths=${n}`).join('&')}`;
+const nameBody = (lastName, firstName) => ({ fields: { lastName: { stringValue: lastName }, firstName: { stringValue: firstName } } });
+await expect('Mitglied ändert den eigenen Namen', api('PATCH', ownName(plain.uid, 'lastName', 'firstName'), nameBody('Muster', 'Max'), plain.token), true);
+await expect('Mitglied ändert nur den eigenen Nachnamen', api('PATCH', ownName(plain.uid, 'lastName'), { fields: { lastName: { stringValue: 'Neu' } } }, plain.token), true);
+await expect('Mitglied mit leerem Namen', api('PATCH', ownName(plain.uid, 'lastName', 'firstName'), nameBody('', ''), plain.token), true);
+await expect('Mitglied mit zu langem Namen', api('PATCH', ownName(plain.uid, 'lastName', 'firstName'), nameBody('x'.repeat(101), 'Max'), plain.token), false);
+await expect('Mitglied ändert den Namen eines anderen', api('PATCH', ownName(planner.uid, 'lastName', 'firstName'), nameBody('Fremd', 'Name'), plain.token), false);
+await expect('Mitglied setzt zum Namen die Kategorie', api('PATCH', ownName(plain.uid, 'lastName', 'category'), { fields: { lastName: { stringValue: 'Muster' }, category: { stringValue: 'BROTHER' } } }, plain.token), false);
+await expect('Mitglied setzt zum Namen die Telefonnummer', api('PATCH', ownName(plain.uid, 'lastName', 'mobilePhone'), { fields: { lastName: { stringValue: 'Muster' }, mobilePhone: { stringValue: '0171' } } }, plain.token), false);
+await expect('Mitglied setzt sich als Redner', api('PATCH', ownName(plain.uid, 'isSpeaker'), { fields: { isSpeaker: { booleanValue: true } } }, plain.token), false);
+await expect('Vortragsplaner ändert den eigenen Namen', api('PATCH', ownName(planner.uid, 'lastName', 'firstName'), nameBody('Planer', 'Paul'), planner.token), true);
+await expect('Admin ändert den eigenen Namen', api('PATCH', ownName(adminPlanner.uid, 'lastName', 'firstName'), nameBody('Admin', 'Anna'), adminPlanner.token), true);
+
 // ---------- Planen nur als Vortragsplaner: die Rolle Versammlungsadmin allein genügt nicht ----------
 await expect('Versammlungsadmin ohne Planerrolle schreibt Termin', putSlot('2026-11-08', base, congAdmin.token), false);
 await expect('Versammlungsadmin ohne Planerrolle liest Termine', api('GET', SLOT, undefined, congAdmin.token), false);
