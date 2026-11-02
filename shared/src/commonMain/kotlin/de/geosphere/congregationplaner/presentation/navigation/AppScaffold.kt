@@ -3,6 +3,7 @@ package de.geosphere.congregationplaner.presentation.navigation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
@@ -28,6 +29,7 @@ import de.geosphere.congregationplaner.organization.domain.model.SelectedCongreg
 import de.geosphere.congregationplaner.theming.AppTheme
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.ui.button.SecondaryButton
+import de.geosphere.congregationplaner.ui.common.topCutoutInset
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 
@@ -109,7 +111,8 @@ private fun nightNavigationItemColors() = NavigationSuiteDefaults.itemColors(
 
 @Composable
 private fun SettingsContent(onSignOut: () -> Unit) {
-    Column(Modifier.fillMaxSize().padding(24.dp)) {
+    val padding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 24.dp, top = maxOf(24.dp, topCutoutInset()))
+    Column(Modifier.fillMaxSize().padding(padding)) {
         Text("Einstellungen", style = MaterialTheme.typography.headlineSmall)
         Text(
             "Hier erscheinen später die Einstellungen der App.",

@@ -38,6 +38,7 @@ import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.NightPreviewWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.theming.nightTextStyle
+import de.geosphere.congregationplaner.ui.common.topCutoutInset
 
 private val FADE_ALPHAS = listOf(0.3f, 0.55f)
 
@@ -63,7 +64,7 @@ fun TeleprompterHeader(
             .padding(
                 start = if (compact) 20.dp else 24.dp,
                 end = if (compact) 20.dp else 24.dp,
-                top = if (compact) 8.dp else 20.dp,
+                top = maxOf(if (compact) 8.dp else 20.dp, topCutoutInset()),
                 bottom = if (compact) 12.dp else 20.dp,
             ),
     ) {
