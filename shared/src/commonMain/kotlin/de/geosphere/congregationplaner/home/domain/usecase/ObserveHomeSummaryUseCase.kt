@@ -3,6 +3,7 @@ package de.geosphere.congregationplaner.home.domain.usecase
 import de.geosphere.congregationplaner.home.domain.model.HomeSummary
 import de.geosphere.congregationplaner.home.domain.model.TalkSummary
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
+import de.geosphere.congregationplaner.talk.domain.model.upcomingTalkSlots
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkYearUseCase
 import de.geosphere.congregationplaner.user.domain.model.AppUser
@@ -59,7 +60,7 @@ private fun horizonEnd(today: LocalDate): LocalDate = today.plus(DatePeriod(days
  * zählen nicht; ein Termin ist offen, wenn Vortrag oder Redner fehlen.
  */
 internal fun summarizeTalks(slots: List<TalkSlot>, today: LocalDate): TalkSummary {
-    val upcoming = slots.distinctBy { it.date }.filter { it.date >= today && !it.talkCancelled }.sortedBy { it.date }
+    val upcoming = slots.upcomingTalkSlots(today)
     val end = horizonEnd(today)
     return TalkSummary(
         nextSlot = upcoming.firstOrNull(),

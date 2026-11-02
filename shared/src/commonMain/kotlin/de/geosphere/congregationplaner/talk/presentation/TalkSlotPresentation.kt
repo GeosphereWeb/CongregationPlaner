@@ -2,6 +2,7 @@ package de.geosphere.congregationplaner.talk.presentation
 
 import de.geosphere.congregationplaner.presentation.navigation.germanMonthName
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
+import de.geosphere.congregationplaner.talk.domain.model.upcomingTalkSlots
 import de.geosphere.congregationplaner.ui.chip.StatusTone
 import kotlinx.datetime.LocalDate
 
@@ -20,7 +21,7 @@ internal data class SlotChip(val text: String, val tone: StatusTone)
 
 /** Der erste Termin ab [today], an dem ein Vortrag gehalten wird; abgesagte Termine zählen nicht. */
 internal fun nextSlotDate(slots: List<TalkSlot>, today: LocalDate): LocalDate? =
-    slots.filter { !it.talkCancelled && it.date >= today }.minOfOrNull { it.date }
+    slots.upcomingTalkSlots(today).firstOrNull()?.date
 
 /**
  * Reihenfolge der Prüfung: abgesagt, nächster Termin, dann nach Vollständigkeit. „Nächster“ gilt damit nur für einen
