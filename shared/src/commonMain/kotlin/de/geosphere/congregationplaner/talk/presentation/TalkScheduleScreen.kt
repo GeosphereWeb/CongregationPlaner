@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner.talk.presentation
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -185,8 +186,12 @@ internal fun TalkScheduleContent(
                                 item { Text("Für ${state.year} sind noch keine Termine angelegt.") }
                             }
                             state.slots.groupBy { it.date.month }.values.forEach { monthSlots ->
-                                item(key = "month-${monthSlots.first().id}") {
-                                    SectionLabel(slotMonthLabel(monthSlots.first().date), Modifier.padding(top = 8.dp))
+                                // Der Monat bleibt beim Scrollen oben stehen; der Hintergrund verdeckt die Termine darunter.
+                                stickyHeader(key = "month-${monthSlots.first().id}") {
+                                    SectionLabel(
+                                        slotMonthLabel(monthSlots.first().date),
+                                        Modifier.monthHeader(),
+                                    )
                                 }
                                 items(monthSlots, key = { it.id }) { slot ->
                                     SelectableListCard(
@@ -264,6 +269,11 @@ internal fun TalkScheduleContent(
 }
 
 private val FAB_CLEARANCE = 88.dp
+
+/** Volle Breite mit dem Seitenhintergrund, damit der klebende Monatskopf die Termine darunter verdeckt. */
+@Composable
+private fun Modifier.monthHeader(): Modifier =
+    fillMaxWidth().background(MaterialTheme.colorScheme.background).padding(vertical = 8.dp)
 
 /**
  * FAB der Liste: öffnet darüber zwei beschriftete Knöpfe „Termin anlegen“ und „Alle Termine <Jahr> anlegen“
