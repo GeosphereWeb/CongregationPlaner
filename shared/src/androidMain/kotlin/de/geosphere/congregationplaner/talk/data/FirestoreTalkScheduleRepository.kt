@@ -64,9 +64,10 @@ private fun toSlot(document: DocumentSnapshot): TalkSlot = TalkSlot(
     chairmanFirstName = document.getString("chairmanFirstName"),
     externalSpeakerId = document.getString("externalSpeakerId"),
     speakerCongregation = document.getString("speakerCongregation"),
+    note = document.getString("note"),
 )
 
-// `confirmed` wird nur geschrieben, wenn es gesetzt ist (fehlend = false); so bleibt die App mit älteren Rules kompatibel.
+// `confirmed` und `note` werden nur geschrieben, wenn sie gesetzt sind (fehlend = false bzw. keine); so bleibt die App mit älteren Rules kompatibel.
 // LocalTime.toString() liefert HH:mm, solange keine Sekunden gesetzt sind; die Rules verlangen genau dieses Format.
 private fun TalkSlot.toFirestoreFields(): Map<String, Any?> = mapOf(
     "time" to time.toString(),
@@ -83,4 +84,4 @@ private fun TalkSlot.toFirestoreFields(): Map<String, Any?> = mapOf(
     "chairmanFirstName" to chairmanFirstName,
     "externalSpeakerId" to externalSpeakerId,
     "speakerCongregation" to speakerCongregation,
-) + if (confirmed) mapOf("confirmed" to true) else emptyMap()
+) + (if (confirmed) mapOf("confirmed" to true) else emptyMap()) + (note?.let { mapOf("note" to it) } ?: emptyMap())
