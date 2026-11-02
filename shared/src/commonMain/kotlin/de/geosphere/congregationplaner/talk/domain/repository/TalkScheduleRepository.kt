@@ -11,5 +11,11 @@ interface TalkScheduleRepository {
 
     suspend fun saveSlot(congregation: CongregationRef, slot: TalkSlot): Result<TalkSlot>
 
+    /**
+     * Legt nur die Termine aus [slots] an, deren Datum noch keinen Termin hat; bestehende Termine bleiben
+     * unverändert. Liefert die Zahl der neu angelegten Termine.
+     */
+    suspend fun createMissingSlots(congregation: CongregationRef, slots: List<TalkSlot>): Result<Int>
+
     suspend fun deleteSlot(congregation: CongregationRef, date: LocalDate): Result<Unit>
 }

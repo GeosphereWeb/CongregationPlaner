@@ -10,6 +10,7 @@ import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
+import com.google.firebase.firestore.Transaction
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
@@ -174,6 +175,46 @@ class FirestoreTalkRepositoriesTest {
             ),
             fields.captured,
         )
+    }
+
+    @Test
+    fun `createMissingSlots reads every day first and writes only the missing ones`() = runBlocking {
+        val second = mockk<DocumentReference>()
+        every { collection.document("2026-11-01") } returns second
+        val transaction = mockk<Transaction>()
+        every { transaction.get(reference) } returns mockk<DocumentSnapshot> { every { exists() } returns true }
+        every { transaction.get(second) } returns mockk<DocumentSnapshot> { every { exists() } returns false }
+        val written = mutableListOf<Pair<DocumentReference, Any>>()
+        every { transaction.set(any<DocumentReference>(), any()) } answers {
+            written += firstArg<DocumentReference>() to secondArg<Any>()
+            transaction
+        }
+        val function = slot<Transaction.Function<Int>>()
+        every { firestore.runTransaction(capture(function)) } answers {
+            successTask(function.captured.apply(transaction))
+        }
+        val free = TalkSlot(LocalDate(2026, 11, 1), LocalTime(17, 30))
+
+        val created = FirestoreTalkScheduleRepository(firestore).createMissingSlots(congregation, listOf(slot, free))
+
+        assertEquals(1, created.getOrThrow())
+        assertEquals(listOf(second), written.map { it.first })
+        assertEquals("17:30", (written.single().second as Map<*, *>)["time"])
+        verify(exactly = 0) { transaction.set(reference, any()) }
+        verify(exactly = 0) { reference.set(any()) }
+    }
+
+    @Test
+    fun `createMissingSlots returns failure when the transaction fails`(): Unit = withMockedLog {
+        val error = IllegalStateException("permission denied")
+        every { firestore.runTransaction(any<Transaction.Function<Int>>()) } returns failedTask<Int>(error)
+
+        runBlocking {
+            assertFailure(
+                error,
+                FirestoreTalkScheduleRepository(firestore).createMissingSlots(congregation, listOf(slot)),
+            )
+        }
     }
 
     @Test

@@ -2,6 +2,7 @@ package de.geosphere.congregationplaner.talk.data
 
 import com.google.gson.JsonObject
 import de.geosphere.congregationplaner.auth.FirebaseAuthManager
+import de.geosphere.congregationplaner.firestore.FirestoreHttpException
 import de.geosphere.congregationplaner.firestore.FirestoreRestClient
 import de.geosphere.congregationplaner.firestore.FirestoreRestDocument
 import de.geosphere.congregationplaner.firestore.booleanField
@@ -45,6 +46,21 @@ internal class FirestoreRestTalkScheduleRepository(
         client.request("PATCH", client.documentUrl(congregation.talkSchedulePath, slot.id), slot.toBody())
         slot
     }
+
+    // `currentDocument.exists=false` lässt Firestore einen vorhandenen Termin mit 409 ablehnen, statt ihn zu ersetzen.
+    override suspend fun createMissingSlots(congregation: CongregationRef, slots: List<TalkSlot>): Result<Int> =
+        runCatchingIo {
+            slots.count { slot ->
+                val url = "${client.documentUrl(congregation.talkSchedulePath, slot.id)}?currentDocument.exists=false"
+                try {
+                    client.request("PATCH", url, slot.toBody())
+                    true
+                } catch (exception: FirestoreHttpException) {
+                    if (exception.status != HTTP_CONFLICT) throw exception
+                    false
+                }
+            }
+        }
 
     override suspend fun deleteSlot(congregation: CongregationRef, date: LocalDate): Result<Unit> =
         runCatchingIo { client.request("DELETE", client.documentUrl(congregation.talkSchedulePath, date.toString())) }
@@ -92,3 +108,5 @@ internal class FirestoreRestTalkScheduleRepository(
         },
     )
 }
+
+private const val HTTP_CONFLICT = 409

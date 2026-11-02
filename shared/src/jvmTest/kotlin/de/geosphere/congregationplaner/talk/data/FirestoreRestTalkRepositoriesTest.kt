@@ -103,6 +103,35 @@ class FirestoreRestTalkRepositoriesTest {
     }
 
     @Test
+    fun `createMissingSlots creates only slots that do not exist yet`() = runWithServer(
+        responder = { request ->
+            // Firestore lehnt die Anlage mit 409 ab, wenn es den Termin schon gibt.
+            if (request.path.endsWith("2026-10-25")) FakeResponse(409, "{}") else FakeResponse(200, "{}")
+        },
+    ) { server ->
+        val free = TalkSlot(LocalDate(2026, 11, 1), LocalTime(17, 30))
+
+        val created = FirestoreRestTalkScheduleRepository(idTokenProvider = { "token-123" })
+            .createMissingSlots(congregation, listOf(slot, free))
+
+        assertEquals(1, created.getOrThrow())
+        assertEquals(listOf("$slotsPath/2026-10-25", "$slotsPath/2026-11-01"), server.requests.map { it.path })
+        assertTrue(server.requests.all { it.method == "PATCH" && it.query == "currentDocument.exists=false" })
+        assertTrue(server.requests.last().body.contains(""""time":{"stringValue":"17:30"}"""))
+    }
+
+    @Test
+    fun `createMissingSlots fails on an error other than an existing slot`() = runWithServer(
+        responder = { FakeResponse(500, "{}") },
+    ) { server ->
+        val result = FirestoreRestTalkScheduleRepository(idTokenProvider = { "token-123" })
+            .createMissingSlots(congregation, listOf(slot, TalkSlot(LocalDate(2026, 11, 1), LocalTime(17, 30))))
+
+        assertTrue(result.isFailure)
+        assertEquals(1, server.requests.size)
+    }
+
+    @Test
     fun `slot speaker is read back and written as snapshot`() = runWithServer(
         responder = { request ->
             if (request.method == "GET") {
