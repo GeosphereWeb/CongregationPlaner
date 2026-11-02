@@ -36,6 +36,18 @@ internal class FirestoreTalkScheduleRepository(private val firestore: FirebaseFi
             slot
         }
 
+    // Die Transaktion liest zuerst alle Tage und schreibt nur die fehlenden; so überschreibt auch ein zweites Gerät
+    // nichts, das zwischenzeitlich angelegt wurde.
+    override suspend fun createMissingSlots(congregation: CongregationRef, slots: List<TalkSlot>): Result<Int> =
+        runFirestoreCatching("create talk slots") {
+            val collection = firestore.collection(congregation.talkSchedulePath)
+            firestore.runTransaction { transaction ->
+                val missing = slots.filter { !transaction.get(collection.document(it.id)).exists() }
+                missing.forEach { transaction.set(collection.document(it.id), it.toFirestoreFields()) }
+                missing.size
+            }.awaitResult()
+        }
+
     override suspend fun deleteSlot(congregation: CongregationRef, date: LocalDate): Result<Unit> =
         runFirestoreCatching("delete talk slot") {
             firestore.collection(congregation.talkSchedulePath).document(date.toString()).delete().awaitResult()
