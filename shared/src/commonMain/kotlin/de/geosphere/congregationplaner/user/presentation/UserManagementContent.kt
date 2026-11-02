@@ -195,12 +195,8 @@ private fun InviteLinkCard(link: String) {
                 "Neue Nutzer können diesen Link im Login einfügen, um deine Versammlung auszuwählen.",
                 style = MaterialTheme.typography.bodySmall,
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                SelectionContainer(modifier = Modifier.weight(1f)) {
-                    Text(link, style = MaterialTheme.typography.bodyMedium)
-                }
-                CopyLinkButton(link)
-            }
+            // Der Link selbst bleibt unsichtbar; er wird nur über den Knopf in die Zwischenablage kopiert.
+            CopyLinkButton(link)
         }
     }
 }
