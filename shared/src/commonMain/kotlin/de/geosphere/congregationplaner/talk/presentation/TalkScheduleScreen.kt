@@ -1,16 +1,19 @@
 package de.geosphere.congregationplaner.talk.presentation
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -23,9 +26,12 @@ import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -44,7 +50,6 @@ import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
-import de.geosphere.congregationplaner.ui.button.SecondaryButton
 import de.geosphere.congregationplaner.ui.card.DateBadge
 import de.geosphere.congregationplaner.ui.chip.StatusChip
 import de.geosphere.congregationplaner.ui.nav.SectionLabel
@@ -169,45 +174,40 @@ internal fun TalkScheduleContent(
             modifier = Modifier.weight(1f).fillMaxWidth(),
             listPane = {
                 AnimatedPane {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        item {
-                            SecondaryButton(
-                                text = "Termin anlegen",
-                                onClick = actions.onNewSlot,
-                                enabled = !state.isSaving,
-                                leading = { Icon(addIcon, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                            )
-                        }
-                        item {
-                            SecondaryButton(
-                                text = "Alle Termine ${state.year} anlegen",
-                                onClick = actions.onAskCreateYear,
-                                enabled = !state.isSaving,
-                                outlined = false,
-                            )
-                        }
-                        if (state.slots.isEmpty()) {
-                            item { Text("Für ${state.year} sind noch keine Termine angelegt.") }
-                        }
-                        state.slots.groupBy { it.date.month }.values.forEach { monthSlots ->
-                            item(key = "month-${monthSlots.first().id}") {
-                                SectionLabel(slotMonthLabel(monthSlots.first().date), Modifier.padding(top = 8.dp))
+                    Box(Modifier.fillMaxSize()) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            // Platz unter dem letzten Termin, damit der FAB ihn nicht verdeckt.
+                            contentPadding = PaddingValues(bottom = FAB_CLEARANCE),
+                        ) {
+                            if (state.slots.isEmpty()) {
+                                item { Text("Für ${state.year} sind noch keine Termine angelegt.") }
                             }
-                            items(monthSlots, key = { it.id }) { slot ->
-                                SelectableListCard(
-                                    selected = editor?.original?.date == slot.date,
-                                    onSelect = { actions.onEditSlot(slot) },
-                                    onDelete = { actions.onDelete(slot) },
-                                    actionsEnabled = !state.isSaving,
-                                    canDelete = true,
-                                ) {
-                                    SlotSummary(slot, slotChip(slot, slotStatus(slot, nextDate)))
+                            state.slots.groupBy { it.date.month }.values.forEach { monthSlots ->
+                                item(key = "month-${monthSlots.first().id}") {
+                                    SectionLabel(slotMonthLabel(monthSlots.first().date), Modifier.padding(top = 8.dp))
+                                }
+                                items(monthSlots, key = { it.id }) { slot ->
+                                    SelectableListCard(
+                                        selected = editor?.original?.date == slot.date,
+                                        onSelect = { actions.onEditSlot(slot) },
+                                        onDelete = { actions.onDelete(slot) },
+                                        actionsEnabled = !state.isSaving,
+                                        canDelete = true,
+                                    ) {
+                                        SlotSummary(slot, slotChip(slot, slotStatus(slot, nextDate)))
+                                    }
                                 }
                             }
                         }
+                        CreateSlotsFab(
+                            year = state.year,
+                            enabled = !state.isSaving,
+                            onNewSlot = actions.onNewSlot,
+                            onCreateYear = actions.onAskCreateYear,
+                            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+                        )
                     }
                 }
             },
@@ -261,6 +261,66 @@ internal fun TalkScheduleContent(
             dismissButton = { TextButton(onClick = actions.onDismissCreateYear) { Text("Abbrechen") } },
         )
     }
+}
+
+private val FAB_CLEARANCE = 88.dp
+
+/**
+ * FAB der Liste: öffnet darüber zwei beschriftete Knöpfe „Termin anlegen“ und „Alle Termine <Jahr> anlegen“
+ * (Speed Dial). Das „+“ dreht sich dabei zum „×“; ein zweiter Tipp schließt wieder.
+ */
+@Composable
+private fun CreateSlotsFab(
+    year: Int,
+    enabled: Boolean,
+    onNewSlot: () -> Unit,
+    onCreateYear: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val open = expanded && enabled
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        if (open) {
+            SpeedDialAction("Alle Termine $year anlegen") {
+                expanded = false
+                onCreateYear()
+            }
+            SpeedDialAction("Termin anlegen") {
+                expanded = false
+                onNewSlot()
+            }
+        }
+        // Helles Lavendel statt des dunklen primaryContainer, damit der FAB vom Hintergrund absticht.
+        FloatingActionButton(
+            onClick = { if (enabled) expanded = !expanded },
+            containerColor = NightColors.Lavender,
+            contentColor = NightColors.HeaderTop,
+        ) {
+            Icon(
+                addIcon,
+                contentDescription = if (open) "Schließen" else "Termine anlegen",
+                modifier = Modifier.rotate(if (open) FAB_OPEN_ROTATION else 0f),
+            )
+        }
+    }
+}
+
+private const val FAB_OPEN_ROTATION = 45f
+
+/** Beschrifteter Knopf über dem FAB, im kräftigen Lila der übrigen Knöpfe. */
+@Composable
+private fun SpeedDialAction(text: String, onClick: () -> Unit) {
+    ExtendedFloatingActionButton(
+        onClick = onClick,
+        containerColor = NightColors.Primary,
+        contentColor = NightColors.OnBackground,
+        icon = { Icon(addIcon, contentDescription = null) },
+        text = { Text(text) },
+    )
 }
 
 /** Datumsblock, Vortrag und Redner mit Herkunft sowie die Statusmarke. */
