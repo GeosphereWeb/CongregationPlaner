@@ -246,6 +246,17 @@ Unter Windows statt `./gradlew` einfach `gradlew.bat` verwenden.
 
 GitHub Actions bauen jeden Push und Pull Request (`ci.yml`) und führen zusätzlich SonarCloud- und CodeQL-Analysen aus.
 
+## ☎️ Vorwahlverzeichnis
+
+Telefonnummern werden nach der Ortsnetzkennzahl gruppiert (`formatPhoneNumber`). Die Liste der Vorwahlen stammt aus dem
+[Vorwahlverzeichnis der Bundesnetzagentur](https://www.bundesnetzagentur.de/DE/Fachthemen/Telekommunikation/Nummerierung/ONRufnr/Einteilung_ONB/start.html)
+(Datenlizenz Deutschland – Namensnennung – Version 4.0) und liegt erzeugt in `GermanAreaCodes.kt`; die Quellenangabe
+steht in der App unter „Einstellungen“. Aktualisieren aus dem Repo-Root:
+
+```bash
+python scripts/update_german_area_codes.py
+```
+
 ## 🤝 Workflow & Konventionen
 
 - **Branches:** `feature/CP-<nr>-<beschreibung>` für Tickets, `jdi/<beschreibung>` für kleine Änderungen
