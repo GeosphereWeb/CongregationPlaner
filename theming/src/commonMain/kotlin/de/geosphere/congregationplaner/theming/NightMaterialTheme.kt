@@ -83,7 +83,7 @@ fun nightTypography(): Typography {
 fun nightShapes(): Shapes = Shapes(
     extraSmall = RoundedCornerShape(8.dp),
     small = RoundedCornerShape(10.dp),
-    medium = RoundedCornerShape(14.dp),
+    medium = RoundedCornerShape(8.dp),
     large = RoundedCornerShape(16.dp),
     extraLarge = RoundedCornerShape(28.dp),
 )

@@ -22,6 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -37,17 +38,22 @@ import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.ui.chip.StatusChip
 import de.geosphere.congregationplaner.ui.chip.StatusTone
 
-private val CARD_SHAPE = RoundedCornerShape(14.dp)
-private val NESTED_CARD_SHAPE = RoundedCornerShape(topEnd = 14.dp, bottomEnd = 14.dp)
+private val CARD_SHAPE = RoundedCornerShape(8.dp)
+private val NESTED_CARD_SHAPE = RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp)
 private val ITEM_SHAPE = RoundedCornerShape(10.dp)
 private val EDGE_WIDTH = 2.dp
 
 /** Gruppen-Überschrift einer Liste; [tone] färbt sie, ohne Angabe ist sie gedämpft. */
 @Composable
-fun SectionLabel(text: String, modifier: Modifier = Modifier, tone: StatusTone? = null) {
+fun SectionLabel(
+    text: String,
+    modifier: Modifier = Modifier,
+    tone: StatusTone? = null,
+    style: TextStyle = MaterialTheme.typography.labelSmall,
+) {
     Text(
         text = text.uppercase(),
-        style = MaterialTheme.typography.labelSmall,
+        style = style,
         color = tone?.content ?: NightColors.OnBackgroundMuted,
         modifier = modifier,
     )
@@ -76,14 +82,15 @@ fun NavCardRow(
     Row(
         modifier = modifier.padding(start = if (nested) 14.dp else 0.dp)
             .fillMaxWidth()
-            .heightIn(min = 64.dp)
+            // 48 dp bleiben als Mindesthöhe für die Berührungsfläche.
+            .heightIn(min = 48.dp)
             .clip(shape)
             .background(if (selected) NightColors.SurfaceActive else NightColors.Surface)
             .border(1.dp, if (selected) NightColors.Lavender else NightColors.Border, shape)
             .clickable(role = Role.Button, onClick = onClick)
             .drawBehind { if (nested) drawRect(accent, size = Size(EDGE_WIDTH.toPx(), size.height)) }
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(start = 12.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (indicator != null) Box(Modifier.size(8.dp).background(indicator.content, CircleShape))

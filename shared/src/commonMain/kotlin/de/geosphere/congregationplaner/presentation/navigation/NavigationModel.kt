@@ -36,9 +36,9 @@ enum class CongregationSection(
         supportingText = "Mitglieder, Rollen, Freigaben",
     ),
     MIDWEEK_PLANNING("Planung unter der Woche", CongregationGroup.PLANNING, supportingText = "Aufgabenplaner"),
-    WEEKEND_TALKS("Planung am Wochenende", CongregationGroup.PLANNING, nested = true, tabLabel = "Wochenende"),
-    EXTERNAL_SPEAKERS("Externe Redner", CongregationGroup.PLANNING, nested = true),
-    TALK_HISTORY("Vortragshistorie", CongregationGroup.PLANNING, nested = true, tabLabel = "Historie"),
+    WEEKEND_TALKS("Planung am Wochenende", CongregationGroup.PLANNING, nested = true, tabLabel = "Wochenplanung"),
+    EXTERNAL_SPEAKERS("Externe Redner", CongregationGroup.PLANNING, nested = true, tabLabel = "Rednerliste"),
+    TALK_HISTORY("Vortragshistorie", CongregationGroup.PLANNING, nested = true, tabLabel = "Vortragshistorie"),
     ;
 
     companion object {
