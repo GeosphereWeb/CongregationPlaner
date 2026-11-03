@@ -232,14 +232,14 @@ class TalkScheduleViewModelTest {
         viewModel.onCurrentUserChanged(planner)
 
         viewModel.toggleStatusFilter(SlotStatus.NOT_PLANNED)
-        viewModel.toggleStatusFilter(SlotStatus.INFORMED)
-        assertEquals(setOf(SlotStatus.NOT_PLANNED, SlotStatus.INFORMED), state.statusFilter)
+        viewModel.toggleStatusFilter(SlotStatus.CANCELLED)
+        assertEquals(setOf(SlotStatus.NOT_PLANNED, SlotStatus.CANCELLED), state.statusFilter)
 
         viewModel.toggleStatusFilter(SlotStatus.NOT_PLANNED)
-        assertEquals(setOf(SlotStatus.INFORMED), state.statusFilter)
+        assertEquals(setOf(SlotStatus.CANCELLED), state.statusFilter)
 
         viewModel.changeYear(2027)
-        assertEquals(setOf(SlotStatus.INFORMED), state.statusFilter)
+        assertEquals(setOf(SlotStatus.CANCELLED), state.statusFilter)
     }
 
     @Test
