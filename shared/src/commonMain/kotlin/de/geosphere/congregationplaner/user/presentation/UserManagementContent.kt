@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -44,6 +43,7 @@ import de.geosphere.congregationplaner.presentation.components.ListPaneHeader
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
+import de.geosphere.congregationplaner.ui.button.SecondaryButton
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
@@ -213,14 +213,14 @@ private fun CopyLinkButton(link: String) {
             copied = false
         }
     }
-    Button(
+    SecondaryButton(
+        text = if (copied) "Kopiert" else "Link kopieren",
         onClick = {
             clipboardManager.setText(AnnotatedString(link))
             copied = true
         },
-    ) {
-        Text(if (copied) "Kopiert" else "Link kopieren")
-    }
+        height = 44.dp,
+    )
 }
 
 private const val COPIED_FEEDBACK_MILLIS = 2_000L

@@ -1,4 +1,4 @@
-package de.geosphere.congregationplaner.ui.common
+    package de.geosphere.congregationplaner.ui.common
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size

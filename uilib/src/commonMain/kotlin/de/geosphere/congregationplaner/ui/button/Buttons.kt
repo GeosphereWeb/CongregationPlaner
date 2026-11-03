@@ -25,7 +25,7 @@ import de.geosphere.congregationplaner.theming.NightPreviewWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.theming.nightTextStyle
 
-private val ButtonShape = RoundedCornerShape(14.dp)
+private val ButtonShape = RoundedCornerShape(8.dp)
 
 /** Hauptaktion in Lila. Die Breite bestimmt der Aufrufer (z. B. `fillMaxWidth()`). */
 @Composable
@@ -41,11 +41,13 @@ fun PrimaryButton(
         modifier = modifier.height(height),
         enabled = enabled,
         shape = ButtonShape,
+        // Deaktiviert wie eine Fläche mit Rand, damit sie nicht als Hauptaktion gelesen wird.
+        border = if (enabled) null else BorderStroke(1.dp, NightColors.Border),
         colors = ButtonDefaults.buttonColors(
             containerColor = NightColors.Primary,
             contentColor = NightColors.OnBackground,
-            disabledContainerColor = NightColors.PrimaryDisabled,
-            disabledContentColor = NightColors.OnBackgroundMuted,
+            disabledContainerColor = NightColors.Surface,
+            disabledContentColor = NightColors.OnBackgroundDisabled,
         ),
     ) {
         Text(text, style = nightTextStyle(16.sp, FontWeight.Bold, Color.Unspecified))

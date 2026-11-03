@@ -25,7 +25,7 @@ class AppThemeTest {
     fun shapesFollowDesignRadii() {
         val shapes = nightShapes()
         assertEquals(RoundedCornerShape(8.dp), shapes.extraSmall)
-        assertEquals(RoundedCornerShape(14.dp), shapes.medium)
+        assertEquals(RoundedCornerShape(8.dp), shapes.medium)
         assertEquals(RoundedCornerShape(16.dp), shapes.large)
     }
 }
