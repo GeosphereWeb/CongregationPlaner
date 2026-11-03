@@ -69,6 +69,12 @@ internal fun slotChip(slot: TalkSlot, status: SlotStatus): SlotChip = when (stat
     SlotStatus.INFORMED -> SlotChip(statusLabel(status), StatusTone.Mint)
 }
 
+/**
+ * Name des Wochenereignisses als eigene Zeile in der Liste. Bei einem abgesagten Termin steht er schon in der
+ * Marke ([slotChip]); dann `null`, damit er nicht doppelt erscheint.
+ */
+internal fun slotEventLine(slot: TalkSlot): String? = slot.weekEventName?.takeUnless { slot.talkCancelled }
+
 internal fun slotTitle(slot: TalkSlot): String = slot.talkNumber?.let { "Vortrag Nr. $it" } ?: "Noch nicht geplant"
 
 /** Redner mit Herkunft: „Muster, Max · eigene Versammlung“, „Extern, Eva · Gast aus Nord“ oder „Redner noch offen“. */
