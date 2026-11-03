@@ -46,7 +46,7 @@ rules_version = '2';
 // Fields (all optional):
 //   - street (<= 100 chars), postalCode (<= 10 chars), city (<= 100 chars): string
 //   - emergencyContacts: list (<= 5) of maps {name: string (1..100), relation: string (<= 50, optional),
-//     phone: string (1..30, digits and + ( ) / - space)}
+//     phones: list (1..3) of string (1..30, digits and + ( ) / - space)}
 //
 // Collection: region/.../congregation/{congId}/talkSchedule
 // Document ID: the date as yyyy-MM-dd (one day of the weekend meeting; the weekday
@@ -322,11 +322,23 @@ service cloud.firestore {
 
     function isValidEmergencyContact(contact) {
       return contact is map &&
-        contact.keys().hasOnly(['name', 'relation', 'phone']) &&
-        contact.keys().hasAll(['name', 'phone']) &&
+        contact.keys().hasOnly(['name', 'relation', 'phones']) &&
+        contact.keys().hasAll(['name', 'phones']) &&
         contact.name is string && contact.name.size() >= 1 && contact.name.size() <= 100 &&
         isShortString(contact.get('relation', ''), 50) &&
-        contact.phone is string && contact.phone.size() >= 1 && isValidPhone(contact.phone);
+        isValidContactPhones(contact.phones);
+    }
+
+    // One to three numbers, checked one by one (rules have no loops).
+    function isValidContactPhones(phones) {
+      return phones is list && phones.size() >= 1 && phones.size() <= 3 &&
+        isValidContactPhone(phones[0]) &&
+        (phones.size() < 2 || isValidContactPhone(phones[1])) &&
+        (phones.size() < 3 || isValidContactPhone(phones[2]));
+    }
+
+    function isValidContactPhone(phone) {
+      return phone is string && phone.size() >= 1 && isValidPhone(phone);
     }
 
     function roleFields() {

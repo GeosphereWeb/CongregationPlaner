@@ -27,9 +27,10 @@ class FirestoreRestMemberPrivateRepositoryTest {
                 "city":{"stringValue":"Berlin"},
                 "emergencyContacts":{"arrayValue":{"values":[
                     {"mapValue":{"fields":{"name":{"stringValue":"Anna"},"relation":{"stringValue":"Ehefrau"},
-                        "phone":{"stringValue":"0170"}}}},
+                        "phones":{"arrayValue":{"values":[{"stringValue":"0170"},{"stringValue":"0201 1"}]}}}}},
                     {"stringValue":"kaputt"},
-                    {"mapValue":{"fields":{"name":{"stringValue":"Ben"},"phone":{"stringValue":"030"}}}}]}}}}""",
+                    {"mapValue":{"fields":{"name":{"stringValue":"Ben"},
+                        "phones":{"arrayValue":{"values":[{"stringValue":"030"}]}}}}}]}}}}""",
         )
     }) { server, repository ->
         val details = repository.observe(congregation, "uid-1").first()
@@ -40,8 +41,8 @@ class FirestoreRestMemberPrivateRepositoryTest {
                 postalCode = "10115",
                 city = "Berlin",
                 emergencyContacts = listOf(
-                    EmergencyContact("Anna", "Ehefrau", "0170"),
-                    EmergencyContact("Ben", "", "030"),
+                    EmergencyContact("Anna", "Ehefrau", listOf("0170", "0201 1")),
+                    EmergencyContact("Ben", "", listOf("030")),
                 ),
             ),
             details,
@@ -60,7 +61,7 @@ class FirestoreRestMemberPrivateRepositoryTest {
     }) { server, repository ->
         val details = MemberPrivateDetails(
             street = "Hauptstr. 1",
-            emergencyContacts = listOf(EmergencyContact("Anna", "", "0170")),
+            emergencyContacts = listOf(EmergencyContact("Anna", "", listOf("0170"))),
         )
 
         repository.save(congregation, "uid-1", details).getOrThrow()
@@ -70,7 +71,7 @@ class FirestoreRestMemberPrivateRepositoryTest {
         assertEquals("$privatePath/uid-1", request.path)
         assertTrue(request.body.contains(""""street":{"stringValue":"Hauptstr. 1"}"""))
         assertTrue(request.body.contains(""""name":{"stringValue":"Anna"}"""))
-        assertTrue(request.body.contains(""""phone":{"stringValue":"0170"}"""))
+        assertTrue(request.body.contains(""""phones":{"arrayValue":{"values":[{"stringValue":"0170"}]}}"""))
         assertFalse(request.body.contains("relation"))
     }
 

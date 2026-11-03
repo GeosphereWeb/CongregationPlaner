@@ -45,3 +45,39 @@ private fun areaCodeLength(number: String): Int? {
         .firstOrNull { length -> digits.length > length && digits.take(length) in GERMAN_AREA_CODES }
         ?.plus(1)
 }
+
+/** Art einer Telefonnummer, erkannt an der Vorwahl. */
+enum class PhoneKind {
+    MOBILE,
+    LANDLINE,
+    UNKNOWN,
+}
+
+/** Handy (015/016/017), Festnetz (bekannte Ortsnetzkennzahl) oder unbekannt; Trennzeichen und +49 sind erlaubt. */
+fun phoneKind(raw: String): PhoneKind {
+    val national = nationalDigits(raw) ?: return PhoneKind.UNKNOWN
+    return when {
+        MOBILE_PREFIXES.any(national::startsWith) -> PhoneKind.MOBILE
+        areaCodeLength(national) != null -> PhoneKind.LANDLINE
+        else -> PhoneKind.UNKNOWN
+    }
+}
+
+/** Der Ortsnetzname zur Vorwahl einer Festnetznummer, z. B. „Essen“ für „0201 123456“; sonst `null`. */
+fun areaName(raw: String): String? {
+    if (phoneKind(raw) != PhoneKind.LANDLINE) return null
+    val national = nationalDigits(raw) ?: return null
+    val length = areaCodeLength(national) ?: return null
+    return GERMAN_AREA_NAMES[national.substring(1, length)]
+}
+
+/** Die Nummer national ohne Trennzeichen („+49 201 1“ → „02011“); `null`, wenn sie nicht deutsch beginnt. */
+private fun nationalDigits(raw: String): String? {
+    val compact = raw.filter { it.isDigit() || it == '+' }
+    val digits = compact.filter(Char::isDigit)
+    return when {
+        compact.startsWith(INTERNATIONAL_PREFIX) -> "0" + digits.drop(INTERNATIONAL_PREFIX.length - 1)
+        compact.startsWith("0") -> digits
+        else -> null
+    }
+}

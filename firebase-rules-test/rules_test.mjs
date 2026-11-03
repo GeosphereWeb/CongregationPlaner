@@ -279,16 +279,22 @@ await expect('Mitglied ändert die Telefonnummer eines anderen', api('PATCH', ow
 
 // ---------- Private Angaben (memberPrivate, ADR-0015): Adresse und Notfallkontakte ----------
 const PRIVATE = `${CONG}/memberPrivate`;
-const emergency = (name, phone, relation) => ({ mapValue: { fields: { name: { stringValue: name }, phone: { stringValue: phone }, ...(relation === undefined ? {} : { relation: { stringValue: relation } }) } } });
+const phonesValue = (phones) => ({ arrayValue: { values: phones.map((stringValue) => ({ stringValue })) } });
+const emergency = (name, phone, relation, more = []) => ({ mapValue: { fields: { name: { stringValue: name }, phones: phonesValue([phone, ...more]), ...(relation === undefined ? {} : { relation: { stringValue: relation } }) } } });
 const privateBody = (contacts, extra = {}) => ({ fields: { street: { stringValue: 'Hauptstr. 1' }, postalCode: { stringValue: '10115' }, city: { stringValue: 'Berlin' }, emergencyContacts: { arrayValue: { values: contacts } }, ...extra } });
 const putPrivate = (uid, body, token) => api('PATCH', `${PRIVATE}/${uid}`, body, token);
 await expect('Mitglied speichert eigene Adresse und Notfallkontakte', putPrivate(plain.uid, privateBody([emergency('Anna Muster', '0170 1', 'Ehefrau'), emergency('Ben Muster', '030 2')]), plain.token), true);
 await expect('Mitglied speichert fünf Notfallkontakte', putPrivate(plain.uid, privateBody([1, 2, 3, 4, 5].map((i) => emergency(`K${i}`, `0${i}`))), plain.token), true);
 await expect('Mitglied speichert sechs Notfallkontakte', putPrivate(plain.uid, privateBody([1, 2, 3, 4, 5, 6].map((i) => emergency(`K${i}`, `0${i}`))), plain.token), false);
 await expect('Notfallkontakt ohne Telefon', putPrivate(plain.uid, privateBody([{ mapValue: { fields: { name: { stringValue: 'Anna' } } } }]), plain.token), false);
+await expect('Notfallkontakt mit drei Telefonnummern', putPrivate(plain.uid, privateBody([emergency('Anna', '0170 1', 'Ehefrau', ['030 2', '0201 3'])]), plain.token), true);
+await expect('Notfallkontakt mit vier Telefonnummern', putPrivate(plain.uid, privateBody([emergency('Anna', '0170 1', undefined, ['030 2', '0201 3', '089 4'])]), plain.token), false);
+await expect('Notfallkontakt mit leerer Telefonliste', putPrivate(plain.uid, privateBody([{ mapValue: { fields: { name: { stringValue: 'Anna' }, phones: phonesValue([]) } } }]), plain.token), false);
+await expect('Notfallkontakt mit ungültiger zweiter Nummer', putPrivate(plain.uid, privateBody([emergency('Anna', '0170 1', undefined, ['abc'])]), plain.token), false);
+await expect('Notfallkontakt im alten Format mit phone', putPrivate(plain.uid, privateBody([{ mapValue: { fields: { name: { stringValue: 'Anna' }, phone: { stringValue: '0170' } } } }]), plain.token), false);
 await expect('Notfallkontakt ohne Namen', putPrivate(plain.uid, privateBody([emergency('', '0170')]), plain.token), false);
 await expect('Notfallkontakt mit ungültiger Telefonnummer', putPrivate(plain.uid, privateBody([emergency('Anna', 'abc')]), plain.token), false);
-await expect('Notfallkontakt mit Zusatzfeld', putPrivate(plain.uid, privateBody([{ mapValue: { fields: { name: { stringValue: 'Anna' }, phone: { stringValue: '0170' }, email: { stringValue: 'a@b.de' } } } }]), plain.token), false);
+await expect('Notfallkontakt mit Zusatzfeld', putPrivate(plain.uid, privateBody([{ mapValue: { fields: { name: { stringValue: 'Anna' }, phones: phonesValue(['0170']), email: { stringValue: 'a@b.de' } } } }]), plain.token), false);
 await expect('Private Angaben mit Zusatzfeld', putPrivate(plain.uid, privateBody([], { iban: { stringValue: 'DE00' } }), plain.token), false);
 await expect('Private Angaben mit zu langer Postleitzahl', putPrivate(plain.uid, privateBody([], { postalCode: { stringValue: '12345678901' } }), plain.token), false);
 await expect('Mitglied liest eigene private Angaben', api('GET', `${PRIVATE}/${plain.uid}`, undefined, plain.token), true);

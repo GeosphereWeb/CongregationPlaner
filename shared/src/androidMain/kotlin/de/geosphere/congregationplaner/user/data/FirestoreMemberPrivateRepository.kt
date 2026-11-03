@@ -53,7 +53,7 @@ private fun toDetails(document: DocumentSnapshot): MemberPrivateDetails = Member
             EmergencyContact(
                 name = contact["name"] as? String ?: "",
                 relation = contact["relation"] as? String ?: "",
-                phone = contact["phone"] as? String ?: "",
+                phones = (contact["phones"] as? List<*>).orEmpty().filterIsInstance<String>(),
             )
         },
 )
@@ -67,7 +67,7 @@ private fun MemberPrivateDetails.toFirestoreFields(): Map<String, Any> = mapOf(
         buildMap {
             put("name", contact.name)
             if (contact.relation.isNotEmpty()) put("relation", contact.relation)
-            put("phone", contact.phone)
+            put("phones", contact.phones)
         }
     },
 )
