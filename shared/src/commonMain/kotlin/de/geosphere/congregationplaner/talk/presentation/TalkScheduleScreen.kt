@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -80,6 +82,7 @@ internal data class TalkScheduleActions(
     val onConfirmCreateYear: () -> Unit = {},
     val onDismissCreateYear: () -> Unit = {},
     val onDismissInfo: () -> Unit = {},
+    val onToggleStatusFilter: (SlotStatus) -> Unit = {},
 )
 
 @Composable
@@ -114,6 +117,7 @@ fun TalkScheduleScreen(
             onConfirmCreateYear = viewModel::createYear,
             onDismissCreateYear = viewModel::dismissCreateYear,
             onDismissInfo = viewModel::dismissInfo,
+            onToggleStatusFilter = viewModel::toggleStatusFilter,
         ),
     )
 }
@@ -169,6 +173,9 @@ internal fun TalkScheduleContent(
             return@Column
         }
 
+        StatusFilterRow(state.slots, state.statusFilter, actions.onToggleStatusFilter)
+        val visibleSlots = filterSlots(state.slots, state.statusFilter)
+
         ListDetailPaneScaffold(
             directive = navigator.scaffoldDirective,
             scaffoldState = navigator.scaffoldState,
@@ -184,8 +191,10 @@ internal fun TalkScheduleContent(
                         ) {
                             if (state.slots.isEmpty()) {
                                 item { Text("Für ${state.year} sind noch keine Termine angelegt.") }
+                            } else if (visibleSlots.isEmpty()) {
+                                item { Text("Keine Termine für diese Auswahl.") }
                             }
-                            state.slots.groupBy { it.date.month }.values.forEach { monthSlots ->
+                            visibleSlots.groupBy { it.date.month }.values.forEach { monthSlots ->
                                 // Der Monat bleibt beim Scrollen oben stehen; der Hintergrund verdeckt die Termine darunter.
                                 stickyHeader(key = "month-${monthSlots.first().id}") {
                                     SectionLabel(
@@ -269,6 +278,24 @@ internal fun TalkScheduleContent(
 }
 
 private val FAB_CLEARANCE = 88.dp
+
+/**
+ * Zahl der Termine je Stand im angezeigten Jahr; jeder Stand ist ein Filter. Mehrere lassen sich zugleich wählen,
+ * ohne Auswahl zeigt die Liste das ganze Jahr.
+ */
+@Composable
+private fun StatusFilterRow(slots: List<TalkSlot>, filter: Set<SlotStatus>, onToggle: (SlotStatus) -> Unit) {
+    val counts = statusCounts(slots)
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        FILTER_STATUSES.forEach { status ->
+            FilterChip(
+                selected = status in filter,
+                onClick = { onToggle(status) },
+                label = { Text("${statusLabel(status)} ${counts[status] ?: 0}") },
+            )
+        }
+    }
+}
 
 /** Volle Breite mit dem Seitenhintergrund, damit der klebende Monatskopf die Termine darunter verdeckt. */
 @Composable
