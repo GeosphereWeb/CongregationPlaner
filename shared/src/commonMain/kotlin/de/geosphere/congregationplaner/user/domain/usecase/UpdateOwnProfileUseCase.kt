@@ -3,6 +3,7 @@ package de.geosphere.congregationplaner.user.domain.usecase
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.MemberProfileException
+import de.geosphere.congregationplaner.user.domain.model.formatPhoneNumber
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
 import dev.zacsweers.metro.Inject
 
@@ -24,8 +25,8 @@ class UpdateOwnProfileUseCase(private val repository: UserRepository) {
         val profile = user.profile.copy(
             lastName = lastName.trim(),
             firstName = firstName.trim(),
-            mobilePhone = mobilePhone.trim(),
-            landlinePhone = landlinePhone.trim(),
+            mobilePhone = formatPhoneNumber(mobilePhone),
+            landlinePhone = formatPhoneNumber(landlinePhone),
         )
         val error = when {
             profile.lastName.isEmpty() || profile.firstName.isEmpty() -> MemberProfileException.MissingName()
