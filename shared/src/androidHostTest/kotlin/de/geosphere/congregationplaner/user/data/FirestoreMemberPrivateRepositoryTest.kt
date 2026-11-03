@@ -46,9 +46,9 @@ class FirestoreMemberPrivateRepositoryTest {
         }
         // Außerhalb des mockk-Blocks, weil dort `get` die DynamicCall-Funktion von MockK meint.
         every { snapshot.get("emergencyContacts") } returns listOf(
-            mapOf("name" to "Anna", "relation" to "Ehefrau", "phone" to "0170"),
+            mapOf("name" to "Anna", "relation" to "Ehefrau", "phones" to listOf("0170", "0201 1")),
             "kaputt",
-            mapOf("name" to "Ben", "phone" to "030"),
+            mapOf("name" to "Ben", "phones" to listOf("030")),
         )
         emit(snapshot)
 
@@ -60,8 +60,8 @@ class FirestoreMemberPrivateRepositoryTest {
                 postalCode = "10115",
                 city = "Berlin",
                 emergencyContacts = listOf(
-                    EmergencyContact("Anna", "Ehefrau", "0170"),
-                    EmergencyContact("Ben", "", "030"),
+                    EmergencyContact("Anna", "Ehefrau", listOf("0170", "0201 1")),
+                    EmergencyContact("Ben", "", listOf("030")),
                 ),
             ),
             details,
@@ -84,7 +84,7 @@ class FirestoreMemberPrivateRepositoryTest {
             street = "Hauptstr. 1",
             postalCode = "10115",
             city = "Berlin",
-            emergencyContacts = listOf(EmergencyContact("Anna", "", "0170")),
+            emergencyContacts = listOf(EmergencyContact("Anna", "", listOf("0170"))),
         )
 
         runBlocking { repository.save(congregation, "uid-1", details).getOrThrow() }
@@ -94,7 +94,7 @@ class FirestoreMemberPrivateRepositoryTest {
                 "street" to "Hauptstr. 1",
                 "postalCode" to "10115",
                 "city" to "Berlin",
-                "emergencyContacts" to listOf(mapOf("name" to "Anna", "phone" to "0170")),
+                "emergencyContacts" to listOf(mapOf("name" to "Anna", "phones" to listOf("0170"))),
             ),
             fields.captured,
         )

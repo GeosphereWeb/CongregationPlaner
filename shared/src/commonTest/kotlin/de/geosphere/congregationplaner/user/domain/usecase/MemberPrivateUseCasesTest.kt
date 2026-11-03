@@ -35,7 +35,7 @@ class MemberPrivateUseCasesTest {
         street = "Hauptstr. 1",
         postalCode = "10115",
         city = "Berlin",
-        emergencyContacts = listOf(EmergencyContact("Anna Muster", "Ehefrau", "0170 1")),
+        emergencyContacts = listOf(EmergencyContact("Anna Muster", "Ehefrau", listOf("0170 1"))),
     )
 
     @Test
@@ -54,7 +54,10 @@ class MemberPrivateUseCasesTest {
             street = " Hauptstr. 1 ",
             postalCode = " 10115",
             city = "Berlin ",
-            emergencyContacts = listOf(EmergencyContact(" Anna Muster ", " Ehefrau ", " 0170 1 "), EmergencyContact()),
+            emergencyContacts = listOf(
+                EmergencyContact(" Anna Muster ", " Ehefrau ", listOf(" 0170 1 ")),
+                EmergencyContact(),
+            ),
         )
 
         val saved = SaveOwnPrivateDetailsUseCase(repository)(member, input).getOrThrow()
@@ -68,7 +71,7 @@ class MemberPrivateUseCasesTest {
     fun `saving rejects incomplete invalid or too many contacts and long addresses`() = runBlocking {
         val repository = FakeMemberPrivateRepository()
         val save = SaveOwnPrivateDetailsUseCase(repository)
-        val contact = EmergencyContact("Anna", "", "0170")
+        val contact = EmergencyContact("Anna", "", listOf("0170"))
 
         assertIs<MemberPrivateException.IncompleteContact>(
             save(member, MemberPrivateDetails(emergencyContacts = listOf(EmergencyContact("Anna")))).exceptionOrNull(),
@@ -76,7 +79,7 @@ class MemberPrivateUseCasesTest {
         assertIs<MemberPrivateException.InvalidContact>(
             save(
                 member,
-                MemberPrivateDetails(emergencyContacts = listOf(contact.copy(phone = "abc"))),
+                MemberPrivateDetails(emergencyContacts = listOf(contact.copy(phones = listOf("abc")))),
             ).exceptionOrNull(),
         )
         assertIs<MemberPrivateException.TooManyContacts>(
@@ -90,9 +93,27 @@ class MemberPrivateUseCasesTest {
     }
 
     @Test
+    fun `a contact keeps up to three formatted numbers and drops empty ones`(): Unit = runBlocking {
+        val repository = FakeMemberPrivateRepository()
+        val save = SaveOwnPrivateDetailsUseCase(repository)
+        val input = MemberPrivateDetails(
+            emergencyContacts = listOf(EmergencyContact("Anna", "", listOf("01701234567", "", " 0201123456 "))),
+        )
+
+        val saved = save(member, input).getOrThrow()
+
+        assertEquals(listOf("0170 1234567", "0201 123456"), saved.emergencyContacts.single().phones)
+        assertEquals("Essen", saved.emergencyContacts.single().areaName)
+        val four = EmergencyContact("Anna", "", listOf("0170", "030 1", "0201 2", "089 3"))
+        assertIs<MemberPrivateException.TooManyPhones>(
+            save(member, MemberPrivateDetails(emergencyContacts = listOf(four))).exceptionOrNull(),
+        )
+    }
+
+    @Test
     fun `five contacts are allowed`() = runBlocking {
         val repository = FakeMemberPrivateRepository()
-        val five = MemberPrivateDetails(emergencyContacts = List(5) { EmergencyContact("K$it", "", "0$it") })
+        val five = MemberPrivateDetails(emergencyContacts = List(5) { EmergencyContact("K$it", "", listOf("0$it")) })
 
         assertEquals(five, SaveOwnPrivateDetailsUseCase(repository)(member, five).getOrThrow())
     }

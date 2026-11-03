@@ -6,10 +6,12 @@ import de.geosphere.congregationplaner.auth.FirebaseAuthManager
 import de.geosphere.congregationplaner.firestore.FirestoreRestClient
 import de.geosphere.congregationplaner.firestore.firestoreFields
 import de.geosphere.congregationplaner.firestore.firestoreString
+import de.geosphere.congregationplaner.firestore.firestoreStringArray
 import de.geosphere.congregationplaner.firestore.optionalStringField
 import de.geosphere.congregationplaner.firestore.parseDocument
 import de.geosphere.congregationplaner.firestore.pollingFlow
 import de.geosphere.congregationplaner.firestore.runCatchingIo
+import de.geosphere.congregationplaner.firestore.stringArrayField
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.user.domain.model.EmergencyContact
 import de.geosphere.congregationplaner.user.domain.model.MemberPrivateDetails
@@ -59,7 +61,7 @@ private fun JsonObject.toDetails(): MemberPrivateDetails = MemberPrivateDetails(
                 EmergencyContact(
                     name = fields.optionalStringField("name").orEmpty(),
                     relation = fields.optionalStringField("relation").orEmpty(),
-                    phone = fields.optionalStringField("phone").orEmpty(),
+                    phones = fields.stringArrayField("phones").filterNotNull(),
                 )
             }
         }
@@ -76,7 +78,7 @@ private fun MemberPrivateDetails.toFields(): JsonObject = JsonObject().apply {
             val fields = JsonObject().apply {
                 add("name", firestoreString(contact.name))
                 if (contact.relation.isNotEmpty()) add("relation", firestoreString(contact.relation))
-                add("phone", firestoreString(contact.phone))
+                add("phones", firestoreStringArray(contact.phones))
             }
             add(JsonObject().apply { add("mapValue", JsonObject().apply { add("fields", fields) }) })
         }
