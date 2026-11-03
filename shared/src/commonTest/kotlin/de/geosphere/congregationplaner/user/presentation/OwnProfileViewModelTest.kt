@@ -168,6 +168,47 @@ class OwnProfileViewModelTest {
     }
 
     @Test
+    fun `the first e-mail field is always there and two more can be added and removed`() {
+        assertEquals(listOf(""), state.emailFields)
+        assertFalse(state.isDirty)
+
+        viewModel.onEmailChange(0, "max@beispiel.de")
+        repeat(3) { viewModel.addEmail() }
+        assertEquals(3, state.emailFields.size)
+        assertFalse(state.canAddEmail)
+
+        viewModel.removeEmail(0)
+        assertEquals("max@beispiel.de", state.emailFields.first())
+        viewModel.removeEmail(2)
+        viewModel.removeEmail(1)
+        viewModel.save()
+
+        assertEquals(listOf("max@beispiel.de"), users.updatedOwnProfiles.single().profile.emails)
+        assertEquals(listOf("max@beispiel.de"), state.form.emails)
+        assertFalse(state.isDirty)
+    }
+
+    @Test
+    fun `adding a second field without a first address keeps the first field`() {
+        viewModel.addEmail()
+
+        assertEquals(listOf("", ""), state.emailFields)
+
+        viewModel.onEmailChange(0, "a")
+        viewModel.onEmailChange(0, "")
+        assertEquals(2, state.emailFields.size)
+    }
+
+    @Test
+    fun `clearing the only e-mail field leaves no address`() {
+        viewModel.onEmailChange(0, "a")
+        viewModel.onEmailChange(0, "")
+
+        assertEquals(emptyList(), state.form.emails)
+        assertFalse(state.isDirty)
+    }
+
+    @Test
     fun `saving without a change does nothing`() {
         viewModel.save()
 

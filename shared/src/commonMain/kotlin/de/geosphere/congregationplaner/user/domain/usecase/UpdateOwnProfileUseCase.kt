@@ -8,8 +8,8 @@ import de.geosphere.congregationplaner.user.domain.repository.UserRepository
 import dev.zacsweers.metro.Inject
 
 /**
- * Speichert Nachnamen, Vornamen, Handy und Festnetz des angemeldeten Mitglieds im eigenen Mitgliedsdokument. Beide
- * Namen sind Pflicht, die Telefonnummern optional; andere Angaben bleiben bei den Admins.
+ * Speichert Nachnamen, Vornamen, Handy, Festnetz und zusätzliche E-Mail-Adressen des angemeldeten Mitglieds im eigenen
+ * Mitgliedsdokument. Beide Namen sind Pflicht, der Rest optional; andere Angaben bleiben bei den Admins.
  */
 @Inject
 class UpdateOwnProfileUseCase(private val repository: UserRepository) {
@@ -19,6 +19,7 @@ class UpdateOwnProfileUseCase(private val repository: UserRepository) {
         firstName: String,
         mobilePhone: String = user.profile.mobilePhone,
         landlinePhone: String = user.profile.landlinePhone,
+        emails: List<String> = user.profile.emails,
     ): Result<AppUser> {
         val congregation = user.congregation
             ?: return Result.failure(IllegalStateException("Ohne Versammlung gibt es kein Mitgliedsdokument."))
@@ -27,6 +28,7 @@ class UpdateOwnProfileUseCase(private val repository: UserRepository) {
             firstName = firstName.trim(),
             mobilePhone = formatPhoneNumber(mobilePhone),
             landlinePhone = formatPhoneNumber(landlinePhone),
+            emails = emails.map(String::trim).filter(String::isNotEmpty),
         )
         val error = when {
             profile.lastName.isEmpty() || profile.firstName.isEmpty() -> MemberProfileException.MissingName()
@@ -34,6 +36,8 @@ class UpdateOwnProfileUseCase(private val repository: UserRepository) {
                 MemberProfileException.NameTooLong()
             !MemberProfile.isValidPhone(profile.mobilePhone) || !MemberProfile.isValidPhone(profile.landlinePhone) ->
                 MemberProfileException.InvalidPhone()
+            profile.emails.size > MemberProfile.MAX_EMAILS -> MemberProfileException.TooManyEmails()
+            !profile.emails.all(MemberProfile::isValidEmail) -> MemberProfileException.InvalidEmail()
             else -> null
         }
         return error?.let { Result.failure(it) }

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.EmergencyContact
 import de.geosphere.congregationplaner.user.domain.model.MemberPrivateDetails
+import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.usecase.ObserveOwnPrivateDetailsUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.SaveOwnPrivateDetailsUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.UpdateOwnProfileUseCase
@@ -16,12 +17,13 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** Die Felder von „Mein Profil“: Namen und Telefon aus dem Mitgliedsdokument, dazu die privaten Angaben. */
+/** Die Felder von „Mein Profil“: Namen, Telefon und E-Mail aus dem Mitgliedsdokument, dazu die privaten Angaben. */
 data class OwnProfileForm(
     val lastName: String = "",
     val firstName: String = "",
     val mobilePhone: String = "",
     val landlinePhone: String = "",
+    val emails: List<String> = emptyList(),
     val details: MemberPrivateDetails = MemberPrivateDetails(),
 ) {
     internal val profilePart get() = copy(details = MemberPrivateDetails())
@@ -43,6 +45,10 @@ data class OwnProfileUiState(
     val canSave: Boolean
         get() = isDirty && detailsLoaded && !isSaving && form.lastName.isNotBlank() && form.firstName.isNotBlank()
     val canAddContact: Boolean get() = form.details.emergencyContacts.size < MemberPrivateDetails.MAX_EMERGENCY_CONTACTS
+
+    /** Das erste E-Mail-Feld ist immer da, auch ohne gespeicherte Adresse; weitere kommen bei Bedarf dazu. */
+    val emailFields: List<String> get() = form.emails.ifEmpty { listOf("") }
+    val canAddEmail: Boolean get() = emailFields.size < MemberProfile.MAX_EMAILS
 }
 
 @Inject
@@ -67,6 +73,7 @@ class OwnProfileViewModel(
                 firstName = profile.firstName,
                 mobilePhone = profile.mobilePhone,
                 landlinePhone = profile.landlinePhone,
+                emails = profile.emails,
             )
             val form = if (state.form.profilePart == state.saved.profilePart) {
                 saved.copy(details = state.form.details)
@@ -85,6 +92,33 @@ class OwnProfileViewModel(
     fun onMobilePhoneChange(value: String) = updateForm { it.copy(mobilePhone = value) }
 
     fun onLandlinePhoneChange(value: String) = updateForm { it.copy(landlinePhone = value) }
+
+    fun onEmailChange(index: Int, value: String) = updateForm { form ->
+        val fields = form.emails.ifEmpty { listOf("") }
+        // Bleibt nur ein leeres erstes Feld übrig, gibt es keine Adresse; so wird das Formular nicht unnötig geändert.
+        form.copy(
+            emails = fields.mapIndexed { i, old ->
+                if (i ==
+                    index
+                ) {
+                    value
+                } else {
+                    old
+                }
+            }.takeUnless { it == listOf("") }.orEmpty(),
+        )
+    }
+
+    fun addEmail() {
+        if (!mutableUiState.value.canAddEmail) return
+        updateForm { it.copy(emails = it.emails.ifEmpty { listOf("") } + "") }
+    }
+
+    /** Das erste Feld bleibt immer; entfernt werden nur weitere. */
+    fun removeEmail(index: Int) {
+        if (index == 0) return
+        updateForm { form -> form.copy(emails = form.emails.filterIndexed { i, _ -> i != index }) }
+    }
 
     fun onStreetChange(value: String) = updateDetails { it.copy(street = value) }
 
@@ -126,13 +160,21 @@ class OwnProfileViewModel(
             var saved = state.saved
             if (form.profilePart != state.saved.profilePart) {
                 val result =
-                    updateOwnProfile(current, form.lastName, form.firstName, form.mobilePhone, form.landlinePhone)
+                    updateOwnProfile(
+                        current,
+                        form.lastName,
+                        form.firstName,
+                        form.mobilePhone,
+                        form.landlinePhone,
+                        form.emails,
+                    )
                 val profile = result.getOrElse { return@launch fail(it) }.profile
                 saved = saved.copy(
                     lastName = profile.lastName,
                     firstName = profile.firstName,
                     mobilePhone = profile.mobilePhone,
                     landlinePhone = profile.landlinePhone,
+                    emails = profile.emails,
                 )
             }
             if (form.details != state.saved.details) {

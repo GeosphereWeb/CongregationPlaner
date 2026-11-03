@@ -126,6 +126,7 @@ class FirestoreUserRepositoryTest {
                     "mobilePhone" to "0170 123",
                     "landlinePhone" to "030 456",
                     "isSpeaker" to true,
+                    "emails" to listOf("max@beispiel.de"),
                     "hasAccount" to false,
                 ),
             ),
@@ -144,6 +145,7 @@ class FirestoreUserRepositoryTest {
                 mobilePhone = "0170 123",
                 landlinePhone = "030 456",
                 isSpeaker = true,
+                emails = listOf("max@beispiel.de"),
             ),
             user.profile,
         )
@@ -213,7 +215,7 @@ class FirestoreUserRepositoryTest {
     }
 
     @Test
-    fun `updateOwnProfile writes only the names and phones`() = withMockedLog {
+    fun `updateOwnProfile writes only the names phones and e-mails`() = withMockedLog {
         val fields = slot<Map<String, Any?>>()
         every { document.update(capture(fields)) } returns successTask<Void?>(null)
         val profile = MemberProfile(
@@ -227,7 +229,13 @@ class FirestoreUserRepositoryTest {
 
         runBlocking { assertEquals(member, repository.updateOwnProfile(congregation, member).getOrThrow()) }
         assertEquals(
-            mapOf("lastName" to "Muster", "firstName" to "Max", "mobilePhone" to "0170", "landlinePhone" to "030 1"),
+            mapOf(
+                "lastName" to "Muster",
+                "firstName" to "Max",
+                "mobilePhone" to "0170",
+                "landlinePhone" to "030 1",
+                "emails" to emptyList<String>(),
+            ),
             fields.captured,
         )
 
@@ -394,6 +402,7 @@ class FirestoreUserRepositoryTest {
         every { this@mockk.get("permissions") } returns permissions
         every { contains("roles") } returns (roles != null)
         every { this@mockk.get("roles") } returns roles
+        every { this@mockk.get("emails") } returns profile["emails"]
         every { getString("email") } returns "user@example.com"
         every { getString("displayName") } returns "User"
         every { getString("role") } returns role
@@ -409,5 +418,6 @@ class FirestoreUserRepositoryTest {
         "mobilePhone" to "",
         "landlinePhone" to "",
         "isSpeaker" to false,
+        "emails" to emptyList<String>(),
     )
 }
