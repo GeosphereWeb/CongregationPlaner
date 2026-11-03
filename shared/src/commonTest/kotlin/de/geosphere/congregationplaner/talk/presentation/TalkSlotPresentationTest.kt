@@ -112,8 +112,7 @@ class TalkSlotPresentationTest {
         assertEquals(
             mapOf(
                 SlotStatus.NOT_PLANNED to 2,
-                SlotStatus.PLANNED to 1,
-                SlotStatus.INFORMED to 1,
+                SlotStatus.PLANNED to 2,
                 SlotStatus.CANCELLED to 1,
             ),
             statusCounts(slots),
@@ -129,14 +128,15 @@ class TalkSlotPresentationTest {
         val all = listOf(open, planned, informed, cancelled)
 
         assertEquals(all, filterSlots(all, emptySet()))
-        assertEquals(listOf(planned), filterSlots(all, setOf(SlotStatus.PLANNED)))
+        // Informierte Termine gehören zum Filter „Geplant“.
+        assertEquals(listOf(planned, informed), filterSlots(all, setOf(SlotStatus.PLANNED)))
         assertEquals(listOf(open, cancelled), filterSlots(all, setOf(SlotStatus.NOT_PLANNED, SlotStatus.CANCELLED)))
     }
 
     @Test
     fun `filter labels follow the planning terms`() {
         assertEquals(
-            listOf("Nicht geplant", "Geplant", "Informiert", "Entfällt"),
+            listOf("Nicht geplant", "Geplant", "Entfällt"),
             FILTER_STATUSES.map(::statusLabel),
         )
     }

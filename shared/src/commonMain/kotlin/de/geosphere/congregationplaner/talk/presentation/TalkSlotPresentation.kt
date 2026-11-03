@@ -19,19 +19,25 @@ enum class SlotStatus {
     INFORMED,
 }
 
-/** Die Stände, nach denen die Liste gezählt und gefiltert wird, in der Reihenfolge der Anzeige. */
-internal val FILTER_STATUSES =
-    listOf(SlotStatus.NOT_PLANNED, SlotStatus.PLANNED, SlotStatus.INFORMED, SlotStatus.CANCELLED)
+/**
+ * Die Stände, nach denen die Liste gezählt und gefiltert wird, in der Reihenfolge der Anzeige. „Informiert“ ist kein
+ * eigener Filter: informierte Termine zählen zu „Geplant“ (siehe [filterStatus]).
+ */
+internal val FILTER_STATUSES = listOf(SlotStatus.NOT_PLANNED, SlotStatus.PLANNED, SlotStatus.CANCELLED)
 
 /** Planungsstand ohne die Marke „Nächster“. */
 internal fun planningStatus(slot: TalkSlot): SlotStatus = slotStatus(slot, nextSlotDate = null)
 
+/** Der Filter, zu dem ein Termin gehört: wie [planningStatus], nur dass „Informiert“ zu „Geplant“ zählt. */
+internal fun filterStatus(slot: TalkSlot): SlotStatus =
+    planningStatus(slot).let { if (it == SlotStatus.INFORMED) SlotStatus.PLANNED else it }
+
 /** Wie viele Termine es je Stand in [FILTER_STATUSES] gibt; Stände ohne Termin fehlen in der Map. */
-internal fun statusCounts(slots: List<TalkSlot>): Map<SlotStatus, Int> = slots.groupingBy(::planningStatus).eachCount()
+internal fun statusCounts(slots: List<TalkSlot>): Map<SlotStatus, Int> = slots.groupingBy(::filterStatus).eachCount()
 
 /** Termine, deren Stand in [filter] ist; ein leerer Filter zeigt alle. Mehrere Stände ergänzen sich. */
 internal fun filterSlots(slots: List<TalkSlot>, filter: Set<SlotStatus>): List<TalkSlot> =
-    if (filter.isEmpty()) slots else slots.filter { planningStatus(it) in filter }
+    if (filter.isEmpty()) slots else slots.filter { filterStatus(it) in filter }
 
 internal fun statusLabel(status: SlotStatus): String = when (status) {
     SlotStatus.NEXT -> "Nächster"
