@@ -142,6 +142,17 @@ class TalkSlotPresentationTest {
     }
 
     @Test
+    fun `the week event name is always visible either as its own line or in the chip`() {
+        val withEvent = slot { it.copy(weekEventId = "besuch", weekEventName = "Dienstwoche") }
+        val cancelled = slot { it.copy(weekEventId = "kongress", weekEventName = "Kongress", talkCancelled = true) }
+
+        assertEquals("Dienstwoche", slotEventLine(withEvent))
+        assertNull(slotEventLine(cancelled))
+        assertEquals("Kongress", slotChip(cancelled, SlotStatus.CANCELLED).text)
+        assertNull(slotEventLine(slot()))
+    }
+
+    @Test
     fun `a cancelled slot shows the week event name`() {
         val s = slot { it.copy(weekEventId = "kongress", weekEventName = "Kongress", talkCancelled = true) }
 
