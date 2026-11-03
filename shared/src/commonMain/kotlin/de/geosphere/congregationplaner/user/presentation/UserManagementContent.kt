@@ -1,22 +1,23 @@
 package de.geosphere.congregationplaner.user.presentation
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -41,9 +42,13 @@ import de.geosphere.congregationplaner.presentation.components.DetailPane
 import de.geosphere.congregationplaner.presentation.components.DetailPlaceholder
 import de.geosphere.congregationplaner.presentation.components.ListPaneHeader
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
+import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.ui.button.SecondaryButton
+import de.geosphere.congregationplaner.ui.button.SpeedDialFab
+import de.geosphere.congregationplaner.ui.button.SpeedDialItem
+import de.geosphere.congregationplaner.ui.nav.NavCardRow
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
@@ -132,31 +137,39 @@ internal fun UserManagementContent(
             modifier = Modifier.weight(1f).fillMaxWidth(),
             listPane = {
                 AnimatedPane {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        state.inviteLink?.let { link -> item { InviteLinkCard(link) } }
-                        item {
-                            OutlinedButton(onClick = actions.onAddMemberWithoutAccount, enabled = !state.isSaving) {
-                                Text("Person ohne Konto hinzufügen")
+                    Box(Modifier.fillMaxSize()) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                            // Platz unter dem letzten Mitglied, damit der FAB es nicht verdeckt.
+                            contentPadding = PaddingValues(bottom = FAB_CLEARANCE),
+                        ) {
+                            state.inviteLink?.let { link -> item { InviteLinkCard(link) } }
+                            if (state.members.isEmpty()) {
+                                item { Text("Noch keine Mitglieder.") }
+                            }
+                            items(state.members, key = { it.uid }) { member ->
+                                NavCardRow(
+                                    title = memberTitle(member, member.uid == state.currentUserId),
+                                    onClick = {
+                                        if (actions.canEditProfile(member) && member.uid !in state.busyMemberIds) {
+                                            actions.onEditProfile(member)
+                                        }
+                                    },
+                                    supportingText = memberSubtitle(member),
+                                    selected = editor?.member?.uid == member.uid,
+                                    badge = memberBadge(member),
+                                )
                             }
                         }
-                        if (state.members.isEmpty()) {
-                            item { Text("Noch keine Mitglieder.") }
-                        }
-                        items(state.members, key = { it.uid }) { member ->
-                            val isBusy = member.uid in state.busyMemberIds
-                            MemberCard(
-                                member = member,
-                                isCurrentUser = member.uid == state.currentUserId,
-                                isBusy = isBusy,
-                                enabled = actions.canEdit(member) && !isBusy,
-                                selected = editor?.member?.uid == member.uid,
-                                canSelect = actions.canEditProfile(member) && !isBusy,
-                                actions = actions,
-                            )
-                        }
+                        SpeedDialFab(
+                            items = listOf(
+                                SpeedDialItem("Person ohne Konto hinzufügen", actions.onAddMemberWithoutAccount),
+                            ),
+                            contentDescription = "Mitglieder hinzufügen",
+                            enabled = !state.isSaving,
+                            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+                        )
                     }
                 }
             },
@@ -168,6 +181,14 @@ internal fun UserManagementContent(
                         backEnabled = !state.isSaving,
                     ) {
                         if (editor != null) {
+                            // Freigabe und Rollen ändern sich sofort; deshalb gilt der aktuelle Stand aus der Liste.
+                            val member = editor.member?.let { selected ->
+                                state.members.firstOrNull { it.uid == selected.uid } ?: selected
+                            }
+                            val isBusy = member?.uid in state.busyMemberIds
+                            if (member != null && member.hasAccount) {
+                                MemberAccessCard(member, isBusy, actions)
+                            }
                             MemberEditor(
                                 editor = editor,
                                 isSaving = state.isSaving,
@@ -176,6 +197,15 @@ internal fun UserManagementContent(
                                 onSave = actions.onSaveProfile,
                                 onCancel = onCancelEditing,
                             )
+                            if (member != null && actions.canEdit(member)) {
+                                SecondaryButton(
+                                    text = "Aus der Versammlung entfernen",
+                                    onClick = { actions.onRemove(member) },
+                                    enabled = !isBusy && !state.isSaving,
+                                    outlined = false,
+                                    contentColor = NightColors.Coral,
+                                )
+                            }
                         } else {
                             DetailPlaceholder("Wähle ein Mitglied zum Bearbeiten aus.")
                         }
@@ -186,18 +216,31 @@ internal fun UserManagementContent(
     }
 }
 
+/** Fläche mit Rand und Radius 8 wie die übrigen Karten; Grundlage für Einladung und Zugang. */
+@Composable
+private fun DesignCard(content: @Composable ColumnScope.() -> Unit) {
+    val shape = RoundedCornerShape(8.dp)
+    Column(
+        modifier = Modifier.fillMaxWidth()
+            .background(NightColors.Surface, shape)
+            .border(1.dp, NightColors.Border, shape)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        content = content,
+    )
+}
+
 @Composable
 private fun InviteLinkCard(link: String) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("Einladungslink", style = MaterialTheme.typography.titleSmall)
-            Text(
-                "Neue Nutzer können diesen Link im Login einfügen, um deine Versammlung auszuwählen.",
-                style = MaterialTheme.typography.bodySmall,
-            )
-            // Der Link selbst bleibt unsichtbar; er wird nur über den Knopf in die Zwischenablage kopiert.
-            CopyLinkButton(link)
-        }
+    DesignCard {
+        Text("Einladungslink", style = MaterialTheme.typography.titleSmall, color = NightColors.OnBackground)
+        Text(
+            "Neue Nutzer können diesen Link im Login einfügen, um deine Versammlung auszuwählen.",
+            style = MaterialTheme.typography.bodySmall,
+            color = NightColors.OnBackgroundMuted,
+        )
+        // Der Link selbst bleibt unsichtbar; er wird nur über den Knopf in die Zwischenablage kopiert.
+        CopyLinkButton(link)
     }
 }
 
@@ -225,82 +268,26 @@ private fun CopyLinkButton(link: String) {
 
 private const val COPIED_FEEDBACK_MILLIS = 2_000L
 
-@Composable
-private fun MemberCard(
-    member: AppUser,
-    isCurrentUser: Boolean,
-    isBusy: Boolean,
-    enabled: Boolean,
-    selected: Boolean,
-    canSelect: Boolean,
-    actions: UserManagementActions,
-) {
-    val isPending = member.hasAccount && !member.approved
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(enabled = canSelect) { actions.onEditProfile(member) },
-        colors = CardDefaults.cardColors(
-            containerColor = when {
-                selected -> MaterialTheme.colorScheme.secondaryContainer
-                isPending -> MaterialTheme.colorScheme.tertiaryContainer
-                else -> MaterialTheme.colorScheme.surface
-            },
-        ),
-    ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        if (isCurrentUser) "${member.label} (du)" else member.label,
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    member.email?.takeIf { it != member.label }?.let {
-                        Text(it, style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-                if (member.hasAccount) {
-                    Text(if (member.approved) "Freigegeben" else "Wartet auf Freigabe")
-                    Switch(
-                        checked = member.approved,
-                        onCheckedChange = { actions.onApprovedChange(member, it) },
-                        enabled = enabled,
-                    )
-                } else {
-                    Text("Ohne Konto", style = MaterialTheme.typography.labelLarge)
-                }
-            }
-            ProfileSummary(member.profile)
-            if (member.hasAccount) {
-                AccessSettings(member, isBusy, actions)
-            }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (enabled) {
-                    TextButton(onClick = { actions.onRemove(member) }) {
-                        Text("Aus der Versammlung entfernen", color = MaterialTheme.colorScheme.error)
-                    }
-                }
-            }
-        }
-    }
-}
+private val FAB_CLEARANCE = 88.dp
 
+/** Freigabe und Rollen im Detail; beides wirkt sofort, ohne „Speichern“. */
 @Composable
-private fun ProfileSummary(profile: MemberProfile) {
-    val details = listOfNotNull(
-        profile.category?.label,
-        "getauft".takeIf { profile.baptized },
-        profile.appointment.takeIf { it != Appointment.NONE }?.label,
-        "Redner".takeIf { profile.isSpeaker },
-    )
-    Text(
-        details.joinToString(" · ").ifEmpty { "Noch keine Angaben" },
-        style = MaterialTheme.typography.bodyMedium,
-    )
-    val phones = listOfNotNull(
-        profile.mobilePhone.takeIf(String::isNotBlank)?.let { "Handy: $it" },
-        profile.landlinePhone.takeIf(String::isNotBlank)?.let { "Festnetz: $it" },
-    )
-    if (phones.isNotEmpty()) {
-        SelectionContainer { Text(phones.joinToString("   "), style = MaterialTheme.typography.bodySmall) }
+private fun MemberAccessCard(member: AppUser, isBusy: Boolean, actions: UserManagementActions) {
+    DesignCard {
+        Text("Zugang", style = MaterialTheme.typography.titleSmall, color = NightColors.OnBackground)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                if (member.approved) "Freigegeben" else "Wartet auf Freigabe",
+                modifier = Modifier.weight(1f),
+                color = NightColors.OnBackgroundBody,
+            )
+            Switch(
+                checked = member.approved,
+                onCheckedChange = { actions.onApprovedChange(member, it) },
+                enabled = actions.canEdit(member) && !isBusy,
+            )
+        }
+        AccessSettings(member, isBusy, actions)
     }
 }
 
