@@ -37,8 +37,10 @@ object NightColors {
     val MintContainer = Color(0xFF12352F)
     val Sky = Color(0xFF86A6F2)
     val SkyContainer = Color(0xFF1B2850)
+    val SkyBorder = Color(0xFF374F99)
     val Coral = Color(0xFFF2786A)
     val CoralContainer = Color(0xFF45201E)
+    val CoralBorder = Color(0xFF793B38)
 
     val OnBackground = Color(0xFFE8ECF5)
     val OnBackgroundBody = Color(0xFFC3CADB)
