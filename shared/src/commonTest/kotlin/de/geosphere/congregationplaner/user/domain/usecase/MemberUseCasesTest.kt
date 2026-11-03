@@ -6,6 +6,7 @@ import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.MemberProfileException
+import de.geosphere.congregationplaner.user.testing.FakeMemberPrivateRepository
 import de.geosphere.congregationplaner.user.testing.FakeUserRepository
 import de.geosphere.congregationplaner.user.testing.testCongregation
 import kotlinx.coroutines.flow.first
@@ -152,19 +153,48 @@ class MemberUseCasesTest {
     }
 
     @Test
-    fun `remove rejects blank ids and delegates otherwise`() = runBlocking {
+    fun `remove rejects blank ids and deletes the private details first`() = runBlocking {
         val repository = FakeUserRepository()
-        val useCase = RemoveMemberUseCase(repository)
+        val privateDetails = FakeMemberPrivateRepository()
+        val useCase = RemoveMemberUseCase(repository, privateDetails)
 
         assertIs<IllegalArgumentException>(useCase(testCongregation, "").exceptionOrNull())
         useCase(testCongregation, "1").getOrThrow()
+        assertEquals(listOf("1"), privateDetails.deletedUids)
         assertEquals(listOf("1"), repository.removedUids)
+    }
+
+    @Test
+    fun `remove keeps the member when the private details cannot be deleted`() = runBlocking {
+        val repository = FakeUserRepository()
+        val privateDetails = FakeMemberPrivateRepository().apply {
+            deleteResult = Result.failure(IllegalStateException("offline"))
+        }
+
+        val result = RemoveMemberUseCase(repository, privateDetails)(testCongregation, "1")
+
+        assertEquals("offline", result.exceptionOrNull()?.message)
+        assertTrue(repository.removedUids.isEmpty())
+    }
+
+    @Test
+    fun `own profile keeps valid phones and rejects invalid ones`() = runBlocking {
+        val repository = FakeUserRepository()
+        val useCase = UpdateOwnProfileUseCase(repository)
+        val member = AppUser(uid = "1", approved = true, congregation = testCongregation)
+
+        val saved = useCase(member, "Muster", "Max", " 0170 123456 ", "+49 (30) 1234-56").getOrThrow()
+        assertEquals("0170 123456", saved.profile.mobilePhone)
+        assertEquals("+49 (30) 1234-56", saved.profile.landlinePhone)
+
+        assertIs<MemberProfileException.InvalidPhone>(useCase(member, "Muster", "Max", "0170-abc").exceptionOrNull())
+        assertEquals(1, repository.updatedOwnProfiles.size)
     }
 
     @Test
     fun `own name needs a congregation and both names within the limit`() = runBlocking {
         val repository = FakeUserRepository()
-        val useCase = UpdateOwnNameUseCase(repository)
+        val useCase = UpdateOwnProfileUseCase(repository)
         val member = AppUser(uid = "1", approved = true, congregation = testCongregation)
 
         assertIs<IllegalStateException>(useCase(member.copy(congregation = null), "Muster", "Max").exceptionOrNull())
@@ -172,7 +202,7 @@ class MemberUseCasesTest {
         assertIs<MemberProfileException.MissingName>(useCase(member, "Muster", "").exceptionOrNull())
         val tooLong = "x".repeat(MemberProfile.MAX_NAME_LENGTH + 1)
         assertIs<MemberProfileException.NameTooLong>(useCase(member, tooLong, "Max").exceptionOrNull())
-        assertTrue(repository.updatedOwnNames.isEmpty())
+        assertTrue(repository.updatedOwnProfiles.isEmpty())
     }
 
     @Test
@@ -181,10 +211,10 @@ class MemberUseCasesTest {
         val profile = MemberProfile(category = MemberCategory.BROTHER, mobilePhone = "0170", isSpeaker = true)
         val member = AppUser(uid = "1", approved = true, congregation = testCongregation, profile = profile)
 
-        val saved = UpdateOwnNameUseCase(repository)(member, " Muster ", " Max ").getOrThrow()
+        val saved = UpdateOwnProfileUseCase(repository)(member, " Muster ", " Max ").getOrThrow()
 
         assertEquals(profile.copy(lastName = "Muster", firstName = "Max"), saved.profile)
-        assertEquals(listOf(saved), repository.updatedOwnNames)
+        assertEquals(listOf(saved), repository.updatedOwnProfiles)
     }
 
     private fun profile(category: MemberCategory, baptized: Boolean = false, elder: Boolean = false) = MemberProfile(

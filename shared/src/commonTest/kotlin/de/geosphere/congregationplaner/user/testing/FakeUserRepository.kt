@@ -28,7 +28,7 @@ internal class FakeUserRepository(user: AppUser? = null, members: List<AppUser> 
     var createResult: Result<Unit> = Result.success(Unit)
     var updateResult: Result<Unit> = Result.success(Unit)
     var updateProfileResult: Result<Unit> = Result.success(Unit)
-    var updateOwnNameResult: Result<Unit> = Result.success(Unit)
+    var updateOwnProfileResult: Result<Unit> = Result.success(Unit)
     var removeResult: Result<Unit> = Result.success(Unit)
 
     var loadCount = 0
@@ -38,7 +38,7 @@ internal class FakeUserRepository(user: AppUser? = null, members: List<AppUser> 
     val createdMembers = mutableListOf<AppUser>()
     val updatedMembers = mutableListOf<AppUser>()
     val updatedProfiles = mutableListOf<AppUser>()
-    val updatedOwnNames = mutableListOf<AppUser>()
+    val updatedOwnProfiles = mutableListOf<AppUser>()
     val removedUids = mutableListOf<String>()
 
     override suspend fun getOrCreateUser(authUser: FirebaseUser, congregation: CongregationRef): Result<AppUser> {
@@ -82,9 +82,9 @@ internal class FakeUserRepository(user: AppUser? = null, members: List<AppUser> 
             member
         }
 
-    override suspend fun updateOwnName(congregation: CongregationRef, member: AppUser): Result<AppUser> =
-        updateOwnNameResult.map {
-            updatedOwnNames += member
+    override suspend fun updateOwnProfile(congregation: CongregationRef, member: AppUser): Result<AppUser> =
+        updateOwnProfileResult.map {
+            updatedOwnProfiles += member
             member
         }
 

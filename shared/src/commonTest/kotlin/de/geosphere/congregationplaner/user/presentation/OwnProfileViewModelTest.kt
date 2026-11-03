@@ -2,7 +2,7 @@ package de.geosphere.congregationplaner.user.presentation
 
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
-import de.geosphere.congregationplaner.user.domain.usecase.UpdateOwnNameUseCase
+import de.geosphere.congregationplaner.user.domain.usecase.UpdateOwnProfileUseCase
 import de.geosphere.congregationplaner.user.testing.FakeUserRepository
 import de.geosphere.congregationplaner.user.testing.testCongregation
 import kotlinx.coroutines.Dispatchers
@@ -35,7 +35,7 @@ class OwnProfileViewModelTest {
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         repository = FakeUserRepository()
-        viewModel = OwnProfileViewModel(UpdateOwnNameUseCase(repository))
+        viewModel = OwnProfileViewModel(UpdateOwnProfileUseCase(repository))
         viewModel.onUserChanged(user)
     }
 
@@ -69,7 +69,7 @@ class OwnProfileViewModelTest {
 
         viewModel.save()
 
-        assertEquals("Maxi", repository.updatedOwnNames.single().profile.firstName)
+        assertEquals("Maxi", repository.updatedOwnProfiles.single().profile.firstName)
         val state = viewModel.uiState.value
         assertFalse(state.isDirty)
         assertFalse(state.isSaving)
@@ -79,7 +79,7 @@ class OwnProfileViewModelTest {
 
     @Test
     fun `a failed save keeps the input and shows the error`() {
-        repository.updateOwnNameResult = Result.failure(IllegalStateException("denied"))
+        repository.updateOwnProfileResult = Result.failure(IllegalStateException("denied"))
         viewModel.onLastNameChange("Neu")
 
         viewModel.save()
@@ -89,7 +89,7 @@ class OwnProfileViewModelTest {
         assertTrue(state.isDirty)
         assertTrue(state.isError)
         assertEquals("denied", state.message)
-        assertTrue(repository.updatedOwnNames.isEmpty())
+        assertTrue(repository.updatedOwnProfiles.isEmpty())
     }
 
     @Test
@@ -118,7 +118,7 @@ class OwnProfileViewModelTest {
     fun `saving without a change does nothing`() {
         viewModel.save()
 
-        assertTrue(repository.updatedOwnNames.isEmpty())
+        assertTrue(repository.updatedOwnProfiles.isEmpty())
         assertNull(viewModel.uiState.value.message)
         assertNotNull(viewModel.uiState.value)
     }

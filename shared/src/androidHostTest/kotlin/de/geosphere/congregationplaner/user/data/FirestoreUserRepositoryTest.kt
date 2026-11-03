@@ -213,18 +213,27 @@ class FirestoreUserRepositoryTest {
     }
 
     @Test
-    fun `updateOwnName writes only the two names`() = withMockedLog {
+    fun `updateOwnProfile writes only the names and phones`() = withMockedLog {
         val fields = slot<Map<String, Any?>>()
         every { document.update(capture(fields)) } returns successTask<Void?>(null)
-        val profile = MemberProfile(lastName = "Muster", firstName = "Max", category = MemberCategory.BROTHER)
+        val profile = MemberProfile(
+            lastName = "Muster",
+            firstName = "Max",
+            category = MemberCategory.BROTHER,
+            mobilePhone = "0170",
+            landlinePhone = "030 1",
+        )
         val member = AppUser(uid = "uid-1", approved = true, profile = profile)
 
-        runBlocking { assertEquals(member, repository.updateOwnName(congregation, member).getOrThrow()) }
-        assertEquals(mapOf("lastName" to "Muster", "firstName" to "Max"), fields.captured)
+        runBlocking { assertEquals(member, repository.updateOwnProfile(congregation, member).getOrThrow()) }
+        assertEquals(
+            mapOf("lastName" to "Muster", "firstName" to "Max", "mobilePhone" to "0170", "landlinePhone" to "030 1"),
+            fields.captured,
+        )
 
         val error = IllegalStateException("denied")
         every { document.update(any<Map<String, Any?>>()) } returns failedTask(error)
-        runBlocking { assertFailure(error, repository.updateOwnName(congregation, member)) }
+        runBlocking { assertFailure(error, repository.updateOwnProfile(congregation, member)) }
     }
 
     @Test

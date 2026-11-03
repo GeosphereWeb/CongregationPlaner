@@ -85,16 +85,18 @@ internal class FirestoreRestUserRepository(
             member
         }
 
-    override suspend fun updateOwnName(congregation: CongregationRef, member: AppUser): Result<AppUser> =
+    override suspend fun updateOwnProfile(congregation: CongregationRef, member: AppUser): Result<AppUser> =
         runCatchingIo {
             client.request(
                 method = "PATCH",
-                url = "${documentUrl(congregation, member.uid)}?${client.updateMask(NAME_FIELD_NAMES)}" +
+                url = "${documentUrl(congregation, member.uid)}?${client.updateMask(OWN_PROFILE_FIELD_NAMES)}" +
                     "&currentDocument.exists=true",
                 body = firestoreFields(
                     JsonObject().apply {
                         add("lastName", firestoreString(member.profile.lastName))
                         add("firstName", firestoreString(member.profile.firstName))
+                        add("mobilePhone", firestoreString(member.profile.mobilePhone))
+                        add("landlinePhone", firestoreString(member.profile.landlinePhone))
                     },
                 ),
             )
@@ -161,7 +163,7 @@ internal class FirestoreRestUserRepository(
 
     private companion object {
         val ACCESS_FIELD_NAMES = listOf("approved", "roles")
-        val NAME_FIELD_NAMES = listOf("lastName", "firstName")
+        val OWN_PROFILE_FIELD_NAMES = listOf("lastName", "firstName", "mobilePhone", "landlinePhone")
         val PROFILE_FIELD_NAMES =
             listOf(
                 "lastName",

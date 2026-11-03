@@ -12,6 +12,7 @@ import de.geosphere.congregationplaner.user.domain.usecase.ObserveMembersUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.RemoveMemberUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.UpdateMemberProfileUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.UpdateMemberUseCase
+import de.geosphere.congregationplaner.user.testing.FakeMemberPrivateRepository
 import de.geosphere.congregationplaner.user.testing.FakeUserRepository
 import de.geosphere.congregationplaner.user.testing.testCongregation
 import kotlinx.coroutines.Dispatchers
@@ -57,7 +58,7 @@ class UserManagementViewModelTest {
         UpdateMemberUseCase(repository),
         CreateMemberWithoutAccountUseCase(repository),
         UpdateMemberProfileUseCase(repository),
-        RemoveMemberUseCase(repository),
+        RemoveMemberUseCase(repository, FakeMemberPrivateRepository()),
         UserPermissionPolicy(),
     )
 

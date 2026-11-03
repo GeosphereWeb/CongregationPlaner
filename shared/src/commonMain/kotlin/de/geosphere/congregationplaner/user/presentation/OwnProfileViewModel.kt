@@ -3,7 +3,7 @@ package de.geosphere.congregationplaner.user.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.geosphere.congregationplaner.user.domain.model.AppUser
-import de.geosphere.congregationplaner.user.domain.usecase.UpdateOwnNameUseCase
+import de.geosphere.congregationplaner.user.domain.usecase.UpdateOwnProfileUseCase
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,7 +24,7 @@ data class OwnProfileUiState(
 }
 
 @Inject
-class OwnProfileViewModel(private val updateOwnName: UpdateOwnNameUseCase) : ViewModel() {
+class OwnProfileViewModel(private val updateOwnProfile: UpdateOwnProfileUseCase) : ViewModel() {
     private var user: AppUser? = null
     private val mutableUiState = MutableStateFlow(OwnProfileUiState())
     val uiState = mutableUiState.asStateFlow()
@@ -52,7 +52,7 @@ class OwnProfileViewModel(private val updateOwnName: UpdateOwnNameUseCase) : Vie
         if (!state.canSave) return
         mutableUiState.update { it.copy(isSaving = true, message = null) }
         viewModelScope.launch {
-            updateOwnName(current, state.lastName, state.firstName).fold(
+            updateOwnProfile(current, state.lastName, state.firstName).fold(
                 onSuccess = { saved ->
                     val names = saved.profile.lastName to saved.profile.firstName
                     mutableUiState.update {
