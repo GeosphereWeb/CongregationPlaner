@@ -46,6 +46,8 @@ data class TalkSlotEditorState(val slot: TalkSlot, val original: TalkSlot? = nul
 data class TalkScheduleUiState(
     val year: Int,
     val slots: List<TalkSlot> = emptyList(),
+    /** Gewählte Stände; leer zeigt das ganze Jahr. Bleibt beim Jahreswechsel erhalten. */
+    val statusFilter: Set<SlotStatus> = emptySet(),
     val weekEvents: List<WeekEvent> = emptyList(),
     val talks: List<Talk> = emptyList(),
     val speakers: List<Speaker> = emptyList(),
@@ -103,6 +105,14 @@ class TalkScheduleViewModel(
         }
         observeReferenceData(user)
         observeSlots()
+    }
+
+    /** Nimmt einen Stand in den Filter auf oder heraus; mehrere Stände ergänzen sich. */
+    fun toggleStatusFilter(status: SlotStatus) {
+        mutableUiState.update { state ->
+            val filter = if (status in state.statusFilter) state.statusFilter - status else state.statusFilter + status
+            state.copy(statusFilter = filter)
+        }
     }
 
     fun changeYear(year: Int) {
