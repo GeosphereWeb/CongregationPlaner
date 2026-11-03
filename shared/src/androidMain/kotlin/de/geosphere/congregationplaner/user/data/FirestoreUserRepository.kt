@@ -17,6 +17,7 @@ import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.repository.AdminContactRepository
+import de.geosphere.congregationplaner.user.domain.repository.MemberPrivateRepository
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -27,6 +28,9 @@ actual fun createUserRepository(): UserRepository = FirestoreUserRepository(Andr
 
 actual fun createAdminContactRepository(): AdminContactRepository =
     FirestoreAdminContactRepository(AndroidFirestoreProvider.firestore)
+
+actual fun createMemberPrivateRepository(): MemberPrivateRepository =
+    FirestoreMemberPrivateRepository(AndroidFirestoreProvider.firestore)
 
 internal class FirestoreUserRepository(private val firestore: FirebaseFirestore) : UserRepository {
     override suspend fun getOrCreateUser(authUser: FirebaseUser, congregation: CongregationRef): Result<AppUser> =
@@ -102,11 +106,18 @@ internal class FirestoreUserRepository(private val firestore: FirebaseFirestore)
             member
         }
 
-    override suspend fun updateOwnName(congregation: CongregationRef, member: AppUser): Result<AppUser> =
+    override suspend fun updateOwnProfile(congregation: CongregationRef, member: AppUser): Result<AppUser> =
         runFirestoreCatching("update own name") {
             firestore.collection(congregation.membersPath)
                 .document(member.uid)
-                .update(mapOf("lastName" to member.profile.lastName, "firstName" to member.profile.firstName))
+                .update(
+                    mapOf(
+                        "lastName" to member.profile.lastName,
+                        "firstName" to member.profile.firstName,
+                        "mobilePhone" to member.profile.mobilePhone,
+                        "landlinePhone" to member.profile.landlinePhone,
+                    ),
+                )
                 .awaitResult()
             member
         }
