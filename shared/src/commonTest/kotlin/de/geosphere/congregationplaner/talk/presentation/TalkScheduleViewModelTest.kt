@@ -228,6 +228,21 @@ class TalkScheduleViewModelTest {
     }
 
     @Test
+    fun `status filter adds and removes statuses and survives a year change`() {
+        viewModel.onCurrentUserChanged(planner)
+
+        viewModel.toggleStatusFilter(SlotStatus.NOT_PLANNED)
+        viewModel.toggleStatusFilter(SlotStatus.INFORMED)
+        assertEquals(setOf(SlotStatus.NOT_PLANNED, SlotStatus.INFORMED), state.statusFilter)
+
+        viewModel.toggleStatusFilter(SlotStatus.NOT_PLANNED)
+        assertEquals(setOf(SlotStatus.INFORMED), state.statusFilter)
+
+        viewModel.changeYear(2027)
+        assertEquals(setOf(SlotStatus.INFORMED), state.statusFilter)
+    }
+
+    @Test
     fun `planner sees the slots of the year and the week events`() {
         viewModel.onCurrentUserChanged(planner)
 
