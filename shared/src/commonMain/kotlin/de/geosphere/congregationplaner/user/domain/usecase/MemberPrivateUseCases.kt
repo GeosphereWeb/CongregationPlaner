@@ -57,8 +57,14 @@ private fun MemberPrivateDetails.cleaned(): MemberPrivateDetails = copy(
     postalCode = postalCode.trim(),
     city = city.trim(),
     emergencyContacts = emergencyContacts
-        .map { EmergencyContact(it.name.trim(), it.relation.trim(), formatPhoneNumber(it.phone)) }
-        .filterNot { it.name.isEmpty() && it.relation.isEmpty() && it.phone.isEmpty() },
+        .map { contact ->
+            EmergencyContact(
+                name = contact.name.trim(),
+                relation = contact.relation.trim(),
+                phones = contact.phones.map(::formatPhoneNumber).filter(String::isNotEmpty),
+            )
+        }
+        .filterNot { it.name.isEmpty() && it.relation.isEmpty() && it.phones.isEmpty() },
 )
 
 private fun MemberPrivateDetails.validationError(): MemberPrivateException? = when {
@@ -66,11 +72,13 @@ private fun MemberPrivateDetails.validationError(): MemberPrivateException? = wh
         postalCode.length > MemberPrivateDetails.MAX_POSTAL_CODE_LENGTH ||
         city.length > MemberPrivateDetails.MAX_CITY_LENGTH -> MemberPrivateException.AddressTooLong()
     emergencyContacts.size > MemberPrivateDetails.MAX_EMERGENCY_CONTACTS -> MemberPrivateException.TooManyContacts()
-    emergencyContacts.any { it.name.isEmpty() || it.phone.isEmpty() } -> MemberPrivateException.IncompleteContact()
+    emergencyContacts.any { it.name.isEmpty() || it.phones.isEmpty() } -> MemberPrivateException.IncompleteContact()
+    emergencyContacts.any { it.phones.size > MemberPrivateDetails.MAX_PHONES_PER_CONTACT } ->
+        MemberPrivateException.TooManyPhones()
     emergencyContacts.any { !it.isValid() } -> MemberPrivateException.InvalidContact()
     else -> null
 }
 
 private fun EmergencyContact.isValid(): Boolean = name.length <= MemberPrivateDetails.MAX_CONTACT_NAME_LENGTH &&
     relation.length <= MemberPrivateDetails.MAX_RELATION_LENGTH &&
-    MemberProfile.isValidPhone(phone)
+    phones.all(MemberProfile::isValidPhone)

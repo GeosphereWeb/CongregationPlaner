@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -34,6 +35,8 @@ import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.EmergencyContact
 import de.geosphere.congregationplaner.user.domain.model.MemberPrivateDetails
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
+import de.geosphere.congregationplaner.user.domain.model.PhoneKind
+import de.geosphere.congregationplaner.user.domain.model.phoneKind
 import dev.zacsweers.metro.createGraph
 
 /**
@@ -172,8 +175,64 @@ private fun EmergencyContactCard(
         ProfileField(contact.relation, "Beziehung (optional)", enabled, MemberPrivateDetails.MAX_RELATION_LENGTH, {
             onChange(contact.copy(relation = it))
         })
-        PhoneField(contact.phone, "Telefon", callIcon, enabled, { onChange(contact.copy(phone = it)) })
+        contact.phones.forEachIndexed { index, phone ->
+            PhoneField(
+                value = phone,
+                label = "Telefon ${index + 1}",
+                icon = phoneKindIcon(phone),
+                enabled = enabled,
+                onValueChange = { value ->
+                    onChange(
+                        contact.copy(
+                            phones = contact.phones.mapIndexed { i, old ->
+                                if (i ==
+                                    index
+                                ) {
+                                    value
+                                } else {
+                                    old
+                                }
+                            },
+                        ),
+                    )
+                },
+                onRemove = if (contact.phones.size > 1) {
+                    { onChange(contact.copy(phones = contact.phones.filterIndexed { i, _ -> i != index })) }
+                } else {
+                    null
+                },
+            )
+        }
+        if (contact.phones.size < MemberPrivateDetails.MAX_PHONES_PER_CONTACT) {
+            SecondaryButton(
+                text = "Telefonnummer hinzufügen",
+                onClick = { onChange(contact.copy(phones = contact.phones + "")) },
+                enabled = enabled,
+                outlined = false,
+            )
+        }
+        // Nur zum Lesen: der Ortsnetzname zur ersten Festnetznummer, nicht gespeichert.
+        OutlinedTextField(
+            value = contact.areaName.orEmpty(),
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Ort (aus der Festnetznummer)") },
+            supportingText = if (contact.areaName == null) {
+                { Text("Erscheint, sobald eine Festnetznummer eingetragen ist.") }
+            } else {
+                null
+            },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
+}
+
+/** Handy-Symbol für Handynummern, Telefonhörer für Festnetz, sonst eine neutrale Wähltastatur. */
+private fun phoneKindIcon(phone: String): ImageVector = when (phoneKind(phone)) {
+    PhoneKind.MOBILE -> smartphoneIcon
+    PhoneKind.LANDLINE -> callIcon
+    PhoneKind.UNKNOWN -> dialpadIcon
 }
 
 /** Telefonfeld mit Symbol vorn; beim Tippen schon so gruppiert, wie es gespeichert wird. */
@@ -184,12 +243,20 @@ private fun PhoneField(
     icon: ImageVector,
     enabled: Boolean,
     onValueChange: (String) -> Unit,
+    onRemove: (() -> Unit)? = null,
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = { onValueChange(it.take(MemberProfile.MAX_PHONE_LENGTH)) },
         label = { Text(label) },
         leadingIcon = { Icon(icon, contentDescription = null, tint = NightColors.OnBackgroundMuted) },
+        trailingIcon = onRemove?.let { remove ->
+            {
+                IconButton(onClick = remove, enabled = enabled) {
+                    Icon(closeIcon, contentDescription = "$label entfernen", tint = NightColors.OnBackgroundMuted)
+                }
+            }
+        },
         singleLine = true,
         enabled = enabled,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
@@ -209,6 +276,22 @@ private val callIcon = vectorIcon(
     "M6.62,10.79c1.44,2.83 3.76,5.14 6.59,6.59l2.2,-2.2c0.27,-0.27 0.67,-0.36 1.02,-0.24 1.12,0.37 2.33,0.57 " +
         "3.57,0.57 0.55,0 1,0.45 1,1V20c0,0.55 -0.45,1 -1,1 -9.39,0 -17,-7.61 -17,-17 0,-0.55 0.45,-1 1,-1h3.5" +
         "c0.55,0 1,0.45 1,1 0,1.25 0.2,2.45 0.57,3.57 0.11,0.35 0.03,0.74 -0.25,1.02l-2.2,2.2z",
+)
+
+// Wähltastatur und Schließen aus den Material Icons (Apache 2.0).
+private val dialpadIcon = vectorIcon(
+    "dialpad",
+    "M12,19c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2zM6,1c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 " +
+        "-0.9,-2 -2,-2zM6,7c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2zM6,13c-1.1,0 -2,0.9 -2,2s0.9,2 " +
+        "2,2 2,-0.9 2,-2 -0.9,-2 -2,-2zM18,5c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM12,13c-1.1,0 " +
+        "-2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2zM18,13c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 " +
+        "-2,-2zM18,7c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2zM12,7c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 " +
+        "2,-0.9 2,-2 -0.9,-2 -2,-2zM12,1c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2z",
+)
+
+private val closeIcon = vectorIcon(
+    "close",
+    "M19,6.41L17.59,5 12,10.59 6.41,5 5,6.41 10.59,12 5,17.59 6.41,19 12,13.41 17.59,19 19,17.59 13.41,12z",
 )
 
 private fun vectorIcon(name: String, path: String): ImageVector = ImageVector.Builder(

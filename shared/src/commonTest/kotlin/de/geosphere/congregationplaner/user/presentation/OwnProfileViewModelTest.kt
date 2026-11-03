@@ -35,7 +35,7 @@ class OwnProfileViewModelTest {
         street = "Hauptstr. 1",
         postalCode = "10115",
         city = "Berlin",
-        emergencyContacts = listOf(EmergencyContact("Anna", "Ehefrau", "0171")),
+        emergencyContacts = listOf(EmergencyContact("Anna", "Ehefrau", listOf("0171"))),
     )
 
     private lateinit var users: FakeUserRepository
@@ -107,8 +107,8 @@ class OwnProfileViewModelTest {
     @Test
     fun `contacts can be added edited and removed up to the limit`() {
         viewModel.addContact()
-        viewModel.onContactChange(1, EmergencyContact("Ben", "", "030 2"))
-        assertEquals(EmergencyContact("Ben", "", "030 2"), state.form.details.emergencyContacts[1])
+        viewModel.onContactChange(1, EmergencyContact("Ben", "", listOf("030 2")))
+        assertEquals(EmergencyContact("Ben", "", listOf("030 2")), state.form.details.emergencyContacts[1])
 
         repeat(5) { viewModel.addContact() }
         assertEquals(MemberPrivateDetails.MAX_EMERGENCY_CONTACTS, state.form.details.emergencyContacts.size)
@@ -133,7 +133,7 @@ class OwnProfileViewModelTest {
     @Test
     fun `an incomplete contact keeps the input and shows the error`() {
         viewModel.addContact()
-        viewModel.onContactChange(1, EmergencyContact(name = "Ben"))
+        viewModel.onContactChange(1, EmergencyContact(name = "Ben", phones = listOf("")))
 
         viewModel.save()
 
