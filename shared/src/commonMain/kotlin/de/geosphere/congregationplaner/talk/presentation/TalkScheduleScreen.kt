@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,6 +17,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +42,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.addPathNodes
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import de.geosphere.congregationplaner.presentation.components.DetailPane
 import de.geosphere.congregationplaner.presentation.components.DetailPlaceholder
 import de.geosphere.congregationplaner.presentation.components.ListPaneHeader
@@ -201,6 +204,7 @@ internal fun TalkScheduleContent(
                                     SectionLabel(
                                         slotMonthLabel(monthSlots.first().date),
                                         Modifier.monthHeader(),
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 13.sp),
                                     )
                                 }
                                 items(monthSlots, key = { it.id }) { slot ->
@@ -287,12 +291,21 @@ private val FAB_CLEARANCE = 88.dp
 @Composable
 private fun StatusFilterRow(slots: List<TalkSlot>, filter: Set<SlotStatus>, onToggle: (SlotStatus) -> Unit) {
     val counts = statusCounts(slots)
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         FILTER_STATUSES.forEach { status ->
+            val selected = status in filter
             FilterChip(
-                selected = status in filter,
+                selected = selected,
                 onClick = { onToggle(status) },
-                label = { Text("${statusLabel(status)} ${counts[status] ?: 0}") },
+                label = { Text("${statusLabel(status)} ${counts[status] ?: 0}", fontSize = 11.sp) },
+                modifier = Modifier.height(28.dp),
+                colors = FilterChipDefaults.filterChipColors(containerColor = NightColors.Surface),
+                border = FilterChipDefaults.filterChipBorder(
+                    enabled = true,
+                    selected = selected,
+                    borderColor = NightColors.Border,
+                    selectedBorderColor = NightColors.Lavender,
+                ),
             )
         }
     }
@@ -364,7 +377,7 @@ private fun SpeedDialAction(text: String, onClick: () -> Unit) {
 /** Datumsblock, Vortrag und Redner mit Herkunft sowie die Statusmarke. */
 @Composable
 private fun SlotSummary(slot: TalkSlot, chip: SlotChip) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         DateBadge(germanWeekdayName(slot.date).take(WEEKDAY_SHORT_LENGTH), slot.date.day.toString())
         Column(Modifier.weight(1f)) {
             Text(slotTitle(slot), style = MaterialTheme.typography.titleMedium, color = NightColors.OnBackground)

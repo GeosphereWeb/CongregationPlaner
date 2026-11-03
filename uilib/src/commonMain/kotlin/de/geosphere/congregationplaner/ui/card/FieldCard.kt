@@ -30,7 +30,7 @@ import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.ui.button.PrimaryButton
 import de.geosphere.congregationplaner.ui.button.SecondaryButton
 
-private val CARD_RADIUS = 14.dp
+private val CARD_RADIUS = 8.dp
 
 /** Gestrichelter Rahmen mit abgerundeten Ecken, z. B. für eine Angabe, die noch fehlt. */
 fun Modifier.dashedBorder(color: Color, cornerRadius: Dp, width: Dp = 1.dp): Modifier = drawBehind {

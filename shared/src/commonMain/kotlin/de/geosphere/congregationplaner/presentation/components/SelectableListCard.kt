@@ -34,14 +34,14 @@ internal fun SelectableListCard(
     canDelete: Boolean,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val shape = RoundedCornerShape(16.dp)
+    val shape = RoundedCornerShape(8.dp)
     Column(
         modifier = Modifier.fillMaxWidth()
             .clip(shape)
             .background(if (selected) NightColors.SurfaceActive else NightColors.Surface)
             .border(1.dp, if (selected) NightColors.Lavender else NightColors.Border, shape)
             .clickable(onClick = onSelect)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .padding(start = 4.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         content()
