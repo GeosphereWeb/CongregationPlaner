@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
@@ -285,8 +286,9 @@ internal fun TalkScheduleContent(
 private val FAB_CLEARANCE = 88.dp
 
 /**
- * Zahl der Termine je Stand im angezeigten Jahr; jeder Stand ist ein Filter. Mehrere lassen sich zugleich wählen,
- * ohne Auswahl zeigt die Liste das ganze Jahr.
+ * Zahl der Termine je Stand im angezeigten Jahr; jeder Stand ist ein Filter. Nicht gewählt sind alle neutral, ein
+ * gewählter zeigt seine Farbe und ein Häkchen. Mehrere lassen sich zugleich wählen; ohne Auswahl zeigt die Liste das
+ * ganze Jahr.
  */
 @Composable
 private fun StatusFilterRow(slots: List<TalkSlot>, filter: Set<SlotStatus>, onToggle: (SlotStatus) -> Unit) {
@@ -294,21 +296,40 @@ private fun StatusFilterRow(slots: List<TalkSlot>, filter: Set<SlotStatus>, onTo
     FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         FILTER_STATUSES.forEach { status ->
             val selected = status in filter
+            val (container, border) = filterChipColors(status)
             FilterChip(
                 selected = selected,
                 onClick = { onToggle(status) },
                 label = { Text("${statusLabel(status)} ${counts[status] ?: 0}", fontSize = 11.sp) },
                 modifier = Modifier.height(28.dp),
-                colors = FilterChipDefaults.filterChipColors(containerColor = NightColors.Surface),
+                leadingIcon = if (selected) {
+                    { Icon(checkIcon, contentDescription = null, modifier = Modifier.size(14.dp)) }
+                } else {
+                    null
+                },
+                colors = FilterChipDefaults.filterChipColors(
+                    containerColor = NightColors.Surface,
+                    labelColor = NightColors.OnBackgroundBody,
+                    selectedContainerColor = container,
+                    selectedLabelColor = NightColors.OnBackgroundBody,
+                    selectedLeadingIconColor = NightColors.OnBackgroundBody,
+                ),
                 border = FilterChipDefaults.filterChipBorder(
                     enabled = true,
                     selected = selected,
                     borderColor = NightColors.Border,
-                    selectedBorderColor = NightColors.Lavender,
+                    selectedBorderColor = border,
                 ),
             )
         }
     }
+}
+
+/** Fläche und Rand eines gewählten Filter-Chips: Koralle für „Nicht geplant“, neutral für „Geplant“, Blau für „Entfällt“. */
+private fun filterChipColors(status: SlotStatus): Pair<Color, Color> = when (status) {
+    SlotStatus.NOT_PLANNED -> NightColors.CoralContainer to NightColors.CoralBorder
+    SlotStatus.CANCELLED -> NightColors.SkyContainer to NightColors.SkyBorder
+    else -> NightColors.Surface to NightColors.Border
 }
 
 /** Volle Breite mit dem Seitenhintergrund, damit der klebende Monatskopf die Termine darunter verdeckt. */
@@ -405,6 +426,18 @@ private val addIcon = ImageVector.Builder(
     viewportHeight = 24f,
 ).addPath(
     pathData = addPathNodes("M19,13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"),
+    fill = SolidColor(Color.Black),
+).build()
+
+// Das Häkchen aus den Material Symbols (Apache 2.0).
+private val checkIcon = ImageVector.Builder(
+    name = "check",
+    defaultWidth = 24.dp,
+    defaultHeight = 24.dp,
+    viewportWidth = 24f,
+    viewportHeight = 24f,
+).addPath(
+    pathData = addPathNodes("M9,16.17L4.83,12l-1.42,1.41L9,19 21,7l-1.41,-1.41z"),
     fill = SolidColor(Color.Black),
 ).build()
 
