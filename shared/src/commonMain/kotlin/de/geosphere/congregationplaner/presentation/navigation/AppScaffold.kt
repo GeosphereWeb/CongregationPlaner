@@ -42,6 +42,7 @@ import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.ui.common.topCutoutInset
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
+import de.geosphere.congregationplaner.user.domain.model.GERMAN_AREA_CODES_STAND
 import de.geosphere.congregationplaner.user.presentation.OwnProfileSection
 
 /**
@@ -148,7 +149,23 @@ private fun SettingsContent(currentUser: AppUser, onSignOut: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             OwnProfileSection(currentUser, Modifier.padding(top = 24.dp).widthIn(max = 480.dp))
+            DataSources(Modifier.padding(top = 32.dp).widthIn(max = 480.dp))
         }
+    }
+}
+
+/** Quellenangaben für eingebundene Daten; die Datenlizenz Deutschland verlangt die Namensnennung. */
+@Composable
+private fun DataSources(modifier: Modifier = Modifier) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text("Datenquellen", style = MaterialTheme.typography.titleSmall)
+        Text(
+            "Vorwahlverzeichnis: Bundesnetzagentur, Stand $GERMAN_AREA_CODES_STAND. " +
+                "Lizenz: Datenlizenz Deutschland – Namensnennung – Version 4.0. " +
+                "Bearbeitet: nur die aktiven Vorwahlen, ohne Ortsnamen.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
