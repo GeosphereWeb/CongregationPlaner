@@ -6,14 +6,39 @@ import de.geosphere.congregationplaner.talk.domain.model.upcomingTalkSlots
 import de.geosphere.congregationplaner.ui.chip.StatusTone
 import kotlinx.datetime.LocalDate
 
-/** Wo ein Termin der Vortragsplanung steht; bestimmt die Marke in der Liste und im Detail. */
-internal enum class SlotStatus {
+/**
+ * Wo ein Termin der Vortragsplanung steht; bestimmt die Marke in der Liste und im Detail. Vortrag und Redner werden
+ * immer zusammen geplant: fehlt eines davon, ist der Termin [NOT_PLANNED]. [INFORMED] heißt, der Redner wurde an den
+ * Termin erinnert (Feld `confirmed`). [NEXT] ist nur eine Marke, kein eigener Planungsstand.
+ */
+enum class SlotStatus {
     NEXT,
     CANCELLED,
-    OPEN,
-    SPEAKER_MISSING,
+    NOT_PLANNED,
     PLANNED,
-    CONFIRMED,
+    INFORMED,
+}
+
+/** Die Stände, nach denen die Liste gezählt und gefiltert wird, in der Reihenfolge der Anzeige. */
+internal val FILTER_STATUSES =
+    listOf(SlotStatus.NOT_PLANNED, SlotStatus.PLANNED, SlotStatus.INFORMED, SlotStatus.CANCELLED)
+
+/** Planungsstand ohne die Marke „Nächster“. */
+internal fun planningStatus(slot: TalkSlot): SlotStatus = slotStatus(slot, nextSlotDate = null)
+
+/** Wie viele Termine es je Stand in [FILTER_STATUSES] gibt; Stände ohne Termin fehlen in der Map. */
+internal fun statusCounts(slots: List<TalkSlot>): Map<SlotStatus, Int> = slots.groupingBy(::planningStatus).eachCount()
+
+/** Termine, deren Stand in [filter] ist; ein leerer Filter zeigt alle. Mehrere Stände ergänzen sich. */
+internal fun filterSlots(slots: List<TalkSlot>, filter: Set<SlotStatus>): List<TalkSlot> =
+    if (filter.isEmpty()) slots else slots.filter { planningStatus(it) in filter }
+
+internal fun statusLabel(status: SlotStatus): String = when (status) {
+    SlotStatus.NEXT -> "Nächster"
+    SlotStatus.CANCELLED -> "Entfällt"
+    SlotStatus.NOT_PLANNED -> "Nicht geplant"
+    SlotStatus.PLANNED -> "Geplant"
+    SlotStatus.INFORMED -> "Informiert"
 }
 
 /** Text und Farbe der Statusmarke eines Termins. */
@@ -30,20 +55,18 @@ internal fun nextSlotDate(slots: List<TalkSlot>, today: LocalDate): LocalDate? =
 internal fun slotStatus(slot: TalkSlot, nextSlotDate: LocalDate?): SlotStatus = when {
     slot.talkCancelled -> SlotStatus.CANCELLED
     slot.date == nextSlotDate -> SlotStatus.NEXT
-    slot.talkNumber == null -> SlotStatus.OPEN
-    slot.speakerMemberId == null && slot.externalSpeakerId == null -> SlotStatus.SPEAKER_MISSING
-    slot.confirmed -> SlotStatus.CONFIRMED
+    slot.talkNumber == null || !slot.hasSpeaker -> SlotStatus.NOT_PLANNED
+    slot.confirmed -> SlotStatus.INFORMED
     else -> SlotStatus.PLANNED
 }
 
 /** Bei einem abgesagten Termin mit Wochenereignis steht dessen Name in der Marke. */
 internal fun slotChip(slot: TalkSlot, status: SlotStatus): SlotChip = when (status) {
-    SlotStatus.NEXT -> SlotChip("Nächster", StatusTone.Gold)
-    SlotStatus.CANCELLED -> SlotChip(slot.weekEventName ?: "Entfällt", StatusTone.Sky)
-    SlotStatus.OPEN -> SlotChip("Offen", StatusTone.Coral)
-    SlotStatus.SPEAKER_MISSING -> SlotChip("Redner fehlt", StatusTone.Coral)
-    SlotStatus.PLANNED -> SlotChip("Geplant", StatusTone.Sky)
-    SlotStatus.CONFIRMED -> SlotChip("Bestätigt", StatusTone.Mint)
+    SlotStatus.NEXT -> SlotChip(statusLabel(status), StatusTone.Gold)
+    SlotStatus.CANCELLED -> SlotChip(slot.weekEventName ?: statusLabel(status), StatusTone.Sky)
+    SlotStatus.NOT_PLANNED -> SlotChip(statusLabel(status), StatusTone.Coral)
+    SlotStatus.PLANNED -> SlotChip(statusLabel(status), StatusTone.Sky)
+    SlotStatus.INFORMED -> SlotChip(statusLabel(status), StatusTone.Mint)
 }
 
 internal fun slotTitle(slot: TalkSlot): String = slot.talkNumber?.let { "Vortrag Nr. $it" } ?: "Noch nicht geplant"

@@ -176,7 +176,7 @@ internal fun TalkSlotEditor(
         )
 
         SwitchRow(
-            label = "Bestätigt",
+            label = "Informiert",
             checked = slot.confirmed,
             enabled = complete && !slot.talkCancelled,
         ) { onChange(slot.copy(confirmed = it)) }
@@ -348,7 +348,7 @@ private fun EditorPreview(slot: TalkSlot, original: TalkSlot?, chip: SlotChip) =
 @Composable
 private fun TalkSlotEditorMissingSpeakerPreview() {
     val slot = TalkSlot(LocalDate(2026, 11, 1), LocalTime(17, 30), talkNumber = 12, talkTitle = "Der Weg zum Glück")
-    EditorPreview(slot, slot, SlotChip("Redner fehlt", StatusTone.Coral))
+    EditorPreview(slot, slot, SlotChip("Nicht geplant", StatusTone.Coral))
 }
 
 @ThemePreviews
@@ -364,5 +364,5 @@ private fun TalkSlotEditorCompletePreview() {
         speakerFirstName = "Max",
         confirmed = true,
     )
-    EditorPreview(slot, slot, SlotChip("Bestätigt", StatusTone.Mint))
+    EditorPreview(slot, slot, SlotChip("Informiert", StatusTone.Mint))
 }

@@ -53,27 +53,23 @@ class TalkSlotPresentationTest {
     }
 
     @Test
-    fun `without a talk the slot is open`() {
-        assertEquals(SlotStatus.OPEN, slotStatus(slot(), nextSlotDate = null))
+    fun `without a talk the slot is not planned`() {
+        assertEquals(SlotStatus.NOT_PLANNED, slotStatus(slot(), nextSlotDate = null))
     }
 
     @Test
-    fun `a speaker without a talk is still open`() {
-        val s = slot { it.copy(speakerMemberId = "m1", speakerLastName = "Muster", speakerFirstName = "Max") }
+    fun `talk and speaker are planned together so one alone is not planned`() {
+        val speakerOnly = slot { it.copy(speakerMemberId = "m1", speakerLastName = "Muster", speakerFirstName = "Max") }
 
-        assertEquals(SlotStatus.OPEN, slotStatus(s, nextSlotDate = null))
+        assertEquals(SlotStatus.NOT_PLANNED, slotStatus(speakerOnly, nextSlotDate = null))
+        assertEquals(SlotStatus.NOT_PLANNED, slotStatus(slot(block = withTalk), nextSlotDate = null))
     }
 
     @Test
-    fun `a talk without a speaker is missing the speaker`() {
-        assertEquals(SlotStatus.SPEAKER_MISSING, slotStatus(slot(block = withTalk), nextSlotDate = null))
-    }
-
-    @Test
-    fun `talk and speaker make the slot planned and confirmed makes it confirmed`() {
+    fun `talk and speaker make the slot planned and a reminded speaker makes it informed`() {
         assertEquals(SlotStatus.PLANNED, slotStatus(slot(block = withMember), nextSlotDate = null))
         assertEquals(
-            SlotStatus.CONFIRMED,
+            SlotStatus.INFORMED,
             slotStatus(slot { withMember(it).copy(confirmed = true) }, nextSlotDate = null),
         )
     }
@@ -98,10 +94,51 @@ class TalkSlotPresentationTest {
 
         assertEquals(SlotChip("Nächster", StatusTone.Gold), slotChip(s, SlotStatus.NEXT))
         assertEquals(SlotChip("Entfällt", StatusTone.Sky), slotChip(s, SlotStatus.CANCELLED))
-        assertEquals(SlotChip("Offen", StatusTone.Coral), slotChip(s, SlotStatus.OPEN))
-        assertEquals(SlotChip("Redner fehlt", StatusTone.Coral), slotChip(s, SlotStatus.SPEAKER_MISSING))
+        assertEquals(SlotChip("Nicht geplant", StatusTone.Coral), slotChip(s, SlotStatus.NOT_PLANNED))
         assertEquals(SlotChip("Geplant", StatusTone.Sky), slotChip(s, SlotStatus.PLANNED))
-        assertEquals(SlotChip("Bestätigt", StatusTone.Mint), slotChip(s, SlotStatus.CONFIRMED))
+        assertEquals(SlotChip("Informiert", StatusTone.Mint), slotChip(s, SlotStatus.INFORMED))
+    }
+
+    @Test
+    fun `counts ignore the next marker and cover every planning status`() {
+        val slots = listOf(
+            slot(today),
+            slot(today.plusDays(7), block = withMember),
+            slot(today.plusDays(14)) { withMember(it).copy(confirmed = true) },
+            slot(today.plusDays(21)) { it.copy(talkCancelled = true) },
+            slot(today.plusDays(28)),
+        )
+
+        assertEquals(
+            mapOf(
+                SlotStatus.NOT_PLANNED to 2,
+                SlotStatus.PLANNED to 1,
+                SlotStatus.INFORMED to 1,
+                SlotStatus.CANCELLED to 1,
+            ),
+            statusCounts(slots),
+        )
+    }
+
+    @Test
+    fun `an empty filter shows all slots and several statuses add up`() {
+        val open = slot(today)
+        val planned = slot(today.plusDays(7), block = withMember)
+        val informed = slot(today.plusDays(14)) { withMember(it).copy(confirmed = true) }
+        val cancelled = slot(today.plusDays(21)) { it.copy(talkCancelled = true) }
+        val all = listOf(open, planned, informed, cancelled)
+
+        assertEquals(all, filterSlots(all, emptySet()))
+        assertEquals(listOf(planned), filterSlots(all, setOf(SlotStatus.PLANNED)))
+        assertEquals(listOf(open, cancelled), filterSlots(all, setOf(SlotStatus.NOT_PLANNED, SlotStatus.CANCELLED)))
+    }
+
+    @Test
+    fun `filter labels follow the planning terms`() {
+        assertEquals(
+            listOf("Nicht geplant", "Geplant", "Informiert", "Entfällt"),
+            FILTER_STATUSES.map(::statusLabel),
+        )
     }
 
     @Test
