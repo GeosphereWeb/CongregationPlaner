@@ -55,6 +55,7 @@ import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.ui.card.DateBadge
 import de.geosphere.congregationplaner.ui.chip.StatusChip
+import de.geosphere.congregationplaner.ui.chip.StatusTone
 import de.geosphere.congregationplaner.ui.nav.SectionLabel
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
@@ -372,6 +373,9 @@ private fun SlotSummary(slot: TalkSlot, chip: SlotChip) {
                 style = MaterialTheme.typography.bodySmall,
                 color = NightColors.OnBackgroundMuted,
             )
+            slotEventLine(slot)?.let { event ->
+                Text(event, style = MaterialTheme.typography.bodySmall, color = StatusTone.Sky.content)
+            }
         }
         StatusChip(chip.text, chip.tone)
     }
