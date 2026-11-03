@@ -16,10 +16,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -32,12 +30,10 @@ import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -57,6 +53,8 @@ import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
+import de.geosphere.congregationplaner.ui.button.SpeedDialFab
+import de.geosphere.congregationplaner.ui.button.SpeedDialItem
 import de.geosphere.congregationplaner.ui.card.DateBadge
 import de.geosphere.congregationplaner.ui.chip.StatusChip
 import de.geosphere.congregationplaner.ui.chip.StatusTone
@@ -221,11 +219,13 @@ internal fun TalkScheduleContent(
                                 }
                             }
                         }
-                        CreateSlotsFab(
-                            year = state.year,
+                        SpeedDialFab(
+                            items = listOf(
+                                SpeedDialItem("Alle Termine ${state.year} anlegen", actions.onAskCreateYear),
+                                SpeedDialItem("Termin anlegen", actions.onNewSlot),
+                            ),
+                            contentDescription = "Termine anlegen",
                             enabled = !state.isSaving,
-                            onNewSlot = actions.onNewSlot,
-                            onCreateYear = actions.onAskCreateYear,
                             modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
                         )
                     }
@@ -337,64 +337,6 @@ private fun filterChipColors(status: SlotStatus): Pair<Color, Color> = when (sta
 private fun Modifier.monthHeader(): Modifier =
     fillMaxWidth().background(MaterialTheme.colorScheme.background).padding(vertical = 8.dp)
 
-/**
- * FAB der Liste: öffnet darüber zwei beschriftete Knöpfe „Termin anlegen“ und „Alle Termine <Jahr> anlegen“
- * (Speed Dial). Das „+“ dreht sich dabei zum „×“; ein zweiter Tipp schließt wieder.
- */
-@Composable
-private fun CreateSlotsFab(
-    year: Int,
-    enabled: Boolean,
-    onNewSlot: () -> Unit,
-    onCreateYear: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val open = expanded && enabled
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.End,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        if (open) {
-            SpeedDialAction("Alle Termine $year anlegen") {
-                expanded = false
-                onCreateYear()
-            }
-            SpeedDialAction("Termin anlegen") {
-                expanded = false
-                onNewSlot()
-            }
-        }
-        // Helles Lavendel statt des dunklen primaryContainer, damit der FAB vom Hintergrund absticht.
-        FloatingActionButton(
-            onClick = { if (enabled) expanded = !expanded },
-            containerColor = NightColors.Lavender,
-            contentColor = NightColors.HeaderTop,
-        ) {
-            Icon(
-                addIcon,
-                contentDescription = if (open) "Schließen" else "Termine anlegen",
-                modifier = Modifier.rotate(if (open) FAB_OPEN_ROTATION else 0f),
-            )
-        }
-    }
-}
-
-private const val FAB_OPEN_ROTATION = 45f
-
-/** Beschrifteter Knopf über dem FAB, im kräftigen Lila der übrigen Knöpfe. */
-@Composable
-private fun SpeedDialAction(text: String, onClick: () -> Unit) {
-    ExtendedFloatingActionButton(
-        onClick = onClick,
-        containerColor = NightColors.Primary,
-        contentColor = NightColors.OnBackground,
-        icon = { Icon(addIcon, contentDescription = null) },
-        text = { Text(text) },
-    )
-}
-
 /** Datumsblock, Vortrag und Redner mit Herkunft sowie die Statusmarke. */
 @Composable
 private fun SlotSummary(slot: TalkSlot, chip: SlotChip) {
@@ -416,18 +358,6 @@ private fun SlotSummary(slot: TalkSlot, chip: SlotChip) {
 }
 
 private const val WEEKDAY_SHORT_LENGTH = 2
-
-// Das Plus aus den Material Symbols (Apache 2.0).
-private val addIcon = ImageVector.Builder(
-    name = "add",
-    defaultWidth = 24.dp,
-    defaultHeight = 24.dp,
-    viewportWidth = 24f,
-    viewportHeight = 24f,
-).addPath(
-    pathData = addPathNodes("M19,13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"),
-    fill = SolidColor(Color.Black),
-).build()
 
 // Das Häkchen aus den Material Symbols (Apache 2.0).
 private val checkIcon = ImageVector.Builder(
