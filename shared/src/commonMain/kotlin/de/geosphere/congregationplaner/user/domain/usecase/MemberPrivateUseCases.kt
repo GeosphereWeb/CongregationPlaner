@@ -5,6 +5,7 @@ import de.geosphere.congregationplaner.user.domain.model.EmergencyContact
 import de.geosphere.congregationplaner.user.domain.model.MemberPrivateDetails
 import de.geosphere.congregationplaner.user.domain.model.MemberPrivateException
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
+import de.geosphere.congregationplaner.user.domain.model.formatPhoneNumber
 import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
 import de.geosphere.congregationplaner.user.domain.repository.MemberPrivateRepository
 import dev.zacsweers.metro.Inject
@@ -56,7 +57,7 @@ private fun MemberPrivateDetails.cleaned(): MemberPrivateDetails = copy(
     postalCode = postalCode.trim(),
     city = city.trim(),
     emergencyContacts = emergencyContacts
-        .map { EmergencyContact(it.name.trim(), it.relation.trim(), it.phone.trim()) }
+        .map { EmergencyContact(it.name.trim(), it.relation.trim(), formatPhoneNumber(it.phone)) }
         .filterNot { it.name.isEmpty() && it.relation.isEmpty() && it.phone.isEmpty() },
 )
 
