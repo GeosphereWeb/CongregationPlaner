@@ -34,7 +34,7 @@ class PhoneVisualTransformationTest {
 
         assertEquals("0201 123456", result.text.text)
         assertEquals(7, result.offsetMapping.originalToTransformed(7))
-        assertEquals("0201123456", phoneDisplay("0201123456"))
+        assertEquals("08001234567", phoneDisplay("08001234567"))
         assertEquals(" 0170", phoneDisplay(" 0170"))
     }
 }

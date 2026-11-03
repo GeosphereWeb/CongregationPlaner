@@ -2,6 +2,7 @@ package de.geosphere.congregationplaner.user.domain.model
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class PhoneNumberFormatTest {
     @Test
@@ -12,27 +13,37 @@ class PhoneNumberFormatTest {
     }
 
     @Test
-    fun `the big cities are split after the three digit area code`() {
+    fun `landline numbers are split after the area code of any length`() {
         assertEquals("030 123456", formatPhoneNumber("030123456"))
-        assertEquals("089 1234567", formatPhoneNumber("0891234567"))
+        assertEquals("0201 123456", formatPhoneNumber("0201123456"))
+        assertEquals("0331 234567", formatPhoneNumber("0331234567"))
+        assertEquals("03381 12345", formatPhoneNumber("0338112345"))
+        assertEquals("039999 1234", formatPhoneNumber("0399991234"))
+    }
+
+    @Test
+    fun `the longest matching area code wins`() {
+        assertEquals("02129 12345", formatPhoneNumber("0212912345"))
+        assertEquals("0212 123456", formatPhoneNumber("0212123456"))
     }
 
     @Test
     fun `international numbers with plus 49 keep the country code`() {
         assertEquals("+49 170 1234567", formatPhoneNumber("+491701234567"))
         assertEquals("+49 30 123456", formatPhoneNumber("+4930123456"))
+        assertEquals("+49 201 123456", formatPhoneNumber("+49201123456"))
     }
 
     @Test
-    fun `numbers without a safely known prefix stay as typed`() {
-        assertEquals("0201123456", formatPhoneNumber("0201123456"))
+    fun `numbers without a known prefix stay as typed`() {
+        assertEquals("08001234567", formatPhoneNumber("08001234567"))
         assertEquals("+431234567", formatPhoneNumber("+431234567"))
         assertEquals("1234567", formatPhoneNumber("1234567"))
     }
 
     @Test
     fun `separators set by the user are kept`() {
-        assertEquals("0201 123456", formatPhoneNumber("0201 123456"))
+        assertEquals("0201 12 34 56", formatPhoneNumber("0201 12 34 56"))
         assertEquals("0170/1234567", formatPhoneNumber("0170/1234567"))
     }
 
@@ -40,7 +51,15 @@ class PhoneNumberFormatTest {
     fun `short or empty input and too long results stay unchanged`() {
         assertEquals("", formatPhoneNumber(""))
         assertEquals("0170", formatPhoneNumber("0170"))
+        assertEquals("030", formatPhoneNumber("030"))
         val maxLength = "0170" + "1".repeat(MemberProfile.MAX_PHONE_LENGTH - 4)
         assertEquals(maxLength, formatPhoneNumber(maxLength))
+    }
+
+    @Test
+    fun `the area code list holds all active codes of the federal network agency`() {
+        assertEquals(5200, GERMAN_AREA_CODES.size)
+        assertTrue(listOf("30", "201", "212", "2129", "331", "3381", "39999").all { it in GERMAN_AREA_CODES })
+        assertTrue("33052" !in GERMAN_AREA_CODES, "inaktive Kennzahl Leegebruch darf nicht enthalten sein")
     }
 }
