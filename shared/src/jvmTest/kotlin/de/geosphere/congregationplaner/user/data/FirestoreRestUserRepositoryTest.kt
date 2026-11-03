@@ -307,27 +307,29 @@ class FirestoreRestUserRepositoryTest {
     }
 
     @Test
-    fun `updateOwnName patches only the two names of an existing member`() = runWithServer({
+    fun `updateOwnProfile patches only the names and phones of an existing member`() = runWithServer({
         FakeResponse(200, "{}")
     }) { server, repository ->
         val member = AppUser(
             uid = "uid-1",
             approved = true,
-            profile = MemberProfile(lastName = "Muster", firstName = "Max", mobilePhone = "0170"),
+            profile = MemberProfile(lastName = "Muster", firstName = "Max", mobilePhone = "0170", isSpeaker = true),
         )
 
-        assertEquals(member, repository.updateOwnName(congregation, member).getOrThrow())
+        assertEquals(member, repository.updateOwnProfile(congregation, member).getOrThrow())
 
         val request = server.requests.single()
         assertEquals("PATCH", request.method)
         assertEquals("$membersPath/uid-1", request.path)
         assertEquals(
-            "updateMask.fieldPaths=lastName&updateMask.fieldPaths=firstName&currentDocument.exists=true",
+            listOf("lastName", "firstName", "mobilePhone", "landlinePhone")
+                .joinToString("&") { "updateMask.fieldPaths=$it" } + "&currentDocument.exists=true",
             request.query,
         )
         assertTrue(request.body.contains(""""lastName":{"stringValue":"Muster"}"""))
         assertTrue(request.body.contains(""""firstName":{"stringValue":"Max"}"""))
-        assertFalse(request.body.contains("mobilePhone"))
+        assertTrue(request.body.contains(""""mobilePhone":{"stringValue":"0170"}"""))
+        assertFalse(request.body.contains("isSpeaker"))
     }
 
     @Test

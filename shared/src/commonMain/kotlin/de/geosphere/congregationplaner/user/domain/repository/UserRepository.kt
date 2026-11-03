@@ -32,10 +32,10 @@ interface UserRepository {
     suspend fun updateMemberProfile(congregation: CongregationRef, member: AppUser): Result<AppUser>
 
     /**
-     * Speichert nur Nachnamen und Vornamen von [member] ([AppUser.profile]); das darf jedes Mitglied im eigenen
-     * Dokument. Alle anderen Felder bleiben unverändert.
+     * Speichert nur Nachnamen, Vornamen, Handy und Festnetz von [member] ([AppUser.profile]); das darf jedes Mitglied
+     * im eigenen Dokument. Alle anderen Felder bleiben unverändert.
      */
-    suspend fun updateOwnName(congregation: CongregationRef, member: AppUser): Result<AppUser>
+    suspend fun updateOwnProfile(congregation: CongregationRef, member: AppUser): Result<AppUser>
 
     suspend fun removeMember(congregation: CongregationRef, uid: String): Result<Unit>
 }

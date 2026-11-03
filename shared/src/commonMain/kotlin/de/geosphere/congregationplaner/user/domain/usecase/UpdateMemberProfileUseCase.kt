@@ -6,6 +6,7 @@ import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.MemberProfileException
+import de.geosphere.congregationplaner.user.domain.model.formatPhoneNumber
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
 import dev.zacsweers.metro.Inject
 
@@ -26,8 +27,8 @@ internal fun MemberProfile.validated(requireName: Boolean): Result<MemberProfile
     val trimmed = copy(
         lastName = lastName.trim(),
         firstName = firstName.trim(),
-        mobilePhone = mobilePhone.trim(),
-        landlinePhone = landlinePhone.trim(),
+        mobilePhone = formatPhoneNumber(mobilePhone),
+        landlinePhone = formatPhoneNumber(landlinePhone),
     )
     val error = when {
         requireName && (trimmed.lastName.isEmpty() || trimmed.firstName.isEmpty()) ->
