@@ -18,6 +18,7 @@ data class MemberProfile(
     val mobilePhone: String = "",
     val landlinePhone: String = "",
     val isSpeaker: Boolean = false,
+    val emails: List<String> = emptyList(),
 ) {
     val fullName: String get() = listOf(firstName, lastName).filter(String::isNotBlank).joinToString(" ")
 
@@ -38,11 +39,18 @@ data class MemberProfile(
     companion object {
         const val MAX_NAME_LENGTH = 100
         const val MAX_PHONE_LENGTH = 30
+        const val MAX_EMAILS = 3
+        const val MAX_EMAIL_LENGTH = 254
 
         /** Ziffern, Leerzeichen und die üblichen Trennzeichen; entspricht der Prüfung in den Security Rules. */
         private val PHONE_PATTERN = Regex("^[0-9+ ()/-]*$")
 
         fun isValidPhone(phone: String): Boolean = phone.length <= MAX_PHONE_LENGTH && PHONE_PATTERN.matches(phone)
+
+        /** Grobe Prüfung wie in den Security Rules: etwas@etwas.etwas, ohne Leerzeichen. */
+        private val EMAIL_PATTERN = Regex("^[^@ ]+@[^@ ]+[.][^@ ]+$")
+
+        fun isValidEmail(email: String): Boolean = email.length <= MAX_EMAIL_LENGTH && EMAIL_PATTERN.matches(email)
     }
 }
 
@@ -91,6 +99,11 @@ sealed class MemberProfileException(message: String) : Exception(message) {
             "Telefonnummern dürfen nur Ziffern, Leerzeichen und + ( ) / - enthalten " +
                 "(max. ${MemberProfile.MAX_PHONE_LENGTH} Zeichen).",
         )
+
+    class InvalidEmail : MemberProfileException("Bitte gib gültige E-Mail-Adressen ein (z. B. name@beispiel.de).")
+
+    class TooManyEmails :
+        MemberProfileException("Es sind höchstens ${MemberProfile.MAX_EMAILS} zusätzliche E-Mail-Adressen möglich.")
 
     class AccessWithoutAccount :
         MemberProfileException(

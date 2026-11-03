@@ -178,6 +178,25 @@ class MemberUseCasesTest {
     }
 
     @Test
+    fun `own profile keeps up to three e-mails and drops empty ones`() = runBlocking {
+        val repository = FakeUserRepository()
+        val useCase = UpdateOwnProfileUseCase(repository)
+        val member = AppUser(uid = "1", approved = true, congregation = testCongregation)
+
+        val saved = useCase(member, "Muster", "Max", emails = listOf(" max@beispiel.de ", "", "m.m@firma.org"))
+            .getOrThrow()
+        assertEquals(listOf("max@beispiel.de", "m.m@firma.org"), saved.profile.emails)
+
+        assertIs<MemberProfileException.InvalidEmail>(
+            useCase(member, "Muster", "Max", emails = listOf("keine-adresse")).exceptionOrNull(),
+        )
+        assertIs<MemberProfileException.TooManyEmails>(
+            useCase(member, "Muster", "Max", emails = listOf("a@b.de", "c@d.de", "e@f.de", "g@h.de")).exceptionOrNull(),
+        )
+        assertEquals(1, repository.updatedOwnProfiles.size)
+    }
+
+    @Test
     fun `own profile keeps valid phones and rejects invalid ones`() = runBlocking {
         val repository = FakeUserRepository()
         val useCase = UpdateOwnProfileUseCase(repository)

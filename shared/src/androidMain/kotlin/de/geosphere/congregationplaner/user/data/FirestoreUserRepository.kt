@@ -116,6 +116,7 @@ internal class FirestoreUserRepository(private val firestore: FirebaseFirestore)
                         "firstName" to member.profile.firstName,
                         "mobilePhone" to member.profile.mobilePhone,
                         "landlinePhone" to member.profile.landlinePhone,
+                        "emails" to member.profile.emails,
                     ),
                 )
                 .awaitResult()
@@ -145,6 +146,7 @@ private fun toDomain(document: DocumentSnapshot, congregation: CongregationRef):
         mobilePhone = document.getString("mobilePhone").orEmpty(),
         landlinePhone = document.getString("landlinePhone").orEmpty(),
         isSpeaker = document.getBoolean("isSpeaker") ?: false,
+        emails = document.stringList("emails").orEmpty().filterNotNull(),
     ),
 )
 
@@ -170,4 +172,5 @@ private fun MemberProfile.toFirestoreFields(): Map<String, Any?> = mapOf(
     "mobilePhone" to mobilePhone,
     "landlinePhone" to landlinePhone,
     "isSpeaker" to isSpeaker,
+    "emails" to emails,
 )
