@@ -1,8 +1,13 @@
 package de.geosphere.congregationplaner.user.presentation
 
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.EmergencyContact
+import de.geosphere.congregationplaner.user.domain.model.MemberPrivateDetails
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
-import de.geosphere.congregationplaner.user.domain.usecase.UpdateOwnNameUseCase
+import de.geosphere.congregationplaner.user.domain.usecase.ObserveOwnPrivateDetailsUseCase
+import de.geosphere.congregationplaner.user.domain.usecase.SaveOwnPrivateDetailsUseCase
+import de.geosphere.congregationplaner.user.domain.usecase.UpdateOwnProfileUseCase
+import de.geosphere.congregationplaner.user.testing.FakeMemberPrivateRepository
 import de.geosphere.congregationplaner.user.testing.FakeUserRepository
 import de.geosphere.congregationplaner.user.testing.testCongregation
 import kotlinx.coroutines.Dispatchers
@@ -15,7 +20,6 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -25,17 +29,31 @@ class OwnProfileViewModelTest {
         uid = "u1",
         approved = true,
         congregation = testCongregation,
-        profile = MemberProfile(lastName = "Muster", firstName = "Max"),
+        profile = MemberProfile(lastName = "Muster", firstName = "Max", mobilePhone = "0170"),
+    )
+    private val stored = MemberPrivateDetails(
+        street = "Hauptstr. 1",
+        postalCode = "10115",
+        city = "Berlin",
+        emergencyContacts = listOf(EmergencyContact("Anna", "Ehefrau", "0171")),
     )
 
-    private lateinit var repository: FakeUserRepository
+    private lateinit var users: FakeUserRepository
+    private lateinit var privateDetails: FakeMemberPrivateRepository
     private lateinit var viewModel: OwnProfileViewModel
+
+    private val state get() = viewModel.uiState.value
 
     @BeforeTest
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
-        repository = FakeUserRepository()
-        viewModel = OwnProfileViewModel(UpdateOwnNameUseCase(repository))
+        users = FakeUserRepository()
+        privateDetails = FakeMemberPrivateRepository(mapOf("u1" to stored))
+        viewModel = OwnProfileViewModel(
+            UpdateOwnProfileUseCase(users),
+            ObserveOwnPrivateDetailsUseCase(privateDetails),
+            SaveOwnPrivateDetailsUseCase(privateDetails),
+        )
         viewModel.onUserChanged(user)
     }
 
@@ -45,81 +63,116 @@ class OwnProfileViewModelTest {
     }
 
     @Test
-    fun `the form starts with the saved names and nothing to save`() {
-        val state = viewModel.uiState.value
-
-        assertEquals("Muster", state.lastName)
-        assertEquals("Max", state.firstName)
+    fun `the form starts with the saved profile and private details and nothing to save`() {
+        assertEquals("Muster", state.form.lastName)
+        assertEquals("0170", state.form.mobilePhone)
+        assertEquals(stored, state.form.details)
+        assertTrue(state.detailsLoaded)
         assertFalse(state.isDirty)
         assertFalse(state.canSave)
     }
 
     @Test
     fun `an edit can be saved only while both names are filled`() {
-        viewModel.onFirstNameChange("Maxi")
-        assertTrue(viewModel.uiState.value.canSave)
+        viewModel.onLandlinePhoneChange("030 1")
+        assertTrue(state.canSave)
 
         viewModel.onFirstNameChange(" ")
-        assertFalse(viewModel.uiState.value.canSave)
+        assertFalse(state.canSave)
     }
 
     @Test
-    fun `saving writes the names and marks them as saved`() {
-        viewModel.onFirstNameChange("Maxi")
+    fun `changing only the phone writes the member document and leaves the private details alone`() {
+        viewModel.onMobilePhoneChange("0172")
 
         viewModel.save()
 
-        assertEquals("Maxi", repository.updatedOwnNames.single().profile.firstName)
-        val state = viewModel.uiState.value
+        assertEquals("0172", users.updatedOwnProfiles.single().profile.mobilePhone)
+        assertTrue(privateDetails.savedUids.isEmpty())
         assertFalse(state.isDirty)
-        assertFalse(state.isSaving)
-        assertFalse(state.isError)
         assertEquals("Gespeichert.", state.message)
     }
 
     @Test
-    fun `a failed save keeps the input and shows the error`() {
-        repository.updateOwnNameResult = Result.failure(IllegalStateException("denied"))
-        viewModel.onLastNameChange("Neu")
+    fun `changing only the address writes the private details`() {
+        viewModel.onCityChange("Potsdam")
 
         viewModel.save()
 
-        val state = viewModel.uiState.value
-        assertEquals("Neu", state.lastName)
-        assertTrue(state.isDirty)
-        assertTrue(state.isError)
-        assertEquals("denied", state.message)
-        assertTrue(repository.updatedOwnNames.isEmpty())
-    }
-
-    @Test
-    fun `a new stored state does not overwrite unsaved input`() {
-        viewModel.onFirstNameChange("Maxi")
-
-        viewModel.onUserChanged(user.copy(profile = MemberProfile(lastName = "Neu", firstName = "Max")))
-
-        val state = viewModel.uiState.value
-        assertEquals("Maxi", state.firstName)
-        assertEquals("Muster", state.lastName)
-        assertEquals("Neu" to "Max", state.saved)
-    }
-
-    @Test
-    fun `a new stored state replaces the form while nothing was edited`() {
-        viewModel.onUserChanged(user.copy(profile = MemberProfile(lastName = "Neu", firstName = "Anna")))
-
-        val state = viewModel.uiState.value
-        assertEquals("Neu", state.lastName)
-        assertEquals("Anna", state.firstName)
+        assertTrue(users.updatedOwnProfiles.isEmpty())
+        assertEquals("Potsdam", privateDetails.details.value["u1"]?.city)
         assertFalse(state.isDirty)
+    }
+
+    @Test
+    fun `contacts can be added edited and removed up to the limit`() {
+        viewModel.addContact()
+        viewModel.onContactChange(1, EmergencyContact("Ben", "", "030 2"))
+        assertEquals(EmergencyContact("Ben", "", "030 2"), state.form.details.emergencyContacts[1])
+
+        repeat(5) { viewModel.addContact() }
+        assertEquals(MemberPrivateDetails.MAX_EMERGENCY_CONTACTS, state.form.details.emergencyContacts.size)
+        assertFalse(state.canAddContact)
+
+        viewModel.removeContact(0)
+        assertEquals("Ben", state.form.details.emergencyContacts.first().name)
+    }
+
+    @Test
+    fun `empty new contacts are dropped when saving`() {
+        viewModel.addContact()
+        viewModel.onStreetChange("Nebenstr. 2")
+
+        viewModel.save()
+
+        assertEquals(stored.emergencyContacts, privateDetails.details.value["u1"]?.emergencyContacts)
+        assertEquals(stored.emergencyContacts, state.form.details.emergencyContacts)
+        assertFalse(state.isDirty)
+    }
+
+    @Test
+    fun `an incomplete contact keeps the input and shows the error`() {
+        viewModel.addContact()
+        viewModel.onContactChange(1, EmergencyContact(name = "Ben"))
+
+        viewModel.save()
+
+        assertTrue(state.isError)
+        assertTrue(state.isDirty)
+        assertTrue(privateDetails.savedUids.isEmpty())
+    }
+
+    @Test
+    fun `a failed private save keeps the saved member document`() {
+        privateDetails.saveResult = Result.failure(IllegalStateException("denied"))
+        viewModel.onMobilePhoneChange("0172")
+        viewModel.onCityChange("Potsdam")
+
+        viewModel.save()
+
+        assertEquals("denied", state.message)
+        assertEquals("0172", state.saved.mobilePhone)
+        assertEquals("Berlin", state.saved.details.city)
+        assertTrue(state.isDirty)
+    }
+
+    @Test
+    fun `new stored details do not overwrite unsaved input`() {
+        viewModel.onCityChange("Potsdam")
+
+        privateDetails.details.value = mapOf("u1" to stored.copy(street = "Neu 1"))
+
+        assertEquals("Potsdam", state.form.details.city)
+        assertEquals("Hauptstr. 1", state.form.details.street)
+        assertEquals("Neu 1", state.saved.details.street)
     }
 
     @Test
     fun `saving without a change does nothing`() {
         viewModel.save()
 
-        assertTrue(repository.updatedOwnNames.isEmpty())
-        assertNull(viewModel.uiState.value.message)
-        assertNotNull(viewModel.uiState.value)
+        assertTrue(users.updatedOwnProfiles.isEmpty())
+        assertTrue(privateDetails.savedUids.isEmpty())
+        assertNull(state.message)
     }
 }

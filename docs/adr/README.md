@@ -71,3 +71,4 @@ Numbers are sequential and permanent. Never reuse or renumber an existing ADR, e
 - [ADR-0012: Eine Liste gleichrangiger Rollen je Mitglied](0012-congregation-roles-list.md) — Accepted
 - [ADR-0013: Der globale Admin hat keinen Einblick in Versammlungsdaten](0013-global-admin-without-congregation-data.md) — Accepted
 - [ADR-0014: Nachtblau-Design als `MaterialTheme`](0014-night-design-as-material-theme.md) — Accepted
+- [ADR-0015: Adresse und Notfallkontakte in einem eigenen Dokument](0015-private-member-details-separate-document.md) — Accepted

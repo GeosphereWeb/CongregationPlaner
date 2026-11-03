@@ -20,6 +20,9 @@ data class CongregationRef(
 
     val adminContactsPath: String get() = "$documentPath/$ADMIN_CONTACTS_SUBCOLLECTION"
 
+    /** Private Angaben der Mitglieder (ADR-0015). */
+    val memberPrivatePath: String get() = "$documentPath/$MEMBER_PRIVATE_SUBCOLLECTION"
+
     /**
      * Link, den ein Versammlungsadmin weitergeben kann, damit neue Nutzer die Versammlung nicht suchen müssen.
      * Der Pfad ist verschlüsselt (siehe [InviteLinkCodec]); jeder Aufruf liefert einen anderen, gültigen Link;
@@ -31,6 +34,7 @@ data class CongregationRef(
         const val INVITE_LINK_PREFIX = "congregationplaner://join/"
         const val MEMBERS_SUBCOLLECTION = "members"
         const val ADMIN_CONTACTS_SUBCOLLECTION = "adminContacts"
+        const val MEMBER_PRIVATE_SUBCOLLECTION = "memberPrivate"
 
         fun fromIds(ids: List<String>): CongregationRef? {
             if (ids.size != OrgLevel.entries.size || !ids.all(::isValidSegment)) return null

@@ -1,13 +1,18 @@
 package de.geosphere.congregationplaner.presentation.navigation
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.NavigationRailItemDefaults
@@ -16,9 +21,14 @@ import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.addPathNodes
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -29,7 +39,6 @@ import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.organization.domain.model.SelectedCongregation
 import de.geosphere.congregationplaner.theming.AppTheme
 import de.geosphere.congregationplaner.theming.NightColors
-import de.geosphere.congregationplaner.ui.button.SecondaryButton
 import de.geosphere.congregationplaner.ui.common.topCutoutInset
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
@@ -112,25 +121,51 @@ private fun nightNavigationItemColors() = NavigationSuiteDefaults.itemColors(
 )
 
 @Composable
+/**
+ * Feste Kopfzeile mit der Überschrift und „Abmelden“ (Exit-Symbol, rechts); darunter scrollt der Rest, weil das
+ * Profil mit Adresse und Notfallkontakten länger als der Bildschirm ist.
+ */
 private fun SettingsContent(currentUser: AppUser, onSignOut: () -> Unit) {
-    val padding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 24.dp, top = maxOf(24.dp, topCutoutInset()))
-    Column(Modifier.fillMaxSize().padding(padding)) {
-        Text("Einstellungen", style = MaterialTheme.typography.headlineSmall)
-        Text(
-            "Hier erscheinen später die Einstellungen der App.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 8.dp),
-        )
-        OwnProfileSection(currentUser, Modifier.padding(top = 24.dp).widthIn(max = 480.dp))
-        SecondaryButton(
-            text = "Abmelden",
-            onClick = onSignOut,
-            outlined = false,
-            modifier = Modifier.padding(top = 24.dp),
-        )
+    Column(Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.fillMaxWidth()
+                .padding(start = 24.dp, end = 12.dp, top = maxOf(16.dp, topCutoutInset()), bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text("Einstellungen", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+            IconButton(onClick = onSignOut) {
+                Icon(logoutIcon, contentDescription = "Abmelden", tint = NightColors.Lavender)
+            }
+        }
+        Column(
+            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())
+                .padding(start = 24.dp, end = 24.dp, bottom = 24.dp),
+        ) {
+            Text(
+                "Hier erscheinen später die Einstellungen der App.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            OwnProfileSection(currentUser, Modifier.padding(top = 24.dp).widthIn(max = 480.dp))
+        }
     }
 }
+
+// Das Logout-Symbol aus den Material Symbols (Apache 2.0).
+private val logoutIcon = ImageVector.Builder(
+    name = "logout",
+    defaultWidth = 24.dp,
+    defaultHeight = 24.dp,
+    viewportWidth = 24f,
+    viewportHeight = 24f,
+).addPath(
+    pathData = addPathNodes(
+        "M5,21C4.45,21 3.98,20.8 3.59,20.41C3.2,20.02 3,19.55 3,19V5C3,4.45 3.2,3.98 3.59,3.59C3.98,3.2 " +
+            "4.45,3 5,3H12V5H5V19H12V21H5ZM16,17L14.63,15.55L17.18,13H9V11H17.18L14.63,8.45L16,7L21,12L16,17Z",
+    ),
+    fill = SolidColor(Color.Black),
+).build()
 
 private val previewUser = AppUser(
     uid = "preview",
