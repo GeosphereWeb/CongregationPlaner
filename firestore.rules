@@ -30,14 +30,23 @@ rules_version = '2';
 //   - hasAccount: bool (optional, immutable, default true) - false for persons
 //     without an account; they are never approved and have no role
 // Profile fields (optional because older documents do not have them yet;
-// maintained by admins, except the own first and last name):
-//   - lastName, firstName: string (<= 100 chars); a member may change the own two names, see `members` below
+// maintained by admins, except the own names and phone numbers):
+//   - lastName, firstName: string (<= 100 chars); a member may change the own names and phones, see `members` below
 //   - category: string | null ('BROTHER' | 'SISTER' | 'CHILD')
 //   - baptized: bool (default false; never true for 'CHILD')
 //   - appointment: string ('NONE' | 'MINISTERIAL_SERVANT' | 'ELDER';
 //     anything but 'NONE' only for baptized brothers)
 //   - mobilePhone, landlinePhone: string (<= 30 chars, digits and + ( ) / - space)
 //   - isSpeaker: bool (default false; marks talk speakers, only for category 'BROTHER')
+//
+// Collection: region/.../congregation/{congId}/memberPrivate (ADR-0015)
+// Document ID: Firebase Auth UID of the member. Private details that planners must not see, so they are kept out of
+// the member document (rules cannot hide single fields). Readable by the member and the congregation admins,
+// writable only by the member; admins may delete it when they remove the member.
+// Fields (all optional):
+//   - street (<= 100 chars), postalCode (<= 10 chars), city (<= 100 chars): string
+//   - emergencyContacts: list (<= 5) of maps {name: string (1..100), relation: string (<= 50, optional),
+//     phone: string (1..30, digits and + ( ) / - space)}
 //
 // Collection: region/.../congregation/{congId}/talkSchedule
 // Document ID: the date as yyyy-MM-dd (one day of the weekend meeting; the weekday
@@ -293,6 +302,33 @@ service cloud.firestore {
       return isShortString(value, 30) && value.matches('^[0-9+ ()/-]*$');
     }
 
+    function isValidMemberPrivate(data) {
+      return data.keys().hasOnly(['street', 'postalCode', 'city', 'emergencyContacts']) &&
+        isShortString(data.get('street', ''), 100) &&
+        isShortString(data.get('postalCode', ''), 10) &&
+        isShortString(data.get('city', ''), 100) &&
+        isValidEmergencyContacts(data.get('emergencyContacts', []));
+    }
+
+    // Rules have no loops; at most five contacts are checked one by one.
+    function isValidEmergencyContacts(contacts) {
+      return contacts is list && contacts.size() <= 5 &&
+        (contacts.size() < 1 || isValidEmergencyContact(contacts[0])) &&
+        (contacts.size() < 2 || isValidEmergencyContact(contacts[1])) &&
+        (contacts.size() < 3 || isValidEmergencyContact(contacts[2])) &&
+        (contacts.size() < 4 || isValidEmergencyContact(contacts[3])) &&
+        (contacts.size() < 5 || isValidEmergencyContact(contacts[4]));
+    }
+
+    function isValidEmergencyContact(contact) {
+      return contact is map &&
+        contact.keys().hasOnly(['name', 'relation', 'phone']) &&
+        contact.keys().hasAll(['name', 'phone']) &&
+        contact.name is string && contact.name.size() >= 1 && contact.name.size() <= 100 &&
+        isShortString(contact.get('relation', ''), 50) &&
+        contact.phone is string && contact.phone.size() >= 1 && isValidPhone(contact.phone);
+    }
+
     function roleFields() {
       return ['roles'];
     }
@@ -472,14 +508,35 @@ service cloud.firestore {
                 // Admins maintain profiles and roles of every member. In their own document they may change the
                 // roles but neither the approval nor remove their own admin role,
                 // so nobody locks themselves out. The approval of others is set here too.
-                // Every member may change the own first and last name (and nothing else).
+                // Every member may change the own names and phone numbers (and nothing else).
                 allow update: if isAuthenticated() &&
                   ((isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) &&
                     (request.auth.uid == uid
                       ? (onlyFieldsChanged(profileFields().concat(roleFields())) && keepsOwnAdminRole())
                       : onlyFieldsChanged(accessFields().concat(profileFields())))) ||
-                   (request.auth.uid == uid && onlyFieldsChanged(['lastName', 'firstName']))) &&
+                   (request.auth.uid == uid &&
+                     onlyFieldsChanged(['lastName', 'firstName', 'mobilePhone', 'landlinePhone']))) &&
                   isValidMember(request.resource.data);
+
+                allow delete: if isAuthenticated() && (
+                  request.auth.uid == uid ||
+                  isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId)
+                );
+              }
+
+              // ---------------------------------------------------------
+              // Private details of a member: address and emergency contacts (ADR-0015). Only the member and the
+              // congregation admins read them; only the member writes them.
+              // ---------------------------------------------------------
+              match /memberPrivate/{uid} {
+                allow read: if isAuthenticated() && (
+                  request.auth.uid == uid ||
+                  isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId)
+                );
+
+                allow create, update: if isAuthenticated() && request.auth.uid == uid &&
+                  exists(/databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/circuit/$(circuitId)/congregation/$(congId)/members/$(uid)) &&
+                  isValidMemberPrivate(request.resource.data);
 
                 allow delete: if isAuthenticated() && (
                   request.auth.uid == uid ||
