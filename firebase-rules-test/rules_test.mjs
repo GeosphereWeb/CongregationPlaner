@@ -277,6 +277,14 @@ await expect('Mitglied ändert die eigenen Telefonnummern', api('PATCH', ownName
 await expect('Mitglied mit ungültiger Telefonnummer', api('PATCH', ownName(plain.uid, 'mobilePhone'), { fields: { mobilePhone: { stringValue: '0170-abc' } } }, plain.token), false);
 await expect('Mitglied ändert die Telefonnummer eines anderen', api('PATCH', ownName(planner.uid, 'mobilePhone'), { fields: { mobilePhone: { stringValue: '0170' } } }, plain.token), false);
 
+// ---------- Eigene zusätzliche E-Mail-Adressen im Mitgliedsdokument ----------
+const emailsBody = (...emails) => ({ fields: { emails: { arrayValue: { values: emails.map((stringValue) => ({ stringValue })) } } } });
+await expect('Mitglied speichert drei E-Mail-Adressen', api('PATCH', ownName(plain.uid, 'emails'), emailsBody('a@b.de', 'c.d@e-f.org', 'x+y@z.com'), plain.token), true);
+await expect('Mitglied speichert vier E-Mail-Adressen', api('PATCH', ownName(plain.uid, 'emails'), emailsBody('a@b.de', 'c@d.de', 'e@f.de', 'g@h.de'), plain.token), false);
+await expect('Mitglied speichert ungültige E-Mail-Adresse', api('PATCH', ownName(plain.uid, 'emails'), emailsBody('keine-adresse'), plain.token), false);
+await expect('Mitglied ändert die E-Mail-Adressen eines anderen', api('PATCH', ownName(planner.uid, 'emails'), emailsBody('a@b.de'), plain.token), false);
+await expect('Mitglied ändert die Anmelde-E-Mail', api('PATCH', ownName(plain.uid, 'email'), { fields: { email: { stringValue: 'neu@b.de' } } }, plain.token), false);
+
 // ---------- Private Angaben (memberPrivate, ADR-0015): Adresse und Notfallkontakte ----------
 const PRIVATE = `${CONG}/memberPrivate`;
 const phonesValue = (phones) => ({ arrayValue: { values: phones.map((stringValue) => ({ stringValue })) } });
