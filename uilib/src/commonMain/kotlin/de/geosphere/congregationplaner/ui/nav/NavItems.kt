@@ -94,7 +94,8 @@ fun NavCardRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (indicator != null) Box(Modifier.size(8.dp).background(indicator.content, CircleShape))
-        Column(Modifier.weight(1f)) {
+        // Der Textblock hat rundum 4 dp Luft; mit dem Kartenrand ergibt das 8/16/8 wie in der Design-Leinwand.
+        Column(Modifier.weight(1f).padding(4.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium, color = NightColors.OnBackground)
             if (supportingText != null) {
                 Text(
