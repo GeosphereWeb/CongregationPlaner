@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -114,7 +116,8 @@ private fun nightNavigationItemColors() = NavigationSuiteDefaults.itemColors(
 @Composable
 private fun SettingsContent(currentUser: AppUser, onSignOut: () -> Unit) {
     val padding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 24.dp, top = maxOf(24.dp, topCutoutInset()))
-    Column(Modifier.fillMaxSize().padding(padding)) {
+    // Das Profil mit Adresse und Notfallkontakten ist länger als der Bildschirm.
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(padding)) {
         Text("Einstellungen", style = MaterialTheme.typography.headlineSmall)
         Text(
             "Hier erscheinen später die Einstellungen der App.",
