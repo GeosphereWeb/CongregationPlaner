@@ -2,6 +2,7 @@ package de.geosphere.congregationplaner.user.domain.model
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class PhoneNumberFormatTest {
@@ -54,6 +55,27 @@ class PhoneNumberFormatTest {
         assertEquals("030", formatPhoneNumber("030"))
         val maxLength = "0170" + "1".repeat(MemberProfile.MAX_PHONE_LENGTH - 4)
         assertEquals(maxLength, formatPhoneNumber(maxLength))
+    }
+
+    @Test
+    fun `mobile and landline numbers are recognised with or without separators`() {
+        assertEquals(PhoneKind.MOBILE, phoneKind("0170 1234567"))
+        assertEquals(PhoneKind.MOBILE, phoneKind("+49 151 12345678"))
+        assertEquals(PhoneKind.LANDLINE, phoneKind("0201123456"))
+        assertEquals(PhoneKind.LANDLINE, phoneKind("+49 (30) 123-456"))
+        assertEquals(PhoneKind.UNKNOWN, phoneKind("0800 1234567"))
+        assertEquals(PhoneKind.UNKNOWN, phoneKind("+43 1 234567"))
+        assertEquals(PhoneKind.UNKNOWN, phoneKind(""))
+    }
+
+    @Test
+    fun `the area name comes from the longest matching area code of a landline number`() {
+        assertEquals("Essen", areaName("0201 123456"))
+        assertEquals("Berlin", areaName("+4930123456"))
+        assertEquals("Haan Rheinl", areaName("0212912345"))
+        assertEquals("Solingen", areaName("0212123456"))
+        assertNull(areaName("0170 1234567"))
+        assertNull(areaName("0800 1234567"))
     }
 
     @Test

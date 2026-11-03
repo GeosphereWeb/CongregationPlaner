@@ -1,7 +1,10 @@
 package de.geosphere.congregationplaner.user.domain.model
 
-/** Ein Notfallkontakt; [relation] (z. B. „Ehefrau“) ist optional. */
-data class EmergencyContact(val name: String = "", val relation: String = "", val phone: String = "")
+/** Ein Notfallkontakt mit bis zu [MemberPrivateDetails.MAX_PHONES_PER_CONTACT] Telefonnummern; [relation] ist optional. */
+data class EmergencyContact(val name: String = "", val relation: String = "", val phones: List<String> = listOf("")) {
+    /** Der Ort zur ersten Festnetznummer (Ortsnetzname aus dem Vorwahlverzeichnis), sonst `null`. */
+    val areaName: String? get() = phones.firstNotNullOfOrNull { phone -> areaName(phone) }
+}
 
 /**
  * Private Angaben eines Mitglieds, getrennt vom Mitgliedsdokument (ADR-0015): lesen nur das Mitglied selbst und die
@@ -20,6 +23,7 @@ data class MemberPrivateDetails(
         const val MAX_CONTACT_NAME_LENGTH = 100
         const val MAX_RELATION_LENGTH = 50
         const val MAX_EMERGENCY_CONTACTS = 5
+        const val MAX_PHONES_PER_CONTACT = 3
     }
 }
 
@@ -36,7 +40,13 @@ sealed class MemberPrivateException(message: String) : Exception(message) {
             "Es sind höchstens ${MemberPrivateDetails.MAX_EMERGENCY_CONTACTS} Notfallkontakte möglich.",
         )
 
-    class IncompleteContact : MemberPrivateException("Jeder Notfallkontakt braucht einen Namen und eine Telefonnummer.")
+    class IncompleteContact :
+        MemberPrivateException("Jeder Notfallkontakt braucht einen Namen und mindestens eine Telefonnummer.")
+
+    class TooManyPhones :
+        MemberPrivateException(
+            "Ein Notfallkontakt hat höchstens ${MemberPrivateDetails.MAX_PHONES_PER_CONTACT} Telefonnummern.",
+        )
 
     class InvalidContact :
         MemberPrivateException(
