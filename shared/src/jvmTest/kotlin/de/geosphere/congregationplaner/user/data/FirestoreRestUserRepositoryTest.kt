@@ -9,6 +9,7 @@ import de.geosphere.congregationplaner.testing.withFirestoreRestConfig
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
+import de.geosphere.congregationplaner.user.domain.model.EmergencyContact
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import kotlinx.coroutines.flow.first
@@ -24,6 +25,19 @@ import kotlin.test.assertTrue
 class FirestoreRestUserRepositoryTest {
     private val congregation = CongregationRef("EMEA", "europe", "central-europe", "609a", "berlin")
     private val membersPath = "${FakeFirestoreRestServer.DOCUMENTS_PATH}/${congregation.membersPath}"
+
+    /** The fields a member changes in the own document, in the order of the update mask. */
+    private val ownFields = listOf(
+        "lastName",
+        "firstName",
+        "mobilePhone",
+        "landlinePhone",
+        "emails",
+        "street",
+        "postalCode",
+        "city",
+        "emergencyContacts",
+    )
 
     private val authUser = object : FirebaseUser {
         override val uid: String = "uid-1"
@@ -105,7 +119,14 @@ class FirestoreRestUserRepositoryTest {
                 "appointment":{"stringValue":"ELDER"},
                 "mobilePhone":{"stringValue":"0170 123"},
                 "landlinePhone":{"stringValue":"030 456"},
-                "isSpeaker":{"booleanValue":true}}}""",
+                "isSpeaker":{"booleanValue":true},
+                "street":{"stringValue":"Hauptstr. 1"},
+                "postalCode":{"stringValue":"10115"},
+                "city":{"stringValue":"Berlin"},
+                "emergencyContacts":{"arrayValue":{"values":[
+                    {"mapValue":{"fields":{"name":{"stringValue":"Anna"},"relation":{"stringValue":"Ehefrau"},
+                        "phones":{"arrayValue":{"values":[{"stringValue":"0170 1"},{"stringValue":"030 2"}]}}}}},
+                    {"mapValue":{"fields":{"name":{"stringValue":"Ben"}}}}]}}}}""",
         )
     }) { _, repository ->
         val user = repository.observeUser(congregation, "uid-1").first()
@@ -121,6 +142,14 @@ class FirestoreRestUserRepositoryTest {
                 mobilePhone = "0170 123",
                 landlinePhone = "030 456",
                 isSpeaker = true,
+                street = "Hauptstr. 1",
+                postalCode = "10115",
+                city = "Berlin",
+                // Missing fields of a contact are empty.
+                emergencyContacts = listOf(
+                    EmergencyContact("Anna", "Ehefrau", listOf("0170 1", "030 2")),
+                    EmergencyContact("Ben", "", emptyList()),
+                ),
             ),
             user.profile,
         )
@@ -287,17 +316,7 @@ class FirestoreRestUserRepositoryTest {
         assertEquals("PATCH", request.method)
         assertEquals("$membersPath/uid-1", request.path)
         assertEquals(
-            listOf(
-                "lastName",
-                "firstName",
-                "category",
-                "baptized",
-                "appointment",
-                "mobilePhone",
-                "landlinePhone",
-                "isSpeaker",
-                "emails",
-            )
+            (ownFields + listOf("category", "baptized", "appointment", "isSpeaker"))
                 .joinToString("&") { "updateMask.fieldPaths=$it" } + "&currentDocument.exists=true",
             request.query,
         )
@@ -308,13 +327,20 @@ class FirestoreRestUserRepositoryTest {
     }
 
     @Test
-    fun `updateOwnProfile patches only the names phones and e-mails of an existing member`() = runWithServer({
+    fun `updateOwnProfile patches only the own contact fields of an existing member`() = runWithServer({
         FakeResponse(200, "{}")
     }) { server, repository ->
         val member = AppUser(
             uid = "uid-1",
             approved = true,
-            profile = MemberProfile(lastName = "Muster", firstName = "Max", mobilePhone = "0170", isSpeaker = true),
+            profile = MemberProfile(
+                lastName = "Muster",
+                firstName = "Max",
+                mobilePhone = "0170",
+                isSpeaker = true,
+                city = "Berlin",
+                emergencyContacts = listOf(EmergencyContact("Ben", "", listOf("030 2"))),
+            ),
         )
 
         assertEquals(member, repository.updateOwnProfile(congregation, member).getOrThrow())
@@ -323,13 +349,20 @@ class FirestoreRestUserRepositoryTest {
         assertEquals("PATCH", request.method)
         assertEquals("$membersPath/uid-1", request.path)
         assertEquals(
-            listOf("lastName", "firstName", "mobilePhone", "landlinePhone", "emails")
-                .joinToString("&") { "updateMask.fieldPaths=$it" } + "&currentDocument.exists=true",
+            ownFields.joinToString("&") { "updateMask.fieldPaths=$it" } + "&currentDocument.exists=true",
             request.query,
         )
         assertTrue(request.body.contains(""""lastName":{"stringValue":"Muster"}"""))
-        assertTrue(request.body.contains(""""firstName":{"stringValue":"Max"}"""))
         assertTrue(request.body.contains(""""mobilePhone":{"stringValue":"0170"}"""))
+        assertTrue(request.body.contains(""""city":{"stringValue":"Berlin"}"""))
+        // An empty relation is left out; the rules allow it only as an optional field.
+        assertTrue(
+            request.body.contains(
+                """"emergencyContacts":{"arrayValue":{"values":[{"mapValue":{"fields":""" +
+                    """{"name":{"stringValue":"Ben"},""" +
+                    """"phones":{"arrayValue":{"values":[{"stringValue":"030 2"}]}}}}}]}}""",
+            ),
+        )
         assertFalse(request.body.contains("isSpeaker"))
     }
 
