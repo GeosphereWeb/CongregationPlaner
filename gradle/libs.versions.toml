@@ -21,6 +21,7 @@ kotlinx-coroutines = "1.11.0"
 kotlinx-datetime = "0.7.1"
 material3 = "1.12.0-alpha03"
 material3-adaptive = "1.3.0"
+navigationevent = "1.1.0"
 sonarcube = "7.4.0.8496"
 kover = "0.9.9"
 kotest = "6.2.4"
@@ -48,7 +49,7 @@ compose-material3-adaptiveNavigationSuite = { module = "org.jetbrains.compose.ma
 compose-material3-adaptive-layout = { module = "org.jetbrains.compose.material3.adaptive:adaptive-layout", version.ref = "material3-adaptive" }
 compose-material3-adaptive-navigation = { module = "org.jetbrains.compose.material3.adaptive:adaptive-navigation", version.ref = "material3-adaptive" }
 compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "composeMultiplatform" }
-compose-ui-backhandler = { module = "org.jetbrains.compose.ui:ui-backhandler", version.ref = "composeMultiplatform" }
+navigationevent-compose = { module = "org.jetbrains.androidx.navigationevent:navigationevent-compose", version.ref = "navigationevent" }
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composeMultiplatform" }
 compose-uiToolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "composeMultiplatform" }
 kotlinx-coroutinesCore = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }

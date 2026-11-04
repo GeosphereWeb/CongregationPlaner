@@ -17,14 +17,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -32,6 +30,9 @@ import androidx.compose.ui.graphics.vector.addPathNodes
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.navigationevent.NavigationEventInfo
+import androidx.navigationevent.compose.NavigationBackHandler
+import androidx.navigationevent.compose.rememberNavigationEventState
 import androidx.window.core.layout.WindowSizeClass
 import de.geosphere.congregationplaner.home.presentation.HomeContent
 import de.geosphere.congregationplaner.home.presentation.HomeUiState
@@ -51,7 +52,6 @@ import de.geosphere.congregationplaner.user.presentation.OwnProfileSection
  * Ab mittlerer Breite zeigen „Versammlung“ und „Globale Verwaltung“ eine feste zweite Spalte, davor eine Übersicht.
  * [congregation] füllt die Kopfbereiche; globale Admins haben keine (ADR-0013).
  */
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun AppScaffold(
     state: AppNavigationState,
@@ -61,11 +61,15 @@ fun AppScaffold(
     home: HomeUiState,
     actions: AppNavigationActions,
 ) {
-    val isWide = currentWindowAdaptiveInfo().windowSizeClass.isWidthAtLeastBreakpoint(
+    val isWide = currentWindowAdaptiveInfoV2().windowSizeClass.isWidthAtLeastBreakpoint(
         WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND,
     )
     // Unterbereich → Übersicht → Home; auf Home greift das System-Zurück.
-    BackHandler(enabled = state.canGoBack) { actions.onBack() }
+    NavigationBackHandler(
+        state = rememberNavigationEventState(NavigationEventInfo.None),
+        isBackEnabled = state.canGoBack,
+        onBackCompleted = actions.onBack,
+    )
     val itemColors = nightNavigationItemColors()
     NavigationSuiteScaffold(
         navigationSuiteItems = {
