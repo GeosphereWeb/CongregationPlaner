@@ -3,10 +3,10 @@ package de.geosphere.congregationplaner.user.domain.usecase
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
+import de.geosphere.congregationplaner.user.domain.model.EmergencyContact
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.MemberProfileException
-import de.geosphere.congregationplaner.user.testing.FakeMemberPrivateRepository
 import de.geosphere.congregationplaner.user.testing.FakeUserRepository
 import de.geosphere.congregationplaner.user.testing.testCongregation
 import kotlinx.coroutines.flow.first
@@ -153,28 +153,13 @@ class MemberUseCasesTest {
     }
 
     @Test
-    fun `remove rejects blank ids and deletes the private details first`() = runBlocking {
+    fun `remove rejects blank ids`() = runBlocking {
         val repository = FakeUserRepository()
-        val privateDetails = FakeMemberPrivateRepository()
-        val useCase = RemoveMemberUseCase(repository, privateDetails)
+        val useCase = RemoveMemberUseCase(repository)
 
         assertIs<IllegalArgumentException>(useCase(testCongregation, "").exceptionOrNull())
         useCase(testCongregation, "1").getOrThrow()
-        assertEquals(listOf("1"), privateDetails.deletedUids)
         assertEquals(listOf("1"), repository.removedUids)
-    }
-
-    @Test
-    fun `remove keeps the member when the private details cannot be deleted`() = runBlocking {
-        val repository = FakeUserRepository()
-        val privateDetails = FakeMemberPrivateRepository().apply {
-            deleteResult = Result.failure(IllegalStateException("offline"))
-        }
-
-        val result = RemoveMemberUseCase(repository, privateDetails)(testCongregation, "1")
-
-        assertEquals("offline", result.exceptionOrNull()?.message)
-        assertTrue(repository.removedUids.isEmpty())
     }
 
     @Test
@@ -183,15 +168,14 @@ class MemberUseCasesTest {
         val useCase = UpdateOwnProfileUseCase(repository)
         val member = AppUser(uid = "1", approved = true, congregation = testCongregation)
 
-        val saved = useCase(member, "Muster", "Max", emails = listOf(" max@beispiel.de ", "", "m.m@firma.org"))
-            .getOrThrow()
+        val saved = useCase(member, named(emails = listOf(" max@beispiel.de ", "", "m.m@firma.org"))).getOrThrow()
         assertEquals(listOf("max@beispiel.de", "m.m@firma.org"), saved.profile.emails)
 
         assertIs<MemberProfileException.InvalidEmail>(
-            useCase(member, "Muster", "Max", emails = listOf("keine-adresse")).exceptionOrNull(),
+            useCase(member, named(emails = listOf("keine-adresse"))).exceptionOrNull(),
         )
         assertIs<MemberProfileException.TooManyEmails>(
-            useCase(member, "Muster", "Max", emails = listOf("a@b.de", "c@d.de", "e@f.de", "g@h.de")).exceptionOrNull(),
+            useCase(member, named(emails = listOf("a@b.de", "c@d.de", "e@f.de", "g@h.de"))).exceptionOrNull(),
         )
         assertEquals(1, repository.updatedOwnProfiles.size)
     }
@@ -202,11 +186,14 @@ class MemberUseCasesTest {
         val useCase = UpdateOwnProfileUseCase(repository)
         val member = AppUser(uid = "1", approved = true, congregation = testCongregation)
 
-        val saved = useCase(member, "Muster", "Max", " 0170 123456 ", "+49 (30) 1234-56").getOrThrow()
+        val saved = useCase(member, named(mobilePhone = " 0170 123456 ", landlinePhone = "+49 (30) 1234-56"))
+            .getOrThrow()
         assertEquals("0170 123456", saved.profile.mobilePhone)
         assertEquals("+49 (30) 1234-56", saved.profile.landlinePhone)
 
-        assertIs<MemberProfileException.InvalidPhone>(useCase(member, "Muster", "Max", "0170-abc").exceptionOrNull())
+        assertIs<MemberProfileException.InvalidPhone>(
+            useCase(member, named(mobilePhone = "0170-abc")).exceptionOrNull(),
+        )
         assertEquals(1, repository.updatedOwnProfiles.size)
     }
 
@@ -216,26 +203,114 @@ class MemberUseCasesTest {
         val useCase = UpdateOwnProfileUseCase(repository)
         val member = AppUser(uid = "1", approved = true, congregation = testCongregation)
 
-        assertIs<IllegalStateException>(useCase(member.copy(congregation = null), "Muster", "Max").exceptionOrNull())
-        assertIs<MemberProfileException.MissingName>(useCase(member, " ", "Max").exceptionOrNull())
-        assertIs<MemberProfileException.MissingName>(useCase(member, "Muster", "").exceptionOrNull())
+        assertIs<IllegalStateException>(useCase(member.copy(congregation = null), named()).exceptionOrNull())
+        assertIs<MemberProfileException.MissingName>(useCase(member, named(lastName = " ")).exceptionOrNull())
+        assertIs<MemberProfileException.MissingName>(useCase(member, named(firstName = "")).exceptionOrNull())
         val tooLong = "x".repeat(MemberProfile.MAX_NAME_LENGTH + 1)
-        assertIs<MemberProfileException.NameTooLong>(useCase(member, tooLong, "Max").exceptionOrNull())
+        assertIs<MemberProfileException.NameTooLong>(useCase(member, named(lastName = tooLong)).exceptionOrNull())
         assertTrue(repository.updatedOwnProfiles.isEmpty())
     }
 
     @Test
-    fun `own name is trimmed and keeps every other profile field`() = runBlocking {
+    fun `own profile is trimmed and keeps the fields of the admin`() = runBlocking {
         val repository = FakeUserRepository()
         val profile = MemberProfile(category = MemberCategory.BROTHER, mobilePhone = "0170", isSpeaker = true)
         val member = AppUser(uid = "1", approved = true, congregation = testCongregation, profile = profile)
+        // The form must not be able to change the fields of the admin.
+        val form = profile.copy(lastName = " Muster ", firstName = " Max ", category = MemberCategory.SISTER)
 
-        val saved = UpdateOwnProfileUseCase(repository)(member, " Muster ", " Max ").getOrThrow()
+        val saved = UpdateOwnProfileUseCase(repository)(member, form.copy(isSpeaker = false)).getOrThrow()
 
         assertEquals(profile.copy(lastName = "Muster", firstName = "Max"), saved.profile)
         assertEquals(listOf(saved), repository.updatedOwnProfiles)
     }
 
+    @Test
+    fun `address and contacts are trimmed and empty contacts dropped`() = runBlocking {
+        val repository = FakeUserRepository()
+        val member = AppUser(uid = "1", approved = true, congregation = testCongregation)
+        val form = named(
+            street = " Hauptstr. 1 ",
+            postalCode = " 10115",
+            city = "Berlin ",
+            emergencyContacts = listOf(
+                EmergencyContact(" Anna Muster ", " Ehefrau ", listOf("01701234567", "", " 0201123456 ")),
+                EmergencyContact(),
+            ),
+        )
+
+        val saved = UpdateOwnProfileUseCase(repository)(member, form).getOrThrow().profile
+
+        assertEquals("Hauptstr. 1, 10115, Berlin", listOf(saved.street, saved.postalCode, saved.city).joinToString())
+        val contact = saved.emergencyContacts.single()
+        assertEquals(EmergencyContact("Anna Muster", "Ehefrau", listOf("0170 1234567", "0201 123456")), contact)
+        assertEquals("Essen", contact.areaName)
+    }
+
+    @Test
+    fun `invalid incomplete or too many contacts and long addresses are rejected`(): Unit = runBlocking {
+        val repository = FakeUserRepository()
+        val member = AppUser(uid = "1", approved = true, congregation = testCongregation)
+        val useCase = UpdateOwnProfileUseCase(repository)
+        val contact = EmergencyContact("Anna", "", listOf("0170"))
+        suspend fun errorFor(form: MemberProfile) = useCase(member, form).exceptionOrNull()
+
+        assertIs<MemberProfileException.IncompleteContact>(
+            errorFor(named(emergencyContacts = listOf(EmergencyContact("Anna")))),
+        )
+        assertIs<MemberProfileException.InvalidContact>(
+            errorFor(named(emergencyContacts = listOf(contact.copy(phones = listOf("abc"))))),
+        )
+        assertIs<MemberProfileException.TooManyPhones>(
+            errorFor(
+                named(emergencyContacts = listOf(contact.copy(phones = listOf("0170", "030 1", "0201 2", "089 3")))),
+            ),
+        )
+        assertIs<MemberProfileException.TooManyContacts>(errorFor(named(emergencyContacts = List(6) { contact })))
+        assertIs<MemberProfileException.AddressTooLong>(errorFor(named(postalCode = "12345678901")))
+        assertTrue(repository.updatedOwnProfiles.isEmpty())
+
+        useCase(member, named(emergencyContacts = List(MemberProfile.MAX_EMERGENCY_CONTACTS) { contact })).getOrThrow()
+    }
+
+    @Test
+    fun `the admin saves address and contacts of a member`() = runBlocking {
+        val repository = FakeUserRepository()
+        val member = AppUser(
+            uid = "1",
+            profile = MemberProfile(
+                city = " Berlin ",
+                emergencyContacts = listOf(EmergencyContact("Anna", "", listOf("0170"))),
+            ),
+        )
+
+        val saved = UpdateMemberProfileUseCase(repository)(testCongregation, member).getOrThrow()
+
+        assertEquals("Berlin", saved.profile.city)
+        assertEquals(listOf(saved), repository.updatedProfiles)
+    }
+
+    private fun named(
+        lastName: String = "Muster",
+        firstName: String = "Max",
+        mobilePhone: String = "",
+        landlinePhone: String = "",
+        emails: List<String> = emptyList(),
+        street: String = "",
+        postalCode: String = "",
+        city: String = "",
+        emergencyContacts: List<EmergencyContact> = emptyList(),
+    ) = MemberProfile(
+        lastName = lastName,
+        firstName = firstName,
+        mobilePhone = mobilePhone,
+        landlinePhone = landlinePhone,
+        emails = emails,
+        street = street,
+        postalCode = postalCode,
+        city = city,
+        emergencyContacts = emergencyContacts,
+    )
     private fun profile(category: MemberCategory, baptized: Boolean = false, elder: Boolean = false) = MemberProfile(
         category = category,
         baptized = baptized,

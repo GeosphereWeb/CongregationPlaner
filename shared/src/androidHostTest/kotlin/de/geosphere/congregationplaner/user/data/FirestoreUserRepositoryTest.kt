@@ -18,6 +18,7 @@ import de.geosphere.congregationplaner.testing.withMockedLog
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
+import de.geosphere.congregationplaner.user.domain.model.EmergencyContact
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import io.mockk.every
@@ -127,6 +128,15 @@ class FirestoreUserRepositoryTest {
                     "landlinePhone" to "030 456",
                     "isSpeaker" to true,
                     "emails" to listOf("max@beispiel.de"),
+                    "street" to "Hauptstr. 1",
+                    "postalCode" to "10115",
+                    "city" to "Berlin",
+                    // Entries that are no map are skipped; a missing relation is empty.
+                    "emergencyContacts" to listOf(
+                        mapOf("name" to "Anna", "relation" to "Ehefrau", "phones" to listOf("0170 1", 7)),
+                        "kaputt",
+                        mapOf("name" to "Ben", "phones" to listOf("030 2")),
+                    ),
                     "hasAccount" to false,
                 ),
             ),
@@ -146,6 +156,13 @@ class FirestoreUserRepositoryTest {
                 landlinePhone = "030 456",
                 isSpeaker = true,
                 emails = listOf("max@beispiel.de"),
+                street = "Hauptstr. 1",
+                postalCode = "10115",
+                city = "Berlin",
+                emergencyContacts = listOf(
+                    EmergencyContact("Anna", "Ehefrau", listOf("0170 1")),
+                    EmergencyContact("Ben", "", listOf("030 2")),
+                ),
             ),
             user.profile,
         )
@@ -215,7 +232,7 @@ class FirestoreUserRepositoryTest {
     }
 
     @Test
-    fun `updateOwnProfile writes only the names phones and e-mails`() = withMockedLog {
+    fun `updateOwnProfile writes only the own contact fields`() = withMockedLog {
         val fields = slot<Map<String, Any?>>()
         every { document.update(capture(fields)) } returns successTask<Void?>(null)
         val profile = MemberProfile(
@@ -224,6 +241,11 @@ class FirestoreUserRepositoryTest {
             category = MemberCategory.BROTHER,
             mobilePhone = "0170",
             landlinePhone = "030 1",
+            city = "Berlin",
+            emergencyContacts = listOf(
+                EmergencyContact("Anna", "Ehefrau", listOf("0171")),
+                EmergencyContact("Ben", "", listOf("030 2")),
+            ),
         )
         val member = AppUser(uid = "uid-1", approved = true, profile = profile)
 
@@ -235,6 +257,14 @@ class FirestoreUserRepositoryTest {
                 "mobilePhone" to "0170",
                 "landlinePhone" to "030 1",
                 "emails" to emptyList<String>(),
+                "street" to "",
+                "postalCode" to "",
+                "city" to "Berlin",
+                // An empty relation is left out; the rules allow it only as an optional field.
+                "emergencyContacts" to listOf(
+                    mapOf("name" to "Anna", "relation" to "Ehefrau", "phones" to listOf("0171")),
+                    mapOf("name" to "Ben", "phones" to listOf("030 2")),
+                ),
             ),
             fields.captured,
         )
@@ -403,6 +433,7 @@ class FirestoreUserRepositoryTest {
         every { contains("roles") } returns (roles != null)
         every { this@mockk.get("roles") } returns roles
         every { this@mockk.get("emails") } returns profile["emails"]
+        every { this@mockk.get("emergencyContacts") } returns profile["emergencyContacts"]
         every { getString("email") } returns "user@example.com"
         every { getString("displayName") } returns "User"
         every { getString("role") } returns role
@@ -419,5 +450,9 @@ class FirestoreUserRepositoryTest {
         "landlinePhone" to "",
         "isSpeaker" to false,
         "emails" to emptyList<String>(),
+        "street" to "",
+        "postalCode" to "",
+        "city" to "",
+        "emergencyContacts" to emptyList<Map<String, Any>>(),
     )
 }

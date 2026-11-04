@@ -2,12 +2,9 @@ package de.geosphere.congregationplaner.user.presentation
 
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.EmergencyContact
-import de.geosphere.congregationplaner.user.domain.model.MemberPrivateDetails
+import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
-import de.geosphere.congregationplaner.user.domain.usecase.ObserveOwnPrivateDetailsUseCase
-import de.geosphere.congregationplaner.user.domain.usecase.SaveOwnPrivateDetailsUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.UpdateOwnProfileUseCase
-import de.geosphere.congregationplaner.user.testing.FakeMemberPrivateRepository
 import de.geosphere.congregationplaner.user.testing.FakeUserRepository
 import de.geosphere.congregationplaner.user.testing.testCongregation
 import kotlinx.coroutines.Dispatchers
@@ -29,31 +26,28 @@ class OwnProfileViewModelTest {
         uid = "u1",
         approved = true,
         congregation = testCongregation,
-        profile = MemberProfile(lastName = "Muster", firstName = "Max", mobilePhone = "0170"),
-    )
-    private val stored = MemberPrivateDetails(
-        street = "Hauptstr. 1",
-        postalCode = "10115",
-        city = "Berlin",
-        emergencyContacts = listOf(EmergencyContact("Anna", "Ehefrau", listOf("0171"))),
+        profile = MemberProfile(
+            lastName = "Muster",
+            firstName = "Max",
+            mobilePhone = "0170",
+            street = "Hauptstr. 1",
+            postalCode = "10115",
+            city = "Berlin",
+            emergencyContacts = listOf(EmergencyContact("Anna", "Ehefrau", listOf("0171"))),
+        ),
     )
 
     private lateinit var users: FakeUserRepository
-    private lateinit var privateDetails: FakeMemberPrivateRepository
     private lateinit var viewModel: OwnProfileViewModel
 
     private val state get() = viewModel.uiState.value
+    private val form get() = state.form
 
     @BeforeTest
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         users = FakeUserRepository()
-        privateDetails = FakeMemberPrivateRepository(mapOf("u1" to stored))
-        viewModel = OwnProfileViewModel(
-            UpdateOwnProfileUseCase(users),
-            ObserveOwnPrivateDetailsUseCase(privateDetails),
-            SaveOwnPrivateDetailsUseCase(privateDetails),
-        )
+        viewModel = OwnProfileViewModel(UpdateOwnProfileUseCase(users))
         viewModel.onUserChanged(user)
     }
 
@@ -63,148 +57,122 @@ class OwnProfileViewModelTest {
     }
 
     @Test
-    fun `the form starts with the saved profile and private details and nothing to save`() {
-        assertEquals("Muster", state.form.lastName)
-        assertEquals("0170", state.form.mobilePhone)
-        assertEquals(stored, state.form.details)
-        assertTrue(state.detailsLoaded)
+    fun `the form starts with the saved profile and nothing to save`() {
+        assertEquals(user.profile, form)
         assertFalse(state.isDirty)
         assertFalse(state.canSave)
     }
 
     @Test
     fun `an edit can be saved only while both names are filled`() {
-        viewModel.onLandlinePhoneChange("030 1")
+        viewModel.onFormChange(form.copy(landlinePhone = "030 1"))
         assertTrue(state.canSave)
 
-        viewModel.onFirstNameChange(" ")
+        viewModel.onFormChange(form.copy(firstName = " "))
         assertFalse(state.canSave)
     }
 
     @Test
-    fun `changing only the phone writes the member document and leaves the private details alone`() {
-        viewModel.onMobilePhoneChange("0172")
+    fun `phone and address are saved together in the member document`() {
+        viewModel.onFormChange(form.copy(mobilePhone = "0172", city = "Potsdam"))
 
         viewModel.save()
 
-        assertEquals("0172", users.updatedOwnProfiles.single().profile.mobilePhone)
-        assertTrue(privateDetails.savedUids.isEmpty())
+        val saved = users.updatedOwnProfiles.single().profile
+        assertEquals("0172", saved.mobilePhone)
+        assertEquals("Potsdam", saved.city)
         assertFalse(state.isDirty)
         assertEquals("Gespeichert.", state.message)
     }
 
     @Test
-    fun `changing only the address writes the private details`() {
-        viewModel.onCityChange("Potsdam")
-
-        viewModel.save()
-
-        assertTrue(users.updatedOwnProfiles.isEmpty())
-        assertEquals("Potsdam", privateDetails.details.value["u1"]?.city)
-        assertFalse(state.isDirty)
-    }
-
-    @Test
     fun `contacts can be added edited and removed up to the limit`() {
-        viewModel.addContact()
-        viewModel.onContactChange(1, EmergencyContact("Ben", "", listOf("030 2")))
-        assertEquals(EmergencyContact("Ben", "", listOf("030 2")), state.form.details.emergencyContacts[1])
+        viewModel.onFormChange(form.withAddedContact())
+        viewModel.onFormChange(form.withContact(1, EmergencyContact("Ben", "", listOf("030 2"))))
+        assertEquals(EmergencyContact("Ben", "", listOf("030 2")), form.emergencyContacts[1])
 
-        repeat(5) { viewModel.addContact() }
-        assertEquals(MemberPrivateDetails.MAX_EMERGENCY_CONTACTS, state.form.details.emergencyContacts.size)
-        assertFalse(state.canAddContact)
+        repeat(5) { viewModel.onFormChange(form.withAddedContact()) }
+        assertEquals(MemberProfile.MAX_EMERGENCY_CONTACTS, form.emergencyContacts.size)
+        assertFalse(form.canAddContact)
 
-        viewModel.removeContact(0)
-        assertEquals("Ben", state.form.details.emergencyContacts.first().name)
+        viewModel.onFormChange(form.withoutContact(0))
+        assertEquals("Ben", form.emergencyContacts.first().name)
     }
 
     @Test
     fun `empty new contacts are dropped when saving`() {
-        viewModel.addContact()
-        viewModel.onStreetChange("Nebenstr. 2")
+        viewModel.onFormChange(form.withAddedContact().copy(street = "Nebenstr. 2"))
 
         viewModel.save()
 
-        assertEquals(stored.emergencyContacts, privateDetails.details.value["u1"]?.emergencyContacts)
-        assertEquals(stored.emergencyContacts, state.form.details.emergencyContacts)
+        assertEquals(user.profile.emergencyContacts, users.updatedOwnProfiles.single().profile.emergencyContacts)
+        assertEquals(user.profile.emergencyContacts, form.emergencyContacts)
         assertFalse(state.isDirty)
     }
 
     @Test
     fun `an incomplete contact keeps the input and shows the error`() {
-        viewModel.addContact()
-        viewModel.onContactChange(1, EmergencyContact(name = "Ben", phones = listOf("")))
+        viewModel.onFormChange(form.withAddedContact())
+        viewModel.onFormChange(form.withContact(1, EmergencyContact(name = "Ben", phones = listOf(""))))
 
         viewModel.save()
 
         assertTrue(state.isError)
         assertTrue(state.isDirty)
-        assertTrue(privateDetails.savedUids.isEmpty())
+        assertTrue(users.updatedOwnProfiles.isEmpty())
     }
 
     @Test
-    fun `a failed private save keeps the saved member document`() {
-        privateDetails.saveResult = Result.failure(IllegalStateException("denied"))
-        viewModel.onMobilePhoneChange("0172")
-        viewModel.onCityChange("Potsdam")
+    fun `a new stored profile does not overwrite unsaved input but takes the fields of the admin`() {
+        viewModel.onFormChange(form.copy(city = "Potsdam"))
 
-        viewModel.save()
+        viewModel.onUserChanged(
+            user.copy(profile = user.profile.copy(street = "Neu 1", category = MemberCategory.BROTHER)),
+        )
 
-        assertEquals("denied", state.message)
-        assertEquals("0172", state.saved.mobilePhone)
-        assertEquals("Berlin", state.saved.details.city)
-        assertTrue(state.isDirty)
-    }
-
-    @Test
-    fun `new stored details do not overwrite unsaved input`() {
-        viewModel.onCityChange("Potsdam")
-
-        privateDetails.details.value = mapOf("u1" to stored.copy(street = "Neu 1"))
-
-        assertEquals("Potsdam", state.form.details.city)
-        assertEquals("Hauptstr. 1", state.form.details.street)
-        assertEquals("Neu 1", state.saved.details.street)
+        assertEquals("Potsdam", form.city)
+        assertEquals("Hauptstr. 1", form.street)
+        assertEquals(MemberCategory.BROTHER, form.category)
+        assertEquals("Neu 1", state.saved.street)
     }
 
     @Test
     fun `the first e-mail field is always there and two more can be added and removed`() {
-        assertEquals(listOf(""), state.emailFields)
-        assertFalse(state.isDirty)
+        assertEquals(listOf(""), form.emailFields)
 
-        viewModel.onEmailChange(0, "max@beispiel.de")
-        repeat(3) { viewModel.addEmail() }
-        assertEquals(3, state.emailFields.size)
-        assertFalse(state.canAddEmail)
+        viewModel.onFormChange(form.withEmail(0, "max@beispiel.de"))
+        repeat(3) { viewModel.onFormChange(form.withAddedEmail()) }
+        assertEquals(3, form.emailFields.size)
+        assertFalse(form.canAddEmail)
 
-        viewModel.removeEmail(0)
-        assertEquals("max@beispiel.de", state.emailFields.first())
-        viewModel.removeEmail(2)
-        viewModel.removeEmail(1)
+        viewModel.onFormChange(form.withoutEmail(0))
+        assertEquals("max@beispiel.de", form.emailFields.first())
+        viewModel.onFormChange(form.withoutEmail(2))
+        viewModel.onFormChange(form.withoutEmail(1))
         viewModel.save()
 
         assertEquals(listOf("max@beispiel.de"), users.updatedOwnProfiles.single().profile.emails)
-        assertEquals(listOf("max@beispiel.de"), state.form.emails)
+        assertEquals(listOf("max@beispiel.de"), form.emails)
         assertFalse(state.isDirty)
     }
 
     @Test
     fun `adding a second field without a first address keeps the first field`() {
-        viewModel.addEmail()
+        viewModel.onFormChange(form.withAddedEmail())
 
-        assertEquals(listOf("", ""), state.emailFields)
+        assertEquals(listOf("", ""), form.emailFields)
 
-        viewModel.onEmailChange(0, "a")
-        viewModel.onEmailChange(0, "")
-        assertEquals(2, state.emailFields.size)
+        viewModel.onFormChange(form.withEmail(0, "a"))
+        viewModel.onFormChange(form.withEmail(0, ""))
+        assertEquals(2, form.emailFields.size)
     }
 
     @Test
     fun `clearing the only e-mail field leaves no address`() {
-        viewModel.onEmailChange(0, "a")
-        viewModel.onEmailChange(0, "")
+        viewModel.onFormChange(form.withEmail(0, "a"))
+        viewModel.onFormChange(form.withEmail(0, ""))
 
-        assertEquals(emptyList(), state.form.emails)
+        assertEquals(emptyList(), form.emails)
         assertFalse(state.isDirty)
     }
 
@@ -213,7 +181,6 @@ class OwnProfileViewModelTest {
         viewModel.save()
 
         assertTrue(users.updatedOwnProfiles.isEmpty())
-        assertTrue(privateDetails.savedUids.isEmpty())
         assertNull(state.message)
     }
 }
