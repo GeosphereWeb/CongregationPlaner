@@ -393,8 +393,36 @@ await expect('Global Admin ändert ein fremdes Feld der Versammlung nicht', api(
 const NEW_CONG = 'region/R/subregion/S/branch/B/circuit/C/congregation/NEW';
 await expect('Global Admin legt eine Versammlung an', api('PATCH', NEW_CONG, fields({ name: 'Neu', midweek_meeting_time: '19:00', midweek_meeting_weekday: 3 }), admin.token), true);
 await expect('Global Admin löscht eine Versammlung', api('DELETE', NEW_CONG, undefined, admin.token), true);
-await expect('Global Admin pflegt weiter die Kreise', api('PATCH', 'region/R2', { fields: {} }, admin.token), true);
-await expect('Normaler Nutzer pflegt keine Kreise', api('PATCH', 'region/R3', { fields: {} }, plain.token), false);
+await expect('Global Admin pflegt weiter die Kreise', api('PATCH', 'region/R2', fields({ name: 'Region 2' }), admin.token), true);
+await expect('Normaler Nutzer pflegt keine Kreise', api('PATCH', 'region/R3', fields({ name: 'Region 3' }), plain.token), false);
+
+// ---------- Organisationsbaum: nur der globale Admin, nur bekannte Felder (CP-72) ----------
+const ORG_UNITS = ['region/OR', 'region/OR/subregion/OS', 'region/OR/subregion/OS/branch/OB'];
+for (const unit of ORG_UNITS) {
+  const level = unit.split('/').at(-2);
+  await expect(`Global Admin legt ${level} an`, api('PATCH', unit, fields({ name: 'Neu' }), admin.token), true);
+  await expect(`Global Admin benennt ${level} um`, api('PATCH', unit, fields({ name: 'Umbenannt' }), admin.token), true);
+  await expect(`${level} ohne Namen`, api('PATCH', unit, fields({}), admin.token), false);
+  await expect(`${level} mit leerem Namen`, api('PATCH', unit, fields({ name: '' }), admin.token), false);
+  await expect(`${level} mit zu langem Namen`, api('PATCH', unit, fields({ name: 'x'.repeat(101) }), admin.token), false);
+  await expect(`${level} mit Zusatzfeld`, api('PATCH', unit, fields({ name: 'Neu', extra: 'x' }), admin.token), false);
+  await expect(`Versammlungsadmin legt keine ${level} an`, api('PATCH', unit, fields({ name: 'Neu' }), congAdmin.token), false);
+  await expect(`Gast legt keine ${level} an`, api('PATCH', unit, fields({ name: 'Neu' })), false);
+  await expect(`Gast liest ${level}`, api('GET', unit), true);
+}
+const ORG_CIRCUIT = 'region/OR/subregion/OS/branch/OB/circuit/OC';
+await expect('Global Admin legt einen Kreis an', api('PATCH', ORG_CIRCUIT, fields({ name: 'Kreis 1', overseer_name: 'Max Muster' }), admin.token), true);
+await expect('Global Admin legt einen Kreis ohne Kreisaufseher an', api('PATCH', ORG_CIRCUIT, fields({ name: 'Kreis 1' }), admin.token), true);
+await expect('Kreis ohne Namen', api('PATCH', ORG_CIRCUIT, fields({ overseer_name: 'Max' }), admin.token), false);
+await expect('Kreis mit zu langem Kreisaufseher', api('PATCH', ORG_CIRCUIT, fields({ name: 'Kreis 1', overseer_name: 'x'.repeat(101) }), admin.token), false);
+await expect('Kreis mit Zusatzfeld', api('PATCH', ORG_CIRCUIT, fields({ name: 'Kreis 1', number: '609a' }), admin.token), false);
+await expect('Versammlungsadmin legt keinen Kreis an', api('PATCH', ORG_CIRCUIT, fields({ name: 'Kreis 1' }), congAdmin.token), false);
+await expect('Versammlungsadmin löscht keinen Kreis', api('DELETE', ORG_CIRCUIT, undefined, congAdmin.token), false);
+await expect('Versammlungsadmin löscht keine Region', api('DELETE', 'region/OR', undefined, congAdmin.token), false);
+await expect('Global Admin löscht einen Kreis', api('DELETE', ORG_CIRCUIT, undefined, admin.token), true);
+for (const unit of [...ORG_UNITS].reverse()) {
+  await expect(`Global Admin löscht ${unit.split('/').at(-2)}`, api('DELETE', unit, undefined, admin.token), true);
+}
 
 // Doppelrolle: ein globaler Admin, der zugleich Vortragsplaner einer Versammlung ist, plant über seine Rolle.
 const dualAdmin = await signUp('dualadmin@test.de');
