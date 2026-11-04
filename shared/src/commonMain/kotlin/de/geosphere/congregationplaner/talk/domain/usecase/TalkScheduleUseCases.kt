@@ -107,7 +107,7 @@ class CreateYearSlotsUseCase(
             return Result.failure(TalkScheduleException.NotAllowed())
         }
         val all = try {
-            congregations.observeAll().first()
+            congregations.observeAll(congregation.circuitIds).first()
         } catch (exception: CancellationException) {
             throw exception
         } catch (@Suppress("TooGenericExceptionCaught") exception: Exception) {

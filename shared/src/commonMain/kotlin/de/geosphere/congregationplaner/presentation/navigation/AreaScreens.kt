@@ -252,7 +252,10 @@ private fun CongregationSectionContent(
 private fun GlobalSectionContent(section: GlobalSection, currentUser: AppUser) {
     when (section) {
         GlobalSection.CIRCUITS -> CircuitRoute(currentUser)
-        GlobalSection.CONGREGATIONS -> CongregationMetadataRoute(currentUser)
+        GlobalSection.CONGREGATIONS -> CongregationMetadataRoute(currentUser, circuitIds = LEGACY_CIRCUIT_IDS)
         GlobalSection.TALK_REFERENCE -> TalkReferenceRoute(currentUser)
     }
 }
+
+// shortcut: the global list still shows the former fixed circuit, until the "Organisation" area lets the admin pick it.
+private val LEGACY_CIRCUIT_IDS = listOf("EMEA", "europe", "central-europe", "609a")

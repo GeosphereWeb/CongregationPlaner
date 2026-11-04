@@ -27,20 +27,22 @@ internal class FirestoreRestCongregationMetadataRepository(
 ) : CongregationMetadataRepository {
     private val client = FirestoreRestClient(httpClient, idTokenProvider, "Sign in before accessing congregation data.")
 
-    override fun observeAll(): Flow<List<CongregationMetadata>> = pollingFlow {
-        parseDocuments(client.request("GET", "${client.collectionUrl(CONGREGATION_COLLECTION_PATH)}?pageSize=1000"))
-            .map { it.toCongregation() }
+    override fun observeAll(circuitIds: List<String>): Flow<List<CongregationMetadata>> = pollingFlow {
+        val url = client.collectionUrl(congregationCollectionPath(circuitIds))
+        parseDocuments(client.request("GET", "$url?pageSize=1000")).map { it.toCongregation() }
     }
 
-    override suspend fun save(congregation: CongregationMetadata): Result<CongregationMetadata> = runCatchingIo {
+    override suspend fun save(
+        circuitIds: List<String>,
+        congregation: CongregationMetadata,
+    ): Result<CongregationMetadata> = runCatchingIo {
+        val path = congregationCollectionPath(circuitIds)
         val id = if (congregation.id.isBlank()) {
-            val url = client.collectionUrl(CONGREGATION_COLLECTION_PATH)
-            parseDocument(client.request("POST", url, congregation.toFirestoreJson())).id
+            parseDocument(client.request("POST", client.collectionUrl(path), congregation.toFirestoreJson())).id
         } else {
             client.request(
                 method = "PATCH",
-                url = "${client.documentUrl(CONGREGATION_COLLECTION_PATH, congregation.id)}?" +
-                    client.updateMask(FIRESTORE_FIELD_NAMES),
+                url = "${client.documentUrl(path, congregation.id)}?${client.updateMask(FIRESTORE_FIELD_NAMES)}",
                 body = congregation.toFirestoreJson(),
             )
             congregation.id
@@ -48,9 +50,9 @@ internal class FirestoreRestCongregationMetadataRepository(
         congregation.copy(id = id)
     }
 
-    override suspend fun delete(congregationId: String): Result<Unit> = runCatchingIo {
+    override suspend fun delete(circuitIds: List<String>, congregationId: String): Result<Unit> = runCatchingIo {
         require(congregationId.isNotBlank()) { "A congregation ID is required to delete a congregation." }
-        client.request("DELETE", client.documentUrl(CONGREGATION_COLLECTION_PATH, congregationId))
+        client.request("DELETE", client.documentUrl(congregationCollectionPath(circuitIds), congregationId))
     }
 
     private fun FirestoreRestDocument.toCongregation(): CongregationMetadata = CongregationMetadata(

@@ -31,6 +31,7 @@ class CongregationMetadataViewModelTest {
     private val planer = AppUser(uid = "planer", approved = true, roles = setOf(CongregationRole.CONGREGATION_ADMIN))
     private val berlin = CongregationMetadata(id = "609a", name = "Berlin")
     private val hamburg = CongregationMetadata(id = "610b", name = "Hamburg")
+    private val circuit = listOf("EMEA", "europe", "central-europe", "609a")
 
     private lateinit var repository: FakeCongregationRepository
 
@@ -271,7 +272,7 @@ class CongregationMetadataViewModelTest {
         SaveCongregationUseCase(repository),
         DeleteCongregationUseCase(repository),
         CongregationPermissionPolicy(),
-    ).also { viewModel -> user?.let(viewModel::onCurrentUserChanged) }
+    ).also { viewModel -> viewModel.onCurrentUserChanged(user, circuitIds = circuit) }
 
     private class FakeCongregationRepository(congregations: List<CongregationMetadata>) :
         CongregationMetadataRepository {
@@ -281,17 +282,24 @@ class CongregationMetadataViewModelTest {
         var deleteResult: Result<Unit> = Result.success(Unit)
         val saved = mutableListOf<CongregationMetadata>()
         val deletedIds = mutableListOf<String>()
+        val circuits = mutableListOf<List<String>>()
 
-        override fun observeAll(): Flow<List<CongregationMetadata>> = observeError?.let { error ->
-            flow { throw error }
-        } ?: congregations
+        override fun observeAll(circuitIds: List<String>): Flow<List<CongregationMetadata>> {
+            circuits += circuitIds
+            return observeError?.let { error -> flow { throw error } } ?: congregations
+        }
 
-        override suspend fun save(congregation: CongregationMetadata): Result<CongregationMetadata> {
+        override suspend fun save(
+            circuitIds: List<String>,
+            congregation: CongregationMetadata,
+        ): Result<CongregationMetadata> {
+            circuits += circuitIds
             saved += congregation
             return saveResult ?: Result.success(congregation.copy(id = congregation.id.ifBlank { "new-id" }))
         }
 
-        override suspend fun delete(congregationId: String): Result<Unit> {
+        override suspend fun delete(circuitIds: List<String>, congregationId: String): Result<Unit> {
+            circuits += circuitIds
             deletedIds += congregationId
             return deleteResult
         }
@@ -325,18 +333,45 @@ class CongregationMetadataViewModelTest {
     }
 
     @Test
-    fun `own only shows just the congregation of the user`() {
+    fun `own only shows just the congregation of the user from its circuit`() {
         val viewModel = createViewModel()
         val own = CongregationRef("r", "s", "b", "c", "609a")
 
         viewModel.onCurrentUserChanged(planer.copy(congregation = own), ownOnly = true)
         assertEquals(listOf(berlin), viewModel.uiState.value.congregations)
+        assertEquals(listOf("r", "s", "b", "c"), repository.circuits.last())
 
-        viewModel.onCurrentUserChanged(planer.copy(congregation = own), ownOnly = false)
+        viewModel.onCurrentUserChanged(planer.copy(congregation = own), ownOnly = false, circuitIds = circuit)
         assertEquals(listOf(berlin, hamburg), viewModel.uiState.value.congregations)
 
         viewModel.onCurrentUserChanged(planer, ownOnly = true)
         assertTrue(viewModel.uiState.value.congregations.isEmpty())
+    }
+
+    @Test
+    fun `save and delete use the shown circuit and need one`() {
+        val viewModel = createViewModel(admin)
+        viewModel.editCongregation(berlin)
+        viewModel.saveCongregation()
+        viewModel.deleteCongregation(berlin)
+        assertEquals(listOf(circuit, circuit, circuit), repository.circuits)
+
+        viewModel.onCurrentUserChanged(admin, circuitIds = null)
+        assertTrue(viewModel.uiState.value.congregations.isEmpty())
+        assertFalse(viewModel.uiState.value.isLoading)
+        viewModel.editCongregation(hamburg)
+        viewModel.saveCongregation()
+        assertEquals(MISSING_PERMISSION, viewModel.uiState.value.errorMessage)
+        assertEquals(1, repository.saved.size)
+    }
+
+    @Test
+    fun `the same circuit is observed only once`() {
+        val viewModel = createViewModel(admin)
+
+        viewModel.onCurrentUserChanged(admin.copy(displayName = "Neu"), circuitIds = circuit)
+
+        assertEquals(listOf(circuit), repository.circuits)
     }
 
     private companion object {

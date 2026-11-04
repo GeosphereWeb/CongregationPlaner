@@ -68,10 +68,10 @@ class UnavailableRepositoriesTest {
         val repository = unavailableCongregationMetadataRepository("iOS")
 
         assertIs<UnsupportedOperationException>(
-            repository.save(CongregationMetadata(name = "Berlin")).exceptionOrNull(),
+            repository.save(congregation.circuitIds, CongregationMetadata(name = "Berlin")).exceptionOrNull(),
         )
-        assertIs<UnsupportedOperationException>(repository.delete("609a").exceptionOrNull())
-        assertFailsWith<UnsupportedOperationException> { repository.observeAll().first() }
+        assertIs<UnsupportedOperationException>(repository.delete(congregation.circuitIds, "609a").exceptionOrNull())
+        assertFailsWith<UnsupportedOperationException> { repository.observeAll(congregation.circuitIds).first() }
     }
 
     @Test

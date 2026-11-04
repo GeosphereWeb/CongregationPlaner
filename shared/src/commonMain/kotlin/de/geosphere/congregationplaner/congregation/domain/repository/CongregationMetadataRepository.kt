@@ -3,10 +3,14 @@ package de.geosphere.congregationplaner.congregation.domain.repository
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
 import kotlinx.coroutines.flow.Flow
 
+/**
+ * Die Versammlungen eines Kreises. [circuitIds] sind die IDs von der Region bis zum Kreis (siehe
+ * `CongregationRef.circuitIds` und `OrgLevel.collectionPath`).
+ */
 interface CongregationMetadataRepository {
-    fun observeAll(): Flow<List<CongregationMetadata>>
+    fun observeAll(circuitIds: List<String>): Flow<List<CongregationMetadata>>
 
-    suspend fun save(congregation: CongregationMetadata): Result<CongregationMetadata>
+    suspend fun save(circuitIds: List<String>, congregation: CongregationMetadata): Result<CongregationMetadata>
 
-    suspend fun delete(congregationId: String): Result<Unit>
+    suspend fun delete(circuitIds: List<String>, congregationId: String): Result<Unit>
 }

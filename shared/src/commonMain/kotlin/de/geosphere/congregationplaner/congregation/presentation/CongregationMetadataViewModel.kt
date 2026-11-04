@@ -10,6 +10,7 @@ import de.geosphere.congregationplaner.presentation.components.ListDetailState
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.permission.CongregationPermissionPolicy
 import dev.zacsweers.metro.Inject
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
@@ -51,10 +52,35 @@ class CongregationMetadataViewModel(
     private var currentUser: AppUser? = null
     private var allCongregations: List<CongregationMetadata> = emptyList()
     private var ownCongregationOnly = false
+    private var circuitIds: List<String>? = null
+    private var observeJob: Job? = null
+    private var observing = false
 
-    init {
-        viewModelScope.launch {
-            observeCongregations()
+    /**
+     * Mit [ownOnly] zeigt die Liste nur die eigene Versammlung des Nutzers aus deren Kreis (Bereich „Versammlung“);
+     * sonst alle Versammlungen des Kreises [circuitIds] (Globale Verwaltung).
+     */
+    fun onCurrentUserChanged(user: AppUser?, ownOnly: Boolean = false, circuitIds: List<String>? = null) {
+        currentUser = user
+        ownCongregationOnly = ownOnly
+        val circuit = if (ownOnly) user?.congregation?.circuitIds else circuitIds
+        if (!observing || circuit != this.circuitIds) observe(circuit)
+        updateState { it.copy(congregations = visibleCongregations()) }
+    }
+
+    private fun observe(circuit: List<String>?) {
+        observing = true
+        circuitIds = circuit
+        observeJob?.cancel()
+        allCongregations = emptyList()
+        if (circuit == null) {
+            observeJob = null
+            updateState { it.copy(congregations = emptyList(), isLoading = false) }
+            return
+        }
+        updateState { it.copy(isLoading = true) }
+        observeJob = viewModelScope.launch {
+            observeCongregations(circuit)
                 .catch { exception ->
                     updateState {
                         it.copy(
@@ -69,16 +95,6 @@ class CongregationMetadataViewModel(
                     }
                 }
         }
-    }
-
-    /**
-     * Mit [ownOnly] zeigt die Liste nur die eigene Versammlung des Nutzers (Bereich „Versammlung“); sonst alle
-     * (Globale Verwaltung).
-     */
-    fun onCurrentUserChanged(user: AppUser?, ownOnly: Boolean = false) {
-        currentUser = user
-        ownCongregationOnly = ownOnly
-        updateState { it.copy(congregations = visibleCongregations()) }
     }
 
     private fun visibleCongregations(): List<CongregationMetadata> {
@@ -122,7 +138,8 @@ class CongregationMetadataViewModel(
         if (mutableUiState.value.isSaving || mutableUiState.value.isDeleting) return
         val congregation = mutableUiState.value.editor ?: return
         val user = currentUser
-        if (user == null || !canModify(user, congregation)) {
+        val circuit = circuitIds
+        if (user == null || circuit == null || !canModify(user, congregation)) {
             updateState { it.copy(errorMessage = MISSING_PERMISSION_MESSAGE) }
             return
         }
@@ -133,7 +150,7 @@ class CongregationMetadataViewModel(
 
         updateState { it.copy(isSaving = true, errorMessage = null) }
         viewModelScope.launch {
-            saveCongregation(congregation.copy(name = congregation.name.trim()))
+            saveCongregation(circuit, congregation.copy(name = congregation.name.trim()))
                 .onSuccess { savedCongregation ->
                     updateState { state ->
                         val existingIndex = state.congregations.indexOfFirst { it.id == savedCongregation.id }
@@ -166,14 +183,15 @@ class CongregationMetadataViewModel(
     fun deleteCongregation(congregation: CongregationMetadata) {
         if (congregation.id.isBlank() || mutableUiState.value.isDeleting || mutableUiState.value.isSaving) return
         val user = currentUser
-        if (user == null || !permissionPolicy.canDelete(user, congregation)) {
+        val circuit = circuitIds
+        if (user == null || circuit == null || !permissionPolicy.canDelete(user, congregation)) {
             updateState { it.copy(errorMessage = MISSING_PERMISSION_MESSAGE) }
             return
         }
 
         updateState { it.copy(isDeleting = true, errorMessage = null) }
         viewModelScope.launch {
-            deleteCongregationUseCase(congregation.id)
+            deleteCongregationUseCase(circuit, congregation.id)
                 .onSuccess {
                     updateState {
                         val editor = it.editor?.takeUnless { editor -> editor.id == congregation.id }
