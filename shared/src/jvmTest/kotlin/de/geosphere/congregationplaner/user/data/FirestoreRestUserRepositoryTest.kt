@@ -296,6 +296,7 @@ class FirestoreRestUserRepositoryTest {
                 "mobilePhone",
                 "landlinePhone",
                 "isSpeaker",
+                "emails",
             )
                 .joinToString("&") { "updateMask.fieldPaths=$it" } + "&currentDocument.exists=true",
             request.query,
@@ -307,7 +308,7 @@ class FirestoreRestUserRepositoryTest {
     }
 
     @Test
-    fun `updateOwnProfile patches only the names and phones of an existing member`() = runWithServer({
+    fun `updateOwnProfile patches only the names phones and e-mails of an existing member`() = runWithServer({
         FakeResponse(200, "{}")
     }) { server, repository ->
         val member = AppUser(
@@ -322,7 +323,7 @@ class FirestoreRestUserRepositoryTest {
         assertEquals("PATCH", request.method)
         assertEquals("$membersPath/uid-1", request.path)
         assertEquals(
-            listOf("lastName", "firstName", "mobilePhone", "landlinePhone")
+            listOf("lastName", "firstName", "mobilePhone", "landlinePhone", "emails")
                 .joinToString("&") { "updateMask.fieldPaths=$it" } + "&currentDocument.exists=true",
             request.query,
         )
