@@ -62,7 +62,7 @@ Weiterführende Doku:
 - [PROJEKT_INFO.md](PROJEKT_INFO.md) – KMP-Grundlagen & Projektkonventionen
 - [theming/README.md](theming/README.md) und [uilib/README.md](uilib/README.md) – Module im Detail
 - [KOVER_SETUP.md](KOVER_SETUP.md) – Coverage-Konfiguration
-- [FIREBASE_AUTH_DEVICE_DEBUGGING.md](FIREBASE_AUTH_DEVICE_DEBUGGING.md) – Auth-Emulator auf echten Geräten
+- [firebase/FIREBASE_AUTH_DEVICE_DEBUGGING.md](firebase/FIREBASE_AUTH_DEVICE_DEBUGGING.md) – Auth-Emulator auf echten Geräten
   (Kurzfassung im README-Abschnitt [Lokaler Firebase-Emulator](#-lokaler-firebase-emulator-inkl-echtes-android-gerät))
 - [CLAUDE.md](CLAUDE.md) – Architektur- & Coding-Richtlinien
 
@@ -124,16 +124,18 @@ Release-Builds nutzen immer direkt Firebase, der Emulator wird nur in debuggbare
 
 ### 1. Emulator starten
 
-Voraussetzung: [Firebase CLI](https://firebase.google.com/docs/cli) (`npm install -g firebase-tools`). Das
-`firebase.json` im Repo-Root startet Auth (`9099`), Firestore (`8080`) und die UI (`4000`) und lädt dabei die
-`firestore.rules` des Repos, damit neue Felder lokal gespeichert werden können. Aus dem Repo-Root:
+Voraussetzung: [Firebase CLI](https://firebase.google.com/docs/cli) (`npm install -g firebase-tools`). Alle
+Firebase-Dateien liegen im Ordner `firebase/`: `firebase/firebase.json` startet Auth (`9099`), Firestore (`8080`) und
+die UI (`4000`) und lädt dabei `firebase/firestore.rules`, damit neue Felder lokal gespeichert werden können. Aus dem
+Ordner `firebase/`:
 
 ```bash
+cd firebase
 firebase emulators:start --only auth,firestore --project <deine-Projekt-ID> --import ./emulator-data --export-on-exit
 ```
 
-Nach einer Änderung an `firestore.rules` den Emulator neu starten. `./emulator-data` ist per `.gitignore`
-ausgeschlossen; die Rules prüft zusätzlich `node firebase-rules-test/run.mjs`.
+Nach einer Änderung an `firestore.rules` den Emulator neu starten. `firebase/emulator-data` ist per `.gitignore`
+ausgeschlossen; die Rules prüft zusätzlich `node firebase/rules-test/run.mjs` (aus dem Repo-Root).
 
 `--import` und `--export-on-exit` sorgen dafür, dass Auth-Konten **und** Firestore-Daten einen Neustart überleben.
 Ohne diese Optionen sind nach jedem Neustart alle Konten und Daten weg, und der Login schlägt fehl.
@@ -186,10 +188,10 @@ Wichtig dabei:
 | Echtes Gerät über WLAN/LAN     | IP-Adresse des Rechners (siehe unten) |
 
 **Alternative ohne Kabel (WLAN):** `firebase_auth_emulator_host` im Debug-Manifest auf die IP des Rechners setzen,
-im `firebase.json` bei `auth` und `firestore` `"host": "0.0.0.0"` eintragen, Gerät und Rechner ins selbe Netz
+in `firebase/firebase.json` bei `auth` und `firestore` `"host": "0.0.0.0"` eintragen, Gerät und Rechner ins selbe Netz
 bringen und in der Windows-Firewall eingehende Verbindungen auf `9099` und `8080` erlauben. Die Emulatoren sind dann
 im ganzen Netz erreichbar – nur in vertrauenswürdigen Netzen verwenden.
-Weitere Hintergründe: [FIREBASE_AUTH_DEVICE_DEBUGGING.md](FIREBASE_AUTH_DEVICE_DEBUGGING.md).
+Weitere Hintergründe: [firebase/FIREBASE_AUTH_DEVICE_DEBUGGING.md](firebase/FIREBASE_AUTH_DEVICE_DEBUGGING.md).
 
 ### 3. Ersten Admin anlegen
 

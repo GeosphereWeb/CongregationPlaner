@@ -13,7 +13,7 @@ Prüft `../firestore.rules` gegen den Firestore- und den Auth-Emulator mit echte
 Aus dem Repo-Root, unter Windows in PowerShell oder Git Bash:
 
 ```
-node firebase-rules-test/run.mjs
+node firebase/rules-test/run.mjs
 ```
 
 `run.mjs` kopiert `firestore.rules` in diesen Ordner (die Firebase CLI erlaubt keine Rules außerhalb des Projektordners; die Kopie ist per `.gitignore` ausgeschlossen), startet die Emulatoren und führt `rules_test.mjs` aus. Der Exit-Code ist `0`, wenn alle Prüfungen bestehen, sonst `1`; jede fehlgeschlagene Prüfung steht mit Namen und der Antwort des Emulators in der Ausgabe.
