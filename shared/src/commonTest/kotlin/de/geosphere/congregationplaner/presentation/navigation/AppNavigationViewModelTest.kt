@@ -41,7 +41,7 @@ class AppNavigationViewModelTest {
         assertEquals(TopLevelDestination.HOME, state.destination)
 
         viewModel.openCongregationSection(CongregationSection.USER_MANAGEMENT)
-        viewModel.openGlobalSection(GlobalSection.CIRCUITS)
+        viewModel.openGlobalSection(GlobalSection.ORGANIZATION)
         assertEquals(TopLevelDestination.HOME, state.destination)
         assertNull(state.congregationSection)
         assertNull(state.globalSection)
@@ -129,7 +129,7 @@ class AppNavigationViewModelTest {
     @Test
     fun `back works the same way in the global administration`() {
         viewModel.onUserChanged(AppUser(uid = "g", approved = true, isGlobalAdmin = true))
-        viewModel.openGlobalSection(GlobalSection.CIRCUITS)
+        viewModel.openGlobalSection(GlobalSection.ORGANIZATION)
 
         assertTrue(viewModel.back())
         assertEquals(TopLevelDestination.GLOBAL_ADMIN, state.destination)

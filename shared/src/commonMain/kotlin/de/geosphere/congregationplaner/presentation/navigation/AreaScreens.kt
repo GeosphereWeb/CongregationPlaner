@@ -18,9 +18,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
-import de.geosphere.congregationplaner.circuit.presentation.CircuitRoute
 import de.geosphere.congregationplaner.congregation.presentation.CongregationMetadataRoute
 import de.geosphere.congregationplaner.organization.domain.model.SelectedCongregation
+import de.geosphere.congregationplaner.organization.presentation.OrganizationRoute
 import de.geosphere.congregationplaner.talk.presentation.ExternalDirectoryRoute
 import de.geosphere.congregationplaner.talk.presentation.TalkHistoryRoute
 import de.geosphere.congregationplaner.talk.presentation.TalkReferenceRoute
@@ -251,11 +251,7 @@ private fun CongregationSectionContent(
 @Composable
 private fun GlobalSectionContent(section: GlobalSection, currentUser: AppUser) {
     when (section) {
-        GlobalSection.CIRCUITS -> CircuitRoute(currentUser)
-        GlobalSection.CONGREGATIONS -> CongregationMetadataRoute(currentUser, circuitIds = LEGACY_CIRCUIT_IDS)
+        GlobalSection.ORGANIZATION -> OrganizationRoute(currentUser)
         GlobalSection.TALK_REFERENCE -> TalkReferenceRoute(currentUser)
     }
 }
-
-// shortcut: the global list still shows the former fixed circuit, until the "Organisation" area lets the admin pick it.
-private val LEGACY_CIRCUIT_IDS = listOf("EMEA", "europe", "central-europe", "609a")

@@ -79,9 +79,9 @@ class NavEntriesTest {
 
     @Test
     fun `global entries mark the selection`() {
-        val entries = globalEntries(GlobalSection.entries, GlobalSection.CONGREGATIONS) {}
+        val entries = globalEntries(GlobalSection.entries, GlobalSection.TALK_REFERENCE) {}
 
-        assertEquals(listOf(false, true, false), entries.map { it.selected })
+        assertEquals(listOf(false, true), entries.map { it.selected })
     }
 
     @Test
