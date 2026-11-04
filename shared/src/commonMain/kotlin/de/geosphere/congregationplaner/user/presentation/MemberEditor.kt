@@ -6,19 +6,16 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
@@ -46,12 +43,12 @@ internal fun MemberEditor(
                 editor.member?.let { "Angaben von ${it.label}" } ?: "Neue Person ohne Konto",
                 style = MaterialTheme.typography.titleMedium,
             )
-            ProfileTextField(profile.firstName, "Vorname", onValueChange = { onChange(profile.copy(firstName = it)) })
-            ProfileTextField(
-                profile.lastName,
-                "Familienname",
-                onValueChange = { onChange(profile.copy(lastName = it)) },
-            )
+            ProfileField(profile.firstName, "Vorname", !isSaving, MemberProfile.MAX_NAME_LENGTH, {
+                onChange(profile.copy(firstName = it))
+            })
+            ProfileField(profile.lastName, "Familienname", !isSaving, MemberProfile.MAX_NAME_LENGTH, {
+                onChange(profile.copy(lastName = it))
+            })
 
             ChipGroup("Gruppe") {
                 MemberCategory.entries.forEach { category ->
@@ -90,18 +87,7 @@ internal fun MemberEditor(
                 }
             }
 
-            ProfileTextField(
-                profile.mobilePhone,
-                "Handy (optional)",
-                onValueChange = { onChange(profile.copy(mobilePhone = it)) },
-                keyboardType = KeyboardType.Phone,
-            )
-            ProfileTextField(
-                profile.landlinePhone,
-                "Festnetz (optional)",
-                onValueChange = { onChange(profile.copy(landlinePhone = it)) },
-                keyboardType = KeyboardType.Phone,
-            )
+            ContactFields(profile, enabled = !isSaving, onChange = onChange)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = onSave, enabled = !isSaving && isDirty) {
                     Text(if (isSaving) "Speichert …" else "Speichern")
@@ -112,23 +98,6 @@ internal fun MemberEditor(
             }
         }
     }
-}
-
-@Composable
-private fun ProfileTextField(
-    value: String,
-    label: String,
-    onValueChange: (String) -> Unit,
-    keyboardType: KeyboardType = KeyboardType.Text,
-) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label) },
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-        modifier = Modifier.fillMaxWidth(),
-        singleLine = true,
-    )
 }
 
 @Composable

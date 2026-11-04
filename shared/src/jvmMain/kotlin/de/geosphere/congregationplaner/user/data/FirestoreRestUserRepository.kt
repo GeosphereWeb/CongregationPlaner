@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner.user.data
 
+import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import de.geosphere.congregationplaner.auth.FirebaseAuthManager
 import de.geosphere.congregationplaner.auth.FirebaseUser
@@ -24,6 +25,7 @@ import de.geosphere.congregationplaner.user.data.mappers.toStoredRoles
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
+import de.geosphere.congregationplaner.user.domain.model.EmergencyContact
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
@@ -93,11 +95,9 @@ internal class FirestoreRestUserRepository(
                     "&currentDocument.exists=true",
                 body = firestoreFields(
                     JsonObject().apply {
-                        add("lastName", firestoreString(member.profile.lastName))
-                        add("firstName", firestoreString(member.profile.firstName))
-                        add("mobilePhone", firestoreString(member.profile.mobilePhone))
-                        add("landlinePhone", firestoreString(member.profile.landlinePhone))
-                        add("emails", firestoreStringArray(member.profile.emails))
+                        member.profile.fields().entrySet()
+                            .filter { (name, _) -> name in OWN_PROFILE_FIELD_NAMES }
+                            .forEach { (name, value) -> add(name, value) }
                     },
                 ),
             )
@@ -137,8 +137,28 @@ internal class FirestoreRestUserRepository(
             landlinePhone = fields.optionalStringField("landlinePhone").orEmpty(),
             isSpeaker = fields.booleanField("isSpeaker"),
             emails = fields.stringArrayField("emails").filterNotNull(),
+            street = fields.optionalStringField("street").orEmpty(),
+            postalCode = fields.optionalStringField("postalCode").orEmpty(),
+            city = fields.optionalStringField("city").orEmpty(),
+            emergencyContacts = fields.emergencyContacts(),
         ),
     )
+
+    // Einträge der Liste, die keine Map sind, werden übersprungen; fehlende Felder sind leer.
+    private fun JsonObject.emergencyContacts(): List<EmergencyContact> =
+        get("emergencyContacts")?.takeIf { it.isJsonObject }?.asJsonObject
+            ?.getAsJsonObject("arrayValue")
+            ?.getAsJsonArray("values")
+            ?.mapNotNull { value ->
+                value.asJsonObject.getAsJsonObject("mapValue")?.getAsJsonObject("fields")?.let { contact ->
+                    EmergencyContact(
+                        name = contact.optionalStringField("name").orEmpty(),
+                        relation = contact.optionalStringField("relation").orEmpty(),
+                        phones = contact.stringArrayField("phones").filterNotNull(),
+                    )
+                }
+            }
+            .orEmpty()
 
     private fun AppUser.allFields(): JsonObject = accessFields().apply {
         add("email", firestoreNullableString(email))
@@ -162,22 +182,43 @@ internal class FirestoreRestUserRepository(
         add("landlinePhone", firestoreString(landlinePhone))
         add("isSpeaker", firestoreBoolean(isSpeaker))
         add("emails", firestoreStringArray(emails))
+        add("street", firestoreString(street))
+        add("postalCode", firestoreString(postalCode))
+        add("city", firestoreString(city))
+        // Eine leere Beziehung wird weggelassen; die Rules erlauben sie nur als optionales Feld.
+        val contacts = JsonArray().apply {
+            emergencyContacts.forEach { contact ->
+                val fields = JsonObject().apply {
+                    add("name", firestoreString(contact.name))
+                    if (contact.relation.isNotEmpty()) add("relation", firestoreString(contact.relation))
+                    add("phones", firestoreStringArray(contact.phones))
+                }
+                add(JsonObject().apply { add("mapValue", JsonObject().apply { add("fields", fields) }) })
+            }
+        }
+        add(
+            "emergencyContacts",
+            JsonObject().apply {
+                add("arrayValue", JsonObject().apply { add("values", contacts) })
+            },
+        )
     }
 
     private companion object {
         val ACCESS_FIELD_NAMES = listOf("approved", "roles")
-        val OWN_PROFILE_FIELD_NAMES = listOf("lastName", "firstName", "mobilePhone", "landlinePhone", "emails")
-        val PROFILE_FIELD_NAMES =
-            listOf(
-                "lastName",
-                "firstName",
-                "category",
-                "baptized",
-                "appointment",
-                "mobilePhone",
-                "landlinePhone",
-                "isSpeaker",
-                "emails",
-            )
+
+        /** Die Felder, die ein Mitglied im eigenen Dokument ändern darf (`ownFields()` in den Rules). */
+        val OWN_PROFILE_FIELD_NAMES = listOf(
+            "lastName",
+            "firstName",
+            "mobilePhone",
+            "landlinePhone",
+            "emails",
+            "street",
+            "postalCode",
+            "city",
+            "emergencyContacts",
+        )
+        val PROFILE_FIELD_NAMES = OWN_PROFILE_FIELD_NAMES + listOf("category", "baptized", "appointment", "isSpeaker")
     }
 }
