@@ -4,19 +4,17 @@ import de.geosphere.congregationplaner.talk.domain.permission.TalkReferenceDataP
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
-import de.geosphere.congregationplaner.user.domain.permission.CircuitPermissionPolicy
-import de.geosphere.congregationplaner.user.domain.permission.CongregationPermissionPolicy
 import de.geosphere.congregationplaner.user.domain.permission.MidweekPermissionPolicy
+import de.geosphere.congregationplaner.user.domain.permission.OrganizationPermissionPolicy
 import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 internal fun navigationAccess() = NavigationAccess(
     UserPermissionPolicy(),
-    CongregationPermissionPolicy(),
     TalkSchedulePermissionPolicy(),
     MidweekPermissionPolicy(),
-    CircuitPermissionPolicy(),
+    OrganizationPermissionPolicy(),
     TalkReferenceDataPolicy(),
 )
 

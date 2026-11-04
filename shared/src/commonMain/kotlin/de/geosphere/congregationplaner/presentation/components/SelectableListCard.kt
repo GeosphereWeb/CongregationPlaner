@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,7 +23,8 @@ import de.geosphere.congregationplaner.theming.ThemePreviews
 
 /**
  * Listeneintrag einer Listen-/Detailansicht: hervorgehoben, wenn [selected], und mit Löschen-Aktion,
- * sofern [canDelete]. Der fachliche Inhalt kommt aus [content].
+ * sofern [canDelete]; mit [onEdit] steht davor eine Bearbeiten-Aktion (wenn ein Tipp auf den Eintrag etwas anderes
+ * tut). Der fachliche Inhalt kommt aus [content].
  */
 @Composable
 @Suppress("LongParameterList")
@@ -32,6 +34,7 @@ internal fun SelectableListCard(
     onDelete: () -> Unit,
     actionsEnabled: Boolean,
     canDelete: Boolean,
+    onEdit: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val shape = RoundedCornerShape(8.dp)
@@ -45,9 +48,14 @@ internal fun SelectableListCard(
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         content()
-        if (canDelete) {
-            TextButton(onClick = onDelete, enabled = actionsEnabled) {
-                Text("Löschen", color = NightColors.Coral)
+        Row {
+            if (onEdit != null) {
+                TextButton(onClick = onEdit, enabled = actionsEnabled) { Text("Bearbeiten") }
+            }
+            if (canDelete) {
+                TextButton(onClick = onDelete, enabled = actionsEnabled) {
+                    Text("Löschen", color = NightColors.Coral)
+                }
             }
         }
     }

@@ -49,8 +49,8 @@ enum class CongregationSection(
 
 /** Die Unterbereiche von „Globale Verwaltung“. */
 enum class GlobalSection(val label: String) {
-    CIRCUITS("Kreise"),
-    CONGREGATIONS("Versammlungen"),
+    /** Regionen bis Versammlungen zum Durchklicken (ADR-0017). */
+    ORGANIZATION("Organisation"),
     TALK_REFERENCE("Vortragsliste & Ereignisse"),
 }
 
