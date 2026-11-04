@@ -45,8 +45,12 @@ class CreateYearSlotsUseCaseTest {
     @Test
     fun `creates a slot for every weekend day with the default time`() = runBlocking {
         val repository = FakeTalkScheduleRepository()
+        val congregations = FakeCongregationMetadataRepository(listOf(congregation))
 
-        val result = useCase(repository)(planner, 2026).getOrThrow()
+        val result = useCase(repository, congregations)(planner, 2026).getOrThrow()
+
+        // The meeting times come from the circuit of the own congregation.
+        assertEquals(listOf(testCongregation.circuitIds), congregations.requestedCircuits)
 
         assertEquals(YearSlotsResult(created = 52, alreadyExisting = 0), result)
         assertEquals(52, repository.createdSlots.size)
