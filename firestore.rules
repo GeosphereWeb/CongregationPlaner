@@ -29,9 +29,9 @@ rules_version = '2';
 //     'TASK_PLANNER']; empty for a plain member, see ADR-0012)
 //   - hasAccount: bool (optional, immutable, default true) - false for persons
 //     without an account; they are never approved and have no role
-// Profile fields (optional because older documents do not have them yet;
-// maintained by admins, except the own names, phone numbers and e-mail addresses):
-//   - lastName, firstName: string (<= 100 chars); a member may change the own names and phones, see `members` below
+// Profile fields (optional because older documents do not have them yet). Admins maintain all of them; a member
+// maintains the own contact fields (see ownFields()). Admins and planners read every member (ADR-0016):
+//   - lastName, firstName: string (<= 100 chars)
 //   - category: string | null ('BROTHER' | 'SISTER' | 'CHILD')
 //   - baptized: bool (default false; never true for 'CHILD')
 //   - appointment: string ('NONE' | 'MINISTERIAL_SERVANT' | 'ELDER';
@@ -39,15 +39,9 @@ rules_version = '2';
 //   - mobilePhone, landlinePhone: string (<= 30 chars, digits and + ( ) / - space)
 //   - isSpeaker: bool (default false; marks talk speakers, only for category 'BROTHER')
 //   - emails: list (<= 3) of string (an e-mail address, <= 254 chars): further addresses besides the sign-in `email`
-//
-// Collection: region/.../congregation/{congId}/memberPrivate (ADR-0015)
-// Document ID: Firebase Auth UID of the member. Private details that planners must not see, so they are kept out of
-// the member document (rules cannot hide single fields). Readable by the member and the congregation admins,
-// writable only by the member; admins may delete it when they remove the member.
-// Fields (all optional):
 //   - street (<= 100 chars), postalCode (<= 10 chars), city (<= 100 chars): string
 //   - emergencyContacts: list (<= 5) of maps {name: string (1..100), relation: string (<= 50, optional),
-//     phones: list (1..3) of string (1..30, digits and + ( ) / - space)}
+//     phones: list (1..3) of string; the app checks each number like mobilePhone}
 //
 // Collection: region/.../congregation/{congId}/talkSchedule
 // Document ID: the date as yyyy-MM-dd (one day of the weekend meeting; the weekday
@@ -315,43 +309,27 @@ service cloud.firestore {
       return value is string && value.size() <= 254 && value.matches('^[^@ ]+@[^@ ]+[.][^@ ]+$');
     }
 
-    function isValidMemberPrivate(data) {
-      return data.keys().hasOnly(['street', 'postalCode', 'city', 'emergencyContacts']) &&
-        isShortString(data.get('street', ''), 100) &&
-        isShortString(data.get('postalCode', ''), 10) &&
-        isShortString(data.get('city', ''), 100) &&
-        isValidEmergencyContacts(data.get('emergencyContacts', []));
-    }
-
     // Rules have no loops; at most five contacts are checked one by one.
     function isValidEmergencyContacts(contacts) {
-      return contacts is list && contacts.size() <= 5 &&
-        (contacts.size() < 1 || isValidEmergencyContact(contacts[0])) &&
-        (contacts.size() < 2 || isValidEmergencyContact(contacts[1])) &&
-        (contacts.size() < 3 || isValidEmergencyContact(contacts[2])) &&
-        (contacts.size() < 4 || isValidEmergencyContact(contacts[3])) &&
-        (contacts.size() < 5 || isValidEmergencyContact(contacts[4]));
+      let list = contacts;
+      let count = list is list ? list.size() : 99;
+      return count <= 5 &&
+        (count < 1 || (list[0] is map && isValidEmergencyContact(list[0]))) &&
+        (count < 2 || (list[1] is map && isValidEmergencyContact(list[1]))) &&
+        (count < 3 || (list[2] is map && isValidEmergencyContact(list[2]))) &&
+        (count < 4 || (list[3] is map && isValidEmergencyContact(list[3]))) &&
+        (count < 5 || (list[4] is map && isValidEmergencyContact(list[4])));
     }
 
+    // Only the shape is checked; the content of the numbers is validated by the app (like talkNumbers), because
+    // checking every number does not fit into the limit of 1000 expressions per request.
     function isValidEmergencyContact(contact) {
-      return contact is map &&
-        contact.keys().hasOnly(['name', 'relation', 'phones']) &&
-        contact.keys().hasAll(['name', 'phones']) &&
-        contact.name is string && contact.name.size() >= 1 && contact.name.size() <= 100 &&
+      let name = contact.get('name', null);
+      let phones = contact.get('phones', null);
+      return contact.keys().hasOnly(['name', 'relation', 'phones']) &&
+        name is string && name.size() >= 1 && name.size() <= 100 &&
         isShortString(contact.get('relation', ''), 50) &&
-        isValidContactPhones(contact.phones);
-    }
-
-    // One to three numbers, checked one by one (rules have no loops).
-    function isValidContactPhones(phones) {
-      return phones is list && phones.size() >= 1 && phones.size() <= 3 &&
-        isValidContactPhone(phones[0]) &&
-        (phones.size() < 2 || isValidContactPhone(phones[1])) &&
-        (phones.size() < 3 || isValidContactPhone(phones[2]));
-    }
-
-    function isValidContactPhone(phone) {
-      return phone is string && phone.size() >= 1 && isValidPhone(phone);
+        phones is list && phones.size() >= 1 && phones.size() <= 3;
     }
 
     function roleFields() {
@@ -362,9 +340,14 @@ service cloud.firestore {
       return ['approved'].concat(roleFields());
     }
 
+    // The fields a member maintains in the own document.
+    function ownFields() {
+      return ['lastName', 'firstName', 'mobilePhone', 'landlinePhone', 'emails', 'street', 'postalCode', 'city',
+        'emergencyContacts'];
+    }
+
     function profileFields() {
-      return ['lastName', 'firstName', 'category', 'baptized', 'appointment', 'mobilePhone', 'landlinePhone', 'isSpeaker',
-        'emails'];
+      return ownFields().concat(['category', 'baptized', 'appointment', 'isSpeaker']);
     }
 
     // Missing profile fields fall back to the defaults of a freshly registered member.
@@ -372,6 +355,7 @@ service cloud.firestore {
       let category = data.get('category', null);
       let baptized = data.get('baptized', false);
       let appointment = data.get('appointment', 'NONE');
+      let contacts = data.get('emergencyContacts', []);
       return isShortString(data.get('lastName', ''), 100) &&
         isShortString(data.get('firstName', ''), 100) &&
         (category == null || category in ['BROTHER', 'SISTER', 'CHILD']) &&
@@ -382,6 +366,10 @@ service cloud.firestore {
         isValidPhone(data.get('mobilePhone', '')) &&
         isValidPhone(data.get('landlinePhone', '')) &&
         isValidEmails(data.get('emails', [])) &&
+        isShortString(data.get('street', ''), 100) &&
+        isShortString(data.get('postalCode', ''), 10) &&
+        isShortString(data.get('city', ''), 100) &&
+        isValidEmergencyContacts(contacts) &&
         data.get('isSpeaker', false) is bool &&
         (data.get('isSpeaker', false) == false || category == 'BROTHER');
     }
@@ -417,17 +405,18 @@ service cloud.firestore {
     }
 
     // A user may only register themselves: unapproved, without roles,
-    // with the e-mail address from their auth token.
+    // with the e-mail address from their auth token. The full validation comes last because rules evaluate at most
+    // 1000 expressions per request.
     function isValidSelfRegistration(uid) {
       let data = request.resource.data;
       return isAuthenticated() &&
         request.auth.uid == uid &&
-        isValidMember(data) &&
-        data.approved == false &&
-        data.roles.size() == 0 &&
-        data.email == request.auth.token.get('email', null) &&
+        data.get('approved', null) == false &&
+        data.get('roles', []).size() == 0 &&
+        data.get('email', null) == request.auth.token.get('email', null) &&
         data.get('hasAccount', true) == true &&
-        hasDefaultProfile(data);
+        hasDefaultProfile(data) &&
+        isValidMember(data);
     }
 
     // Admins record persons without an account (e.g. children) with a name.
@@ -535,35 +524,14 @@ service cloud.firestore {
                 // Admins maintain profiles and roles of every member. In their own document they may change the
                 // roles but neither the approval nor remove their own admin role,
                 // so nobody locks themselves out. The approval of others is set here too.
-                // Every member may change the own names and phone numbers (and nothing else).
+                // Every member may change the own contact fields (ownFields(), nothing else).
                 allow update: if isAuthenticated() &&
                   ((isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) &&
                     (request.auth.uid == uid
                       ? (onlyFieldsChanged(profileFields().concat(roleFields())) && keepsOwnAdminRole())
                       : onlyFieldsChanged(accessFields().concat(profileFields())))) ||
-                   (request.auth.uid == uid &&
-                     onlyFieldsChanged(['lastName', 'firstName', 'mobilePhone', 'landlinePhone', 'emails']))) &&
+                   (request.auth.uid == uid && onlyFieldsChanged(ownFields()))) &&
                   isValidMember(request.resource.data);
-
-                allow delete: if isAuthenticated() && (
-                  request.auth.uid == uid ||
-                  isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId)
-                );
-              }
-
-              // ---------------------------------------------------------
-              // Private details of a member: address and emergency contacts (ADR-0015). Only the member and the
-              // congregation admins read them; only the member writes them.
-              // ---------------------------------------------------------
-              match /memberPrivate/{uid} {
-                allow read: if isAuthenticated() && (
-                  request.auth.uid == uid ||
-                  isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId)
-                );
-
-                allow create, update: if isAuthenticated() && request.auth.uid == uid &&
-                  exists(/databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/circuit/$(circuitId)/congregation/$(congId)/members/$(uid)) &&
-                  isValidMemberPrivate(request.resource.data);
 
                 allow delete: if isAuthenticated() && (
                   request.auth.uid == uid ||
