@@ -64,6 +64,38 @@ private fun OwnProfileForm(state: OwnProfileUiState, viewModel: OwnProfileViewMo
         PhoneField(form.mobilePhone, "Handy (optional)", smartphoneIcon, enabled, viewModel::onMobilePhoneChange)
         PhoneField(form.landlinePhone, "Festnetz (optional)", callIcon, enabled, viewModel::onLandlinePhoneChange)
 
+        SectionTitle("E-Mail-Adressen", "Zusätzlich zur Anmelde-E-Mail; sehen Admins und Planer.")
+        state.emailFields.forEachIndexed { index, email ->
+            OutlinedTextField(
+                value = email,
+                onValueChange = { viewModel.onEmailChange(index, it.take(MemberProfile.MAX_EMAIL_LENGTH)) },
+                label = { Text("E-Mail ${index + 1}") },
+                leadingIcon = { Icon(mailIcon, contentDescription = null, tint = NightColors.OnBackgroundMuted) },
+                // Das erste Feld bleibt immer; nur die weiteren lassen sich entfernen.
+                trailingIcon = if (index > 0) {
+                    {
+                        IconButton(onClick = { viewModel.removeEmail(index) }, enabled = enabled) {
+                            Icon(closeIcon, contentDescription = "E-Mail ${index + 1} entfernen")
+                        }
+                    }
+                } else {
+                    null
+                },
+                singleLine = true,
+                enabled = enabled,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        if (state.canAddEmail) {
+            SecondaryButton(
+                text = "E-Mail-Adresse hinzufügen",
+                onClick = viewModel::addEmail,
+                enabled = enabled,
+                outlined = false,
+            )
+        }
+
         SectionTitle("Adresse", "Sehen nur du und die Versammlungsadmins.")
         ProfileField(
             form.details.street,
@@ -287,6 +319,13 @@ private val dialpadIcon = vectorIcon(
         "-2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2zM18,13c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 " +
         "-2,-2zM18,7c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2zM12,7c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 " +
         "2,-0.9 2,-2 -0.9,-2 -2,-2zM12,1c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2z",
+)
+
+// Briefumschlag aus den Material Icons (Apache 2.0).
+private val mailIcon = vectorIcon(
+    "mail",
+    "M20,4L4,4c-1.1,0 -1.99,0.9 -1.99,2L2,18c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2L22,6c0,-1.1 -0.9,-2 -2,-2z" +
+        "M20,8l-8,5 -8,-5L4,6l8,5 8,-5v2z",
 )
 
 private val closeIcon = vectorIcon(

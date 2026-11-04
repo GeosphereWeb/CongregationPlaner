@@ -30,7 +30,7 @@ rules_version = '2';
 //   - hasAccount: bool (optional, immutable, default true) - false for persons
 //     without an account; they are never approved and have no role
 // Profile fields (optional because older documents do not have them yet;
-// maintained by admins, except the own names and phone numbers):
+// maintained by admins, except the own names, phone numbers and e-mail addresses):
 //   - lastName, firstName: string (<= 100 chars); a member may change the own names and phones, see `members` below
 //   - category: string | null ('BROTHER' | 'SISTER' | 'CHILD')
 //   - baptized: bool (default false; never true for 'CHILD')
@@ -38,6 +38,7 @@ rules_version = '2';
 //     anything but 'NONE' only for baptized brothers)
 //   - mobilePhone, landlinePhone: string (<= 30 chars, digits and + ( ) / - space)
 //   - isSpeaker: bool (default false; marks talk speakers, only for category 'BROTHER')
+//   - emails: list (<= 3) of string (an e-mail address, <= 254 chars): further addresses besides the sign-in `email`
 //
 // Collection: region/.../congregation/{congId}/memberPrivate (ADR-0015)
 // Document ID: Firebase Auth UID of the member. Private details that planners must not see, so they are kept out of
@@ -302,6 +303,18 @@ service cloud.firestore {
       return isShortString(value, 30) && value.matches('^[0-9+ ()/-]*$');
     }
 
+    // Up to three further e-mail addresses, checked one by one (rules have no loops).
+    function isValidEmails(emails) {
+      return emails is list && emails.size() <= 3 &&
+        (emails.size() < 1 || isValidEmail(emails[0])) &&
+        (emails.size() < 2 || isValidEmail(emails[1])) &&
+        (emails.size() < 3 || isValidEmail(emails[2]));
+    }
+
+    function isValidEmail(value) {
+      return value is string && value.size() <= 254 && value.matches('^[^@ ]+@[^@ ]+[.][^@ ]+$');
+    }
+
     function isValidMemberPrivate(data) {
       return data.keys().hasOnly(['street', 'postalCode', 'city', 'emergencyContacts']) &&
         isShortString(data.get('street', ''), 100) &&
@@ -350,7 +363,8 @@ service cloud.firestore {
     }
 
     function profileFields() {
-      return ['lastName', 'firstName', 'category', 'baptized', 'appointment', 'mobilePhone', 'landlinePhone', 'isSpeaker'];
+      return ['lastName', 'firstName', 'category', 'baptized', 'appointment', 'mobilePhone', 'landlinePhone', 'isSpeaker',
+        'emails'];
     }
 
     // Missing profile fields fall back to the defaults of a freshly registered member.
@@ -367,6 +381,7 @@ service cloud.firestore {
         (appointment == 'NONE' || (category == 'BROTHER' && baptized)) &&
         isValidPhone(data.get('mobilePhone', '')) &&
         isValidPhone(data.get('landlinePhone', '')) &&
+        isValidEmails(data.get('emails', [])) &&
         data.get('isSpeaker', false) is bool &&
         (data.get('isSpeaker', false) == false || category == 'BROTHER');
     }
@@ -527,7 +542,7 @@ service cloud.firestore {
                       ? (onlyFieldsChanged(profileFields().concat(roleFields())) && keepsOwnAdminRole())
                       : onlyFieldsChanged(accessFields().concat(profileFields())))) ||
                    (request.auth.uid == uid &&
-                     onlyFieldsChanged(['lastName', 'firstName', 'mobilePhone', 'landlinePhone']))) &&
+                     onlyFieldsChanged(['lastName', 'firstName', 'mobilePhone', 'landlinePhone', 'emails']))) &&
                   isValidMember(request.resource.data);
 
                 allow delete: if isAuthenticated() && (
