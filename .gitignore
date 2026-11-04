@@ -28,4 +28,4 @@ node_modules/
 /.env.example
 
 # Firebase emulator data (local accounts and documents)
-/emulator-data/
+/firebase/emulator-data/
