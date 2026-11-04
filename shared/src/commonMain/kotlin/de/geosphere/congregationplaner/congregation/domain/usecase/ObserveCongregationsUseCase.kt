@@ -5,7 +5,8 @@ import de.geosphere.congregationplaner.congregation.domain.repository.Congregati
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.flow.Flow
 
+/** Die Versammlungen des Kreises [circuitIds] (IDs von der Region bis zum Kreis). */
 @Inject
 class ObserveCongregationsUseCase(private val repository: CongregationMetadataRepository) {
-    operator fun invoke(): Flow<List<CongregationMetadata>> = repository.observeAll()
+    operator fun invoke(circuitIds: List<String>): Flow<List<CongregationMetadata>> = repository.observeAll(circuitIds)
 }

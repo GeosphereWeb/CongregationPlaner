@@ -5,5 +5,6 @@ import dev.zacsweers.metro.Inject
 
 @Inject
 class DeleteCongregationUseCase(private val repository: CongregationMetadataRepository) {
-    suspend operator fun invoke(congregationId: String): Result<Unit> = repository.delete(congregationId)
+    suspend operator fun invoke(circuitIds: List<String>, congregationId: String): Result<Unit> =
+        repository.delete(circuitIds, congregationId)
 }
