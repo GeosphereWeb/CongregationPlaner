@@ -16,8 +16,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
@@ -45,6 +43,7 @@ import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
+import de.geosphere.congregationplaner.ui.appbar.NightTabRow
 
 /** Callbacks der Pflege-Oberfläche; gebündelt, damit die Composables überschaubare Signaturen behalten. */
 internal data class TalkCatalogActions(
@@ -115,10 +114,9 @@ internal fun TalkReferenceContent(
             Text("Dafür fehlt dir die Berechtigung.")
             return@Column
         }
-        TabRow(selectedTabIndex = selectedTab) {
-            Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Vorträge") })
-            Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Wochenereignisse") })
-        }
+        NightTabRow(listOf("Vorträge", "Wochenereignisse"), selectedIndex = selectedTab, onSelect = {
+            selectedTab = it
+        })
         if (selectedTab == 0) {
             TalkCatalogTab(catalogState, catalogActions)
         } else {
