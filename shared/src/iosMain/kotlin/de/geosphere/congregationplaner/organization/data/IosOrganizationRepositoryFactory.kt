@@ -1,9 +1,12 @@
 package de.geosphere.congregationplaner.organization.data
 
+import de.geosphere.congregationplaner.organization.domain.repository.OrgUnitRepository
 import de.geosphere.congregationplaner.organization.domain.repository.OrganizationRepository
 import platform.Foundation.NSUserDefaults
 
 actual fun createOrganizationRepository(): OrganizationRepository = unavailableOrganizationRepository("iOS")
+
+actual fun createOrgUnitRepository(): OrgUnitRepository = unavailableOrgUnitRepository("iOS")
 
 actual fun createKeyValueStorage(): KeyValueStorage = object : KeyValueStorage {
     private val defaults = NSUserDefaults.standardUserDefaults

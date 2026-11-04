@@ -5,9 +5,11 @@ import de.geosphere.congregationplaner.circuit.data.unavailableCircuitRepository
 import de.geosphere.congregationplaner.circuit.domain.model.Circuit
 import de.geosphere.congregationplaner.congregation.data.unavailableCongregationMetadataRepository
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
+import de.geosphere.congregationplaner.organization.data.unavailableOrgUnitRepository
 import de.geosphere.congregationplaner.organization.data.unavailableOrganizationRepository
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.organization.domain.model.OrgLevel
+import de.geosphere.congregationplaner.organization.domain.model.OrgUnit
 import de.geosphere.congregationplaner.user.data.unavailableUserRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import kotlinx.coroutines.flow.first
@@ -48,6 +50,17 @@ class UnavailableRepositoriesTest {
 
         assertIs<UnsupportedOperationException>(failure)
         assertEquals("Firestore is not configured for iOS.", failure.message)
+    }
+
+    @Test
+    fun `unavailable org unit repository reports the platform`(): Unit = runBlocking {
+        val repository = unavailableOrgUnitRepository("iOS")
+        val unit = OrgUnit("r1", "EMEA")
+
+        assertIs<UnsupportedOperationException>(repository.create(OrgLevel.REGION, emptyList(), unit).exceptionOrNull())
+        assertIs<UnsupportedOperationException>(repository.update(OrgLevel.REGION, emptyList(), unit).exceptionOrNull())
+        assertIs<UnsupportedOperationException>(repository.delete(OrgLevel.REGION, emptyList(), unit).exceptionOrNull())
+        assertFailsWith<UnsupportedOperationException> { repository.observe(OrgLevel.REGION, emptyList()).first() }
     }
 
     @Test
