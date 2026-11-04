@@ -14,10 +14,10 @@ import de.geosphere.congregationplaner.user.data.mappers.toStoredRoles
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
+import de.geosphere.congregationplaner.user.domain.model.EmergencyContact
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.repository.AdminContactRepository
-import de.geosphere.congregationplaner.user.domain.repository.MemberPrivateRepository
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -28,9 +28,6 @@ actual fun createUserRepository(): UserRepository = FirestoreUserRepository(Andr
 
 actual fun createAdminContactRepository(): AdminContactRepository =
     FirestoreAdminContactRepository(AndroidFirestoreProvider.firestore)
-
-actual fun createMemberPrivateRepository(): MemberPrivateRepository =
-    FirestoreMemberPrivateRepository(AndroidFirestoreProvider.firestore)
 
 internal class FirestoreUserRepository(private val firestore: FirebaseFirestore) : UserRepository {
     override suspend fun getOrCreateUser(authUser: FirebaseUser, congregation: CongregationRef): Result<AppUser> =
@@ -107,18 +104,10 @@ internal class FirestoreUserRepository(private val firestore: FirebaseFirestore)
         }
 
     override suspend fun updateOwnProfile(congregation: CongregationRef, member: AppUser): Result<AppUser> =
-        runFirestoreCatching("update own name") {
+        runFirestoreCatching("update own profile") {
             firestore.collection(congregation.membersPath)
                 .document(member.uid)
-                .update(
-                    mapOf(
-                        "lastName" to member.profile.lastName,
-                        "firstName" to member.profile.firstName,
-                        "mobilePhone" to member.profile.mobilePhone,
-                        "landlinePhone" to member.profile.landlinePhone,
-                        "emails" to member.profile.emails,
-                    ),
-                )
+                .update(member.profile.toFirestoreFields().filterKeys { it in OWN_PROFILE_FIELDS })
                 .awaitResult()
             member
         }
@@ -147,7 +136,33 @@ private fun toDomain(document: DocumentSnapshot, congregation: CongregationRef):
         landlinePhone = document.getString("landlinePhone").orEmpty(),
         isSpeaker = document.getBoolean("isSpeaker") ?: false,
         emails = document.stringList("emails").orEmpty().filterNotNull(),
+        street = document.getString("street").orEmpty(),
+        postalCode = document.getString("postalCode").orEmpty(),
+        city = document.getString("city").orEmpty(),
+        // Einträge der Liste, die keine Map sind, werden übersprungen; fehlende Felder sind leer.
+        emergencyContacts = (document.get("emergencyContacts") as? List<*>).orEmpty()
+            .mapNotNull { it as? Map<*, *> }
+            .map { contact ->
+                EmergencyContact(
+                    name = contact["name"] as? String ?: "",
+                    relation = contact["relation"] as? String ?: "",
+                    phones = (contact["phones"] as? List<*>).orEmpty().filterIsInstance<String>(),
+                )
+            },
     ),
+)
+
+/** Die Felder, die ein Mitglied im eigenen Dokument ändern darf (`ownFields()` in den Rules). */
+private val OWN_PROFILE_FIELDS = setOf(
+    "lastName",
+    "firstName",
+    "mobilePhone",
+    "landlinePhone",
+    "emails",
+    "street",
+    "postalCode",
+    "city",
+    "emergencyContacts",
 )
 
 private fun DocumentSnapshot.stringList(field: String): List<String?>? = (get(field) as? List<*>)?.map { it as? String }
@@ -173,4 +188,15 @@ private fun MemberProfile.toFirestoreFields(): Map<String, Any?> = mapOf(
     "landlinePhone" to landlinePhone,
     "isSpeaker" to isSpeaker,
     "emails" to emails,
+    "street" to street,
+    "postalCode" to postalCode,
+    "city" to city,
+    // Eine leere Beziehung wird weggelassen; die Rules erlauben sie nur als optionales Feld.
+    "emergencyContacts" to emergencyContacts.map { contact ->
+        buildMap {
+            put("name", contact.name)
+            if (contact.relation.isNotEmpty()) put("relation", contact.relation)
+            put("phones", contact.phones)
+        }
+    },
 )

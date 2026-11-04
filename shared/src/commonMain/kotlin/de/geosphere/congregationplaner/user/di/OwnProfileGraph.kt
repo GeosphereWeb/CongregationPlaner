@@ -1,8 +1,6 @@
 package de.geosphere.congregationplaner.user.di
 
-import de.geosphere.congregationplaner.user.data.createMemberPrivateRepository
 import de.geosphere.congregationplaner.user.data.createUserRepository
-import de.geosphere.congregationplaner.user.domain.repository.MemberPrivateRepository
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
 import de.geosphere.congregationplaner.user.presentation.OwnProfileViewModel
 import dev.zacsweers.metro.DependencyGraph
@@ -14,7 +12,4 @@ interface OwnProfileGraph {
 
     @Provides
     fun provideUserRepository(): UserRepository = createUserRepository()
-
-    @Provides
-    fun provideMemberPrivateRepository(): MemberPrivateRepository = createMemberPrivateRepository()
 }

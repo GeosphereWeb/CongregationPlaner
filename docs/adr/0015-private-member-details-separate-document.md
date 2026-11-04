@@ -1,7 +1,7 @@
 # ADR-0015: Adresse und Notfallkontakte in einem eigenen Dokument
 
 ## Status
-Accepted
+Superseded by ADR-0016
 
 ## Context
 Mitglieder sollen ihre Adresse und Notfallkontakte selbst pflegen. Das Mitgliedsdokument lesen aber neben den Versammlungsadmins auch alle Vortrags- und Aufgabenplaner (ADR-0012), und Firestore-Rules schränken nur ganze Dokumente ein, nicht einzelne Felder. Handy und Festnetz stehen schon im Mitgliedsdokument und sollen für die Planung sichtbar bleiben.
