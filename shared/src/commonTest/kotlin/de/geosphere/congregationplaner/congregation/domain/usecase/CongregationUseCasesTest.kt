@@ -11,18 +11,21 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class CongregationUseCasesTest {
-    @Test
-    fun `observe use case returns repository congregations`() = runBlocking {
-        val expected = listOf(CongregationMetadata(id = "609a", name = "Berlin"))
-        val useCase = ObserveCongregationsUseCase(FakeCongregationMetadataRepository(expected))
+    private val circuit = listOf("EMEA", "europe", "central-europe", "609a")
 
-        assertEquals(expected, useCase().first())
+    @Test
+    fun `observe use case returns the congregations of the circuit`() = runBlocking {
+        val expected = listOf(CongregationMetadata(id = "k1", name = "Berlin"))
+        val repository = FakeCongregationMetadataRepository(expected)
+
+        assertEquals(expected, ObserveCongregationsUseCase(repository)(circuit).first())
+        assertEquals(circuit, repository.circuit)
     }
 
     @Test
-    fun `save use case delegates congregation to repository`() = runBlocking {
+    fun `save use case delegates congregation and circuit to repository`() = runBlocking {
         val expected = CongregationMetadata(
-            id = "609a",
+            id = "k1",
             name = "Berlin",
             midweekMeetingTime = LocalTime(19, 0),
             midweekMeetingWeekday = 3,
@@ -31,16 +34,18 @@ class CongregationUseCasesTest {
         )
         val repository = FakeCongregationMetadataRepository(emptyList())
 
-        assertEquals(expected, SaveCongregationUseCase(repository)(expected).getOrThrow())
+        assertEquals(expected, SaveCongregationUseCase(repository)(circuit, expected).getOrThrow())
         assertEquals(expected, repository.savedCongregation)
+        assertEquals(circuit, repository.circuit)
     }
 
     @Test
-    fun `delete use case delegates congregation id to repository`() = runBlocking {
+    fun `delete use case delegates congregation id and circuit to repository`() = runBlocking {
         val repository = FakeCongregationMetadataRepository(emptyList())
 
-        assertEquals(Unit, DeleteCongregationUseCase(repository)("609a").getOrThrow())
-        assertEquals("609a", repository.deletedCongregationId)
+        assertEquals(Unit, DeleteCongregationUseCase(repository)(circuit, "k1").getOrThrow())
+        assertEquals("k1", repository.deletedCongregationId)
+        assertEquals(circuit, repository.circuit)
     }
 
     private class FakeCongregationMetadataRepository(private val congregations: List<CongregationMetadata>) :
@@ -51,14 +56,25 @@ class CongregationUseCasesTest {
         var deletedCongregationId: String? = null
             private set
 
-        override fun observeAll(): Flow<List<CongregationMetadata>> = flowOf(congregations)
+        var circuit: List<String>? = null
+            private set
 
-        override suspend fun save(congregation: CongregationMetadata): Result<CongregationMetadata> {
+        override fun observeAll(circuitIds: List<String>): Flow<List<CongregationMetadata>> {
+            circuit = circuitIds
+            return flowOf(congregations)
+        }
+
+        override suspend fun save(
+            circuitIds: List<String>,
+            congregation: CongregationMetadata,
+        ): Result<CongregationMetadata> {
+            circuit = circuitIds
             savedCongregation = congregation
             return Result.success(congregation)
         }
 
-        override suspend fun delete(congregationId: String): Result<Unit> {
+        override suspend fun delete(circuitIds: List<String>, congregationId: String): Result<Unit> {
+            circuit = circuitIds
             deletedCongregationId = congregationId
             return Result.success(Unit)
         }

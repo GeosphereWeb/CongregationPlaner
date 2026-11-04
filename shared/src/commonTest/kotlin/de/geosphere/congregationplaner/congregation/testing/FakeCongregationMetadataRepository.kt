@@ -6,16 +6,22 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 
-/** [CongregationMetadataRepository], das feste Versammlungen liefert oder mit [error] ausfällt. */
+/** [CongregationMetadataRepository], das feste Versammlungen liefert oder mit [error] ausfällt; merkt sich den Kreis. */
 internal class FakeCongregationMetadataRepository(
     private val congregations: List<CongregationMetadata> = emptyList(),
     private val error: Throwable? = null,
 ) : CongregationMetadataRepository {
-    override fun observeAll(): Flow<List<CongregationMetadata>> =
-        error?.let { flow { throw it } } ?: flowOf(congregations)
+    val requestedCircuits = mutableListOf<List<String>>()
 
-    override suspend fun save(congregation: CongregationMetadata): Result<CongregationMetadata> =
-        Result.success(congregation)
+    override fun observeAll(circuitIds: List<String>): Flow<List<CongregationMetadata>> {
+        requestedCircuits += circuitIds
+        return error?.let { flow { throw it } } ?: flowOf(congregations)
+    }
 
-    override suspend fun delete(congregationId: String): Result<Unit> = Result.success(Unit)
+    override suspend fun save(
+        circuitIds: List<String>,
+        congregation: CongregationMetadata,
+    ): Result<CongregationMetadata> = Result.success(congregation)
+
+    override suspend fun delete(circuitIds: List<String>, congregationId: String): Result<Unit> = Result.success(Unit)
 }

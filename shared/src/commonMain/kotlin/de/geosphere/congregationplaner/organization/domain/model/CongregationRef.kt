@@ -14,6 +14,9 @@ data class CongregationRef(
     /** Die IDs aller Ebenen, von [OrgLevel.REGION] bis [OrgLevel.CONGREGATION]. */
     val ids: List<String> get() = listOf(regionId, subregionId, branchId, circuitId, congregationId)
 
+    /** Die IDs von [OrgLevel.REGION] bis zum Kreis, also die übergeordneten Einheiten der Versammlung. */
+    val circuitIds: List<String> get() = ids.dropLast(1)
+
     val documentPath: String get() = "${OrgLevel.CONGREGATION.collectionPath(ids.dropLast(1))}/$congregationId"
 
     val membersPath: String get() = "$documentPath/$MEMBERS_SUBCOLLECTION"

@@ -30,13 +30,14 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class FirestoreCongregationMetadataRepositoryTest {
+    private val circuit = listOf("EMEA", "europe", "central-europe", "c1")
     private val firestore = mockk<FirebaseFirestore>()
     private val collection = mockk<CollectionReference>()
     private val registration = mockk<ListenerRegistration>(relaxed = true)
     private val repository = FirestoreCongregationMetadataRepository(firestore)
 
     init {
-        every { firestore.collection(CONGREGATION_COLLECTION_PATH) } returns collection
+        every { firestore.collection(congregationCollectionPath(circuit)) } returns collection
     }
 
     @Test
@@ -45,7 +46,7 @@ class FirestoreCongregationMetadataRepositoryTest {
 
         assertEquals(
             listOf(CongregationMetadata("609a", "Berlin", LocalTime(19, 0), 3, LocalTime(10, 0), 7)),
-            repository.observeAll().first(),
+            repository.observeAll(circuit).first(),
         )
         verify { registration.remove() }
     }
@@ -56,7 +57,7 @@ class FirestoreCongregationMetadataRepositoryTest {
 
         assertEquals(
             CongregationMetadata("1", "", LocalTime(0, 0), 1, LocalTime(0, 0), 1),
-            repository.observeAll().first().single(),
+            repository.observeAll(circuit).first().single(),
         )
     }
 
@@ -71,17 +72,17 @@ class FirestoreCongregationMetadataRepositoryTest {
             document("1", "Berlin", 1900L, 3L, "10:00", 7L),
         ).forEach { invalid ->
             emitSnapshot(querySnapshot(invalid), null)
-            runBlocking { assertFailsWith<IllegalArgumentException> { repository.observeAll().first() } }
+            runBlocking { assertFailsWith<IllegalArgumentException> { repository.observeAll(circuit).first() } }
         }
     }
 
     @Test
     fun `observeAll fails for listener errors and empty snapshots`(): Unit = withMockedLog {
         emitSnapshot(null, mockk<FirebaseFirestoreException>(relaxed = true))
-        runBlocking { assertFailsWith<FirebaseFirestoreException> { repository.observeAll().first() } }
+        runBlocking { assertFailsWith<FirebaseFirestoreException> { repository.observeAll(circuit).first() } }
 
         emitSnapshot(null, null)
-        runBlocking { assertFailsWith<IllegalStateException> { repository.observeAll().first() } }
+        runBlocking { assertFailsWith<IllegalStateException> { repository.observeAll(circuit).first() } }
     }
 
     @Test
@@ -93,7 +94,7 @@ class FirestoreCongregationMetadataRepositoryTest {
         every { reference.set(capture(fields)) } returns successTask<Void?>(null)
         val congregation = CongregationMetadata(name = "Berlin")
 
-        assertEquals(congregation.copy(id = "new-id"), repository.save(congregation).getOrThrow())
+        assertEquals(congregation.copy(id = "new-id"), repository.save(circuit, congregation).getOrThrow())
         assertEquals(
             mapOf(
                 "name" to "Berlin",
@@ -114,7 +115,7 @@ class FirestoreCongregationMetadataRepositoryTest {
 
         assertEquals(
             mapOf(2027 to MeetingTimes(4, LocalTime(18, 30), 6, LocalTime(9, 30))),
-            repository.observeAll().first().single().yearlyMeetingTimes,
+            repository.observeAll(circuit).first().single().yearlyMeetingTimes,
         )
     }
 
@@ -126,7 +127,7 @@ class FirestoreCongregationMetadataRepositoryTest {
         every { reference.update(any<Map<String, Any>>()) } returns successTask<Void?>(null)
         val congregation = CongregationMetadata(id = "609a", name = "Berlin")
 
-        assertEquals(congregation, repository.save(congregation).getOrThrow())
+        assertEquals(congregation, repository.save(circuit, congregation).getOrThrow())
         verify { reference.update(any<Map<String, Any>>()) }
     }
 
@@ -137,7 +138,7 @@ class FirestoreCongregationMetadataRepositoryTest {
         every { collection.document() } returns reference
         every { reference.set(any()) } returns failedTask<Void?>(error)
 
-        runBlocking { assertFailure(error, repository.save(CongregationMetadata(name = "Berlin"))) }
+        runBlocking { assertFailure(error, repository.save(circuit, CongregationMetadata(name = "Berlin"))) }
     }
 
     @Test
@@ -147,8 +148,8 @@ class FirestoreCongregationMetadataRepositoryTest {
         every { reference.delete() } returns successTask<Void?>(null)
 
         runBlocking {
-            assertTrue(repository.delete("609a").isSuccess)
-            assertIs<IllegalArgumentException>(repository.delete("").exceptionOrNull())
+            assertTrue(repository.delete(circuit, "609a").isSuccess)
+            assertIs<IllegalArgumentException>(repository.delete(circuit, "").exceptionOrNull())
         }
         verify { reference.delete() }
     }
@@ -160,7 +161,7 @@ class FirestoreCongregationMetadataRepositoryTest {
         every { collection.document("609a") } returns reference
         every { reference.delete() } returns failedTask<Void?>(error)
 
-        runBlocking { assertFailure(error, repository.delete("609a")) }
+        runBlocking { assertFailure(error, repository.delete(circuit, "609a")) }
     }
 
     @Test

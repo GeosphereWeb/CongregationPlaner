@@ -19,31 +19,34 @@ actual fun createCongregationMetadataRepository(): CongregationMetadataRepositor
 
 internal class FirestoreCongregationMetadataRepository(private val firestore: FirebaseFirestore) :
     CongregationMetadataRepository {
-    override fun observeAll(): Flow<List<CongregationMetadata>> =
-        observeDocuments(firestore.collection(CONGREGATION_COLLECTION_PATH), "congregation", ::toDomain)
+    override fun observeAll(circuitIds: List<String>): Flow<List<CongregationMetadata>> =
+        observeDocuments(firestore.collection(congregationCollectionPath(circuitIds)), "congregation", ::toDomain)
 
-    override suspend fun save(congregation: CongregationMetadata): Result<CongregationMetadata> =
-        runFirestoreCatching("save congregation") {
-            val collection = firestore.collection(CONGREGATION_COLLECTION_PATH)
-            val document = if (congregation.id.isBlank()) {
-                collection.document().also { reference ->
-                    reference.set(congregation.toFirestoreFields()).awaitResult()
-                }
-            } else {
-                collection.document(congregation.id).also { reference ->
-                    reference.update(congregation.toFirestoreFields()).awaitResult()
-                }
+    override suspend fun save(
+        circuitIds: List<String>,
+        congregation: CongregationMetadata,
+    ): Result<CongregationMetadata> = runFirestoreCatching("save congregation") {
+        val collection = firestore.collection(congregationCollectionPath(circuitIds))
+        val document = if (congregation.id.isBlank()) {
+            collection.document().also { reference ->
+                reference.set(congregation.toFirestoreFields()).awaitResult()
             }
-            congregation.copy(id = document.id)
+        } else {
+            collection.document(congregation.id).also { reference ->
+                reference.update(congregation.toFirestoreFields()).awaitResult()
+            }
         }
-
-    override suspend fun delete(congregationId: String): Result<Unit> = runFirestoreCatching("delete congregation") {
-        require(congregationId.isNotBlank()) { "A congregation ID is required to delete a congregation." }
-        firestore.collection(CONGREGATION_COLLECTION_PATH)
-            .document(congregationId)
-            .delete()
-            .awaitResult()
+        congregation.copy(id = document.id)
     }
+
+    override suspend fun delete(circuitIds: List<String>, congregationId: String): Result<Unit> =
+        runFirestoreCatching("delete congregation") {
+            require(congregationId.isNotBlank()) { "A congregation ID is required to delete a congregation." }
+            firestore.collection(congregationCollectionPath(circuitIds))
+                .document(congregationId)
+                .delete()
+                .awaitResult()
+        }
 }
 
 private fun toDomain(document: DocumentSnapshot): CongregationMetadata = CongregationMetadata(
