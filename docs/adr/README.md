@@ -73,3 +73,4 @@ Numbers are sequential and permanent. Never reuse or renumber an existing ADR, e
 - [ADR-0014: Nachtblau-Design als `MaterialTheme`](0014-night-design-as-material-theme.md) — Accepted
 - [ADR-0015: Adresse und Notfallkontakte in einem eigenen Dokument](0015-private-member-details-separate-document.md) — Superseded by ADR-0016
 - [ADR-0016: Adresse und Notfallkontakte im Mitgliedsdokument](0016-contact-details-in-member-document.md) — Accepted
+- [ADR-0017: Organisationsbaum in der App pflegen](0017-organization-tree-maintained-in-app.md) — Accepted
