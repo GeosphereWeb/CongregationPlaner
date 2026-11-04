@@ -285,34 +285,34 @@ await expect('Mitglied speichert ungültige E-Mail-Adresse', api('PATCH', ownNam
 await expect('Mitglied ändert die E-Mail-Adressen eines anderen', api('PATCH', ownName(planner.uid, 'emails'), emailsBody('a@b.de'), plain.token), false);
 await expect('Mitglied ändert die Anmelde-E-Mail', api('PATCH', ownName(plain.uid, 'email'), { fields: { email: { stringValue: 'neu@b.de' } } }, plain.token), false);
 
-// ---------- Private Angaben (memberPrivate, ADR-0015): Adresse und Notfallkontakte ----------
-const PRIVATE = `${CONG}/memberPrivate`;
+// ---------- Adresse und Notfallkontakte im Mitgliedsdokument (ADR-0016) ----------
+const ADDRESS_FIELDS = ['street', 'postalCode', 'city', 'emergencyContacts'];
 const phonesValue = (phones) => ({ arrayValue: { values: phones.map((stringValue) => ({ stringValue })) } });
 const emergency = (name, phone, relation, more = []) => ({ mapValue: { fields: { name: { stringValue: name }, phones: phonesValue([phone, ...more]), ...(relation === undefined ? {} : { relation: { stringValue: relation } }) } } });
-const privateBody = (contacts, extra = {}) => ({ fields: { street: { stringValue: 'Hauptstr. 1' }, postalCode: { stringValue: '10115' }, city: { stringValue: 'Berlin' }, emergencyContacts: { arrayValue: { values: contacts } }, ...extra } });
-const putPrivate = (uid, body, token) => api('PATCH', `${PRIVATE}/${uid}`, body, token);
-await expect('Mitglied speichert eigene Adresse und Notfallkontakte', putPrivate(plain.uid, privateBody([emergency('Anna Muster', '0170 1', 'Ehefrau'), emergency('Ben Muster', '030 2')]), plain.token), true);
-await expect('Mitglied speichert fünf Notfallkontakte', putPrivate(plain.uid, privateBody([1, 2, 3, 4, 5].map((i) => emergency(`K${i}`, `0${i}`))), plain.token), true);
-await expect('Mitglied speichert sechs Notfallkontakte', putPrivate(plain.uid, privateBody([1, 2, 3, 4, 5, 6].map((i) => emergency(`K${i}`, `0${i}`))), plain.token), false);
-await expect('Notfallkontakt ohne Telefon', putPrivate(plain.uid, privateBody([{ mapValue: { fields: { name: { stringValue: 'Anna' } } } }]), plain.token), false);
-await expect('Notfallkontakt mit drei Telefonnummern', putPrivate(plain.uid, privateBody([emergency('Anna', '0170 1', 'Ehefrau', ['030 2', '0201 3'])]), plain.token), true);
-await expect('Notfallkontakt mit vier Telefonnummern', putPrivate(plain.uid, privateBody([emergency('Anna', '0170 1', undefined, ['030 2', '0201 3', '089 4'])]), plain.token), false);
-await expect('Notfallkontakt mit leerer Telefonliste', putPrivate(plain.uid, privateBody([{ mapValue: { fields: { name: { stringValue: 'Anna' }, phones: phonesValue([]) } } }]), plain.token), false);
-await expect('Notfallkontakt mit ungültiger zweiter Nummer', putPrivate(plain.uid, privateBody([emergency('Anna', '0170 1', undefined, ['abc'])]), plain.token), false);
-await expect('Notfallkontakt im alten Format mit phone', putPrivate(plain.uid, privateBody([{ mapValue: { fields: { name: { stringValue: 'Anna' }, phone: { stringValue: '0170' } } } }]), plain.token), false);
-await expect('Notfallkontakt ohne Namen', putPrivate(plain.uid, privateBody([emergency('', '0170')]), plain.token), false);
-await expect('Notfallkontakt mit ungültiger Telefonnummer', putPrivate(plain.uid, privateBody([emergency('Anna', 'abc')]), plain.token), false);
-await expect('Notfallkontakt mit Zusatzfeld', putPrivate(plain.uid, privateBody([{ mapValue: { fields: { name: { stringValue: 'Anna' }, phones: phonesValue(['0170']), email: { stringValue: 'a@b.de' } } } }]), plain.token), false);
-await expect('Private Angaben mit Zusatzfeld', putPrivate(plain.uid, privateBody([], { iban: { stringValue: 'DE00' } }), plain.token), false);
-await expect('Private Angaben mit zu langer Postleitzahl', putPrivate(plain.uid, privateBody([], { postalCode: { stringValue: '12345678901' } }), plain.token), false);
-await expect('Mitglied liest eigene private Angaben', api('GET', `${PRIVATE}/${plain.uid}`, undefined, plain.token), true);
-await expect('Versammlungsadmin liest private Angaben', api('GET', `${PRIVATE}/${plain.uid}`, undefined, congAdmin.token), true);
-await expect('Vortragsplaner liest keine privaten Angaben', api('GET', `${PRIVATE}/${plain.uid}`, undefined, planner.token), false);
-await expect('Versammlungsadmin schreibt keine fremden privaten Angaben', putPrivate(plain.uid, privateBody([]), congAdmin.token), false);
-await expect('Mitglied schreibt keine fremden privaten Angaben', putPrivate(planner.uid, privateBody([]), plain.token), false);
-const noMember = await signUp('nomember@test.de');
-await expect('Ohne Mitgliedsdokument keine privaten Angaben', putPrivate(noMember.uid, privateBody([]), noMember.token), false);
-await expect('Versammlungsadmin löscht private Angaben', api('DELETE', `${PRIVATE}/${plain.uid}`, undefined, congAdmin.token), true);
+const addressBody = (contacts, extra = {}) => ({ fields: { street: { stringValue: 'Hauptstr. 1' }, postalCode: { stringValue: '10115' }, city: { stringValue: 'Berlin' }, emergencyContacts: { arrayValue: { values: contacts } }, ...extra } });
+const putAddress = (uid, body, token, fields = ADDRESS_FIELDS) => api('PATCH', ownName(uid, ...fields), body, token);
+await expect('Mitglied speichert eigene Adresse und Notfallkontakte', putAddress(plain.uid, addressBody([emergency('Anna Muster', '0170 1', 'Ehefrau'), emergency('Ben Muster', '030 2')]), plain.token), true);
+// Worst case for the limit of 1000 expressions per request: everything at its maximum.
+const fullContacts = [1, 2, 3, 4, 5].map((i) => emergency(`Kontakt ${i}`, `0170 ${i}`, 'Ehefrau', [`030 ${i}`, `0201 ${i}`]));
+const fullExtras = { emails: { arrayValue: { values: ['a@b.de', 'c@d.de', 'e@f.de'].map((stringValue) => ({ stringValue })) } }, mobilePhone: { stringValue: '0170 123456' }, landlinePhone: { stringValue: '030 123456' } };
+const fullFields = [...ADDRESS_FIELDS, 'emails', 'mobilePhone', 'landlinePhone'];
+await expect('Mitglied speichert fünf Notfallkontakte mit je drei Nummern', putAddress(plain.uid, addressBody(fullContacts, fullExtras), plain.token, fullFields), true);
+await expect('Admin speichert fünf Notfallkontakte mit je drei Nummern', putAddress(plain.uid, addressBody(fullContacts, fullExtras), congAdmin.token, fullFields), true);
+await expect('Mitglied speichert sechs Notfallkontakte', putAddress(plain.uid, addressBody([1, 2, 3, 4, 5, 6].map((i) => emergency(`K${i}`, `0${i}`))), plain.token), false);
+await expect('Notfallkontakt ohne Telefon', putAddress(plain.uid, addressBody([{ mapValue: { fields: { name: { stringValue: 'Anna' } } } }]), plain.token), false);
+await expect('Notfallkontakt mit drei Telefonnummern', putAddress(plain.uid, addressBody([emergency('Anna', '0170 1', 'Ehefrau', ['030 2', '0201 3'])]), plain.token), true);
+await expect('Notfallkontakt mit vier Telefonnummern', putAddress(plain.uid, addressBody([emergency('Anna', '0170 1', undefined, ['030 2', '0201 3', '089 4'])]), plain.token), false);
+await expect('Notfallkontakt mit leerer Telefonliste', putAddress(plain.uid, addressBody([{ mapValue: { fields: { name: { stringValue: 'Anna' }, phones: phonesValue([]) } } }]), plain.token), false);
+await expect('Notfallkontakt ohne Namen', putAddress(plain.uid, addressBody([emergency('', '0170')]), plain.token), false);
+await expect('Notfallkontakt mit Zusatzfeld', putAddress(plain.uid, addressBody([{ mapValue: { fields: { name: { stringValue: 'Anna' }, phones: phonesValue(['0170']), email: { stringValue: 'a@b.de' } } } }]), plain.token), false);
+await expect('Mitglied speichert ein unbekanntes Feld', putAddress(plain.uid, addressBody([], { iban: { stringValue: 'DE00' } }), plain.token, [...ADDRESS_FIELDS, 'iban']), false);
+await expect('Adresse mit zu langer Postleitzahl', putAddress(plain.uid, addressBody([], { postalCode: { stringValue: '12345678901' } }), plain.token), false);
+await expect('Mitglied ändert die Adresse eines anderen', putAddress(planner.uid, addressBody([]), plain.token), false);
+await expect('Mitglied setzt sich zur Adresse als getauft', putAddress(plain.uid, addressBody([], { baptized: { booleanValue: true } }), plain.token, [...ADDRESS_FIELDS, 'baptized']), false);
+await expect('Versammlungsadmin ändert Adresse und Notfallkontakte eines Mitglieds', putAddress(plain.uid, addressBody([emergency('Anna', '0170')]), congAdmin.token), true);
+await expect('Vortragsplaner ändert die Adresse eines Mitglieds', putAddress(plain.uid, addressBody([]), planner.token), false);
+await expect('Vortragsplaner liest ein Mitglied mit Adresse', api('GET', `${CONG}/members/${plain.uid}`, undefined, planner.token), true);
+await expect('Mitglied ohne Rolle liest kein fremdes Mitglied', api('GET', `${CONG}/members/${planner.uid}`, undefined, plain.token), false);
 
 // ---------- Planen nur als Vortragsplaner: die Rolle Versammlungsadmin allein genügt nicht ----------
 await expect('Versammlungsadmin ohne Planerrolle schreibt Termin', putSlot('2026-11-08', base, congAdmin.token), false);
