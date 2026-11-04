@@ -3,9 +3,8 @@ package de.geosphere.congregationplaner.presentation.navigation
 import de.geosphere.congregationplaner.talk.domain.permission.TalkReferenceDataPolicy
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.user.domain.model.AppUser
-import de.geosphere.congregationplaner.user.domain.permission.CircuitPermissionPolicy
-import de.geosphere.congregationplaner.user.domain.permission.CongregationPermissionPolicy
 import de.geosphere.congregationplaner.user.domain.permission.MidweekPermissionPolicy
+import de.geosphere.congregationplaner.user.domain.permission.OrganizationPermissionPolicy
 import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
 import dev.zacsweers.metro.Inject
 
@@ -16,10 +15,9 @@ import dev.zacsweers.metro.Inject
 @Inject
 class NavigationAccess(
     private val userPolicy: UserPermissionPolicy,
-    private val congregationPolicy: CongregationPermissionPolicy,
     private val talkSchedulePolicy: TalkSchedulePermissionPolicy,
     private val midweekPolicy: MidweekPermissionPolicy,
-    private val circuitPolicy: CircuitPermissionPolicy,
+    private val organizationPolicy: OrganizationPermissionPolicy,
     private val talkReferencePolicy: TalkReferenceDataPolicy,
 ) {
     fun visibleFor(user: AppUser): VisibleNavigation = VisibleNavigation(
@@ -41,8 +39,7 @@ class NavigationAccess(
     }
 
     private fun canSee(user: AppUser, section: GlobalSection): Boolean = when (section) {
-        GlobalSection.CIRCUITS -> circuitPolicy.canManageGeneral(user)
-        GlobalSection.CONGREGATIONS -> congregationPolicy.canManageGeneral(user)
+        GlobalSection.ORGANIZATION -> organizationPolicy.canManage(user)
         GlobalSection.TALK_REFERENCE -> talkReferencePolicy.canManage(user)
     }
 }
