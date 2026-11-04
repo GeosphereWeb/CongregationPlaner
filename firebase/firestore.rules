@@ -11,11 +11,11 @@ rules_version = '2';
 //
 // Organization hierarchy (readable WITHOUT sign-in so that a user can pick the
 // congregation on the login screen; only the documents of the hierarchy are
-// public, not their other subcollections):
-//   region/{regionId}
-//     subregion/{subregionId}
-//       branch/{branchId}
-//         circuit/{circuitId}          - name: string, overseer_name: string
+// public, not their other subcollections). Maintained by global admins:
+//   region/{regionId}                  - name: string (1..100)
+//     subregion/{subregionId}          - name: string (1..100)
+//       branch/{branchId}              - name: string (1..100)
+//         circuit/{circuitId}          - name: string (1..100), overseer_name: string (<= 100, optional)
 //           congregation/{congId}      - name: string, meeting times/weekdays
 //
 // Collection: region/.../congregation/{congId}/members
@@ -148,6 +148,18 @@ service cloud.firestore {
         data.keys().hasAll(['name', 'cancelsTalk']) &&
         data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
         data.cancelsTalk is bool;
+    }
+
+    // Region, subregion and branch carry only their name.
+    function isValidOrgUnit(data) {
+      return data.keys().hasOnly(['name']) && data.keys().hasAll(['name']) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 100;
+    }
+
+    function isValidCircuit(data) {
+      return data.keys().hasOnly(['name', 'overseer_name']) && data.keys().hasAll(['name']) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+        isShortString(data.get('overseer_name', ''), 100);
     }
 
     function isValidCatalogTalk(data) {
@@ -478,21 +490,27 @@ service cloud.firestore {
     // Organization hierarchy
     // ===============================================================
 
+    // Only global admins maintain the hierarchy. Rules cannot check that a unit is empty before it is deleted; the app
+    // does that, because Firestore does not delete subcollections.
     match /region/{regionId} {
       allow read: if true;
-      allow write: if isGlobalAdmin();
+      allow create, update: if isGlobalAdmin() && isValidOrgUnit(request.resource.data);
+      allow delete: if isGlobalAdmin();
 
       match /subregion/{subregionId} {
         allow read: if true;
-        allow write: if isGlobalAdmin();
+        allow create, update: if isGlobalAdmin() && isValidOrgUnit(request.resource.data);
+        allow delete: if isGlobalAdmin();
 
         match /branch/{branchId} {
           allow read: if true;
-          allow write: if isGlobalAdmin();
+          allow create, update: if isGlobalAdmin() && isValidOrgUnit(request.resource.data);
+          allow delete: if isGlobalAdmin();
 
           match /circuit/{circuitId} {
             allow read: if true;
-            allow write: if isGlobalAdmin();
+            allow create, update: if isGlobalAdmin() && isValidCircuit(request.resource.data);
+            allow delete: if isGlobalAdmin();
 
             match /congregation/{congId} {
               allow read: if true;
