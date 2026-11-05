@@ -315,11 +315,15 @@ const newcomer = await signUp('newcomer@test.de');
 const newcomer2 = await signUp('newcomer2@test.de');
 const newcomer3 = await signUp('newcomer3@test.de');
 const newcomer5 = await signUp('newcomer5@test.de');
+const newcomer6 = await signUp('newcomer6@test.de');
+const newcomer7 = await signUp('newcomer7@test.de');
 const registerPath = (user) => `${CONG}/members/${user.uid}`;
 await expect('Selbstregistrierung mit roles []', api('PATCH', registerPath(newcomer), registerBody('newcomer@test.de'), newcomer.token), true);
 await expect('Selbstregistrierung mit Rolle', api('PATCH', registerPath(newcomer2), registerBody('newcomer2@test.de', { roles: ['CONGREGATION_ADMIN'] }), newcomer2.token), false);
 await expect('Selbstregistrierung freigegeben', api('PATCH', registerPath(newcomer3), registerBody('newcomer3@test.de', { approved: true }), newcomer3.token), false);
 await expect('Selbstregistrierung ohne roles', api('PATCH', registerPath(newcomer5), fields({ email: 'newcomer5@test.de', displayName: 'n', approved: false }), newcomer5.token), false);
+await expect('Selbstregistrierung mit Vor- und Nachname', api('PATCH', registerPath(newcomer6), registerBody('newcomer6@test.de', { firstName: 'Max', lastName: 'Muster' }), newcomer6.token), true);
+await expect('Selbstregistrierung mit Namen und anderen Profilangaben', api('PATCH', registerPath(newcomer7), registerBody('newcomer7@test.de', { firstName: 'Max', lastName: 'Muster', baptized: true }), newcomer7.token), false);
 await expect('Selbstregistrierung mit fremder E-Mail-Adresse', api('PATCH', registerPath(newcomer5), registerBody('other@test.de'), newcomer5.token), false);
 
 

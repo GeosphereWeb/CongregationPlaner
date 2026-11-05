@@ -25,21 +25,27 @@ class FirebaseAuthPlatformService(
             )
         }
 
-    override suspend fun createUserWithEmailAndPassword(email: String, password: String): FirebaseUser? =
-        withContext(Dispatchers.IO) {
-            val user = performDesktopAuthRequest(
-                endpoint = "accounts:signUp",
-                email = email,
-                password = password,
-            ) ?: return@withContext null
+    override suspend fun createUserWithEmailAndPassword(
+        email: String,
+        password: String,
+        displayName: String?,
+    ): FirebaseUser? = withContext(Dispatchers.IO) {
+        val created = performDesktopAuthRequest(
+            endpoint = "accounts:signUp",
+            email = email,
+            password = password,
+        ) ?: return@withContext null
 
-            val idToken = user.idToken ?: return@withContext user
-            if (sendVerificationEmailRequest(idToken)) {
-                user
-            } else {
-                null
-            }
+        val idToken = created.idToken ?: return@withContext created
+        val name = displayName?.trim().orEmpty()
+        // Scheitert nur das Speichern des Namens, bleibt das Konto bestehen; der Name lässt sich im Profil nachtragen.
+        val user = if (name.isNotEmpty() && updateDisplayNameRequest(idToken, name)) {
+            created.withDisplayName(name).also { currentUser = it }
+        } else {
+            created
         }
+        if (sendVerificationEmailRequest(idToken)) user else null
+    }
 
     override suspend fun signOut() {
         currentUser = null
@@ -101,6 +107,18 @@ class FirebaseAuthPlatformService(
         return currentUser
     }
 
+    private fun updateDisplayNameRequest(idToken: String, displayName: String): Boolean {
+        val apiKey = apiKeyProvider() ?: return false
+        val body = """
+            {
+              "idToken": "${escapeJson(idToken)}",
+              "displayName": "${escapeJson(displayName)}",
+              "returnSecureToken": false
+            }
+        """.trimIndent()
+        return postAuthRequest("accounts:update", apiKey, body)
+    }
+
     private fun sendVerificationEmailRequest(idToken: String): Boolean {
         val apiKey = apiKeyProvider() ?: return false
         val body = """
@@ -109,17 +127,28 @@ class FirebaseAuthPlatformService(
               "idToken": "${escapeJson(idToken)}"
             }
         """.trimIndent()
+        return postAuthRequest("accounts:sendOobCode", apiKey, body)
+    }
 
-        val url = buildDesktopAuthUrl("accounts:sendOobCode", apiKey)
-        val connection = connectionFactory(url)
+    private fun postAuthRequest(endpoint: String, apiKey: String, body: String): Boolean {
+        val connection = connectionFactory(buildDesktopAuthUrl(endpoint, apiKey))
         connection.requestMethod = "POST"
         connection.doOutput = true
         connection.setRequestProperty("Content-Type", "application/json")
         connection.outputStream.use { stream ->
             stream.write(body.toByteArray(StandardCharsets.UTF_8))
         }
-
         return connection.responseCode in 200..299
+    }
+
+    private fun FirebaseUser.withDisplayName(name: String): FirebaseUser {
+        val source = this
+        return object : FirebaseUser {
+            override val uid: String = source.uid
+            override val email: String? = source.email
+            override val displayName: String? = name
+            override val idToken: String? = source.idToken
+        }
     }
 }
 

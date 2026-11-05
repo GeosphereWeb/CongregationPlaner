@@ -28,7 +28,11 @@ class FirebaseRepositoryContractTest {
             private var signedIn = true
 
             override suspend fun signInWithEmailAndPassword(email: String, password: String): FirebaseUser? = null
-            override suspend fun createUserWithEmailAndPassword(email: String, password: String): FirebaseUser? = null
+            override suspend fun createUserWithEmailAndPassword(
+                email: String,
+                password: String,
+                displayName: String?,
+            ): FirebaseUser? = null
             override suspend fun signOut() {
                 signedIn = false
             }

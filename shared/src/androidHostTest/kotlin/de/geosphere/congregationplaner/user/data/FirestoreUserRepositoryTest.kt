@@ -96,9 +96,11 @@ class FirestoreUserRepositoryTest {
                 "User",
                 approved = false,
                 congregation = congregation,
+                profile = MemberProfile(firstName = "User"),
             ),
             user,
         )
+        // Der Anzeigename „User“ ist ein einzelnes Wort und wird zum Vornamen.
         assertEquals(
             mapOf(
                 "email" to "user@example.com",
@@ -106,7 +108,7 @@ class FirestoreUserRepositoryTest {
                 "approved" to false,
                 "roles" to emptyList<String>(),
                 "hasAccount" to true,
-            ) + defaultProfileFields,
+            ) + defaultProfileFields + mapOf("firstName" to "User"),
             fields.captured,
         )
     }

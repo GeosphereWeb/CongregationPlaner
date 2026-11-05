@@ -81,6 +81,8 @@ fun App() {
         var infoMessage by remember { mutableStateOf<String?>(null) }
         var email by remember { mutableStateOf("") }
         var password by remember { mutableStateOf("") }
+        var firstName by remember { mutableStateOf("") }
+        var lastName by remember { mutableStateOf("") }
         val scope = rememberCoroutineScope()
         val userAccessViewModel = remember { createGraph<UserAccessGraph>().userAccessViewModel }
         val selectionViewModel = remember { createGraph<OrganizationGraph>().congregationSelectionViewModel }
@@ -127,6 +129,8 @@ fun App() {
             LoginScreen(
                 email = email,
                 password = password,
+                firstName = firstName,
+                lastName = lastName,
                 firebaseStatus = firebaseStatus,
                 authMode = authMode,
                 loginError = loginError,
@@ -149,6 +153,8 @@ fun App() {
                 onGlobalAdminLogin = { globalLogin = true },
                 onEmailChange = { email = it },
                 onPasswordChange = { password = it },
+                onFirstNameChange = { firstName = it },
+                onLastNameChange = { lastName = it },
                 onToggleMode = {
                     authMode = if (authMode == AuthMode.LOGIN) AuthMode.REGISTER else AuthMode.LOGIN
                     loginError = null
@@ -158,7 +164,11 @@ fun App() {
                     scope.launch {
                         loginError = null
                         val user = if (authMode == AuthMode.REGISTER) {
-                            FirebaseAuthManager.createUserWithEmailAndPassword(email.trim(), password)
+                            FirebaseAuthManager.createUserWithEmailAndPassword(
+                                email.trim(),
+                                password,
+                                "${firstName.trim()} ${lastName.trim()}",
+                            )
                         } else {
                             FirebaseAuthManager.signInWithEmailAndPassword(email.trim(), password)
                         }
@@ -171,6 +181,8 @@ fun App() {
                                 authMode = AuthMode.LOGIN
                                 email = ""
                                 password = ""
+                                firstName = ""
+                                lastName = ""
                             } else {
                                 isAuthenticated = true
                                 email = ""
@@ -276,6 +288,10 @@ fun LoginScreen(
     onToggleMode: () -> Unit,
     onLoginClick: () -> Unit,
     onGoogleClick: () -> Unit,
+    firstName: String = "",
+    lastName: String = "",
+    onFirstNameChange: (String) -> Unit = {},
+    onLastNameChange: (String) -> Unit = {},
     canSignIn: Boolean = true,
     showCredentials: Boolean = true,
     congregationName: String? = null,
@@ -293,6 +309,10 @@ fun LoginScreen(
             CredentialsForm(
                 email = email,
                 password = password,
+                firstName = firstName,
+                lastName = lastName,
+                onFirstNameChange = onFirstNameChange,
+                onLastNameChange = onLastNameChange,
                 authMode = authMode,
                 loginError = loginError,
                 infoMessage = infoMessage,
@@ -338,6 +358,10 @@ fun LoginScreen(
 private fun ColumnScope.CredentialsForm(
     email: String,
     password: String,
+    firstName: String,
+    lastName: String,
+    onFirstNameChange: (String) -> Unit,
+    onLastNameChange: (String) -> Unit,
     authMode: AuthMode,
     loginError: String?,
     infoMessage: String?,
@@ -355,6 +379,20 @@ private fun ColumnScope.CredentialsForm(
             title = if (isLogin) "Anmelden" else "Konto erstellen",
             subtitle = if (isLogin) "Weiter zu deiner Versammlung." else "Lege dein Konto für diese Versammlung an.",
         )
+        if (!isLogin) {
+            FieldBox(
+                label = "Vorname",
+                value = firstName,
+                onValueChange = onFirstNameChange,
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+            )
+            FieldBox(
+                label = "Nachname",
+                value = lastName,
+                onValueChange = onLastNameChange,
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+            )
+        }
         FieldBox(
             label = "E-Mail",
             value = email,
@@ -390,7 +428,7 @@ private fun ColumnScope.CredentialsForm(
             text = if (isLogin) "Anmelden" else "Konto erstellen",
             onClick = onLoginClick,
             modifier = Modifier.fillMaxWidth(),
-            enabled = canSignIn,
+            enabled = canSignIn && (isLogin || (firstName.isNotBlank() && lastName.isNotBlank())),
         )
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             HorizontalDivider(modifier = Modifier.weight(1f), color = NightColors.Border)
