@@ -76,6 +76,10 @@ Bei Repository-/DB-Anbindung sind Interface + UseCase-Schicht Pflicht. Repositor
 - PRs bestehen aus wenigen Commits, die je ein Thema oder einen logischen Baustein abbilden (z. B. Fix, Tests, Doku); Korrektur-, Test-Nachzügler- und Review-Commits werden vor der Freigabe per Fixup/Squash in den passenden Commit gefaltet. Dabei die Commit-Regeln (`CP-<nr>:`-Header) einhalten und anschließend mit `--force-with-lease` pushen.
 - Nur auf ausdrückliche Anfrage committen oder pushen. Nie direkt auf `master`.
 
+## Testumgebung und Altdaten
+
+Die App läuft bis zum Go-live nur in einer Testumgebung (gilt bis auf Widerruf). Code und Firestore-Regeln berücksichtigen keine Altdaten: keine Migration, keine Kompatibilitätslogik für alte Felder oder Formate, keine Rücksicht auf ältere deployte Regeln. Das Datenmodell wird direkt auf den Soll-Zustand geändert. Bereits vorhandene Altdaten-Behandlung wird entfernt, sobald sie auffällt.
+
 ## ADRs
 
 Architekturrelevante Entscheidungen (neues Pattern, Modulgrenze, Datenfluss, nicht offensichtlicher Trade-off) als ADR in `docs/adr/` festhalten, im selben PR wie die Entscheidung. Format und Regeln: `docs/adr/README.md`. Nummern nie wiederverwenden.
