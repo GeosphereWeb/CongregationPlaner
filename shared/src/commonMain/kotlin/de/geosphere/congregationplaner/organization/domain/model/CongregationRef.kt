@@ -66,6 +66,7 @@ data class CongregationRef(
 }
 
 /** Die im Login gewählte Versammlung samt Anzeigename. */
-data class SelectedCongregation(val ref: CongregationRef, val name: String) {
+data class SelectedCongregation(val ref: CongregationRef, val name: String, val circuitName: String = "") {
     val displayName: String get() = name.ifBlank { ref.congregationId }
+    val circuitDisplayName: String get() = circuitName.ifBlank { ref.circuitId }
 }
