@@ -70,6 +70,7 @@ Bei Repository-/DB-Anbindung sind Interface + UseCase-Schicht Pflicht. Repositor
 ## Git, Commits und PRs
 
 - Commit-Header und PR-Titel müssen mit `CP-<nr>:` oder `JDI:` beginnen, optional gefolgt von einem Emoji, z. B. `CP-14: 📝 docs: add ADR README` (Prüfung in `.github/workflows/mergeable.yml`).
+- Jede Änderung (Feature, Fix, Doku, Regeln) erfolgt in einem eigenen Branch mit eigenem PR und eigenem Jira-Ticket (Projekt `CP`). Die Ticket-ID vergibt Jira: erst das Ticket anlegen, dann den Branch und die Commits mit dieser Nummer benennen; Nummern nie selbst erfinden. Gehören mehrere Änderungen in einem Dialog thematisch zusammen, dürfen sie im selben Ticket, Branch und PR bearbeitet werden; andere Themen bekommen ein eigenes Ticket.
 - Branch-Schema: `feature/CP-<nr>-kurzbeschreibung` (kebab-case). Die Ticketnummer aus dem Branchnamen als Commit-Prefix verwenden.
 - PRs nutzen `.github/pull_request_template.md`.
 - Ein Branch wird für einen PR nur freigegeben, wenn er auf den aktuellen `master` gerebased ist (`git fetch` + `git rebase origin/master`, kein Merge von `master` in den Branch). Danach mit `git push --force-with-lease` pushen, nie mit `--force`.
