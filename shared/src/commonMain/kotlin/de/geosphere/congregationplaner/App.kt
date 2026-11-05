@@ -137,7 +137,7 @@ fun App() {
                 previousSteps = if (globalLogin) {
                     emptyList()
                 } else {
-                    selectedCongregation?.let { listOf("Kreis ${it.circuitId}") }.orEmpty()
+                    selectionState.selected?.let { listOf("Kreis ${it.circuitDisplayName}") }.orEmpty()
                 },
                 congregationSelector = {
                     if (globalLogin) {

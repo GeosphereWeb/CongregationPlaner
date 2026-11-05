@@ -139,7 +139,7 @@ private fun SelectedCongregationCard(selected: SelectedCongregation, onChange: (
             Row {
                 Text(selected.displayName, style = nightTextStyle(16.sp, FontWeight.Bold))
                 Text(
-                    " · Kreis ${selected.ref.circuitId}",
+                    " · Kreis ${selected.circuitDisplayName}",
                     style = nightTextStyle(16.sp, color = NightColors.OnBackgroundMuted),
                 )
             }
