@@ -47,7 +47,10 @@ internal fun SelectableListCard(
             .padding(start = 4.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        content()
+        // Same 12 dp inset as the TextButton labels below, so text and actions share one left edge.
+        Column(Modifier.padding(start = 12.dp, top = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            content()
+        }
         Row {
             if (onEdit != null) {
                 TextButton(onClick = onEdit, enabled = actionsEnabled) { Text("Bearbeiten") }
