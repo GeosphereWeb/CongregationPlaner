@@ -3,6 +3,7 @@ package de.geosphere.congregationplaner.congregation.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
+import de.geosphere.congregationplaner.congregation.domain.usecase.CreateCongregationUseCase
 import de.geosphere.congregationplaner.congregation.domain.usecase.DeleteCongregationUseCase
 import de.geosphere.congregationplaner.congregation.domain.usecase.ObserveCongregationsUseCase
 import de.geosphere.congregationplaner.congregation.domain.usecase.SaveCongregationUseCase
@@ -43,6 +44,7 @@ data class CongregationMetadataUiState(
 class CongregationMetadataViewModel(
     private val observeCongregations: ObserveCongregationsUseCase,
     private val saveCongregation: SaveCongregationUseCase,
+    private val createCongregation: CreateCongregationUseCase,
     private val deleteCongregationUseCase: DeleteCongregationUseCase,
     private val permissionPolicy: CongregationPermissionPolicy,
 ) : ViewModel() {
@@ -150,7 +152,13 @@ class CongregationMetadataViewModel(
 
         updateState { it.copy(isSaving = true, errorMessage = null) }
         viewModelScope.launch {
-            saveCongregation(circuit, congregation.copy(name = congregation.name.trim()))
+            val result = if (congregation.id.isBlank()) {
+                // Globale Admins legen an und werden nicht Mitglied; den Namen prüft der Use Case.
+                createCongregation(circuit, congregation.name, user.uid)
+            } else {
+                saveCongregation(circuit, congregation.copy(name = congregation.name.trim()))
+            }
+            result
                 .onSuccess { savedCongregation ->
                     updateState { state ->
                         val existingIndex = state.congregations.indexOfFirst { it.id == savedCongregation.id }

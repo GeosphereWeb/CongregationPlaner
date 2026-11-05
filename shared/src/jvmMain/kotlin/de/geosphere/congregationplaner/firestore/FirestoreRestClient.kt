@@ -68,6 +68,34 @@ internal class FirestoreRestClient(
 
     fun documentUrl(collectionPath: String, id: String): String = "${collectionUrl(collectionPath)}/${encode(id)}"
 
+    /** Führt [writes] atomar aus (`documents:commit`): alle Schreibzugriffe gelten oder keiner. */
+    fun commit(writes: List<JsonObject>) {
+        val body = JsonObject().apply { add("writes", JsonArray().apply { writes.forEach(::add) }) }
+        request("POST", "${firestoreDocumentsUrl()}:commit", body.toString())
+    }
+
+    /** Ein Schreibzugriff für [commit]: legt das Dokument an oder überschreibt es (mit [mask] nur diese Felder). */
+    fun writeUpdate(documentPath: String, fields: JsonObject, mask: List<String>? = null): JsonObject =
+        JsonObject().apply {
+            add(
+                "update",
+                JsonObject().apply {
+                    addProperty("name", documentName(documentPath))
+                    add("fields", fields)
+                },
+            )
+            if (mask != null) {
+                add("updateMask", JsonObject().apply { add("fieldPaths", JsonArray().apply { mask.forEach(::add) }) })
+            }
+        }
+
+    fun writeDelete(documentPath: String): JsonObject =
+        JsonObject().apply { addProperty("delete", documentName(documentPath)) }
+
+    // Der Ressourcenname eines Dokuments: `projects/{id}/databases/(default)/documents/{Pfad}`.
+    private fun documentName(documentPath: String): String =
+        "${firestoreDocumentsUrl().substringAfter("/v1/")}/$documentPath"
+
     /** Query-Parameter, mit denen ein PATCH nur die angegebenen Felder überschreibt. */
     fun updateMask(fieldNames: List<String>): String =
         fieldNames.joinToString("&") { field -> "updateMask.fieldPaths=${encode(field)}" }
@@ -83,7 +111,14 @@ internal class FirestoreRestClient(
 
 internal class FirestoreHttpException(val status: Int) : IOException("Firestore request failed with HTTP $status.")
 
-internal fun encode(value: String): String = URLEncoder.encode(value, StandardCharsets.UTF_8.name())
+private const val AUTO_ID_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+private const val AUTO_ID_LENGTH = 20
+
+/** Eine zufällige Dokument-ID im Format der Firestore-Auto-IDs, wenn sie vor dem Schreiben feststehen muss. */
+internal fun newDocumentId(): String = buildString { repeat(AUTO_ID_LENGTH) { append(AUTO_ID_ALPHABET.random()) } }
+
+// URLEncoder schreibt ein Leerzeichen als „+“; in einem Pfadsegment wäre das ein echtes Pluszeichen.
+internal fun encode(value: String): String = URLEncoder.encode(value, StandardCharsets.UTF_8.name()).replace("+", "%20")
 
 private const val DEFAULT_FIRESTORE_EMULATOR_HOST = "127.0.0.1:8080"
 

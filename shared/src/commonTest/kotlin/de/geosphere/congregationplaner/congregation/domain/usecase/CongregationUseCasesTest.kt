@@ -1,6 +1,7 @@
 package de.geosphere.congregationplaner.congregation.domain.usecase
 
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
+import de.geosphere.congregationplaner.congregation.domain.model.NewCongregationAdmin
 import de.geosphere.congregationplaner.congregation.domain.repository.CongregationMetadataRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -62,6 +63,30 @@ class CongregationUseCasesTest {
         override fun observeAll(circuitIds: List<String>): Flow<List<CongregationMetadata>> {
             circuit = circuitIds
             return flowOf(congregations)
+        }
+
+        var nameOwner: String? = null
+
+        var createdBy: String? = null
+            private set
+
+        var firstAdmin: NewCongregationAdmin? = null
+            private set
+
+        override suspend fun findNameOwner(circuitIds: List<String>, name: String): Result<String?> =
+            Result.success(nameOwner)
+
+        override suspend fun create(
+            circuitIds: List<String>,
+            congregation: CongregationMetadata,
+            createdBy: String,
+            firstAdmin: NewCongregationAdmin?,
+        ): Result<CongregationMetadata> {
+            circuit = circuitIds
+            this.createdBy = createdBy
+            this.firstAdmin = firstAdmin
+            savedCongregation = congregation
+            return Result.success(congregation.copy(id = "new-id"))
         }
 
         override suspend fun save(
