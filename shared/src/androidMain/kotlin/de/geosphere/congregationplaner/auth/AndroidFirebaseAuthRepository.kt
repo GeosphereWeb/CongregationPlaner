@@ -142,6 +142,45 @@ class FirebaseAuthPlatformService : FirebaseAuthRepository {
         auth.signOut()
     }
 
+    override suspend fun refreshCurrentUser(): FirebaseUser? = suspendCancellableCoroutine { continuation ->
+        val user = auth.currentUser
+        if (user == null) {
+            continuation.resume(null)
+            return@suspendCancellableCoroutine
+        }
+        user.reload().addOnCompleteListener { reload ->
+            if (!reload.isSuccessful) {
+                logAuthFailure("reload", reload.exception)
+            }
+            // Erst der neue Token trägt die bestätigte E-Mail-Adresse (`email_verified`) in die Firestore-Regeln.
+            val refreshed = auth.currentUser?.getIdToken(true)
+            if (refreshed == null) {
+                continuation.resume(auth.currentUser?.toFirebaseUser())
+                return@addOnCompleteListener
+            }
+            refreshed.addOnCompleteListener { token ->
+                if (!token.isSuccessful) {
+                    logAuthFailure("getIdToken", token.exception)
+                }
+                continuation.resume(auth.currentUser?.toFirebaseUser())
+            }
+        }
+    }
+
+    override suspend fun resendVerificationEmail(): Boolean = suspendCancellableCoroutine { continuation ->
+        val user = auth.currentUser
+        if (user == null) {
+            continuation.resume(false)
+            return@suspendCancellableCoroutine
+        }
+        user.sendEmailVerification().addOnCompleteListener { task ->
+            if (!task.isSuccessful) {
+                logAuthFailure("sendEmailVerification", task.exception)
+            }
+            continuation.resume(task.isSuccessful)
+        }
+    }
+
     override fun currentUserId(): String? = auth.currentUser?.uid
 
     override fun currentUser(): FirebaseUser? = auth.currentUser?.toFirebaseUser()
@@ -166,6 +205,7 @@ class FirebaseAuthPlatformService : FirebaseAuthRepository {
             override val email: String? = user.email
             override val displayName: String? = user.displayName
             override val idToken: String? = null
+            override val emailVerified: Boolean = user.isEmailVerified
         }
     }
 

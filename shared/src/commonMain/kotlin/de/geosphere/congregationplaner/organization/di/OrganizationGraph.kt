@@ -1,5 +1,7 @@
 package de.geosphere.congregationplaner.organization.di
 
+import de.geosphere.congregationplaner.congregation.data.createCongregationMetadataRepository
+import de.geosphere.congregationplaner.congregation.domain.repository.CongregationMetadataRepository
 import de.geosphere.congregationplaner.organization.data.createCongregationSelectionStore
 import de.geosphere.congregationplaner.organization.data.createOrganizationRepository
 import de.geosphere.congregationplaner.organization.domain.repository.CongregationSelectionStore
@@ -14,6 +16,9 @@ interface OrganizationGraph {
 
     @Provides
     fun provideOrganizationRepository(): OrganizationRepository = createOrganizationRepository()
+
+    @Provides
+    fun provideCongregationMetadataRepository(): CongregationMetadataRepository = createCongregationMetadataRepository()
 
     @Provides
     fun provideCongregationSelectionStore(): CongregationSelectionStore = createCongregationSelectionStore()

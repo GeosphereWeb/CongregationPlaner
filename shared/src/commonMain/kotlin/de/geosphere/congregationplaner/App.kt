@@ -43,6 +43,7 @@ import de.geosphere.congregationplaner.organization.domain.model.OrgUnit
 import de.geosphere.congregationplaner.organization.domain.model.SelectedCongregation
 import de.geosphere.congregationplaner.organization.presentation.CongregationSelectionUiState
 import de.geosphere.congregationplaner.organization.presentation.CongregationSelector
+import de.geosphere.congregationplaner.organization.presentation.NewCongregationScreen
 import de.geosphere.congregationplaner.organization.presentation.OrgLevelSelection
 import de.geosphere.congregationplaner.presentation.navigation.AppNavigationActions
 import de.geosphere.congregationplaner.presentation.navigation.AppNavigationGraph
@@ -90,6 +91,8 @@ fun App() {
         val homeViewModel = remember { createGraph<HomeGraph>().homeViewModel }
         val selectionState by selectionViewModel.uiState.collectAsState()
         val selectedCongregation = selectionState.selected?.ref
+        val newCongregation = selectionState.newCongregation
+        var emailVerified by remember { mutableStateOf(FirebaseAuthManager.currentUser()?.emailVerified == true) }
         val pendingInviteLink by InviteLinkInbox.pendingLink.collectAsState()
 
         LaunchedEffect(Unit) {
@@ -117,6 +120,7 @@ fun App() {
                 return@LaunchedEffect
             }
             val authUser = FirebaseAuthManager.currentUser()
+            emailVerified = authUser?.emailVerified == true
             if (authUser != null) {
                 userAccessViewModel.onSignedIn(authUser, selectedCongregation)
             } else {
@@ -135,13 +139,20 @@ fun App() {
                 authMode = authMode,
                 loginError = loginError,
                 infoMessage = infoMessage,
-                canSignIn = selectedCongregation != null || globalLogin,
-                showCredentials = globalLogin || (selectedCongregation != null && !selectionState.isPicking),
-                congregationName = if (globalLogin) "Globale Verwaltung" else selectionState.selected?.displayName,
+                canSignIn = selectedCongregation != null || globalLogin || selectionState.isNewCongregationReady,
+                showCredentials = globalLogin ||
+                    selectionState.isNewCongregationReady ||
+                    (selectedCongregation != null && !selectionState.isPicking),
+                congregationName = if (globalLogin) {
+                    "Globale Verwaltung"
+                } else {
+                    selectionState.selected?.displayName ?: newCongregation?.name
+                },
                 previousSteps = if (globalLogin) {
                     emptyList()
                 } else {
-                    selectionState.selected?.let { listOf("Kreis ${it.circuitDisplayName}") }.orEmpty()
+                    val circuitName = selectionState.selected?.circuitDisplayName ?: newCongregation?.circuitName
+                    circuitName?.let { listOf("Kreis $it") }.orEmpty()
                 },
                 congregationSelector = {
                     if (globalLogin) {
@@ -233,6 +244,26 @@ fun App() {
         LaunchedEffect(currentUser) { navigationViewModel.onUserChanged(currentUser) }
         LaunchedEffect(currentUser) { homeViewModel.onCurrentUserChanged(currentUser) }
         if (currentUser == null) {
+            // Wer eine neue Versammlung vorgemerkt hat, legt sie an, sobald die E-Mail-Adresse bestätigt ist.
+            if (selectedCongregation == null &&
+                newCongregation != null &&
+                accessState == UserAccessState.CongregationRequired
+            ) {
+                NewCongregationScreen(
+                    draft = newCongregation,
+                    emailVerified = emailVerified,
+                    isCreating = selectionState.isCreating,
+                    errorMessage = selectionState.errorMessage,
+                    onCreate = { FirebaseAuthManager.currentUser()?.let(selectionViewModel::createNewCongregation) },
+                    onRefresh = {
+                        scope.launch { emailVerified = FirebaseAuthManager.refreshCurrentUser()?.emailVerified == true }
+                    },
+                    onResend = { scope.launch { FirebaseAuthManager.resendVerificationEmail() } },
+                    onChangeName = selectionViewModel::cancelNewCongregation,
+                    onSignOut = signOut,
+                )
+                return@AppTheme
+            }
             // Wer schon angemeldet ist, aber (noch) keine Versammlung gewählt hat, wählt sie hier.
             if (selectedCongregation == null && accessState == UserAccessState.CongregationRequired) {
                 CongregationRequiredScreen(onSignOut = signOut) {
