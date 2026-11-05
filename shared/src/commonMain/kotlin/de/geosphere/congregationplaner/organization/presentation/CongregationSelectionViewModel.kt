@@ -79,7 +79,8 @@ class CongregationSelectionViewModel(
         val child = level.child
         if (child == null) {
             val ref = CongregationRef.fromIds(ids) ?: return
-            select(SelectedCongregation(ref, unit.name))
+            val circuitName = updatedLevels.firstOrNull { it.level == OrgLevel.CIRCUIT }?.selectedUnit?.name.orEmpty()
+            select(SelectedCongregation(ref, unit.name, circuitName))
             return
         }
         mutableUiState.update {
@@ -118,7 +119,9 @@ class CongregationSelectionViewModel(
                     if (congregation == null) {
                         mutableUiState.update { it.copy(isResolvingLink = false, errorMessage = UNKNOWN_LINK_MESSAGE) }
                     } else {
-                        select(SelectedCongregation(ref, congregation.name))
+                        val circuitName = loadUnits(OrgLevel.CIRCUIT, ref.ids.dropLast(2)).getOrNull()
+                            ?.firstOrNull { it.id == ref.circuitId }?.name.orEmpty()
+                        select(SelectedCongregation(ref, congregation.name, circuitName))
                     }
                 }.onFailure { exception ->
                     mutableUiState.update {

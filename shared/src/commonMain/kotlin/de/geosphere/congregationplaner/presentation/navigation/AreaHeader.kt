@@ -40,7 +40,7 @@ internal fun homeHeader(congregation: SelectedCongregation?, today: LocalDate) =
 )
 
 internal fun congregationHeader(congregation: SelectedCongregation?) = AreaHeader(
-    stepLabel = congregation?.let { "KREIS ${it.ref.circuitId}" }.orEmpty(),
+    stepLabel = congregation?.let { "KREIS ${it.circuitDisplayName}" }.orEmpty(),
     previous = listOf(TopLevelDestination.CONGREGATION.label),
     current = congregation?.displayName.orEmpty(),
 )

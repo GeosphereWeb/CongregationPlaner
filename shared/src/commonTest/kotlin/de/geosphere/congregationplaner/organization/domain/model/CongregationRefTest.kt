@@ -70,6 +70,8 @@ class CongregationRefTest {
     fun `display names fall back to ids`() {
         assertEquals("berlin", SelectedCongregation(ref, "").displayName)
         assertEquals("Berlin", SelectedCongregation(ref, "Berlin").displayName)
+        assertEquals("609a", SelectedCongregation(ref, "Berlin").circuitDisplayName)
+        assertEquals("Kreis Nord", SelectedCongregation(ref, "Berlin", "Kreis Nord").circuitDisplayName)
         assertEquals("EMEA", OrgUnit("EMEA").displayName)
     }
 
@@ -79,8 +81,11 @@ class CongregationRefTest {
         val store = KeyValueCongregationSelectionStore(storage)
         assertNull(store.load())
 
-        store.save(SelectedCongregation(ref, "Berlin"))
-        assertEquals(SelectedCongregation(ref, "Berlin"), KeyValueCongregationSelectionStore(storage).load())
+        store.save(SelectedCongregation(ref, "Berlin", "Kreis Nord"))
+        assertEquals(
+            SelectedCongregation(ref, "Berlin", "Kreis Nord"),
+            KeyValueCongregationSelectionStore(storage).load(),
+        )
 
         store.clear()
         assertNull(store.load())

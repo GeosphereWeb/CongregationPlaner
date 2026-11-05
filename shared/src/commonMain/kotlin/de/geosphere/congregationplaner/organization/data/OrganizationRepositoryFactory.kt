@@ -41,22 +41,29 @@ fun createCongregationSelectionStore(): CongregationSelectionStore =
 internal class KeyValueCongregationSelectionStore(private val storage: KeyValueStorage) : CongregationSelectionStore {
     override fun load(): SelectedCongregation? {
         val ref = storage.getString(KEY_PATH)?.let(CongregationRef::fromDocumentPath) ?: return null
-        return SelectedCongregation(ref, storage.getString(KEY_NAME).orEmpty())
+        return SelectedCongregation(
+            ref,
+            storage.getString(KEY_NAME).orEmpty(),
+            storage.getString(KEY_CIRCUIT_NAME).orEmpty(),
+        )
     }
 
     override fun save(selection: SelectedCongregation) {
         storage.putString(KEY_PATH, selection.ref.documentPath)
         storage.putString(KEY_NAME, selection.name)
+        storage.putString(KEY_CIRCUIT_NAME, selection.circuitName)
     }
 
     override fun clear() {
         storage.remove(KEY_PATH)
         storage.remove(KEY_NAME)
+        storage.remove(KEY_CIRCUIT_NAME)
     }
 
     private companion object {
         const val KEY_PATH = "selected_congregation_path"
         const val KEY_NAME = "selected_congregation_name"
+        const val KEY_CIRCUIT_NAME = "selected_circuit_name"
     }
 }
 
