@@ -4,7 +4,8 @@
 const PROJECT = 'demo-rules-test';
 const FS = `http://127.0.0.1:18080/v1/projects/${PROJECT}/databases/(default)/documents`;
 const AUTH = 'http://127.0.0.1:19099/identitytoolkit.googleapis.com/v1';
-const CONG = 'region/R/subregion/S/branch/B/circuit/C/congregation/K';
+const CIRCUIT = 'region/R/subregion/S/branch/B/circuit/C';
+const CONG = `${CIRCUIT}/congregation/K`;
 
 const failures = [];
 let count = 0;
@@ -29,6 +30,12 @@ async function call(method, url, body, token) {
 
 const api = (method, path, body, token) => call(method, `${FS}/${path}`, body, token);
 
+// Mehrere Schreibzugriffe atomar, wie der Batch der App; die Rules sehen den Zustand danach (getAfter/existsAfter).
+const DOCS = `projects/${PROJECT}/databases/(default)/documents`;
+const setDoc = (path, data) => ({ update: { name: `${DOCS}/${path}`, ...fields(data) } });
+const delDoc = (path) => ({ delete: `${DOCS}/${path}` });
+const commit = (writes, token) => call('POST', `${FS}:commit`, { writes }, token);
+
 async function signUp(email) {
   const { status, text } = await call('POST', `${AUTH}/accounts:signUp?key=fake`, {
     email,
@@ -38,6 +45,17 @@ async function signUp(email) {
   if (status !== 200) throw new Error(`Sign-up failed: ${text}`);
   const data = JSON.parse(text);
   return { uid: data.localId, token: data.idToken };
+}
+
+/** Nutzer mit bestätigter E-Mail-Adresse: der Auth-Emulator setzt das Flag, der neue Token trägt `email_verified`. */
+async function signUpVerified(email) {
+  const user = await signUp(email);
+  const marked = await call('POST', `${AUTH.replace('/v1', '/v1/projects/' + PROJECT)}/accounts:update`,
+    { localId: user.uid, emailVerified: true }, 'owner');
+  if (marked.status !== 200) throw new Error(`Verifying the e-mail failed: ${marked.text}`);
+  const signedIn = await call('POST', `${AUTH}/accounts:signInWithPassword?key=fake`,
+    { email, password: 'secret12', returnSecureToken: true });
+  return { uid: user.uid, token: JSON.parse(signedIn.text).idToken };
 }
 
 /** allowed = true erwartet 200, allowed = false erwartet 403 (die Rules lehnen ab); jede andere Antwort ist ein Fehler. */
@@ -69,6 +87,7 @@ await api('PATCH', `${CONG}/members/${adminPlanner.uid}`, fields({ email: 'admin
 // Ein eigener Admin für die Tests, in denen ein Admin die eigene Rollenliste ändert.
 const selfAdmin = await signUp('selfadmin@test.de');
 await api('PATCH', `${CONG}/members/${selfAdmin.uid}`, memberDoc('selfadmin@test.de', ['CONGREGATION_ADMIN']), owner);
+await api('PATCH', 'region/R/subregion/S/branch/B/circuit/C/congregationNames/berlin', fields({ congregationId: 'K' }), owner);
 const OTHER_CONG ='region/R/subregion/S/branch/B/circuit/C/congregation/OTHER';
 await api('PATCH', CONG, fields({ name: 'Berlin', midweek_meeting_time: '19:00', midweek_meeting_weekday: 3 }), owner);
 await api('PATCH', OTHER_CONG, fields({ name: 'Hamburg', midweek_meeting_time: '19:00', midweek_meeting_weekday: 3 }), owner);
@@ -378,12 +397,26 @@ await expect('Global Admin liest keine Vortragshistorie', api('GET', HIST, undef
 await expect('Global Admin liest kein Redner-Verzeichnis', api('GET', EXT_SPEAKERS, undefined, admin.token), false);
 await expect('Global Admin legt keinen externen Redner an', post(EXT_SPEAKERS, validSpeaker, admin.token), false);
 await expect('Global Admin liest weiter die Admin-Kontakte', api('GET', CONTACTS, undefined, admin.token), true);
-await expect('Global Admin ändert den Namen der Versammlung', api('PATCH', `${CONG}${mask('name')}`, { fields: { name: { stringValue: 'Berlin-Mitte' } } }, admin.token), true);
+await expect('Global Admin ändert den Namen der Versammlung nicht ohne Namensdokument', api('PATCH', `${CONG}${mask('name')}`, { fields: { name: { stringValue: 'Berlin-Mitte' } } }, admin.token), false);
+await expect('Global Admin ändert den Namen der Versammlung samt Namensdokument', commit([
+  { update: { name: `${DOCS}/${CONG}`, fields: { name: { stringValue: 'Berlin-Mitte' } } }, updateMask: { fieldPaths: ['name'] } },
+  delDoc(`${CIRCUIT}/congregationNames/berlin`),
+  setDoc(`${CIRCUIT}/congregationNames/berlin-mitte`, { congregationId: 'K' }),
+], admin.token), true);
 await expect('Global Admin ändert die Zeiten der Versammlung nicht', api('PATCH', `${CONG}${mask('midweek_meeting_time')}`, time('18:15'), admin.token), false);
 await expect('Global Admin ändert ein fremdes Feld der Versammlung nicht', api('PATCH', `${CONG}${mask('secret')}`, { fields: { secret: { stringValue: 'x' } } }, admin.token), false);
-const NEW_CONG = 'region/R/subregion/S/branch/B/circuit/C/congregation/NEW';
-await expect('Global Admin legt eine Versammlung an', api('PATCH', NEW_CONG, fields({ name: 'Neu', midweek_meeting_time: '19:00', midweek_meeting_weekday: 3 }), admin.token), true);
-await expect('Global Admin löscht eine Versammlung', api('DELETE', NEW_CONG, undefined, admin.token), true);
+const NEW_CONG = `${CIRCUIT}/congregation/NEW`;
+const newCongregation = (name, uid, extra = {}) => fields({ name, createdBy: uid, midweek_meeting_time: '19:00', midweek_meeting_weekday: 3, ...extra });
+await expect('Global Admin legt eine Versammlung nicht ohne Namensdokument an', api('PATCH', NEW_CONG, newCongregation('Neu', admin.uid), admin.token), false);
+await expect('Global Admin legt eine Versammlung mit Namensdokument an', commit([
+  setDoc(NEW_CONG, { name: 'Neu', createdBy: admin.uid, midweek_meeting_time: '19:00', midweek_meeting_weekday: 3 }),
+  setDoc(`${CIRCUIT}/congregationNames/neu`, { congregationId: 'NEW' }),
+], admin.token), true);
+await expect('Global Admin löscht eine Versammlung nicht ohne ihr Namensdokument', api('DELETE', NEW_CONG, undefined, admin.token), false);
+await expect('Global Admin löscht eine Versammlung mit ihrem Namensdokument', commit([
+  delDoc(NEW_CONG),
+  delDoc(`${CIRCUIT}/congregationNames/neu`),
+], admin.token), true);
 await expect('Global Admin pflegt weiter die Kreise', api('PATCH', 'region/R2', fields({ name: 'Region 2' }), admin.token), true);
 await expect('Normaler Nutzer pflegt keine Kreise', api('PATCH', 'region/R3', fields({ name: 'Region 3' }), plain.token), false);
 
@@ -423,6 +456,52 @@ await expect('Global Admin mit Planerrolle plant über die Rolle', putSlot('2026
 await expect('Global Admin mit Planerrolle liest Mitglieder über die Rolle', api('GET', MEMBERS, undefined, dualAdmin.token), true);
 await expect('Global Admin mit Planerrolle ändert trotzdem kein Mitglied', api('PATCH', `${MEMBERS}/${plain.uid}${approvedMask}`, falseApproved, dualAdmin.token), false);
 await expect('Global Admin mit Planerrolle pflegt weiter die Vortragsliste', api('PATCH', 'talkCatalog/77', talk('Dual'), dualAdmin.token), true);
+
+
+// ---------- Versammlung anlegen: der Ersteller wird Admin, der Name ist pro Kreis eindeutig ----------
+const CIRCUIT_2 = 'region/R/subregion/S/branch/B/circuit/C2';
+const creator = await signUpVerified('creator@test.de');
+const unverified = await signUp('unverified@test.de');
+const intruder = await signUpVerified('intruder@test.de');
+const adminMember = (user, email, extra = {}) => ({
+  email, displayName: 'Max Muster', approved: true, roles: ['CONGREGATION_ADMIN'], firstName: 'Max', lastName: 'Muster', hasAccount: true, ...extra,
+});
+const createBatch = (circuit, congId, name, key, user, email, memberExtra = {}, congExtra = {}) => [
+  setDoc(`${circuit}/congregation/${congId}`, { name, createdBy: user.uid, midweek_meeting_time: '19:00', midweek_meeting_weekday: 3, ...congExtra }),
+  setDoc(`${circuit}/congregationNames/${key}`, { congregationId: congId }),
+  setDoc(`${circuit}/congregation/${congId}/members/${user.uid}`, adminMember(user, email, memberExtra)),
+];
+
+await expect('Neue Versammlung mit Namensdokument und Admin-Mitglied', commit(createBatch(CIRCUIT, 'GRAFING', 'Grafing Süd', 'grafing süd', creator, 'creator@test.de'), creator.token), true);
+await expect('Der Ersteller ist danach freigegebener Admin', api('GET', `${CIRCUIT}/congregation/GRAFING/members/${creator.uid}`, undefined, creator.token), true);
+await expect('Neue Versammlung ohne bestätigte E-Mail-Adresse', commit(createBatch(CIRCUIT, 'UNV', 'Unbestätigt', 'unbestätigt', unverified, 'unverified@test.de'), unverified.token), false);
+await expect('Gleicher Name im selben Kreis (Groß-/Kleinschreibung und Leerzeichen egal)', commit(createBatch(CIRCUIT, 'DUP', ' GRAFING   süd ', 'grafing süd', intruder, 'intruder@test.de'), intruder.token), false);
+await expect('Gleicher Name in einem anderen Kreis', commit(createBatch(CIRCUIT_2, 'GRAFING2', 'Grafing Süd', 'grafing süd', intruder, 'intruder@test.de'), intruder.token), true);
+await expect('Versammlung ohne Namensdokument', commit([
+  setDoc(`${CIRCUIT}/congregation/NONAME`, { name: 'Ohne Namensdokument', createdBy: intruder.uid }),
+], intruder.token), false);
+await expect('Namensdokument mit falschem Schlüssel', commit(createBatch(CIRCUIT, 'WRONGKEY', 'Falscher Schlüssel', 'anderer name', intruder, 'intruder@test.de'), intruder.token), false);
+await expect('Versammlung mit fremdem createdBy', commit(createBatch(CIRCUIT, 'FOREIGN', 'Fremd', 'fremd', intruder, 'intruder@test.de', {}, { createdBy: creator.uid }), intruder.token), false);
+await expect('Versammlungsname mit Schrägstrich', commit(createBatch(CIRCUIT, 'SLASH', 'Nord/Süd', 'nord-süd', intruder, 'intruder@test.de'), intruder.token), false);
+await expect('Ersteller mit zusätzlicher Rolle', commit(createBatch(CIRCUIT, 'ROLES', 'Mit Rollen', 'mit rollen', intruder, 'intruder@test.de', { roles: ['CONGREGATION_ADMIN', 'TALK_PLANNER'] }), intruder.token), false);
+await expect('Ersteller ohne Admin-Rolle als freigegebenes Mitglied', commit(createBatch(CIRCUIT, 'PLAIN', 'Ohne Admin', 'ohne admin', intruder, 'intruder@test.de', { roles: [] }), intruder.token), false);
+await expect('Fremder macht sich zum Admin einer bestehenden Versammlung', api('PATCH', `${CIRCUIT}/congregation/GRAFING/members/${intruder.uid}`, fields(adminMember(intruder, 'intruder@test.de')), intruder.token), false);
+await expect('Admin-Mitglied einer bestehenden Versammlung auch im Batch mit einer anderen Neuanlage', commit([
+  ...createBatch(CIRCUIT, 'SECOND', 'Zweite', 'zweite', intruder, 'intruder@test.de'),
+  setDoc(`${CIRCUIT}/congregation/GRAFING/members/${intruder.uid}`, adminMember(intruder, 'intruder@test.de')),
+], intruder.token), false);
+
+const renamed = (name) => ({ update: { name: `${DOCS}/${CIRCUIT}/congregation/GRAFING`, fields: { name: { stringValue: name } } }, updateMask: { fieldPaths: ['name'] } });
+await expect('Admin benennt um ohne neues Namensdokument', commit([renamed('Grafing Nord')], creator.token), false);
+await expect('Admin benennt um und nimmt einen vergebenen Namen', commit([
+  renamed('Berlin-Mitte'), delDoc(`${CIRCUIT}/congregationNames/grafing süd`), setDoc(`${CIRCUIT}/congregationNames/berlin-mitte`, { congregationId: 'GRAFING' }),
+], creator.token), false);
+await expect('Admin gibt den Namen frei ohne umzubenennen', commit([delDoc(`${CIRCUIT}/congregationNames/grafing süd`)], creator.token), false);
+await expect('Admin benennt um und führt das Namensdokument mit', commit([
+  renamed('Grafing Nord'), delDoc(`${CIRCUIT}/congregationNames/grafing süd`), setDoc(`${CIRCUIT}/congregationNames/grafing nord`, { congregationId: 'GRAFING' }),
+], creator.token), true);
+await expect('Der alte Name ist nach dem Umbenennen wieder frei', commit(createBatch(CIRCUIT, 'AGAIN', 'Grafing Süd', 'grafing süd', intruder, 'intruder@test.de'), intruder.token), true);
+await expect('Namensdokumente sind ohne Anmeldung lesbar', api('GET', `${CIRCUIT}/congregationNames/${encodeURIComponent('grafing nord')}`), true);
 
 console.log(`${count} checks, ${failures.length} failures`);
 failures.forEach((failure) => console.log(`FAILURE: ${failure}`));
