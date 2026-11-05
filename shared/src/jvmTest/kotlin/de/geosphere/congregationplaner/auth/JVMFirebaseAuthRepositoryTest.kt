@@ -245,6 +245,45 @@ class JVMFirebaseAuthRepositoryTest {
     }
 
     @Test
+    fun `the e-mail confirmation is read from the id token claim`() {
+        fun token(claims: String) =
+            "header." + java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(claims.toByteArray()) + ".sig"
+
+        assertTrue(emailVerifiedFromToken(token("""{"email_verified":true}""")))
+        assertEquals(false, emailVerifiedFromToken(token("""{"email_verified":false}""")))
+        assertEquals(false, emailVerifiedFromToken(token("""{"sub":"x"}""")))
+        assertEquals(false, emailVerifiedFromToken("not-a-token"))
+        assertEquals(false, emailVerifiedFromToken("a.%%%.c"))
+        assertEquals(false, emailVerifiedFromToken(null))
+    }
+
+    @Test
+    fun `desktop sign in reports the confirmed e-mail address of the token`() = runBlocking {
+        val payload = java.util.Base64.getUrlEncoder().withoutPadding()
+            .encodeToString("""{"email_verified":true}""".toByteArray())
+        val service = FirebaseAuthPlatformService(apiKeyProvider = { "test-key" }) {
+            mockConnection(200, """{"localId":"u","email":"a@b.de","idToken":"h.$payload.s"}""")
+        }
+
+        assertTrue(service.signInWithEmailAndPassword("a@b.de", "secret")?.emailVerified == true)
+    }
+
+    @Test
+    fun `desktop resend sends the verification mail for the signed in user`() = runBlocking {
+        val urls = mutableListOf<String>()
+        val service = FirebaseAuthPlatformService(apiKeyProvider = { "test-key" }) { url ->
+            urls += url
+            mockConnection(200, """{"localId":"u","email":"a@b.de","idToken":"token"}""")
+        }
+
+        assertEquals(false, service.resendVerificationEmail())
+        service.signInWithEmailAndPassword("a@b.de", "secret")
+        assertTrue(service.resendVerificationEmail())
+
+        assertTrue(urls.last().contains("accounts:sendOobCode"), urls.toString())
+    }
+
+    @Test
     fun `desktop create user returns null when sign up response is missing a user`() = runBlocking {
         val previousKey = System.getProperty("FIREBASE_WEB_API_KEY")
         System.setProperty("FIREBASE_WEB_API_KEY", "desktop-test-key")

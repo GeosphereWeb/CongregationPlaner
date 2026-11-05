@@ -8,6 +8,9 @@ interface FirebaseUser {
     val email: String?
     val displayName: String?
     val idToken: String?
+
+    /** `true`, sobald die E-Mail-Adresse über den Link in der Bestätigungsmail bestätigt wurde. */
+    val emailVerified: Boolean get() = false
 }
 
 interface FirebaseAuthRepository {
@@ -25,6 +28,12 @@ interface FirebaseAuthRepository {
     fun currentUserId(): String?
     fun currentUser(): FirebaseUser? = null
     fun currentUserIdToken(): String? = null
+
+    /** Liest das Konto neu und holt einen frischen Token, z. B. nachdem die E-Mail-Adresse bestätigt wurde. */
+    suspend fun refreshCurrentUser(): FirebaseUser? = currentUser()
+
+    /** Schickt die Bestätigungsmail erneut; `false`, wenn das nicht möglich war. */
+    suspend fun resendVerificationEmail(): Boolean = false
     fun isSignedIn(): Boolean
 }
 
@@ -61,6 +70,12 @@ object FirebaseAuthManager {
     fun currentUser(): FirebaseUser? = service.currentUser()
 
     fun currentUserIdToken(): String? = service.currentUserIdToken()
+
+    suspend fun refreshCurrentUser(): FirebaseUser? = withContext(Dispatchers.Default) { service.refreshCurrentUser() }
+
+    suspend fun resendVerificationEmail(): Boolean = withContext(Dispatchers.Default) {
+        service.resendVerificationEmail()
+    }
 
     fun isSignedIn(): Boolean = service.isSignedIn()
 }
