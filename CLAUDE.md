@@ -55,6 +55,8 @@ Bei Repository-/DB-Anbindung sind Interface + UseCase-Schicht Pflicht. Repositor
 ## Tests
 
 - `kotlin.test` als Basis, Turbine für Flows, MockK für Mocks (Versionen im Catalog).
+- Tests sind Pflicht: Jede neue oder geänderte Logik (Code, Mapper, Repositories, Firestore-Regeln) wird im selben PR mit Tests bereitgestellt. Ein Bugfix bekommt einen Test, der ohne den Fix fehlschlägt. Reine Dokumentation und reine Darstellung ohne Logik sind die einzigen Ausnahmen; sie werden im PR begründet.
+- Die Tests müssen in der Pipeline (GitHub Actions, `.github/workflows/sonarcloud.yml`: `:shared:jvmTest` und `:shared:testAndroidHostTest`) laufen und grün sein. Ein Test, den die Pipeline nicht ausführt (z. B. der Firestore-Rules-Test `firebase/rules-test`), zählt nicht als Absicherung: dann zusätzlich die Pipeline erweitern oder im PR ausdrücklich nennen, dass er nur lokal läuft. Tests werden nie entfernt, übersprungen oder abgeschwächt, um eine Pipeline grün zu bekommen. iOS-Tests sind vorerst nicht erforderlich, solange für iOS noch nicht aktiv entwickelt wird (gilt bis auf Widerruf).
 - UseCases/Domain in `commonTest` mit Fakes oder Mocks testen; Mapper und Repository-Integration in passenden Plattform-Targets.
 
 ## Sprache
