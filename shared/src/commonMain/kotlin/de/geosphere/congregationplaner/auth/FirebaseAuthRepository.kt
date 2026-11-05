@@ -12,7 +12,13 @@ interface FirebaseUser {
 
 interface FirebaseAuthRepository {
     suspend fun signInWithEmailAndPassword(email: String, password: String): FirebaseUser?
-    suspend fun createUserWithEmailAndPassword(email: String, password: String): FirebaseUser?
+
+    /** Legt das Konto an; [displayName] („Vorname Nachname“) wird im Auth-Profil gespeichert. */
+    suspend fun createUserWithEmailAndPassword(
+        email: String,
+        password: String,
+        displayName: String? = null,
+    ): FirebaseUser?
     suspend fun signInWithGoogle(): FirebaseUser? = null
     fun isGoogleSignInAvailable(): Boolean = false
     suspend fun signOut()
@@ -34,10 +40,13 @@ object FirebaseAuthManager {
             service.signInWithEmailAndPassword(email, password)
         }
 
-    suspend fun createUserWithEmailAndPassword(email: String, password: String): FirebaseUser? =
-        withContext(Dispatchers.Default) {
-            service.createUserWithEmailAndPassword(email, password)
-        }
+    suspend fun createUserWithEmailAndPassword(
+        email: String,
+        password: String,
+        displayName: String? = null,
+    ): FirebaseUser? = withContext(Dispatchers.Default) {
+        service.createUserWithEmailAndPassword(email, password, displayName)
+    }
 
     suspend fun signInWithGoogle(): FirebaseUser? = withContext(Dispatchers.Default) {
         service.signInWithGoogle()

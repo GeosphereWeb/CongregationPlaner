@@ -9,6 +9,7 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.auth.UserProfileChangeRequest
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
@@ -34,35 +35,60 @@ class FirebaseAuthPlatformService : FirebaseAuthRepository {
                 }
         }
 
-    override suspend fun createUserWithEmailAndPassword(email: String, password: String): FirebaseUser? =
-        suspendCancellableCoroutine { continuation ->
-            auth.createUserWithEmailAndPassword(email, password)
-                .addOnCompleteListener { task ->
-                    if (!task.isSuccessful) {
-                        logAuthFailure("createUserWithEmailAndPassword", task.exception)
-                    }
-                    val user = taskToUser(task)
-                    if (user == null) {
-                        continuation.resume(null)
-                        return@addOnCompleteListener
-                    }
-
-                    if (FirebaseAndroidContextHolder.useAuthEmulator) {
-                        continuation.resume(user)
-                        return@addOnCompleteListener
-                    }
-
-                    auth.currentUser?.sendEmailVerification()
-                        ?.addOnCompleteListener { verificationTask ->
-                            if (verificationTask.isSuccessful) {
-                                continuation.resume(user)
-                            } else {
-                                logAuthFailure("sendEmailVerification", verificationTask.exception)
-                                continuation.resume(null)
-                            }
-                        }
+    override suspend fun createUserWithEmailAndPassword(
+        email: String,
+        password: String,
+        displayName: String?,
+    ): FirebaseUser? = suspendCancellableCoroutine { continuation ->
+        auth.createUserWithEmailAndPassword(email, password)
+            .addOnCompleteListener { task ->
+                if (!task.isSuccessful) {
+                    logAuthFailure("createUserWithEmailAndPassword", task.exception)
                 }
+                val created = taskToUser(task)
+                if (created == null) {
+                    continuation.resume(null)
+                    return@addOnCompleteListener
+                }
+                storeDisplayName(displayName) { stored ->
+                    // Nach dem Speichern des Namens neu lesen, damit der Nutzer ihn schon trägt.
+                    val user = if (stored) auth.currentUser?.toFirebaseUser() ?: created else created
+                    sendVerificationEmail(user, continuation::resume)
+                }
+            }
+    }
+
+    // Scheitert nur das Speichern des Namens, bleibt das Konto bestehen; der Name lässt sich im Profil nachtragen.
+    private fun storeDisplayName(displayName: String?, onDone: (stored: Boolean) -> Unit) {
+        val name = displayName?.trim().orEmpty()
+        val currentUser = if (name.isEmpty()) null else auth.currentUser
+        if (currentUser == null) {
+            onDone(false)
+            return
         }
+        val request = UserProfileChangeRequest.Builder().setDisplayName(name).build()
+        currentUser.updateProfile(request).addOnCompleteListener { task ->
+            if (!task.isSuccessful) {
+                logAuthFailure("updateProfile", task.exception)
+            }
+            onDone(task.isSuccessful)
+        }
+    }
+
+    private fun sendVerificationEmail(user: FirebaseUser?, onResult: (FirebaseUser?) -> Unit) {
+        if (user == null || FirebaseAndroidContextHolder.useAuthEmulator) {
+            onResult(user)
+            return
+        }
+        auth.currentUser?.sendEmailVerification()?.addOnCompleteListener { verificationTask ->
+            if (verificationTask.isSuccessful) {
+                onResult(user)
+            } else {
+                logAuthFailure("sendEmailVerification", verificationTask.exception)
+                onResult(null)
+            }
+        }
+    }
 
     override suspend fun signInWithGoogle(): FirebaseUser? {
         val activity = FirebaseAndroidContextHolder.activity ?: return null

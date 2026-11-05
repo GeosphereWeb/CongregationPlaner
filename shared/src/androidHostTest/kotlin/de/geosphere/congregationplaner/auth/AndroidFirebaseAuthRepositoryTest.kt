@@ -2,17 +2,20 @@ package de.geosphere.congregationplaner.auth
 
 import android.app.Activity
 import android.content.Context
+import android.text.TextUtils
 import android.util.Log
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.AuthResult
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.UserProfileChangeRequest
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.mockkStatic
+import io.mockk.slot
 import io.mockk.unmockkStatic
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -114,6 +117,56 @@ class AndroidFirebaseAuthRepositoryTest {
             assertEquals("new@example.com", user?.email)
         } finally {
             unmockkStatic(FirebaseAuth::class)
+        }
+    }
+
+    @Test
+    fun `android create user stores the display name in the auth profile`() = runBlocking {
+        val auth = mockk<FirebaseAuth>()
+        val createTask = mockk<Task<AuthResult>>()
+        val profileTask = mockk<Task<Void>>()
+        val verificationTask = mockk<Task<Void>>()
+        val authResult = mockk<AuthResult>()
+        val currentUser = mockk<FirebaseUser>()
+        val request = slot<UserProfileChangeRequest>()
+
+        mockkStatic(FirebaseAuth::class, TextUtils::class)
+        try {
+            // Die Host-Tests kennen android.text nicht; der Builder des Profils braucht TextUtils.
+            every { TextUtils.isEmpty(any()) } answers { firstArg<CharSequence?>().isNullOrEmpty() }
+            every { FirebaseAuth.getInstance() } returns auth
+            every { auth.createUserWithEmailAndPassword("new@example.com", "secret") } returns createTask
+            every { createTask.addOnCompleteListener(any<OnCompleteListener<AuthResult>>()) } answers {
+                firstArg<OnCompleteListener<AuthResult>>().onComplete(createTask)
+                createTask
+            }
+            every { createTask.isSuccessful } returns true
+            every { createTask.result } returns authResult
+            every { authResult.user } returns currentUser
+            every { auth.currentUser } returns currentUser
+            every { currentUser.uid } returns "new-android-user"
+            every { currentUser.email } returns "new@example.com"
+            every { currentUser.displayName } returns "Max Muster"
+            every { currentUser.updateProfile(capture(request)) } returns profileTask
+            every { profileTask.addOnCompleteListener(any<OnCompleteListener<Void>>()) } answers {
+                firstArg<OnCompleteListener<Void>>().onComplete(profileTask)
+                profileTask
+            }
+            every { profileTask.isSuccessful } returns true
+            every { currentUser.sendEmailVerification() } returns verificationTask
+            every { verificationTask.addOnCompleteListener(any<OnCompleteListener<Void>>()) } answers {
+                firstArg<OnCompleteListener<Void>>().onComplete(verificationTask)
+                verificationTask
+            }
+            every { verificationTask.isSuccessful } returns true
+
+            val user = FirebaseAuthPlatformService()
+                .createUserWithEmailAndPassword("new@example.com", "secret", " Max Muster ")
+
+            assertEquals("Max Muster", request.captured.displayName)
+            assertEquals("Max Muster", user?.displayName)
+        } finally {
+            unmockkStatic(FirebaseAuth::class, TextUtils::class)
         }
     }
 

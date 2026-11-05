@@ -386,10 +386,9 @@ service cloud.firestore {
         (data.get('isSpeaker', false) == false || category == 'BROTHER');
     }
 
+    // The names may be filled: they come from the display name of the sign-up.
     function hasDefaultProfile(data) {
-      return data.get('lastName', '') == '' &&
-        data.get('firstName', '') == '' &&
-        data.get('category', null) == null &&
+      return data.get('category', null) == null &&
         data.get('baptized', false) == false &&
         data.get('appointment', 'NONE') == 'NONE' &&
         data.get('mobilePhone', '') == '' &&
