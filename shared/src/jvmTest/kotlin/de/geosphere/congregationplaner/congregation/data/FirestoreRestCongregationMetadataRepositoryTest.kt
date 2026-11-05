@@ -1,6 +1,8 @@
 package de.geosphere.congregationplaner.congregation.data
 
+import com.google.gson.JsonParser
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
+import de.geosphere.congregationplaner.congregation.domain.model.NewCongregationAdmin
 import de.geosphere.congregationplaner.testing.FakeFirestoreRestServer
 import de.geosphere.congregationplaner.testing.FakeFirestoreRestServer.FakeResponse
 import de.geosphere.congregationplaner.testing.withFirestoreRestConfig
@@ -12,6 +14,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class FirestoreRestCongregationMetadataRepositoryTest {
@@ -77,57 +80,203 @@ class FirestoreRestCongregationMetadataRepositoryTest {
     }
 
     @Test
-    fun `save creates new congregation with POST and returns generated id`() = runWithServer(
-        FakeResponse(200, """{"name":"projects/p/databases/(default)/documents/congregation/new-id"}"""),
-    ) { server, repository ->
-        val congregation = CongregationMetadata(name = "Berlin", weekendMeetingTime = LocalTime(10, 0))
-
-        val saved = repository.save(circuit, congregation).getOrThrow()
-
-        assertEquals(congregation.copy(id = "new-id"), saved)
-        val request = server.requests.single()
-        assertEquals("POST", request.method)
-        assertEquals(collectionPath, request.path)
-        assertTrue(request.body.contains(""""name":{"stringValue":"Berlin"}"""))
-        assertTrue(request.body.contains(""""weekend_meeting_time":{"stringValue":"10:00"}"""))
-        assertTrue(request.body.contains(""""midweek_meeting_weekday":{"integerValue":3}"""))
-    }
-
-    @Test
-    fun `save updates existing congregation with PATCH and update mask`() = runWithServer(
+    fun `create writes the congregation name document and first admin in one commit`() = runWithServer(
         FakeResponse(200, "{}"),
     ) { server, repository ->
-        val congregation = CongregationMetadata(id = "609a", name = "Berlin")
+        val admin = NewCongregationAdmin("uid-1", "max@example.com", "Max Muster", "Max", "Muster", true)
 
-        assertEquals(congregation, repository.save(circuit, congregation).getOrThrow())
+        val created = repository.create(
+            circuit,
+            CongregationMetadata(name = " Grafing Süd".trim(), weekendMeetingTime = LocalTime(10, 0)),
+            "uid-1",
+            admin,
+        ).getOrThrow()
 
+        assertEquals(20, created.id.length)
         val request = server.requests.single()
-        assertEquals("PATCH", request.method)
-        assertEquals("$collectionPath/609a", request.path)
-        assertTrue(request.query.orEmpty().contains("updateMask.fieldPaths=name"))
-        assertTrue(request.query.orEmpty().contains("updateMask.fieldPaths=weekend_meeting_weekday"))
+        assertEquals("POST", request.method)
+        assertEquals("${FakeFirestoreRestServer.DOCUMENTS_PATH}:commit", request.path)
+        assertEquals("Bearer token-123", request.authorization)
+        val writes = JsonParser.parseString(request.body).asJsonObject.getAsJsonArray("writes")
+            .map { it.asJsonObject.getAsJsonObject("update") }
+        assertEquals(3, writes.size)
+        val prefix = "projects/${FakeFirestoreRestServer.PROJECT_ID}/databases/(default)/documents"
+        val congregationPath = "$prefix/${congregationCollectionPath(circuit)}/${created.id}"
+        assertEquals(congregationPath, writes[0].get("name").asString)
+        assertEquals(
+            "uid-1",
+            writes[0].getAsJsonObject("fields").getAsJsonObject("createdBy").get("stringValue").asString,
+        )
+        assertEquals(
+            "Grafing Süd",
+            writes[0].getAsJsonObject("fields").getAsJsonObject("name").get("stringValue").asString,
+        )
+        assertEquals("$prefix/${congregationNamesCollectionPath(circuit)}/grafing süd", writes[1].get("name").asString)
+        assertEquals(
+            created.id,
+            writes[1].getAsJsonObject("fields").getAsJsonObject("congregationId").get("stringValue").asString,
+        )
+        assertEquals("$congregationPath/members/uid-1", writes[2].get("name").asString)
+        val member = writes[2].getAsJsonObject("fields")
+        assertTrue(member.toString().contains(""""approved":{"booleanValue":true}"""))
+        assertTrue(member.toString().contains("CONGREGATION_ADMIN"))
+        assertEquals("Max", member.getAsJsonObject("firstName").get("stringValue").asString)
+        assertEquals("Muster", member.getAsJsonObject("lastName").get("stringValue").asString)
     }
 
     @Test
-    fun `save returns failure for http errors and missing sign in`() {
+    fun `create without a first admin writes no member and reports failures`() {
+        runWithServer(FakeResponse(200, "{}")) { server, repository ->
+            repository.create(circuit, CongregationMetadata(name = "Nord"), "global-uid", null).getOrThrow()
+
+            val writes = JsonParser.parseString(server.requests.single().body).asJsonObject.getAsJsonArray("writes")
+            assertEquals(2, writes.size())
+        }
+        // Die Regeln lehnen einen vergebenen Namen ab; der Fehler kommt als Failure an.
+        runWithServer(FakeResponse(403)) { _, repository ->
+            assertIs<IOException>(
+                repository.create(circuit, CongregationMetadata(name = "Nord"), "uid-1", null).exceptionOrNull(),
+            )
+        }
+    }
+
+    @Test
+    fun `findNameOwner reads the name document of the circuit`() {
+        runWithServer(
+            FakeResponse(200, """{"name":"x/grafing süd","fields":{"congregationId":{"stringValue":"k1"}}}"""),
+        ) { server, repository ->
+            assertEquals("k1", repository.findNameOwner(circuit, "  Grafing   SÜD ").getOrThrow())
+
+            val request = server.requests.single()
+            assertEquals("GET", request.method)
+            assertEquals(
+                "${FakeFirestoreRestServer.DOCUMENTS_PATH}/${congregationNamesCollectionPath(
+                    circuit,
+                )}/grafing%20s%C3%BCd",
+                request.path,
+            )
+        }
+        runWithServer(FakeResponse(404)) { _, repository ->
+            assertNull(repository.findNameOwner(circuit, "Frei").getOrThrow())
+        }
         runWithServer(FakeResponse(500)) { _, repository ->
-            assertIs<IOException>(repository.save(circuit, CongregationMetadata(name = "Berlin")).exceptionOrNull())
+            assertIs<IOException>(repository.findNameOwner(circuit, "Nord").exceptionOrNull())
+        }
+    }
+
+    @Test
+    fun `save keeps the name document when the name stays`() {
+        val current = congregationDocument("609a", "Berlin", "19:00", 3, "10:00", 7)
+        runWithServer(
+            responder = { request ->
+                if (request.method ==
+                    "GET"
+                ) {
+                    FakeResponse(200, current)
+                } else {
+                    FakeResponse(200, "{}")
+                }
+            },
+        ) { server, repository ->
+            val congregation = CongregationMetadata(id = "609a", name = " BERLIN ".trim())
+
+            assertEquals(congregation, repository.save(circuit, congregation).getOrThrow())
+
+            assertEquals(listOf("GET", "PATCH"), server.requests.map { it.method })
+            val patch = server.requests.last()
+            assertEquals("$collectionPath/609a", patch.path)
+            assertTrue(patch.query.orEmpty().contains("updateMask.fieldPaths=name"))
+            assertTrue(patch.query.orEmpty().contains("updateMask.fieldPaths=weekend_meeting_weekday"))
+        }
+    }
+
+    @Test
+    fun `save moves the name document along with a rename`() {
+        val current = congregationDocument("609a", "Berlin", "19:00", 3, "10:00", 7)
+        runWithServer(
+            responder = { request ->
+                if (request.method ==
+                    "GET"
+                ) {
+                    FakeResponse(200, current)
+                } else {
+                    FakeResponse(200, "{}")
+                }
+            },
+        ) { server, repository ->
+            repository.save(circuit, CongregationMetadata(id = "609a", name = "Berlin-Mitte")).getOrThrow()
+
+            assertEquals(listOf("GET", "POST"), server.requests.map { it.method })
+            val commit = server.requests.last()
+            assertEquals("${FakeFirestoreRestServer.DOCUMENTS_PATH}:commit", commit.path)
+            val writes = JsonParser.parseString(commit.body).asJsonObject.getAsJsonArray("writes").map {
+                it.asJsonObject
+            }
+            val prefix = "projects/${FakeFirestoreRestServer.PROJECT_ID}/databases/(default)/documents"
+            assertEquals(
+                "$prefix/${congregationCollectionPath(circuit)}/609a",
+                writes[0].getAsJsonObject("update").get("name").asString,
+            )
+            assertEquals(
+                "$prefix/${congregationNamesCollectionPath(circuit)}/berlin",
+                writes[1].get("delete").asString,
+            )
+            assertEquals(
+                "$prefix/${congregationNamesCollectionPath(circuit)}/berlin-mitte",
+                writes[2].getAsJsonObject("update").get("name").asString,
+            )
+        }
+    }
+
+    @Test
+    fun `save needs an id and reports http errors and a missing sign in`() {
+        runWithServer(FakeResponse(200)) { server, repository ->
+            assertIs<IllegalArgumentException>(
+                repository.save(circuit, CongregationMetadata(name = "Berlin")).exceptionOrNull(),
+            )
+            assertTrue(server.requests.isEmpty())
+        }
+        runWithServer(FakeResponse(500)) { _, repository ->
+            assertIs<IOException>(
+                repository.save(circuit, CongregationMetadata(id = "609a", name = "Berlin")).exceptionOrNull(),
+            )
         }
         runWithServer(FakeResponse(200), token = null) { server, repository ->
             assertIs<IllegalStateException>(
-                repository.save(circuit, CongregationMetadata(name = "Berlin")).exceptionOrNull(),
+                repository.save(circuit, CongregationMetadata(id = "609a", name = "Berlin")).exceptionOrNull(),
             )
             assertTrue(server.requests.isEmpty())
         }
     }
 
     @Test
-    fun `delete removes congregation document`() = runWithServer(FakeResponse(200, "{}")) { server, repository ->
-        assertTrue(repository.delete(circuit, "609a").isSuccess)
+    fun `delete removes the congregation together with its name document`() {
+        val current = congregationDocument("609a", "Grafing Süd", "19:00", 3, "10:00", 7)
+        runWithServer(
+            responder = { request ->
+                if (request.method ==
+                    "GET"
+                ) {
+                    FakeResponse(200, current)
+                } else {
+                    FakeResponse(200, "{}")
+                }
+            },
+        ) { server, repository ->
+            assertTrue(repository.delete(circuit, "609a").isSuccess)
 
-        val request = server.requests.single()
-        assertEquals("DELETE", request.method)
-        assertEquals("$collectionPath/609a", request.path)
+            assertEquals(listOf("GET", "POST"), server.requests.map { it.method })
+            val writes = JsonParser.parseString(server.requests.last().body).asJsonObject.getAsJsonArray("writes")
+                .map { it.asJsonObject.get("delete").asString }
+            val prefix = "projects/${FakeFirestoreRestServer.PROJECT_ID}/databases/(default)/documents"
+            assertEquals(
+                listOf(
+                    "$prefix/${congregationCollectionPath(circuit)}/609a",
+                    "$prefix/${congregationNamesCollectionPath(circuit)}/grafing süd",
+                ),
+                writes,
+            )
+        }
     }
 
     @Test
@@ -136,7 +285,7 @@ class FirestoreRestCongregationMetadataRepositoryTest {
             assertIs<IllegalArgumentException>(repository.delete(circuit, " ").exceptionOrNull())
             assertTrue(server.requests.isEmpty())
         }
-        runWithServer(FakeResponse(404)) { _, repository ->
+        runWithServer(FakeResponse(500)) { _, repository ->
             assertIs<IOException>(repository.delete(circuit, "609a").exceptionOrNull())
         }
     }
@@ -150,8 +299,14 @@ class FirestoreRestCongregationMetadataRepositoryTest {
         response: FakeResponse,
         token: String? = "token-123",
         block: suspend (FakeFirestoreRestServer, FirestoreRestCongregationMetadataRepository) -> Unit,
+    ) = runWithServer(token = token, responder = { response }, block = block)
+
+    private fun runWithServer(
+        token: String? = "token-123",
+        responder: (FakeFirestoreRestServer.RecordedRequest) -> FakeResponse,
+        block: suspend (FakeFirestoreRestServer, FirestoreRestCongregationMetadataRepository) -> Unit,
     ) {
-        FakeFirestoreRestServer { response }.use { server ->
+        FakeFirestoreRestServer(responder).use { server ->
             withFirestoreRestConfig(server) {
                 runBlocking { block(server, FirestoreRestCongregationMetadataRepository(idTokenProvider = { token })) }
             }

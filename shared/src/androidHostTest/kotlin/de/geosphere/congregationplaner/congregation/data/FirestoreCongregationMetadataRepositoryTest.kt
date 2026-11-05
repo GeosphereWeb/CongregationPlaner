@@ -8,8 +8,11 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.QuerySnapshot
+import com.google.firebase.firestore.Source
+import com.google.firebase.firestore.WriteBatch
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
 import de.geosphere.congregationplaner.congregation.domain.model.MeetingTimes
+import de.geosphere.congregationplaner.congregation.domain.model.NewCongregationAdmin
 import de.geosphere.congregationplaner.testing.assertFailure
 import de.geosphere.congregationplaner.testing.failedTask
 import de.geosphere.congregationplaner.testing.successTask
@@ -27,17 +30,22 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class FirestoreCongregationMetadataRepositoryTest {
     private val circuit = listOf("EMEA", "europe", "central-europe", "c1")
     private val firestore = mockk<FirebaseFirestore>()
     private val collection = mockk<CollectionReference>()
+    private val names = mockk<CollectionReference>()
+    private val batch = mockk<WriteBatch>()
     private val registration = mockk<ListenerRegistration>(relaxed = true)
     private val repository = FirestoreCongregationMetadataRepository(firestore)
 
     init {
         every { firestore.collection(congregationCollectionPath(circuit)) } returns collection
+        every { firestore.collection(congregationNamesCollectionPath(circuit)) } returns names
+        every { firestore.batch() } returns batch
     }
 
     @Test
@@ -86,29 +94,6 @@ class FirestoreCongregationMetadataRepositoryTest {
     }
 
     @Test
-    fun `save creates new document for congregation without id`() = runBlocking {
-        val reference = mockk<DocumentReference>()
-        val fields = slot<Any>()
-        every { collection.document() } returns reference
-        every { reference.id } returns "new-id"
-        every { reference.set(capture(fields)) } returns successTask<Void?>(null)
-        val congregation = CongregationMetadata(name = "Berlin")
-
-        assertEquals(congregation.copy(id = "new-id"), repository.save(circuit, congregation).getOrThrow())
-        assertEquals(
-            mapOf(
-                "name" to "Berlin",
-                "midweek_meeting_time" to "19:00",
-                "midweek_meeting_weekday" to 3,
-                "weekend_meeting_time" to "17:30",
-                "weekend_meeting_weekday" to 7,
-                "yearly_meeting_times" to emptyList<String>(),
-            ),
-            fields.captured,
-        )
-    }
-
-    @Test
     fun `observeAll maps yearly meeting times and skips malformed entries`() = runBlocking {
         val yearly = listOf("2027|4|18:30|6|09:30", "garbage")
         emitSnapshot(querySnapshot(document("1", "Berlin", "19:00", 3L, "10:00", 7L, yearly)), null)
@@ -120,49 +105,176 @@ class FirestoreCongregationMetadataRepositoryTest {
     }
 
     @Test
-    fun `save updates existing document`() = runBlocking {
+    fun `create writes the congregation name document and first admin in one batch`() = runBlocking {
+        val reference = mockk<DocumentReference>()
+        val nameReference = mockk<DocumentReference>()
+        val memberReference = mockk<DocumentReference>()
+        val memberCollection = mockk<CollectionReference>()
+        val fields = slot<Any>()
+        val nameFields = slot<Any>()
+        val memberFields = slot<Any>()
+        every { collection.document() } returns reference
+        every { reference.id } returns "new-id"
+        every { reference.collection("members") } returns memberCollection
+        every { memberCollection.document("uid-1") } returns memberReference
+        every { names.document("grafing süd") } returns nameReference
+        every { batch.set(reference, capture(fields)) } returns batch
+        every { batch.set(nameReference, capture(nameFields)) } returns batch
+        every { batch.set(memberReference, capture(memberFields)) } returns batch
+        every { batch.commit() } returns successTask<Void?>(null)
+        val admin = NewCongregationAdmin("uid-1", "max@example.com", "Max Muster", "Max", "Muster", true)
+
+        val created = repository.create(circuit, CongregationMetadata(name = "Grafing Süd"), "uid-1", admin)
+            .getOrThrow()
+
+        assertEquals("new-id", created.id)
+        assertEquals(
+            mapOf(
+                "name" to "Grafing Süd",
+                "midweek_meeting_time" to "19:00",
+                "midweek_meeting_weekday" to 3,
+                "weekend_meeting_time" to "17:30",
+                "weekend_meeting_weekday" to 7,
+                "yearly_meeting_times" to emptyList<String>(),
+                "createdBy" to "uid-1",
+            ),
+            fields.captured,
+        )
+        assertEquals(mapOf("congregationId" to "new-id"), nameFields.captured)
+        val member = memberFields.captured as Map<*, *>
+        assertEquals(true, member["approved"])
+        assertEquals(listOf("CONGREGATION_ADMIN"), member["roles"])
+        assertEquals("Max", member["firstName"])
+        assertEquals("Muster", member["lastName"])
+        verify(exactly = 1) { batch.commit() }
+    }
+
+    @Test
+    fun `create without a first admin writes no member and reports failures`() = withMockedLog {
+        val reference = mockk<DocumentReference>()
+        val nameReference = mockk<DocumentReference>()
+        every { collection.document() } returns reference
+        every { reference.id } returns "new-id"
+        every { names.document("nord") } returns nameReference
+        every { batch.set(any<DocumentReference>(), any<Map<String, Any?>>()) } returns batch
+        every { batch.commit() } returns successTask<Void?>(null)
+
+        runBlocking {
+            repository.create(circuit, CongregationMetadata(name = "Nord"), "global", null).getOrThrow()
+        }
+        verify(exactly = 2) { batch.set(any<DocumentReference>(), any<Map<String, Any?>>()) }
+
+        val error = IllegalStateException("permission denied")
+        every { batch.commit() } returns failedTask<Void?>(error)
+        runBlocking {
+            assertFailure(error, repository.create(circuit, CongregationMetadata(name = "Nord"), "global", null))
+        }
+    }
+
+    @Test
+    fun `findNameOwner reads the name document of the circuit`() = runBlocking {
+        val nameReference = mockk<DocumentReference>()
+        every { names.document("grafing süd") } returns nameReference
+        every { nameReference.get(Source.SERVER) } returns successTask(
+            mockk<DocumentSnapshot> {
+                every { exists() } returns true
+                every { getString("congregationId") } returns "k1"
+            },
+        )
+
+        assertEquals("k1", repository.findNameOwner(circuit, "  Grafing   SÜD ").getOrThrow())
+
+        every { nameReference.get(Source.SERVER) } returns successTask(
+            mockk<DocumentSnapshot> { every { exists() } returns false },
+        )
+        assertNull(repository.findNameOwner(circuit, "Grafing Süd").getOrThrow())
+    }
+
+    @Test
+    fun `save keeps the name document when the name stays`() = runBlocking {
         val reference = mockk<DocumentReference>()
         every { collection.document("609a") } returns reference
-        every { reference.id } returns "609a"
+        every { reference.get(Source.SERVER) } returns currentName("Berlin")
         every { reference.update(any<Map<String, Any>>()) } returns successTask<Void?>(null)
-        val congregation = CongregationMetadata(id = "609a", name = "Berlin")
+        val congregation = CongregationMetadata(id = "609a", name = "BERLIN")
 
         assertEquals(congregation, repository.save(circuit, congregation).getOrThrow())
         verify { reference.update(any<Map<String, Any>>()) }
+        verify(exactly = 0) { firestore.batch() }
     }
 
     @Test
-    fun `save returns failure when firestore rejects the write`() = withMockedLog {
+    fun `save moves the name document along with a rename`() = runBlocking {
+        val reference = mockk<DocumentReference>()
+        val oldName = mockk<DocumentReference>()
+        val newName = mockk<DocumentReference>()
+        every { collection.document("609a") } returns reference
+        every { reference.get(Source.SERVER) } returns currentName("Berlin")
+        every { names.document("berlin") } returns oldName
+        every { names.document("berlin-mitte") } returns newName
+        every { batch.update(reference, any<Map<String, Any>>()) } returns batch
+        every { batch.delete(oldName) } returns batch
+        every { batch.set(newName, mapOf("congregationId" to "609a")) } returns batch
+        every { batch.commit() } returns successTask<Void?>(null)
+
+        repository.save(circuit, CongregationMetadata(id = "609a", name = "Berlin-Mitte")).getOrThrow()
+
+        verify { batch.update(reference, any<Map<String, Any>>()) }
+        verify { batch.delete(oldName) }
+        verify { batch.set(newName, mapOf("congregationId" to "609a")) }
+        verify(exactly = 1) { batch.commit() }
+    }
+
+    @Test
+    fun `save needs an id and returns failures`() = withMockedLog {
         val reference = mockk<DocumentReference>()
         val error = IllegalStateException("permission denied")
-        every { collection.document() } returns reference
-        every { reference.set(any()) } returns failedTask<Void?>(error)
+        every { collection.document("609a") } returns reference
+        every { reference.get(Source.SERVER) } returns currentName("Berlin")
+        every { reference.update(any<Map<String, Any>>()) } returns failedTask<Void?>(error)
 
-        runBlocking { assertFailure(error, repository.save(circuit, CongregationMetadata(name = "Berlin"))) }
+        runBlocking {
+            assertIs<IllegalArgumentException>(
+                repository.save(circuit, CongregationMetadata(name = "Berlin")).exceptionOrNull(),
+            )
+            assertFailure(error, repository.save(circuit, CongregationMetadata(id = "609a", name = "Berlin")))
+        }
     }
 
     @Test
-    fun `delete removes document and validates id`() = withMockedLog {
+    fun `delete removes the congregation together with its name document`() = withMockedLog {
         val reference = mockk<DocumentReference>()
+        val nameReference = mockk<DocumentReference>()
         every { collection.document("609a") } returns reference
-        every { reference.delete() } returns successTask<Void?>(null)
+        every { reference.get(Source.SERVER) } returns currentName("Grafing Süd")
+        every { names.document("grafing süd") } returns nameReference
+        every { batch.delete(any<DocumentReference>()) } returns batch
+        every { batch.commit() } returns successTask<Void?>(null)
 
         runBlocking {
             assertTrue(repository.delete(circuit, "609a").isSuccess)
             assertIs<IllegalArgumentException>(repository.delete(circuit, "").exceptionOrNull())
         }
-        verify { reference.delete() }
+        verify { batch.delete(reference) }
+        verify { batch.delete(nameReference) }
     }
 
     @Test
-    fun `delete returns failure when firestore rejects the delete`() = withMockedLog {
+    fun `delete returns failure when firestore rejects the batch`() = withMockedLog {
         val reference = mockk<DocumentReference>()
         val error = IllegalStateException("permission denied")
         every { collection.document("609a") } returns reference
-        every { reference.delete() } returns failedTask<Void?>(error)
+        every { reference.get(Source.SERVER) } returns currentName("Grafing Süd")
+        every { names.document(any()) } returns mockk()
+        every { batch.delete(any<DocumentReference>()) } returns batch
+        every { batch.commit() } returns failedTask<Void?>(error)
 
         runBlocking { assertFailure(error, repository.delete(circuit, "609a")) }
     }
+
+    private fun currentName(name: String) = successTask(
+        mockk<DocumentSnapshot> { every { getString("name") } returns name },
+    )
 
     @Test
     fun `android factory creates firestore repository`() {
