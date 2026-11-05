@@ -69,6 +69,13 @@ class UnavailableRepositoriesTest {
             repository.save(congregation.circuitIds, CongregationMetadata(name = "Berlin")).exceptionOrNull(),
         )
         assertIs<UnsupportedOperationException>(repository.delete(congregation.circuitIds, "609a").exceptionOrNull())
+        assertIs<UnsupportedOperationException>(
+            repository.findNameOwner(congregation.circuitIds, "Berlin").exceptionOrNull(),
+        )
+        assertIs<UnsupportedOperationException>(
+            repository.create(congregation.circuitIds, CongregationMetadata(name = "Berlin"), "uid", null)
+                .exceptionOrNull(),
+        )
         assertFailsWith<UnsupportedOperationException> { repository.observeAll(congregation.circuitIds).first() }
     }
 }
