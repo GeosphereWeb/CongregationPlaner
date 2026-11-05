@@ -36,7 +36,6 @@ import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.presentation.components.DetailPane
 import de.geosphere.congregationplaner.presentation.components.DetailPlaceholder
 import de.geosphere.congregationplaner.presentation.components.ListDetailState
-import de.geosphere.congregationplaner.presentation.components.ListPaneHeader
 import de.geosphere.congregationplaner.presentation.components.SelectableListCard
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.talk.domain.model.Talk
@@ -109,7 +108,7 @@ internal fun TalkReferenceContent(
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     Column(modifier = modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ListPaneHeader("Vortragsliste & Ereignisse")
+        // Den Titel zeigt schon der Bereichskopf der Globalen Verwaltung.
         if (!catalogState.canManage) {
             Text("Dafür fehlt dir die Berechtigung.")
             return@Column
