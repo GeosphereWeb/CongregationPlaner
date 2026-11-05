@@ -90,9 +90,8 @@ internal class FirestoreRestTalkScheduleRepository(
         JsonObject().apply {
             add("time", firestoreString(time.toString()))
             add("talkCancelled", firestoreBoolean(talkCancelled))
-            // Nur gesetzt schreiben (fehlend = false), damit ältere Rules den Termin weiter annehmen.
-            if (confirmed) add("confirmed", firestoreBoolean(true))
-            note?.let { add("note", firestoreString(it)) }
+            add("confirmed", firestoreBoolean(confirmed))
+            add("note", firestoreNullableString(note))
             add("weekEventId", firestoreNullableString(weekEventId))
             add("weekEventName", firestoreNullableString(weekEventName))
             add("talkNumber", firestoreNullableInteger(talkNumber))
