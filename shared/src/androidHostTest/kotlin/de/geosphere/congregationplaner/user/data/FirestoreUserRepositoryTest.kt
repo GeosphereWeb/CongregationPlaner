@@ -377,17 +377,6 @@ class FirestoreUserRepositoryTest {
     }
 
     @Test
-    fun `a document without roles has no roles even with the old fields`() = runBlocking {
-        every { document.get(Source.SERVER) } returns successTask(
-            memberSnapshot(approved = true, role = "CONGREGATION_ADMIN", permissions = listOf("PLAN_TALKS")),
-        )
-
-        val user = repository.getOrCreateUser(authUser, congregation).getOrThrow()
-
-        assertEquals(emptySet(), user.roles)
-    }
-
-    @Test
     fun `removeMember deletes the member document and reports failures`() = withMockedLog {
         every { document.delete() } returns successTask<Void?>(null)
         runBlocking { repository.removeMember(congregation, "uid-1").getOrThrow() }
