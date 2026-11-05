@@ -24,12 +24,13 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalCoroutinesApi::class)
 class CongregationSelectionViewModelTest {
     private val ref = CongregationRef("EMEA", "europe", "central-europe", "609a", "berlin")
+    private val berlinSelection = SelectedCongregation(ref, "Berlin", "Kreis Nord")
     private val repository = FakeOrganizationRepository(
         mapOf(
             "region" to listOf(OrgUnit("EMEA")),
             "region/EMEA/subregion" to listOf(OrgUnit("europe", "Europa")),
             "region/EMEA/subregion/europe/branch" to listOf(OrgUnit("central-europe")),
-            "region/EMEA/subregion/europe/branch/central-europe/circuit" to listOf(OrgUnit("609a")),
+            "region/EMEA/subregion/europe/branch/central-europe/circuit" to listOf(OrgUnit("609a", "Kreis Nord")),
             "region/EMEA/subregion/europe/branch/central-europe/circuit/609a/congregation" to listOf(
                 OrgUnit("hamburg", "Hamburg"),
                 OrgUnit("berlin", "Berlin"),
@@ -61,11 +62,11 @@ class CongregationSelectionViewModelTest {
 
     @Test
     fun `stored selection is restored without loading`() {
-        store.save(SelectedCongregation(ref, "Berlin"))
+        store.save(berlinSelection)
 
         val state = createViewModel().uiState.value
 
-        assertEquals(SelectedCongregation(ref, "Berlin"), state.selected)
+        assertEquals(berlinSelection, state.selected)
         assertFalse(state.isPicking)
         assertTrue(repository.requestedPaths.isEmpty())
     }
@@ -84,9 +85,36 @@ class CongregationSelectionViewModelTest {
         viewModel.selectUnit(OrgLevel.CONGREGATION, "berlin")
 
         val state = viewModel.uiState.value
-        assertEquals(SelectedCongregation(ref, "Berlin"), state.selected)
+        assertEquals(berlinSelection, state.selected)
         assertFalse(state.isPicking)
-        assertEquals(SelectedCongregation(ref, "Berlin"), store.load())
+        assertEquals(berlinSelection, store.load())
+    }
+
+    @Test
+    fun `the circuit name is kept with the selection from the levels and from an invite link`() {
+        val viewModel = createViewModel()
+        viewModel.selectUnit(OrgLevel.REGION, "EMEA")
+        viewModel.selectUnit(OrgLevel.SUBREGION, "europe")
+        viewModel.selectUnit(OrgLevel.BRANCH, "central-europe")
+        viewModel.selectUnit(OrgLevel.CIRCUIT, "609a")
+        viewModel.selectUnit(OrgLevel.CONGREGATION, "berlin")
+        assertEquals("Kreis Nord", viewModel.uiState.value.selected?.circuitName)
+
+        viewModel.clearSelection()
+        viewModel.applyInviteLink(ref.toInviteLink())
+        assertEquals("Kreis Nord", viewModel.uiState.value.selected?.circuitName)
+        assertEquals("Kreis Nord", store.load()?.circuitName)
+    }
+
+    @Test
+    fun `an invite link still selects the congregation when the circuit name is unknown`() {
+        repository.units = repository.units - "region/EMEA/subregion/europe/branch/central-europe/circuit"
+        val viewModel = createViewModel()
+
+        viewModel.applyInviteLink(ref.toInviteLink())
+
+        assertEquals(SelectedCongregation(ref, "Berlin", ""), viewModel.uiState.value.selected)
+        assertEquals("609a", viewModel.uiState.value.selected?.circuitDisplayName)
     }
 
     @Test
@@ -135,9 +163,9 @@ class CongregationSelectionViewModelTest {
         viewModel.onInviteLinkChanged(ref.toInviteLink())
         viewModel.applyInviteLink()
 
-        assertEquals(SelectedCongregation(ref, "Berlin"), viewModel.uiState.value.selected)
+        assertEquals(berlinSelection, viewModel.uiState.value.selected)
         assertEquals("", viewModel.uiState.value.inviteLinkInput)
-        assertEquals(SelectedCongregation(ref, "Berlin"), store.load())
+        assertEquals(berlinSelection, store.load())
     }
 
     @Test
@@ -146,7 +174,7 @@ class CongregationSelectionViewModelTest {
 
         viewModel.pasteInviteLink(ref.toInviteLink())
 
-        assertEquals(SelectedCongregation(ref, "Berlin"), viewModel.uiState.value.selected)
+        assertEquals(berlinSelection, viewModel.uiState.value.selected)
         assertEquals("", viewModel.uiState.value.inviteLinkInput)
     }
 
@@ -193,7 +221,7 @@ class CongregationSelectionViewModelTest {
         viewModel.startPicking()
         viewModel.cancelPicking()
         assertFalse(viewModel.uiState.value.isPicking)
-        assertEquals(SelectedCongregation(ref, "Berlin"), viewModel.uiState.value.selected)
+        assertEquals(berlinSelection, viewModel.uiState.value.selected)
 
         viewModel.clearSelection()
         assertNull(viewModel.uiState.value.selected)
