@@ -21,7 +21,8 @@ import dev.zacsweers.metro.createGraph
 
 /**
  * „Mein Profil“ unter „Einstellungen“: Namen, Telefon, E-Mail, Adresse und Notfallkontakte selbst pflegen. Nur für
- * Mitglieder mit eigenem Mitgliedsdokument; globale Admins ohne Versammlung haben keines.
+ * Mitglieder mit eigenem Mitgliedsdokument; globale Admins ohne Versammlung haben keines. Globale Admins pflegen
+ * weder Adresse noch Notfallkontakte.
  */
 @Composable
 internal fun OwnProfileSection(user: AppUser, modifier: Modifier = Modifier) {
@@ -29,11 +30,16 @@ internal fun OwnProfileSection(user: AppUser, modifier: Modifier = Modifier) {
     val viewModel = remember { createGraph<OwnProfileGraph>().ownProfileViewModel }
     LaunchedEffect(viewModel, user) { viewModel.onUserChanged(user) }
     val state by viewModel.uiState.collectAsState()
-    OwnProfileForm(state, viewModel, modifier)
+    OwnProfileForm(state, viewModel, showAddressAndEmergencyContacts = !user.isGlobalAdmin, modifier)
 }
 
 @Composable
-private fun OwnProfileForm(state: OwnProfileUiState, viewModel: OwnProfileViewModel, modifier: Modifier = Modifier) {
+private fun OwnProfileForm(
+    state: OwnProfileUiState,
+    viewModel: OwnProfileViewModel,
+    showAddressAndEmergencyContacts: Boolean,
+    modifier: Modifier = Modifier,
+) {
     val form = state.form
     val enabled = !state.isSaving
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -44,7 +50,7 @@ private fun OwnProfileForm(state: OwnProfileUiState, viewModel: OwnProfileViewMo
         ProfileField(form.lastName, "Nachname", enabled, MemberProfile.MAX_NAME_LENGTH, {
             viewModel.onFormChange(form.copy(lastName = it))
         })
-        ContactFields(form, enabled, viewModel::onFormChange)
+        ContactFields(form, enabled, viewModel::onFormChange, showAddressAndEmergencyContacts)
 
         state.message?.let { message ->
             Text(
