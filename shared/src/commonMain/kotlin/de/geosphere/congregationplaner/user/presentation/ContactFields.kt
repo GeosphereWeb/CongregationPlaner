@@ -67,7 +67,12 @@ private fun <T> List<T>.replaced(index: Int, value: T): List<T> = mapIndexed { i
  * der Versammlungsadmins. Die Angaben sehen das Mitglied, die Admins und die Planer der Versammlung (ADR-0016).
  */
 @Composable
-internal fun ContactFields(profile: MemberProfile, enabled: Boolean, onChange: (MemberProfile) -> Unit) {
+internal fun ContactFields(
+    profile: MemberProfile,
+    enabled: Boolean,
+    onChange: (MemberProfile) -> Unit,
+    showAddressAndEmergencyContacts: Boolean = true,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         PhoneField(profile.mobilePhone, "Handy (optional)", smartphoneIcon, enabled, {
             onChange(profile.copy(mobilePhone = it))
@@ -108,47 +113,49 @@ internal fun ContactFields(profile: MemberProfile, enabled: Boolean, onChange: (
             )
         }
 
-        SectionTitle("Adresse", "Sehen die Admins und Planer der Versammlung.")
-        ProfileField(profile.street, "Straße und Hausnummer", enabled, MemberProfile.MAX_STREET_LENGTH, {
-            onChange(profile.copy(street = it))
-        })
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ProfileField(
-                profile.postalCode,
-                "PLZ",
-                enabled,
-                MemberProfile.MAX_POSTAL_CODE_LENGTH,
-                { onChange(profile.copy(postalCode = it)) },
-                KeyboardType.Number,
-                Modifier.weight(1f),
-            )
-            ProfileField(
-                profile.city,
-                "Ort",
-                enabled,
-                MemberProfile.MAX_CITY_LENGTH,
-                { onChange(profile.copy(city = it)) },
-                modifier = Modifier.weight(2f),
-            )
-        }
+        if (showAddressAndEmergencyContacts) {
+            SectionTitle("Adresse", "Sehen die Admins und Planer der Versammlung.")
+            ProfileField(profile.street, "Straße und Hausnummer", enabled, MemberProfile.MAX_STREET_LENGTH, {
+                onChange(profile.copy(street = it))
+            })
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ProfileField(
+                    profile.postalCode,
+                    "PLZ",
+                    enabled,
+                    MemberProfile.MAX_POSTAL_CODE_LENGTH,
+                    { onChange(profile.copy(postalCode = it)) },
+                    KeyboardType.Number,
+                    Modifier.weight(1f),
+                )
+                ProfileField(
+                    profile.city,
+                    "Ort",
+                    enabled,
+                    MemberProfile.MAX_CITY_LENGTH,
+                    { onChange(profile.copy(city = it)) },
+                    modifier = Modifier.weight(2f),
+                )
+            }
 
-        SectionTitle("Notfallkontakte", "Bis zu ${MemberProfile.MAX_EMERGENCY_CONTACTS}.")
-        profile.emergencyContacts.forEachIndexed { index, contact ->
-            EmergencyContactCard(
-                contact = contact,
-                number = index + 1,
-                enabled = enabled,
-                onChange = { onChange(profile.withContact(index, it)) },
-                onRemove = { onChange(profile.withoutContact(index)) },
-            )
-        }
-        if (profile.canAddContact) {
-            SecondaryButton(
-                text = "Notfallkontakt hinzufügen",
-                onClick = { onChange(profile.withAddedContact()) },
-                enabled = enabled,
-                height = 44.dp,
-            )
+            SectionTitle("Notfallkontakte", "Bis zu ${MemberProfile.MAX_EMERGENCY_CONTACTS}.")
+            profile.emergencyContacts.forEachIndexed { index, contact ->
+                EmergencyContactCard(
+                    contact = contact,
+                    number = index + 1,
+                    enabled = enabled,
+                    onChange = { onChange(profile.withContact(index, it)) },
+                    onRemove = { onChange(profile.withoutContact(index)) },
+                )
+            }
+            if (profile.canAddContact) {
+                SecondaryButton(
+                    text = "Notfallkontakt hinzufügen",
+                    onClick = { onChange(profile.withAddedContact()) },
+                    enabled = enabled,
+                    height = 44.dp,
+                )
+            }
         }
     }
 }
