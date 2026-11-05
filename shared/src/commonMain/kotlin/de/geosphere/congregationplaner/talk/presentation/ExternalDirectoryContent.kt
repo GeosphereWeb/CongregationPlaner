@@ -1,6 +1,7 @@
 package de.geosphere.congregationplaner.talk.presentation
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,6 +14,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -29,7 +31,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.presentation.components.DetailPane
 import de.geosphere.congregationplaner.presentation.components.DetailPlaceholder
@@ -101,48 +106,60 @@ internal fun ExternalDirectoryContent(
     val navigator = rememberListDetailNavigation(state, onClose = actions.onClose)
     val singlePane = navigator.scaffoldDirective.maxHorizontalPartitions == 1
 
-    Column(modifier = modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ListPaneHeader("Externe Redner")
-        if (!state.canPlan) {
-            Text("Dafür fehlt dir die Berechtigung.")
-            return@Column
-        }
-        Button(onClick = actions.onNewCircuit, enabled = !state.isLoading && !isBusy) { Text("Kreis hinzufügen") }
-        state.errorMessage?.let { message ->
-            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                Text(message, color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
-                TextButton(onClick = actions.onDismissError) { Text("OK") }
+    Box(modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            ListPaneHeader("Externe Redner")
+            if (!state.canPlan) {
+                Text("Dafür fehlt dir die Berechtigung.")
+                return@Column
             }
-        }
-        if (state.isLoading) {
-            CircularProgressIndicator()
-            return@Column
-        }
-        ListDetailPaneScaffold(
-            directive = navigator.scaffoldDirective,
-            scaffoldState = navigator.scaffoldState,
-            modifier = Modifier.weight(1f).fillMaxWidth(),
-            listPane = {
-                AnimatedPane {
-                    ExternalDirectoryTree(state, actions, isBusy) { deleteRequest = it }
+            state.errorMessage?.let { message ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(message, color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
+                    TextButton(onClick = actions.onDismissError) { Text("OK") }
                 }
-            },
-            detailPane = {
-                AnimatedPane {
-                    DetailPane(
-                        showBack = navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Hidden,
-                        onBack = actions.onClose,
-                        backEnabled = !isBusy,
-                    ) {
-                        ExternalDirectoryDetail(
-                            state = state,
-                            actions = actions.copy(onDiscard = if (singlePane) actions.onClose else actions.onDiscard),
-                            isBusy = isBusy,
-                        )
+            }
+            if (state.isLoading) {
+                CircularProgressIndicator()
+                return@Column
+            }
+            ListDetailPaneScaffold(
+                directive = navigator.scaffoldDirective,
+                scaffoldState = navigator.scaffoldState,
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                listPane = {
+                    AnimatedPane {
+                        ExternalDirectoryTree(state, actions, isBusy) { deleteRequest = it }
                     }
-                }
-            },
-        )
+                },
+                detailPane = {
+                    AnimatedPane {
+                        DetailPane(
+                            showBack = navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] ==
+                                PaneAdaptedValue.Hidden,
+                            onBack = actions.onClose,
+                            backEnabled = !isBusy,
+                        ) {
+                            ExternalDirectoryDetail(
+                                state = state,
+                                actions = actions.copy(
+                                    onDiscard = if (singlePane) actions.onClose else actions.onDiscard,
+                                ),
+                                isBusy = isBusy,
+                            )
+                        }
+                    }
+                },
+            )
+        }
+        // On a phone the detail covers the list; the FAB would overlay it there.
+        if (state.canPlan && (!singlePane || !state.hasDetail)) {
+            FloatingActionButton(
+                onClick = { if (!state.isLoading && !isBusy) actions.onNewCircuit() },
+                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
+                    .semantics { contentDescription = "Kreis hinzufügen" },
+            ) { Text("+", style = MaterialTheme.typography.headlineMedium) }
+        }
     }
 
     deleteRequest?.let { request ->
