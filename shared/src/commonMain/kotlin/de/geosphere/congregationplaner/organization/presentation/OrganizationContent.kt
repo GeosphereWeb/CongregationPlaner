@@ -1,6 +1,7 @@
 package de.geosphere.congregationplaner.organization.presentation
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -13,6 +14,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -31,6 +33,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
@@ -72,7 +76,8 @@ internal fun OrganizationRoute(currentUser: AppUser) {
     )
     Column(Modifier.fillMaxSize()) {
         // Den Titel „Organisation“ zeigt schon der Bereichskopf; hier steht nur der Pfad.
-        Column(Modifier.padding(start = 8.dp, top = 8.dp, end = 16.dp)) {
+        // TextButton bringt 12 dp Innenabstand mit; 4 + 12 ergibt dieselbe 16-dp-Kante wie der Inhalt darunter.
+        Column(Modifier.padding(start = 4.dp, top = 8.dp, end = 16.dp)) {
             PathBar(state.path, onGoTo = viewModel::goTo)
         }
         if (state.level == OrgLevel.CONGREGATION) {
@@ -137,61 +142,69 @@ internal fun OrganizationContent(
     val onCancelEditing = if (singlePane) actions.onCancel else actions.onDiscard
     val level = state.level
 
-    Column(modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (state.canManage) {
-            Button(onClick = actions.onCreate, enabled = !state.isLoading && !isBusy) {
-                Text("${level.label} hinzufügen")
-            }
-        }
-        state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+    Box(modifier.fillMaxSize()) {
+        Column(
+            Modifier.fillMaxSize().padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
 
-        if (state.isLoading) {
-            CircularProgressIndicator()
-        } else {
-            ListDetailPaneScaffold(
-                directive = navigator.scaffoldDirective,
-                scaffoldState = navigator.scaffoldState,
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                listPane = {
-                    AnimatedPane {
-                        OrgUnitList(
-                            level = level,
-                            units = state.units,
-                            selectedId = state.editor?.original?.id,
-                            actionsEnabled = !isBusy,
-                            canManage = state.canManage,
-                            onOpen = actions.onOpen,
-                            onEdit = actions.onSelect,
-                            onDelete = { unitToDelete = it },
-                        )
-                    }
-                },
-                detailPane = {
-                    AnimatedPane {
-                        DetailPane(
-                            showBack = navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] ==
-                                PaneAdaptedValue.Hidden,
-                            onBack = actions.onCancel,
-                            backEnabled = !isBusy,
-                        ) {
-                            val editor = state.editor
-                            if (editor == null) {
-                                DetailPlaceholder(
-                                    "Tippe auf einen Eintrag, um ihn zu öffnen; „Bearbeiten“ ändert seinen Namen.",
-                                )
-                            } else {
-                                OrgUnitEditor(
-                                    level = level,
-                                    editor = editor,
-                                    isSaving = state.isSaving,
-                                    isBusy = isBusy,
-                                    actions = actions.copy(onCancel = onCancelEditing),
-                                )
+            if (state.isLoading) {
+                CircularProgressIndicator()
+            } else {
+                ListDetailPaneScaffold(
+                    directive = navigator.scaffoldDirective,
+                    scaffoldState = navigator.scaffoldState,
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    listPane = {
+                        AnimatedPane {
+                            OrgUnitList(
+                                level = level,
+                                units = state.units,
+                                selectedId = state.editor?.original?.id,
+                                actionsEnabled = !isBusy,
+                                canManage = state.canManage,
+                                onOpen = actions.onOpen,
+                                onEdit = actions.onSelect,
+                                onDelete = { unitToDelete = it },
+                            )
+                        }
+                    },
+                    detailPane = {
+                        AnimatedPane {
+                            DetailPane(
+                                showBack = navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] ==
+                                    PaneAdaptedValue.Hidden,
+                                onBack = actions.onCancel,
+                                backEnabled = !isBusy,
+                            ) {
+                                val editor = state.editor
+                                if (editor == null) {
+                                    DetailPlaceholder(
+                                        "Tippe auf einen Eintrag, um ihn zu öffnen; „Bearbeiten“ ändert seinen Namen.",
+                                    )
+                                } else {
+                                    OrgUnitEditor(
+                                        level = level,
+                                        editor = editor,
+                                        isSaving = state.isSaving,
+                                        isBusy = isBusy,
+                                        actions = actions.copy(onCancel = onCancelEditing),
+                                    )
+                                }
                             }
                         }
-                    }
-                },
-            )
+                    },
+                )
+            }
+        }
+        // Auf dem Handy verdeckt der Editor die Liste; dort würde der FAB ihn überlagern.
+        if (state.canManage && (!singlePane || state.editor == null)) {
+            FloatingActionButton(
+                onClick = { if (!state.isLoading && !isBusy) actions.onCreate() },
+                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
+                    .semantics { contentDescription = "${level.label} hinzufügen" },
+            ) { Text("+", style = MaterialTheme.typography.headlineMedium) }
         }
     }
 
