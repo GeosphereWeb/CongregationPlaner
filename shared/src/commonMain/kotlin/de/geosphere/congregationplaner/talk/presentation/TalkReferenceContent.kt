@@ -1,6 +1,7 @@
 package de.geosphere.congregationplaner.talk.presentation
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,8 +13,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -31,6 +32,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.presentation.components.DetailPane
@@ -140,27 +143,39 @@ private fun ErrorRow(message: String?, onDismiss: () -> Unit) {
 private fun ReferenceListDetail(
     state: ListDetailState,
     onClose: () -> Unit,
+    createLabel: String,
+    onCreate: () -> Unit,
     list: @Composable () -> Unit,
     detail: @Composable () -> Unit,
 ) {
     val navigator = rememberListDetailNavigation(state, onClose = onClose)
-    ListDetailPaneScaffold(
-        directive = navigator.scaffoldDirective,
-        scaffoldState = navigator.scaffoldState,
-        modifier = Modifier.fillMaxSize(),
-        listPane = { AnimatedPane { list() } },
-        detailPane = {
-            AnimatedPane {
-                DetailPane(
-                    showBack = navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Hidden,
-                    onBack = onClose,
-                    backEnabled = !state.isSaving,
-                ) {
-                    detail()
+    val singlePane = navigator.scaffoldDirective.maxHorizontalPartitions == 1
+    Box(Modifier.fillMaxSize()) {
+        ListDetailPaneScaffold(
+            directive = navigator.scaffoldDirective,
+            scaffoldState = navigator.scaffoldState,
+            modifier = Modifier.fillMaxSize(),
+            listPane = { AnimatedPane { list() } },
+            detailPane = {
+                AnimatedPane {
+                    DetailPane(
+                        showBack = navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Hidden,
+                        onBack = onClose,
+                        backEnabled = !state.isSaving,
+                    ) {
+                        detail()
+                    }
                 }
-            }
-        },
-    )
+            },
+        )
+        // On a phone the detail covers the list; the FAB would overlay it there.
+        if (!singlePane || !state.hasDetail) {
+            FloatingActionButton(
+                onClick = { if (!state.isSaving) onCreate() },
+                modifier = Modifier.align(Alignment.BottomEnd).semantics { contentDescription = createLabel },
+            ) { Text("+", style = MaterialTheme.typography.headlineMedium) }
+        }
+    }
 }
 
 @Composable
@@ -170,10 +185,11 @@ private fun TalkCatalogTab(state: TalkCatalogUiState, actions: TalkCatalogAction
         CircularProgressIndicator()
         return
     }
-    OutlinedButton(onClick = actions.onNew, enabled = !state.isSaving) { Text("Vortrag anlegen") }
     ReferenceListDetail(
         state = state,
         onClose = actions.onCancel,
+        createLabel = "Vortrag anlegen",
+        onCreate = actions.onNew,
         list = {
             LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (state.talks.isEmpty()) item { Text("Noch keine Vorträge in der Liste.") }
@@ -240,10 +256,11 @@ private fun WeekEventTab(state: WeekEventUiState, actions: WeekEventActions) {
         CircularProgressIndicator()
         return
     }
-    OutlinedButton(onClick = actions.onNew, enabled = !state.isSaving) { Text("Ereignis anlegen") }
     ReferenceListDetail(
         state = state,
         onClose = actions.onCancel,
+        createLabel = "Ereignis anlegen",
+        onCreate = actions.onNew,
         list = {
             LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (state.events.isEmpty()) item { Text("Noch keine Wochenereignisse.") }
