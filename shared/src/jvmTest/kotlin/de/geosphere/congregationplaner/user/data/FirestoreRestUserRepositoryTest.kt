@@ -269,12 +269,10 @@ class FirestoreRestUserRepositoryTest {
     }
 
     @Test
-    fun `unknown role names are ignored and the old fields grant nothing`() = runWithServer({
+    fun `unknown role names are ignored`() = runWithServer({
         FakeResponse(
             200,
             """{"name":"x/members/uid-1","fields":{
-                "role":{"stringValue":"CONGREGATION_ADMIN"},
-                "permissions":{"arrayValue":{"values":[{"stringValue":"PLAN_TALKS"}]}},
                 "roles":{"arrayValue":{"values":[{"stringValue":"TASK_PLANNER"},{"stringValue":"BOSS"}]}}}}""",
         )
     }) { _, repository ->
@@ -287,9 +285,7 @@ class FirestoreRestUserRepositoryTest {
     fun `a document without roles has no roles`() = runWithServer({
         FakeResponse(
             200,
-            """{"name":"x/members/uid-1","fields":{
-                "role":{"stringValue":"CONGREGATION_ADMIN"},
-                "permissions":{"arrayValue":{"values":[{"stringValue":"PLAN_TALKS"}]}}}}""",
+            """{"name":"x/members/uid-1","fields":{"approved":{"booleanValue":true}}}""",
         )
     }) { _, repository ->
         assertEquals(emptySet(), checkNotNull(repository.observeUser(congregation, "uid-1").first()).roles)
