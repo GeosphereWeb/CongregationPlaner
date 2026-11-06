@@ -1,10 +1,12 @@
 package de.geosphere.congregationplaner.auth
 
+import com.google.gson.JsonParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.charset.StandardCharsets
+import java.util.Base64
 
 actual fun createFirebaseAuthPlatformService(): FirebaseAuthRepository = FirebaseAuthPlatformService()
 
@@ -25,21 +27,31 @@ class FirebaseAuthPlatformService(
             )
         }
 
-    override suspend fun createUserWithEmailAndPassword(email: String, password: String): FirebaseUser? =
-        withContext(Dispatchers.IO) {
-            val user = performDesktopAuthRequest(
-                endpoint = "accounts:signUp",
-                email = email,
-                password = password,
-            ) ?: return@withContext null
+    override suspend fun createUserWithEmailAndPassword(
+        email: String,
+        password: String,
+        displayName: String?,
+    ): FirebaseUser? = withContext(Dispatchers.IO) {
+        val created = performDesktopAuthRequest(
+            endpoint = "accounts:signUp",
+            email = email,
+            password = password,
+        ) ?: return@withContext null
 
-            val idToken = user.idToken ?: return@withContext user
-            if (sendVerificationEmailRequest(idToken)) {
-                user
-            } else {
-                null
-            }
+        val idToken = created.idToken ?: return@withContext created
+        val name = displayName?.trim().orEmpty()
+        // Scheitert nur das Speichern des Namens, bleibt das Konto bestehen; der Name lässt sich im Profil nachtragen.
+        val user = if (name.isNotEmpty() && updateDisplayNameRequest(idToken, name)) {
+            created.withDisplayName(name).also { currentUser = it }
+        } else {
+            created
         }
+        if (sendVerificationEmailRequest(idToken)) user else null
+    }
+
+    override suspend fun resendVerificationEmail(): Boolean = withContext(Dispatchers.IO) {
+        currentUser?.idToken?.let(::sendVerificationEmailRequest) ?: false
+    }
 
     override suspend fun signOut() {
         currentUser = null
@@ -97,8 +109,21 @@ class FirebaseAuthPlatformService(
             override val email: String? = emailValue
             override val displayName: String? = displayName
             override val idToken: String? = idToken
+            override val emailVerified: Boolean = emailVerifiedFromToken(idToken)
         }
         return currentUser
+    }
+
+    private fun updateDisplayNameRequest(idToken: String, displayName: String): Boolean {
+        val apiKey = apiKeyProvider() ?: return false
+        val body = """
+            {
+              "idToken": "${escapeJson(idToken)}",
+              "displayName": "${escapeJson(displayName)}",
+              "returnSecureToken": false
+            }
+        """.trimIndent()
+        return postAuthRequest("accounts:update", apiKey, body)
     }
 
     private fun sendVerificationEmailRequest(idToken: String): Boolean {
@@ -109,18 +134,42 @@ class FirebaseAuthPlatformService(
               "idToken": "${escapeJson(idToken)}"
             }
         """.trimIndent()
+        return postAuthRequest("accounts:sendOobCode", apiKey, body)
+    }
 
-        val url = buildDesktopAuthUrl("accounts:sendOobCode", apiKey)
-        val connection = connectionFactory(url)
+    private fun postAuthRequest(endpoint: String, apiKey: String, body: String): Boolean {
+        val connection = connectionFactory(buildDesktopAuthUrl(endpoint, apiKey))
         connection.requestMethod = "POST"
         connection.doOutput = true
         connection.setRequestProperty("Content-Type", "application/json")
         connection.outputStream.use { stream ->
             stream.write(body.toByteArray(StandardCharsets.UTF_8))
         }
-
         return connection.responseCode in 200..299
     }
+
+    private fun FirebaseUser.withDisplayName(name: String): FirebaseUser {
+        val source = this
+        return object : FirebaseUser {
+            override val uid: String = source.uid
+            override val email: String? = source.email
+            override val displayName: String? = name
+            override val idToken: String? = source.idToken
+            override val emailVerified: Boolean = source.emailVerified
+        }
+    }
+}
+
+/**
+ * Liest die Behauptung `email_verified` aus dem ID-Token. Die Desktop-Anmeldung hat keinen Refresh-Token: nach dem
+ * Bestätigen der E-Mail-Adresse trägt erst ein neuer Token (neue Anmeldung) die Bestätigung.
+ */
+internal fun emailVerifiedFromToken(idToken: String?): Boolean {
+    val payload = idToken?.split('.')?.getOrNull(1) ?: return false
+    return runCatching {
+        val json = String(Base64.getUrlDecoder().decode(payload), StandardCharsets.UTF_8)
+        JsonParser.parseString(json).asJsonObject.get("email_verified")?.asBoolean == true
+    }.getOrDefault(false)
 }
 
 private fun buildDesktopAuthUrl(endpoint: String, apiKey: String): String {

@@ -1,7 +1,9 @@
 package de.geosphere.congregationplaner.congregation.presentation
 
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
+import de.geosphere.congregationplaner.congregation.domain.model.NewCongregationAdmin
 import de.geosphere.congregationplaner.congregation.domain.repository.CongregationMetadataRepository
+import de.geosphere.congregationplaner.congregation.domain.usecase.CreateCongregationUseCase
 import de.geosphere.congregationplaner.congregation.domain.usecase.DeleteCongregationUseCase
 import de.geosphere.congregationplaner.congregation.domain.usecase.ObserveCongregationsUseCase
 import de.geosphere.congregationplaner.congregation.domain.usecase.SaveCongregationUseCase
@@ -270,6 +272,7 @@ class CongregationMetadataViewModelTest {
     private fun createViewModel(user: AppUser? = null) = CongregationMetadataViewModel(
         ObserveCongregationsUseCase(repository),
         SaveCongregationUseCase(repository),
+        CreateCongregationUseCase(repository),
         DeleteCongregationUseCase(repository),
         CongregationPermissionPolicy(),
     ).also { viewModel -> viewModel.onCurrentUserChanged(user, circuitIds = circuit) }
@@ -287,6 +290,22 @@ class CongregationMetadataViewModelTest {
         override fun observeAll(circuitIds: List<String>): Flow<List<CongregationMetadata>> {
             circuits += circuitIds
             return observeError?.let { error -> flow { throw error } } ?: congregations
+        }
+
+        var nameOwner: String? = null
+
+        override suspend fun findNameOwner(circuitIds: List<String>, name: String): Result<String?> =
+            Result.success(nameOwner)
+
+        override suspend fun create(
+            circuitIds: List<String>,
+            congregation: CongregationMetadata,
+            createdBy: String,
+            firstAdmin: NewCongregationAdmin?,
+        ): Result<CongregationMetadata> {
+            circuits += circuitIds
+            saved += congregation
+            return saveResult ?: Result.success(congregation.copy(id = "new-id"))
         }
 
         override suspend fun save(

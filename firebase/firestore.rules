@@ -16,7 +16,9 @@ rules_version = '2';
 //     subregion/{subregionId}          - name: string (1..100)
 //       branch/{branchId}              - name: string (1..100)
 //         circuit/{circuitId}          - name: string (1..100), overseer_name: string (<= 100, optional)
-//           congregation/{congId}      - name: string, meeting times/weekdays
+//           congregation/{congId}      - name: string, createdBy: uid, meeting times/weekdays
+//           congregationNames/{key}    - congregationId: string; one per congregation name of the circuit
+//             (key = name trimmed, lower case, blanks collapsed); makes the name unique within the circuit
 //
 // Collection: region/.../congregation/{congId}/members
 // Document ID: Firebase Auth UID of the member, or a random Firestore ID for
@@ -98,6 +100,68 @@ service cloud.firestore {
     function isGlobalAdmin() {
       return isAuthenticated() &&
         exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // E-mail address confirmed by the user (claim of the ID token).
+    function isVerifiedEmail() {
+      return isAuthenticated() && request.auth.token.get('email_verified', false) == true;
+    }
+
+    // Key of a congregation name inside its circuit: trimmed, lower case, blanks collapsed (the app builds the same).
+    function congregationNameKey(name) {
+      return name.trim().lower().replace('\\s+', ' ');
+    }
+
+    function congregationNamePath(regionId, subregionId, branchId, circuitId, key) {
+      return /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/circuit/$(circuitId)/congregationNames/$(key);
+    }
+
+    function congregationDocPath(regionId, subregionId, branchId, circuitId, congId) {
+      return /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/circuit/$(circuitId)/congregation/$(congId);
+    }
+
+    function isValidCongregationName(name) {
+      return name is string && name.size() >= 1 && name.size() <= 100 && name.trim().size() > 0 &&
+        !name.matches('.*/.*');
+    }
+
+    // A new congregation carries its creator and comes together with the name document of its circuit, so that a
+    // name is taken at most once per circuit.
+    function isValidNewCongregation(regionId, subregionId, branchId, circuitId, congId, data) {
+      return data.keys().hasOnly(['name', 'createdBy', 'midweek_meeting_time', 'midweek_meeting_weekday',
+          'weekend_meeting_time', 'weekend_meeting_weekday', 'yearly_meeting_times']) &&
+        data.keys().hasAll(['name', 'createdBy']) &&
+        data.createdBy == request.auth.uid &&
+        isValidCongregationName(data.name) &&
+        existsAfter(congregationNamePath(regionId, subregionId, branchId, circuitId, congregationNameKey(data.name))) &&
+        getAfter(congregationNamePath(regionId, subregionId, branchId, circuitId, congregationNameKey(data.name))).data.congregationId == congId;
+    }
+
+    // A rename moves the name document along: the new name is taken in the same write.
+    function keepsNameDocument(regionId, subregionId, branchId, circuitId, congId) {
+      let data = request.resource.data;
+      return data.name == resource.data.name ||
+        (isValidCongregationName(data.name) &&
+          existsAfter(congregationNamePath(regionId, subregionId, branchId, circuitId, congregationNameKey(data.name))) &&
+          getAfter(congregationNamePath(regionId, subregionId, branchId, circuitId, congregationNameKey(data.name))).data.congregationId == congId);
+    }
+
+    // The creator of a brand-new congregation becomes its first, approved admin. Only possible in the write that
+    // creates the congregation: before it the congregation does not exist, after it the creator is `createdBy`.
+    function isFirstAdminOfNewCongregation(regionId, subregionId, branchId, circuitId, congId, uid) {
+      let data = request.resource.data;
+      let congPath = congregationDocPath(regionId, subregionId, branchId, circuitId, congId);
+      return isVerifiedEmail() &&
+        request.auth.uid == uid &&
+        !exists(congPath) &&
+        existsAfter(congPath) &&
+        getAfter(congPath).data.createdBy == uid &&
+        data.get('approved', null) == true &&
+        data.get('roles', []) == ['CONGREGATION_ADMIN'] &&
+        data.get('email', null) == request.auth.token.get('email', null) &&
+        data.get('hasAccount', true) == true &&
+        hasDefaultProfile(data) &&
+        isValidMember(data);
     }
 
     // Approved congregation admin of exactly this congregation.
@@ -386,10 +450,9 @@ service cloud.firestore {
         (data.get('isSpeaker', false) == false || category == 'BROTHER');
     }
 
+    // The names may be filled: they come from the display name of the sign-up.
     function hasDefaultProfile(data) {
-      return data.get('lastName', '') == '' &&
-        data.get('firstName', '') == '' &&
-        data.get('category', null) == null &&
+      return data.get('category', null) == null &&
         data.get('baptized', false) == false &&
         data.get('appointment', 'NONE') == 'NONE' &&
         data.get('mobilePhone', '') == '' &&
@@ -512,18 +575,42 @@ service cloud.firestore {
             allow create, update: if isGlobalAdmin() && isValidCircuit(request.resource.data);
             allow delete: if isGlobalAdmin();
 
+            // Name documents: one per congregation name of the circuit; the document ID is the name key.
+            match /congregationNames/{nameKey} {
+              allow read: if true;
+
+              allow create: if isAuthenticated() &&
+                request.resource.data.keys().hasOnly(['congregationId']) &&
+                request.resource.data.get('congregationId', null) is string &&
+                existsAfter(congregationDocPath(regionId, subregionId, branchId, circuitId, request.resource.data.congregationId)) &&
+                congregationNameKey(getAfter(congregationDocPath(regionId, subregionId, branchId, circuitId, request.resource.data.congregationId)).data.name) == nameKey;
+
+              // Released only when the congregation is gone or carries another name afterwards.
+              allow delete: if isAuthenticated() &&
+                (isGlobalAdmin() || isCongregationAdmin(regionId, subregionId, branchId, circuitId, resource.data.congregationId)) &&
+                (!existsAfter(congregationDocPath(regionId, subregionId, branchId, circuitId, resource.data.congregationId)) ||
+                  congregationNameKey(getAfter(congregationDocPath(regionId, subregionId, branchId, circuitId, resource.data.congregationId)).data.name) != nameKey);
+            }
+
             match /congregation/{congId} {
               allow read: if true;
-              allow create, delete: if isGlobalAdmin();
+              // Every signed-in user with a confirmed e-mail address may create a congregation (and becomes its admin);
+              // global admins always may.
+              allow create: if (isGlobalAdmin() || isVerifiedEmail()) &&
+                isValidNewCongregation(regionId, subregionId, branchId, circuitId, congId, request.resource.data);
+              // The name document goes with the congregation.
+              allow delete: if isGlobalAdmin() &&
+                !existsAfter(congregationNamePath(regionId, subregionId, branchId, circuitId, congregationNameKey(resource.data.name)));
               // Global admins may change the name only; the congregation admin may also change the meeting times of
               // exactly this congregation (ADR-0013).
-              allow update: if (isGlobalAdmin() &&
+              allow update: if keepsNameDocument(regionId, subregionId, branchId, circuitId, congId) && (
+                (isGlobalAdmin() &&
                   request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])) || (
                 isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) &&
                 request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                   'name', 'midweek_meeting_time', 'midweek_meeting_weekday',
                   'weekend_meeting_time', 'weekend_meeting_weekday', 'yearly_meeting_times'])
-              );
+              ));
 
               // ---------------------------------------------------------
               // Members of a congregation
@@ -537,7 +624,8 @@ service cloud.firestore {
                 allow list: if canViewMembers(regionId, subregionId, branchId, circuitId, congId);
 
                 allow create: if isValidSelfRegistration(uid) ||
-                  isValidMemberWithoutAccount(regionId, subregionId, branchId, circuitId, congId);
+                  isValidMemberWithoutAccount(regionId, subregionId, branchId, circuitId, congId) ||
+                  isFirstAdminOfNewCongregation(regionId, subregionId, branchId, circuitId, congId, uid);
 
                 // Admins maintain profiles and roles of every member. In their own document they may change the
                 // roles but neither the approval nor remove their own admin role,

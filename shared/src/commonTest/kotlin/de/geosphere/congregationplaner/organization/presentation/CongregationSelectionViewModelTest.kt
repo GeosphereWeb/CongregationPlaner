@@ -1,5 +1,12 @@
 package de.geosphere.congregationplaner.organization.presentation
 
+import de.geosphere.congregationplaner.auth.FirebaseUser
+import de.geosphere.congregationplaner.congregation.domain.model.CongregationException
+import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
+import de.geosphere.congregationplaner.congregation.domain.model.CongregationName
+import de.geosphere.congregationplaner.congregation.domain.model.NewCongregationAdmin
+import de.geosphere.congregationplaner.congregation.domain.repository.CongregationMetadataRepository
+import de.geosphere.congregationplaner.congregation.domain.usecase.CreateCongregationUseCase
 import de.geosphere.congregationplaner.organization.data.InMemoryKeyValueStorage
 import de.geosphere.congregationplaner.organization.data.KeyValueCongregationSelectionStore
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
@@ -10,6 +17,8 @@ import de.geosphere.congregationplaner.organization.domain.repository.Organizati
 import de.geosphere.congregationplaner.organization.domain.usecase.LoadOrganizationUnitsUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -49,7 +58,165 @@ class CongregationSelectionViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun createViewModel() = CongregationSelectionViewModel(LoadOrganizationUnitsUseCase(repository), store)
+    private val congregations = FakeCongregationRepository()
+
+    private fun createViewModel() = CongregationSelectionViewModel(
+        LoadOrganizationUnitsUseCase(repository),
+        store,
+        CreateCongregationUseCase(congregations),
+    )
+
+    private val authUser = object : FirebaseUser {
+        override val uid = "uid-1"
+        override val email = "max@example.com"
+        override val displayName = "Max Muster"
+        override val idToken: String? = null
+        override val emailVerified = true
+    }
+
+    private fun CongregationSelectionViewModel.selectCircuit() {
+        selectUnit(OrgLevel.REGION, "EMEA")
+        selectUnit(OrgLevel.SUBREGION, "europe")
+        selectUnit(OrgLevel.BRANCH, "central-europe")
+        selectUnit(OrgLevel.CIRCUIT, "609a")
+    }
+
+    @Test
+    fun `a new congregation can only be started once the circuit is chosen`() {
+        val viewModel = createViewModel()
+        viewModel.startNewCongregation()
+        assertNull(viewModel.uiState.value.newCongregation)
+        assertFalse(viewModel.uiState.value.canStartNewCongregation)
+
+        viewModel.selectUnit(OrgLevel.REGION, "EMEA")
+        viewModel.startNewCongregation()
+        assertNull(viewModel.uiState.value.newCongregation)
+
+        viewModel.selectUnit(OrgLevel.SUBREGION, "europe")
+        viewModel.selectUnit(OrgLevel.BRANCH, "central-europe")
+        viewModel.selectUnit(OrgLevel.CIRCUIT, "609a")
+        assertTrue(viewModel.uiState.value.canStartNewCongregation)
+        viewModel.startNewCongregation()
+
+        assertEquals(
+            NewCongregationDraft(listOf("EMEA", "europe", "central-europe", "609a"), "Kreis Nord"),
+            viewModel.uiState.value.newCongregation,
+        )
+    }
+
+    @Test
+    fun `the draft is ready with a valid name and can be cancelled`() {
+        val viewModel = createViewModel()
+        viewModel.selectCircuit()
+        viewModel.startNewCongregation()
+        assertFalse(viewModel.uiState.value.isNewCongregationReady)
+
+        viewModel.onNewCongregationNameChanged("Nord/Süd")
+        assertFalse(viewModel.uiState.value.isNewCongregationReady)
+
+        viewModel.onNewCongregationNameChanged("Grafing Süd")
+        assertTrue(viewModel.uiState.value.isNewCongregationReady)
+
+        viewModel.onNewCongregationNameChanged("x".repeat(500))
+        assertEquals(CongregationName.MAX_LENGTH, viewModel.uiState.value.newCongregation?.name?.length)
+
+        viewModel.cancelNewCongregation()
+        assertNull(viewModel.uiState.value.newCongregation)
+        assertFalse(viewModel.uiState.value.isNewCongregationReady)
+    }
+
+    @Test
+    fun `creating selects the new congregation and makes the user its first admin`() {
+        val viewModel = createViewModel()
+        viewModel.selectCircuit()
+        viewModel.startNewCongregation()
+        viewModel.onNewCongregationNameChanged("  Grafing Süd ")
+
+        viewModel.createNewCongregation(authUser)
+
+        val state = viewModel.uiState.value
+        val expectedRef = CongregationRef("EMEA", "europe", "central-europe", "609a", "new-congregation")
+        assertEquals(SelectedCongregation(expectedRef, "Grafing Süd", "Kreis Nord"), state.selected)
+        assertEquals(state.selected, store.load())
+        assertNull(state.newCongregation)
+        assertFalse(state.isCreating)
+        assertFalse(state.isPicking)
+        assertEquals("uid-1", congregations.createdBy)
+        assertEquals(listOf("EMEA", "europe", "central-europe", "609a"), congregations.circuit)
+        val admin = checkNotNull(congregations.firstAdmin)
+        assertEquals("Max", admin.firstName)
+        assertEquals("Muster", admin.lastName)
+        assertEquals("max@example.com", admin.email)
+        assertTrue(admin.emailVerified)
+    }
+
+    @Test
+    fun `creating reports an unconfirmed e-mail address and a taken name and keeps the draft`() {
+        val viewModel = createViewModel()
+        viewModel.selectCircuit()
+        viewModel.startNewCongregation()
+        viewModel.onNewCongregationNameChanged("Grafing Süd")
+
+        viewModel.createNewCongregation(
+            object : FirebaseUser by authUser {
+                override val emailVerified = false
+            },
+        )
+        assertEquals(CongregationException.EmailNotVerified().message, viewModel.uiState.value.errorMessage)
+        assertFalse(viewModel.uiState.value.isCreating)
+
+        congregations.nameOwner = "other"
+        viewModel.createNewCongregation(authUser)
+        assertEquals(CongregationException.NameTaken().message, viewModel.uiState.value.errorMessage)
+        assertNull(viewModel.uiState.value.selected)
+        assertEquals("Grafing Süd", viewModel.uiState.value.newCongregation?.name)
+        assertNull(congregations.createdBy)
+
+        viewModel.onNewCongregationNameChanged("Grafing Nord")
+        assertNull(viewModel.uiState.value.errorMessage)
+    }
+
+    @Test
+    fun `creating without a draft or while another run is active does nothing`() {
+        val viewModel = createViewModel()
+
+        viewModel.createNewCongregation(authUser)
+
+        assertNull(viewModel.uiState.value.selected)
+        assertNull(congregations.createdBy)
+    }
+
+    private class FakeCongregationRepository : CongregationMetadataRepository {
+        var nameOwner: String? = null
+        var createdBy: String? = null
+        var firstAdmin: NewCongregationAdmin? = null
+        var circuit: List<String>? = null
+
+        override fun observeAll(circuitIds: List<String>): Flow<List<CongregationMetadata>> = emptyFlow()
+
+        override suspend fun findNameOwner(circuitIds: List<String>, name: String): Result<String?> =
+            Result.success(nameOwner)
+
+        override suspend fun create(
+            circuitIds: List<String>,
+            congregation: CongregationMetadata,
+            createdBy: String,
+            firstAdmin: NewCongregationAdmin?,
+        ): Result<CongregationMetadata> {
+            circuit = circuitIds
+            this.createdBy = createdBy
+            this.firstAdmin = firstAdmin
+            return Result.success(congregation.copy(id = "new-congregation"))
+        }
+
+        override suspend fun save(
+            circuitIds: List<String>,
+            congregation: CongregationMetadata,
+        ): Result<CongregationMetadata> = Result.success(congregation)
+
+        override suspend fun delete(circuitIds: List<String>, congregationId: String): Result<Unit> =
+            Result.success(Unit)
+    }
 
     @Test
     fun `without stored selection the regions are loaded`() {

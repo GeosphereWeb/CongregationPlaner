@@ -8,7 +8,11 @@ class FirebaseAuthPlatformService : FirebaseAuthRepository {
         return null
     }
 
-    override suspend fun createUserWithEmailAndPassword(email: String, password: String): FirebaseUser? {
+    override suspend fun createUserWithEmailAndPassword(
+        email: String,
+        password: String,
+        displayName: String?,
+    ): FirebaseUser? {
         // Platzhalter
         return null
     }
