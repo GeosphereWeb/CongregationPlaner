@@ -57,6 +57,9 @@ internal fun CongregationSelector(
     onPasteInviteLink: (String?) -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
+    onStartNewCongregation: () -> Unit = {},
+    onNewCongregationNameChange: (String) -> Unit = {},
+    onCancelNewCongregation: () -> Unit = {},
 ) {
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         val selected = state.selected
@@ -70,6 +73,13 @@ internal fun CongregationSelector(
                 OrgLevelDropdown(selection = level, onSelect = { unitId -> onSelectUnit(level.level, unitId) })
             }
         }
+
+        NewCongregationSection(
+            state = state,
+            onStart = onStartNewCongregation,
+            onNameChange = onNewCongregationNameChange,
+            onCancel = onCancelNewCongregation,
+        )
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             HorizontalDivider(modifier = Modifier.weight(1f), color = NightColors.Border)
@@ -112,6 +122,39 @@ internal fun CongregationSelector(
             Text(message, style = nightTextStyle(14.sp, color = NightColors.Coral))
             SecondaryButton("Erneut laden", onRetry, Modifier.fillMaxWidth(), outlined = false)
         }
+    }
+}
+
+/**
+ * Fehlt die Versammlung in der Liste, legt der Nutzer sie im gewählten Kreis neu an und wird ihr Admin. Der Name wird
+ * hier nur vorgemerkt; angelegt wird nach der Anmeldung mit bestätigter E-Mail-Adresse.
+ */
+@Composable
+private fun NewCongregationSection(
+    state: CongregationSelectionUiState,
+    onStart: () -> Unit,
+    onNameChange: (String) -> Unit,
+    onCancel: () -> Unit,
+) {
+    val draft = state.newCongregation
+    if (draft == null) {
+        if (state.canStartNewCongregation) {
+            SecondaryButton("Meine Versammlung fehlt: neu anlegen", onStart, Modifier.fillMaxWidth(), outlined = false)
+        }
+        return
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        FieldBox(
+            label = "Name der neuen Versammlung",
+            value = draft.name,
+            onValueChange = onNameChange,
+            placeholder = "z. B. Grafing-Süd",
+        )
+        Text(
+            "Du wirst Administrator dieser Versammlung. Dafür meldest du dich an und bestätigst deine E-Mail-Adresse.",
+            style = nightTextStyle(13.sp, color = NightColors.OnBackgroundMuted),
+        )
+        SecondaryButton("Doch eine bestehende wählen", onCancel, Modifier.fillMaxWidth(), outlined = false)
     }
 }
 
@@ -199,6 +242,9 @@ internal fun CongregationSelector(
         onPasteInviteLink = viewModel::pasteInviteLink,
         onRetry = viewModel::retry,
         modifier = modifier,
+        onStartNewCongregation = viewModel::startNewCongregation,
+        onNewCongregationNameChange = viewModel::onNewCongregationNameChanged,
+        onCancelNewCongregation = viewModel::cancelNewCongregation,
     )
 }
 

@@ -167,7 +167,7 @@ private val OWN_PROFILE_FIELDS = setOf(
 
 private fun DocumentSnapshot.stringList(field: String): List<String?>? = (get(field) as? List<*>)?.map { it as? String }
 
-private fun AppUser.toFirestoreFields(): Map<String, Any?> = mapOf(
+internal fun AppUser.toFirestoreFields(): Map<String, Any?> = mapOf(
     "email" to email,
     "displayName" to displayName,
     "hasAccount" to hasAccount,

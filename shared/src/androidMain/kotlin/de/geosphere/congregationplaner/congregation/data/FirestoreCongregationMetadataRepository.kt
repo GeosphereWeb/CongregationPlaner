@@ -2,8 +2,11 @@ package de.geosphere.congregationplaner.congregation.data
 
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Source
 import de.geosphere.congregationplaner.auth.AndroidFirestoreProvider
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
+import de.geosphere.congregationplaner.congregation.domain.model.CongregationName
+import de.geosphere.congregationplaner.congregation.domain.model.NewCongregationAdmin
 import de.geosphere.congregationplaner.congregation.domain.model.decodeYearlyMeetingTimes
 import de.geosphere.congregationplaner.congregation.domain.model.encodeYearlyMeetingTimes
 import de.geosphere.congregationplaner.congregation.domain.repository.CongregationMetadataRepository
@@ -11,6 +14,8 @@ import de.geosphere.congregationplaner.firestore.awaitResult
 import de.geosphere.congregationplaner.firestore.observeDocuments
 import de.geosphere.congregationplaner.firestore.runFirestoreCatching
 import de.geosphere.congregationplaner.firestore.stringField
+import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
+import de.geosphere.congregationplaner.user.data.toFirestoreFields
 import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.LocalTime
 
@@ -22,30 +27,71 @@ internal class FirestoreCongregationMetadataRepository(private val firestore: Fi
     override fun observeAll(circuitIds: List<String>): Flow<List<CongregationMetadata>> =
         observeDocuments(firestore.collection(congregationCollectionPath(circuitIds)), "congregation", ::toDomain)
 
+    override suspend fun findNameOwner(circuitIds: List<String>, name: String): Result<String?> =
+        runFirestoreCatching("find congregation name") {
+            val snapshot = firestore.collection(congregationNamesCollectionPath(circuitIds))
+                .document(CongregationName.key(name))
+                .get(Source.SERVER)
+                .awaitResult()
+            if (snapshot.exists()) snapshot.getString("congregationId") else null
+        }
+
+    override suspend fun create(
+        circuitIds: List<String>,
+        congregation: CongregationMetadata,
+        createdBy: String,
+        firstAdmin: NewCongregationAdmin?,
+    ): Result<CongregationMetadata> = runFirestoreCatching("create congregation") {
+        // document() ohne Pfad vergibt eine zufällige ID.
+        val document = firestore.collection(congregationCollectionPath(circuitIds)).document()
+        val nameDocument = firestore.collection(congregationNamesCollectionPath(circuitIds))
+            .document(CongregationName.key(congregation.name))
+        // Ein Batch: entweder entstehen Versammlung, Namensdokument und Admin zusammen oder gar nichts.
+        val batch = firestore.batch()
+        batch.set(document, congregation.toFirestoreFields() + ("createdBy" to createdBy))
+        batch.set(nameDocument, mapOf("congregationId" to document.id))
+        firstAdmin?.let { admin ->
+            batch.set(
+                document.collection(CongregationRef.MEMBERS_SUBCOLLECTION).document(admin.uid),
+                admin.toMember().toFirestoreFields(),
+            )
+        }
+        batch.commit().awaitResult()
+        congregation.copy(id = document.id)
+    }
+
     override suspend fun save(
         circuitIds: List<String>,
         congregation: CongregationMetadata,
     ): Result<CongregationMetadata> = runFirestoreCatching("save congregation") {
-        val collection = firestore.collection(congregationCollectionPath(circuitIds))
-        val document = if (congregation.id.isBlank()) {
-            collection.document().also { reference ->
-                reference.set(congregation.toFirestoreFields()).awaitResult()
-            }
+        require(congregation.id.isNotBlank()) { "A congregation ID is required to save a congregation." }
+        val reference = firestore.collection(congregationCollectionPath(circuitIds)).document(congregation.id)
+        val names = firestore.collection(congregationNamesCollectionPath(circuitIds))
+        val oldKey = reference.get(Source.SERVER).awaitResult().getString("name")?.let(CongregationName::key)
+        val newKey = CongregationName.key(congregation.name)
+        if (oldKey == null || oldKey == newKey) {
+            reference.update(congregation.toFirestoreFields()).awaitResult()
         } else {
-            collection.document(congregation.id).also { reference ->
-                reference.update(congregation.toFirestoreFields()).awaitResult()
-            }
+            // Das Namensdokument zieht mit um: der alte Name wird frei, der neue vergeben.
+            val batch = firestore.batch()
+            batch.update(reference, congregation.toFirestoreFields())
+            batch.delete(names.document(oldKey))
+            batch.set(names.document(newKey), mapOf("congregationId" to congregation.id))
+            batch.commit().awaitResult()
         }
-        congregation.copy(id = document.id)
+        congregation
     }
 
     override suspend fun delete(circuitIds: List<String>, congregationId: String): Result<Unit> =
         runFirestoreCatching("delete congregation") {
             require(congregationId.isNotBlank()) { "A congregation ID is required to delete a congregation." }
-            firestore.collection(congregationCollectionPath(circuitIds))
-                .document(congregationId)
-                .delete()
-                .awaitResult()
+            val reference = firestore.collection(congregationCollectionPath(circuitIds)).document(congregationId)
+            val name = reference.get(Source.SERVER).awaitResult().getString("name")
+            val names = firestore.collection(congregationNamesCollectionPath(circuitIds))
+            val batch = firestore.batch()
+            batch.delete(reference)
+            name?.let { batch.delete(names.document(CongregationName.key(it))) }
+            batch.commit().awaitResult()
         }
 }
 

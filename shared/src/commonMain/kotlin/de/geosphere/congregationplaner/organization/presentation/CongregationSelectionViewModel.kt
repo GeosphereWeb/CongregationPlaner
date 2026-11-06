@@ -2,12 +2,17 @@ package de.geosphere.congregationplaner.organization.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import de.geosphere.congregationplaner.auth.FirebaseUser
+import de.geosphere.congregationplaner.congregation.domain.model.CongregationName
+import de.geosphere.congregationplaner.congregation.domain.model.NewCongregationAdmin
+import de.geosphere.congregationplaner.congregation.domain.usecase.CreateCongregationUseCase
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.organization.domain.model.OrgLevel
 import de.geosphere.congregationplaner.organization.domain.model.OrgUnit
 import de.geosphere.congregationplaner.organization.domain.model.SelectedCongregation
 import de.geosphere.congregationplaner.organization.domain.repository.CongregationSelectionStore
 import de.geosphere.congregationplaner.organization.domain.usecase.LoadOrganizationUnitsUseCase
+import de.geosphere.congregationplaner.user.data.toNameProfile
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,6 +30,9 @@ data class OrgLevelSelection(
     val selectedUnit: OrgUnit? get() = options.firstOrNull { it.id == selectedId }
 }
 
+/** Eine neue Versammlung, die der Nutzer anlegen will: der Kreis steht fest, der Name wird eingegeben. */
+data class NewCongregationDraft(val circuitIds: List<String>, val circuitName: String, val name: String = "")
+
 data class CongregationSelectionUiState(
     val selected: SelectedCongregation? = null,
     /** Die Ebenen, die gerade ausgewählt werden; leer, solange nicht gewählt wird. */
@@ -32,8 +40,18 @@ data class CongregationSelectionUiState(
     val inviteLinkInput: String = "",
     val isResolvingLink: Boolean = false,
     val errorMessage: String? = null,
+    val newCongregation: NewCongregationDraft? = null,
+    val isCreating: Boolean = false,
 ) {
     val isPicking: Boolean get() = levels.isNotEmpty()
+
+    /** Eine neue Versammlung lässt sich anlegen, sobald der Kreis gewählt ist. */
+    val canStartNewCongregation: Boolean
+        get() = levels.getOrNull(OrgLevel.CIRCUIT.ordinal)?.selectedId != null
+
+    /** Kreis und gültiger Name stehen fest; angelegt wird nach der Anmeldung. */
+    val isNewCongregationReady: Boolean
+        get() = newCongregation?.let { CongregationName.validate(it.name) == null } == true
 }
 
 /**
@@ -44,6 +62,7 @@ data class CongregationSelectionUiState(
 class CongregationSelectionViewModel(
     private val loadUnits: LoadOrganizationUnitsUseCase,
     private val store: CongregationSelectionStore,
+    private val createCongregation: CreateCongregationUseCase,
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(CongregationSelectionUiState(selected = store.load()))
     val uiState = mutableUiState.asStateFlow()
@@ -87,6 +106,71 @@ class CongregationSelectionViewModel(
             it.copy(levels = updatedLevels + OrgLevelSelection(child, isLoading = true), errorMessage = null)
         }
         loadLevel(child, ids)
+    }
+
+    /** Beginnt eine neue Versammlung im gewählten Kreis; den Namen gibt der Nutzer danach ein. */
+    fun startNewCongregation() {
+        val levels = mutableUiState.value.levels
+        val circuit = levels.getOrNull(OrgLevel.CIRCUIT.ordinal)?.takeIf { it.selectedId != null } ?: return
+        val circuitIds = levels.take(OrgLevel.CIRCUIT.ordinal + 1).mapNotNull { it.selectedId }
+        mutableUiState.update {
+            it.copy(
+                newCongregation = NewCongregationDraft(circuitIds, circuit.selectedUnit?.name.orEmpty()),
+                errorMessage = null,
+            )
+        }
+    }
+
+    fun onNewCongregationNameChanged(name: String) {
+        mutableUiState.update { state ->
+            state.copy(
+                newCongregation = state.newCongregation?.copy(name = name.take(CongregationName.MAX_LENGTH)),
+                errorMessage = null,
+            )
+        }
+    }
+
+    fun cancelNewCongregation() {
+        mutableUiState.update { it.copy(newCongregation = null, isCreating = false, errorMessage = null) }
+    }
+
+    /**
+     * Legt die vorgemerkte Versammlung an und wählt sie; [user] wird ihr erster Admin. Das geht erst nach der
+     * Anmeldung mit bestätigter E-Mail-Adresse.
+     */
+    fun createNewCongregation(user: FirebaseUser) {
+        val draft = mutableUiState.value.newCongregation ?: return
+        if (mutableUiState.value.isCreating) return
+        mutableUiState.update { it.copy(isCreating = true, errorMessage = null) }
+        val names = user.displayName.toNameProfile()
+        val admin = NewCongregationAdmin(
+            uid = user.uid,
+            email = user.email,
+            displayName = user.displayName,
+            firstName = names.firstName,
+            lastName = names.lastName,
+            emailVerified = user.emailVerified,
+        )
+        viewModelScope.launch {
+            createCongregation(draft.circuitIds, draft.name, user.uid, admin)
+                .onSuccess { created ->
+                    val ref = CongregationRef.fromIds(draft.circuitIds + created.id)
+                    if (ref == null) {
+                        mutableUiState.update {
+                            it.copy(isCreating = false, errorMessage = CREATED_WITHOUT_PATH_MESSAGE)
+                        }
+                    } else {
+                        select(SelectedCongregation(ref, created.name, draft.circuitName))
+                    }
+                }.onFailure { exception ->
+                    mutableUiState.update {
+                        it.copy(
+                            isCreating = false,
+                            errorMessage = exception.message ?: "Die Versammlung konnte nicht angelegt werden.",
+                        )
+                    }
+                }
+        }
     }
 
     fun onInviteLinkChanged(input: String) {
@@ -156,6 +240,8 @@ class CongregationSelectionViewModel(
                 levels = emptyList(),
                 inviteLinkInput = "",
                 isResolvingLink = false,
+                newCongregation = null,
+                isCreating = false,
                 errorMessage = null,
             )
         }
@@ -195,5 +281,6 @@ class CongregationSelectionViewModel(
         const val INVALID_LINK_MESSAGE = "Der Einladungslink ist ungültig."
         const val EMPTY_CLIPBOARD_MESSAGE = "Die Zwischenablage enthält keinen Text."
         const val UNKNOWN_LINK_MESSAGE = "Die Versammlung aus dem Einladungslink wurde nicht gefunden."
+        const val CREATED_WITHOUT_PATH_MESSAGE = "Die Versammlung wurde angelegt, konnte aber nicht gewählt werden."
     }
 }

@@ -1,6 +1,7 @@
 package de.geosphere.congregationplaner.congregation.testing
 
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
+import de.geosphere.congregationplaner.congregation.domain.model.NewCongregationAdmin
 import de.geosphere.congregationplaner.congregation.domain.repository.CongregationMetadataRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -17,6 +18,15 @@ internal class FakeCongregationMetadataRepository(
         requestedCircuits += circuitIds
         return error?.let { flow { throw it } } ?: flowOf(congregations)
     }
+
+    override suspend fun findNameOwner(circuitIds: List<String>, name: String): Result<String?> = Result.success(null)
+
+    override suspend fun create(
+        circuitIds: List<String>,
+        congregation: CongregationMetadata,
+        createdBy: String,
+        firstAdmin: NewCongregationAdmin?,
+    ): Result<CongregationMetadata> = Result.success(congregation.copy(id = "new-id"))
 
     override suspend fun save(
         circuitIds: List<String>,

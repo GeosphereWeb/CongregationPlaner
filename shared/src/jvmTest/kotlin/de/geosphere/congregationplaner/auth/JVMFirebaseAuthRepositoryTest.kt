@@ -189,6 +189,101 @@ class JVMFirebaseAuthRepositoryTest {
     }
 
     @Test
+    fun `desktop create user stores the display name and sends the verification mail`() = runBlocking {
+        val requests = mutableListOf<Pair<String, ByteArrayOutputStream>>()
+        val service = FirebaseAuthPlatformService(apiKeyProvider = { "test-key" }) { url ->
+            val body = if (url.contains("accounts:signUp")) {
+                """{"localId":"new-user","email":"new@example.com","idToken":"new-token"}"""
+            } else {
+                "{}"
+            }
+            val output = ByteArrayOutputStream()
+            requests += url to output
+            mockConnection(200, body).also { every { it.outputStream } returns output }
+        }
+
+        val user = service.createUserWithEmailAndPassword("new@example.com", "secret", " Max Muster ")
+
+        assertEquals("Max Muster", user?.displayName)
+        assertEquals("Max Muster", service.currentUser()?.displayName)
+        assertEquals("new-token", user?.idToken)
+        val endpoints = requests.map { (url, _) -> url.substringAfter("v1/").substringBefore("?") }
+        assertEquals(listOf("accounts:signUp", "accounts:update", "accounts:sendOobCode"), endpoints)
+        val updateBody = requests[1].second.toString(StandardCharsets.UTF_8)
+        assertTrue(""""displayName": "Max Muster"""" in updateBody, updateBody)
+        assertTrue(""""idToken": "new-token"""" in updateBody, updateBody)
+    }
+
+    @Test
+    fun `desktop create user keeps the account when storing the display name fails`() = runBlocking {
+        val service = FirebaseAuthPlatformService(apiKeyProvider = { "test-key" }) { url ->
+            when {
+                url.contains("accounts:signUp") ->
+                    mockConnection(200, """{"localId":"new-user","email":"new@example.com","idToken":"new-token"}""")
+                url.contains("accounts:update") -> mockConnection(400, null)
+                else -> mockConnection(200, "{}")
+            }
+        }
+
+        val user = service.createUserWithEmailAndPassword("new@example.com", "secret", "Max Muster")
+
+        assertEquals("new-user", user?.uid)
+        assertNull(user?.displayName)
+    }
+
+    @Test
+    fun `desktop create user without a name does not call accounts update`() = runBlocking {
+        val urls = mutableListOf<String>()
+        val service = FirebaseAuthPlatformService(apiKeyProvider = { "test-key" }) { url ->
+            urls += url
+            mockConnection(200, """{"localId":"new-user","email":"new@example.com","idToken":"new-token"}""")
+        }
+
+        service.createUserWithEmailAndPassword("new@example.com", "secret", "  ")
+
+        assertTrue(urls.none { "accounts:update" in it }, urls.toString())
+    }
+
+    @Test
+    fun `the e-mail confirmation is read from the id token claim`() {
+        fun token(claims: String) =
+            "header." + java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(claims.toByteArray()) + ".sig"
+
+        assertTrue(emailVerifiedFromToken(token("""{"email_verified":true}""")))
+        assertEquals(false, emailVerifiedFromToken(token("""{"email_verified":false}""")))
+        assertEquals(false, emailVerifiedFromToken(token("""{"sub":"x"}""")))
+        assertEquals(false, emailVerifiedFromToken("not-a-token"))
+        assertEquals(false, emailVerifiedFromToken("a.%%%.c"))
+        assertEquals(false, emailVerifiedFromToken(null))
+    }
+
+    @Test
+    fun `desktop sign in reports the confirmed e-mail address of the token`() = runBlocking {
+        val payload = java.util.Base64.getUrlEncoder().withoutPadding()
+            .encodeToString("""{"email_verified":true}""".toByteArray())
+        val service = FirebaseAuthPlatformService(apiKeyProvider = { "test-key" }) {
+            mockConnection(200, """{"localId":"u","email":"a@b.de","idToken":"h.$payload.s"}""")
+        }
+
+        assertTrue(service.signInWithEmailAndPassword("a@b.de", "secret")?.emailVerified == true)
+    }
+
+    @Test
+    fun `desktop resend sends the verification mail for the signed in user`() = runBlocking {
+        val urls = mutableListOf<String>()
+        val service = FirebaseAuthPlatformService(apiKeyProvider = { "test-key" }) { url ->
+            urls += url
+            mockConnection(200, """{"localId":"u","email":"a@b.de","idToken":"token"}""")
+        }
+
+        assertEquals(false, service.resendVerificationEmail())
+        service.signInWithEmailAndPassword("a@b.de", "secret")
+        assertTrue(service.resendVerificationEmail())
+
+        assertTrue(urls.last().contains("accounts:sendOobCode"), urls.toString())
+    }
+
+    @Test
     fun `desktop create user returns null when sign up response is missing a user`() = runBlocking {
         val previousKey = System.getProperty("FIREBASE_WEB_API_KEY")
         System.setProperty("FIREBASE_WEB_API_KEY", "desktop-test-key")

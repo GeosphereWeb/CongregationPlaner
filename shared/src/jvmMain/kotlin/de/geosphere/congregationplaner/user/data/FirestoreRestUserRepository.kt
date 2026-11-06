@@ -160,50 +160,6 @@ internal class FirestoreRestUserRepository(
             }
             .orEmpty()
 
-    private fun AppUser.allFields(): JsonObject = accessFields().apply {
-        add("email", firestoreNullableString(email))
-        add("displayName", firestoreNullableString(displayName))
-        add("hasAccount", firestoreBoolean(hasAccount))
-        profile.fields().entrySet().forEach { (name, value) -> add(name, value) }
-    }
-
-    private fun AppUser.accessFields(): JsonObject = JsonObject().apply {
-        add("approved", firestoreBoolean(approved))
-        add("roles", firestoreStringArray(roles.toStoredRoles()))
-    }
-
-    private fun MemberProfile.fields(): JsonObject = JsonObject().apply {
-        add("lastName", firestoreString(lastName))
-        add("firstName", firestoreString(firstName))
-        add("category", firestoreNullableString(category?.name))
-        add("baptized", firestoreBoolean(baptized))
-        add("appointment", firestoreString(appointment.name))
-        add("mobilePhone", firestoreString(mobilePhone))
-        add("landlinePhone", firestoreString(landlinePhone))
-        add("isSpeaker", firestoreBoolean(isSpeaker))
-        add("emails", firestoreStringArray(emails))
-        add("street", firestoreString(street))
-        add("postalCode", firestoreString(postalCode))
-        add("city", firestoreString(city))
-        // Eine leere Beziehung wird weggelassen; die Rules erlauben sie nur als optionales Feld.
-        val contacts = JsonArray().apply {
-            emergencyContacts.forEach { contact ->
-                val fields = JsonObject().apply {
-                    add("name", firestoreString(contact.name))
-                    if (contact.relation.isNotEmpty()) add("relation", firestoreString(contact.relation))
-                    add("phones", firestoreStringArray(contact.phones))
-                }
-                add(JsonObject().apply { add("mapValue", JsonObject().apply { add("fields", fields) }) })
-            }
-        }
-        add(
-            "emergencyContacts",
-            JsonObject().apply {
-                add("arrayValue", JsonObject().apply { add("values", contacts) })
-            },
-        )
-    }
-
     private companion object {
         val ACCESS_FIELD_NAMES = listOf("approved", "roles")
 
@@ -221,4 +177,48 @@ internal class FirestoreRestUserRepository(
         )
         val PROFILE_FIELD_NAMES = OWN_PROFILE_FIELD_NAMES + listOf("category", "baptized", "appointment", "isSpeaker")
     }
+}
+
+internal fun AppUser.allFields(): JsonObject = accessFields().apply {
+    add("email", firestoreNullableString(email))
+    add("displayName", firestoreNullableString(displayName))
+    add("hasAccount", firestoreBoolean(hasAccount))
+    profile.fields().entrySet().forEach { (name, value) -> add(name, value) }
+}
+
+internal fun AppUser.accessFields(): JsonObject = JsonObject().apply {
+    add("approved", firestoreBoolean(approved))
+    add("roles", firestoreStringArray(roles.toStoredRoles()))
+}
+
+private fun MemberProfile.fields(): JsonObject = JsonObject().apply {
+    add("lastName", firestoreString(lastName))
+    add("firstName", firestoreString(firstName))
+    add("category", firestoreNullableString(category?.name))
+    add("baptized", firestoreBoolean(baptized))
+    add("appointment", firestoreString(appointment.name))
+    add("mobilePhone", firestoreString(mobilePhone))
+    add("landlinePhone", firestoreString(landlinePhone))
+    add("isSpeaker", firestoreBoolean(isSpeaker))
+    add("emails", firestoreStringArray(emails))
+    add("street", firestoreString(street))
+    add("postalCode", firestoreString(postalCode))
+    add("city", firestoreString(city))
+    // Eine leere Beziehung wird weggelassen; die Rules erlauben sie nur als optionales Feld.
+    val contacts = JsonArray().apply {
+        emergencyContacts.forEach { contact ->
+            val fields = JsonObject().apply {
+                add("name", firestoreString(contact.name))
+                if (contact.relation.isNotEmpty()) add("relation", firestoreString(contact.relation))
+                add("phones", firestoreStringArray(contact.phones))
+            }
+            add(JsonObject().apply { add("mapValue", JsonObject().apply { add("fields", fields) }) })
+        }
+    }
+    add(
+        "emergencyContacts",
+        JsonObject().apply {
+            add("arrayValue", JsonObject().apply { add("values", contacts) })
+        },
+    )
 }
