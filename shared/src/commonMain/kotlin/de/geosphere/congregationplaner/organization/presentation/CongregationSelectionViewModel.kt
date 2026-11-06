@@ -45,6 +45,12 @@ data class CongregationSelectionUiState(
 ) {
     val isPicking: Boolean get() = levels.isNotEmpty()
 
+    /**
+     * Die Versammlung, mit der die Anmeldung läuft: solange eine neue vorgemerkt ist, zählt die gespeicherte Auswahl
+     * nicht, sonst würde der Nutzer deren Mitglied statt Admin der neuen.
+     */
+    val activeSelection: SelectedCongregation? get() = if (newCongregation != null) null else selected
+
     /** Eine neue Versammlung lässt sich anlegen, sobald der Kreis gewählt ist. */
     val canStartNewCongregation: Boolean
         get() = levels.getOrNull(OrgLevel.CIRCUIT.ordinal)?.selectedId != null
