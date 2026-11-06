@@ -90,7 +90,7 @@ fun App() {
         val navigationViewModel = remember { createGraph<AppNavigationGraph>().appNavigationViewModel }
         val homeViewModel = remember { createGraph<HomeGraph>().homeViewModel }
         val selectionState by selectionViewModel.uiState.collectAsState()
-        val selectedCongregation = selectionState.selected?.ref
+        val selectedCongregation = selectionState.activeSelection?.ref
         val newCongregation = selectionState.newCongregation
         var emailVerified by remember { mutableStateOf(FirebaseAuthManager.currentUser()?.emailVerified == true) }
         val pendingInviteLink by InviteLinkInbox.pendingLink.collectAsState()
@@ -146,12 +146,12 @@ fun App() {
                 congregationName = if (globalLogin) {
                     "Globale Verwaltung"
                 } else {
-                    selectionState.selected?.displayName ?: newCongregation?.name
+                    newCongregation?.name ?: selectionState.selected?.displayName
                 },
                 previousSteps = if (globalLogin) {
                     emptyList()
                 } else {
-                    val circuitName = selectionState.selected?.circuitDisplayName ?: newCongregation?.circuitName
+                    val circuitName = newCongregation?.circuitName ?: selectionState.selected?.circuitDisplayName
                     circuitName?.let { listOf("Kreis $it") }.orEmpty()
                 },
                 congregationSelector = {
