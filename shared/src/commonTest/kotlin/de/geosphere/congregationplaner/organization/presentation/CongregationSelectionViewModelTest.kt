@@ -177,6 +177,32 @@ class CongregationSelectionViewModelTest {
     }
 
     @Test
+    fun `a draft overrides the stored selection until it is cancelled or created`() {
+        store.save(berlinSelection)
+        val viewModel = createViewModel()
+        assertEquals(berlinSelection, viewModel.uiState.value.activeSelection)
+
+        // „Ändern“ im Login: die gespeicherte Auswahl bleibt, bis eine andere feststeht.
+        viewModel.startPicking()
+        viewModel.selectCircuit()
+        assertEquals(berlinSelection, viewModel.uiState.value.activeSelection)
+
+        viewModel.startNewCongregation()
+        viewModel.onNewCongregationNameChanged("Grafing Süd")
+        assertEquals(berlinSelection, viewModel.uiState.value.selected)
+        assertNull(viewModel.uiState.value.activeSelection)
+
+        viewModel.cancelNewCongregation()
+        assertEquals(berlinSelection, viewModel.uiState.value.activeSelection)
+
+        viewModel.startNewCongregation()
+        viewModel.onNewCongregationNameChanged("Grafing Süd")
+        viewModel.createNewCongregation(authUser)
+        assertEquals("Grafing Süd", viewModel.uiState.value.activeSelection?.name)
+        assertEquals("Grafing Süd", store.load()?.name)
+    }
+
+    @Test
     fun `creating without a draft or while another run is active does nothing`() {
         val viewModel = createViewModel()
 
