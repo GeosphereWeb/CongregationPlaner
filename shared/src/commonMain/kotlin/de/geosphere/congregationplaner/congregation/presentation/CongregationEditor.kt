@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
+import de.geosphere.congregationplaner.theming.nightCardColors
 
 @Composable
 @Suppress("LongParameterList")
@@ -30,7 +31,7 @@ internal fun CongregationEditor(
     onSave: () -> Unit,
     onCancel: () -> Unit,
 ) {
-    Card {
+    Card(colors = nightCardColors()) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
