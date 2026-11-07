@@ -141,13 +141,14 @@ fun App() {
                 infoMessage = infoMessage,
                 canSignIn = selectedCongregation != null || globalLogin || selectionState.isNewCongregationReady,
                 showCredentials = globalLogin ||
-                    selectionState.isNewCongregationReady ||
+                    selectionState.isNewCongregationConfirmed ||
                     (selectedCongregation != null && !selectionState.isPicking),
                 congregationName = if (globalLogin) {
                     "Globale Verwaltung"
                 } else {
                     newCongregation?.name ?: selectionState.selected?.displayName
                 },
+                isNewCongregationFlow = !globalLogin && newCongregation != null,
                 previousSteps = if (globalLogin) {
                     emptyList()
                 } else {
@@ -329,11 +330,23 @@ fun LoginScreen(
     previousSteps: List<String> = emptyList(),
     congregationSelector: @Composable () -> Unit = {},
     onGlobalAdminLogin: (() -> Unit)? = null,
+    isNewCongregationFlow: Boolean = false,
 ) {
+    // A new congregation adds the name step between choosing the circuit and the credentials.
+    val totalSteps = if (isNewCongregationFlow) 3 else 2
+    val step = when {
+        showCredentials -> totalSteps
+        isNewCongregationFlow -> 2
+        else -> 1
+    }
     NightScreen(
-        stepLabel = if (showCredentials) "SCHRITT 2 / 2" else "SCHRITT 1 / 2",
-        current = if (showCredentials) congregationName ?: "Anmelden" else "Welche Versammlung?",
-        previous = if (showCredentials) previousSteps else emptyList(),
+        stepLabel = "SCHRITT $step / $totalSteps",
+        current = when {
+            showCredentials -> congregationName ?: "Anmelden"
+            isNewCongregationFlow -> "Neue Versammlung"
+            else -> "Welche Versammlung?"
+        },
+        previous = if (showCredentials || isNewCongregationFlow) previousSteps else emptyList(),
     ) {
         if (showCredentials) {
             congregationSelector()
@@ -355,11 +368,13 @@ fun LoginScreen(
                 onGoogleClick = onGoogleClick,
             )
         } else {
-            PanelTitle("Versammlung wählen", "Wähle deine Versammlung, bevor du dich anmeldest.")
-            Spacer(Modifier.height(14.dp))
+            if (!isNewCongregationFlow) {
+                PanelTitle("Versammlung wählen", "Wähle deine Versammlung, bevor du dich anmeldest.")
+                Spacer(Modifier.height(14.dp))
+            }
             congregationSelector()
             Spacer(Modifier.weight(1f))
-            onGlobalAdminLogin?.let { onClick ->
+            onGlobalAdminLogin?.takeUnless { isNewCongregationFlow }?.let { onClick ->
                 SecondaryButton(
                     text = "Als globaler Admin anmelden",
                     onClick = onClick,
