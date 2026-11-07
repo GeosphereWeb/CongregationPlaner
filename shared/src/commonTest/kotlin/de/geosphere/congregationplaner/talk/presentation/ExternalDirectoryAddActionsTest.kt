@@ -12,33 +12,33 @@ class ExternalDirectoryAddActionsTest {
     private val speaker = VisitingSpeaker("s1", "g1", "Beispiel")
     private val addCircuit = AddAction(AddTarget.CIRCUIT)
 
-    private fun actionsFor(editor: ExternalDirectoryEditor?) = ExternalDirectoryUiState(editor = editor).addActions
+    private fun actionFor(editor: ExternalDirectoryEditor?) = ExternalDirectoryUiState(editor = editor).addAction
 
     @Test
-    fun `without a selection only a circuit can be added`() {
-        assertEquals(listOf(addCircuit), actionsFor(null))
+    fun `without a selection a circuit is added`() {
+        assertEquals(addCircuit, actionFor(null))
     }
 
     @Test
-    fun `a saved circuit offers a congregation in it first`() {
+    fun `a saved circuit only adds a congregation in it`() {
         assertEquals(
-            listOf(AddAction(AddTarget.CONGREGATION, "c1"), addCircuit),
-            actionsFor(ExternalDirectoryEditor.Circuit(circuit, circuit)),
+            AddAction(AddTarget.CONGREGATION, "c1"),
+            actionFor(ExternalDirectoryEditor.Circuit(circuit, circuit)),
         )
     }
 
     @Test
-    fun `a saved congregation offers a speaker in it first`() {
+    fun `a saved congregation only adds a speaker in it`() {
         assertEquals(
-            listOf(AddAction(AddTarget.SPEAKER, "g1"), addCircuit),
-            actionsFor(ExternalDirectoryEditor.Congregation(congregation, congregation)),
+            AddAction(AddTarget.SPEAKER, "g1"),
+            actionFor(ExternalDirectoryEditor.Congregation(congregation, congregation)),
         )
     }
 
     @Test
-    fun `new entries and speakers only offer a circuit`() {
-        assertEquals(listOf(addCircuit), actionsFor(ExternalDirectoryEditor.Circuit(circuit)))
-        assertEquals(listOf(addCircuit), actionsFor(ExternalDirectoryEditor.Congregation(congregation)))
-        assertEquals(listOf(addCircuit), actionsFor(ExternalDirectoryEditor.Speaker(speaker, "", speaker)))
+    fun `new entries and speakers add a circuit`() {
+        assertEquals(addCircuit, actionFor(ExternalDirectoryEditor.Circuit(circuit)))
+        assertEquals(addCircuit, actionFor(ExternalDirectoryEditor.Congregation(congregation)))
+        assertEquals(addCircuit, actionFor(ExternalDirectoryEditor.Speaker(speaker, "", speaker)))
     }
 }
