@@ -94,6 +94,16 @@ class AppNavigationViewModelTest {
     }
 
     @Test
+    fun `signing out from the settings also resets to home`() {
+        viewModel.onUserChanged(admin)
+        viewModel.select(TopLevelDestination.SETTINGS)
+
+        viewModel.onUserChanged(null)
+
+        assertEquals(AppNavigationState(), state)
+    }
+
+    @Test
     fun `a global admin opens global sections`() {
         viewModel.onUserChanged(AppUser(uid = "g", approved = true, isGlobalAdmin = true))
 
