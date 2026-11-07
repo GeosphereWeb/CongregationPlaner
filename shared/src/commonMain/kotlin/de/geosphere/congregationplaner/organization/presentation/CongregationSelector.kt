@@ -59,12 +59,26 @@ internal fun CongregationSelector(
     modifier: Modifier = Modifier,
     onStartNewCongregation: () -> Unit = {},
     onNewCongregationNameChange: (String) -> Unit = {},
+    onConfirmNewCongregation: () -> Unit = {},
+    onEditNewCongregation: () -> Unit = {},
     onCancelNewCongregation: () -> Unit = {},
 ) {
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         val selected = state.selected
         if (selected != null && !state.isPicking) {
-            SelectedCongregationCard(selected, onChange = onStartPicking)
+            SelectedCongregationCard("VERSAMMLUNG", selected.displayName, selected.circuitDisplayName, onStartPicking)
+            return@Column
+        }
+        val draft = state.newCongregation
+        if (draft != null) {
+            NewCongregationStep(
+                draft = draft,
+                isReady = state.isNewCongregationReady,
+                onNameChange = onNewCongregationNameChange,
+                onConfirm = onConfirmNewCongregation,
+                onEdit = onEditNewCongregation,
+                onBack = onCancelNewCongregation,
+            )
             return@Column
         }
 
@@ -74,12 +88,14 @@ internal fun CongregationSelector(
             }
         }
 
-        NewCongregationSection(
-            state = state,
-            onStart = onStartNewCongregation,
-            onNameChange = onNewCongregationNameChange,
-            onCancel = onCancelNewCongregation,
-        )
+        if (state.canStartNewCongregation) {
+            SecondaryButton(
+                "Meine Versammlung fehlt: neu anlegen",
+                onStartNewCongregation,
+                Modifier.fillMaxWidth(),
+                outlined = false,
+            )
+        }
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             HorizontalDivider(modifier = Modifier.weight(1f), color = NightColors.Border)
@@ -126,21 +142,20 @@ internal fun CongregationSelector(
 }
 
 /**
- * Fehlt die Versammlung in der Liste, legt der Nutzer sie im gewählten Kreis neu an und wird ihr Admin. Der Name wird
- * hier nur vorgemerkt; angelegt wird nach der Anmeldung mit bestätigter E-Mail-Adresse.
+ * Eigener Schritt für eine neue Versammlung: nur der Name, ohne Ebenenauswahl und Einladungslink. Der Name wird hier nur
+ * vorgemerkt; angelegt wird nach der Anmeldung mit bestätigter E-Mail-Adresse. Nach „Weiter“ bleibt eine Karte stehen.
  */
 @Composable
-private fun NewCongregationSection(
-    state: CongregationSelectionUiState,
-    onStart: () -> Unit,
+private fun NewCongregationStep(
+    draft: NewCongregationDraft,
+    isReady: Boolean,
     onNameChange: (String) -> Unit,
-    onCancel: () -> Unit,
+    onConfirm: () -> Unit,
+    onEdit: () -> Unit,
+    onBack: () -> Unit,
 ) {
-    val draft = state.newCongregation
-    if (draft == null) {
-        if (state.canStartNewCongregation) {
-            SecondaryButton("Meine Versammlung fehlt: neu anlegen", onStart, Modifier.fillMaxWidth(), outlined = false)
-        }
+    if (draft.confirmed && isReady) {
+        SelectedCongregationCard("NEUE VERSAMMLUNG", draft.name, draft.circuitName, onEdit)
         return
     }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -154,14 +169,21 @@ private fun NewCongregationSection(
             "Du wirst Administrator dieser Versammlung. Dafür meldest du dich an und bestätigst deine E-Mail-Adresse.",
             style = nightTextStyle(13.sp, color = NightColors.OnBackgroundMuted),
         )
-        SecondaryButton("Doch eine bestehende wählen", onCancel, Modifier.fillMaxWidth(), outlined = false)
+        PrimaryButton(
+            text = "Weiter",
+            onClick = onConfirm,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = isReady,
+            height = 48.dp,
+        )
+        SecondaryButton("Zurück", onBack, Modifier.fillMaxWidth(), outlined = false)
     }
 }
 
 /** Gewählte Versammlung mit Kreis und Möglichkeit, sie zu ändern. */
 @Composable
 @Suppress("MagicNumber")
-private fun SelectedCongregationCard(selected: SelectedCongregation, onChange: () -> Unit) {
+private fun SelectedCongregationCard(label: String, name: String, circuitName: String, onChange: () -> Unit) {
     val shape = RoundedCornerShape(14.dp)
     Row(
         modifier = Modifier.fillMaxWidth().background(NightColors.Surface, shape)
@@ -171,7 +193,7 @@ private fun SelectedCongregationCard(selected: SelectedCongregation, onChange: (
     ) {
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
-                "VERSAMMLUNG",
+                label,
                 style = nightTextStyle(
                     11.sp,
                     color = NightColors.OnBackgroundMuted,
@@ -180,9 +202,9 @@ private fun SelectedCongregationCard(selected: SelectedCongregation, onChange: (
                 ),
             )
             Row {
-                Text(selected.displayName, style = nightTextStyle(16.sp, FontWeight.Bold))
+                Text(name, style = nightTextStyle(16.sp, FontWeight.Bold))
                 Text(
-                    " · Kreis ${selected.circuitDisplayName}",
+                    " · Kreis $circuitName",
                     style = nightTextStyle(16.sp, color = NightColors.OnBackgroundMuted),
                 )
             }
@@ -244,6 +266,8 @@ internal fun CongregationSelector(
         modifier = modifier,
         onStartNewCongregation = viewModel::startNewCongregation,
         onNewCongregationNameChange = viewModel::onNewCongregationNameChanged,
+        onConfirmNewCongregation = viewModel::confirmNewCongregation,
+        onEditNewCongregation = viewModel::editNewCongregation,
         onCancelNewCongregation = viewModel::cancelNewCongregation,
     )
 }

@@ -126,6 +126,31 @@ class CongregationSelectionViewModelTest {
     }
 
     @Test
+    fun `a valid name only leads to sign in after confirming`() {
+        val viewModel = createViewModel()
+        viewModel.selectCircuit()
+        viewModel.startNewCongregation()
+
+        viewModel.confirmNewCongregation()
+        assertFalse(viewModel.uiState.value.isNewCongregationConfirmed)
+
+        viewModel.onNewCongregationNameChanged("Grafing Süd")
+        assertFalse(viewModel.uiState.value.isNewCongregationConfirmed)
+
+        viewModel.confirmNewCongregation()
+        assertTrue(viewModel.uiState.value.isNewCongregationConfirmed)
+
+        viewModel.onNewCongregationNameChanged("Nord/Süd")
+        assertFalse(viewModel.uiState.value.isNewCongregationConfirmed)
+
+        viewModel.onNewCongregationNameChanged("Grafing Süd")
+        viewModel.confirmNewCongregation()
+        viewModel.editNewCongregation()
+        assertFalse(viewModel.uiState.value.isNewCongregationConfirmed)
+        assertEquals("Grafing Süd", viewModel.uiState.value.newCongregation?.name)
+    }
+
+    @Test
     fun `creating selects the new congregation and makes the user its first admin`() {
         val viewModel = createViewModel()
         viewModel.selectCircuit()
