@@ -14,6 +14,7 @@ import de.geosphere.congregationplaner.congregation.domain.model.CongregationMet
 import de.geosphere.congregationplaner.presentation.components.DetailPlaceholder
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
+import de.geosphere.congregationplaner.theming.nightCardColors
 
 @Composable
 @Suppress("LongParameterList")
@@ -48,7 +49,7 @@ internal fun CongregationDetail(
 
 @Composable
 private fun CongregationSummary(congregation: CongregationMetadata) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(modifier = Modifier.fillMaxWidth(), colors = nightCardColors()) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),

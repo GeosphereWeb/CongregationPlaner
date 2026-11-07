@@ -33,6 +33,7 @@ import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkHistoryEntry
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
+import de.geosphere.congregationplaner.theming.nightCardColors
 import kotlinx.datetime.LocalDate
 
 /** Callbacks der Historie; gebündelt, damit die Composables überschaubare Signaturen behalten. */
@@ -125,7 +126,7 @@ private fun TalkHistoryDetail(row: TalkHistoryRow?) {
         DetailPlaceholder("Wähle einen Vortrag aus, um zu sehen, wann er gehalten wurde.")
         return
     }
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(modifier = Modifier.fillMaxWidth(), colors = nightCardColors()) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("${row.talk.number} – ${row.talk.title}", style = MaterialTheme.typography.titleMedium)
             val days = row.entry?.heldOn.orEmpty()
