@@ -47,6 +47,7 @@ import de.geosphere.congregationplaner.talk.domain.model.ExternalDirectory
 import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
+import de.geosphere.congregationplaner.theming.nightCardColors
 
 /** Callbacks der Verwaltung; gebündelt, damit die Composables überschaubare Signaturen behalten. */
 internal data class ExternalDirectoryActions(
@@ -387,7 +388,7 @@ private fun EditorCard(
     extra: (@Composable () -> Unit)? = null,
     fields: @Composable () -> Unit,
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(modifier = Modifier.fillMaxWidth(), colors = nightCardColors()) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium)
             fields()

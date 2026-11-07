@@ -45,6 +45,7 @@ import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
+import de.geosphere.congregationplaner.theming.nightCardColors
 import de.geosphere.congregationplaner.ui.appbar.NightTabRow
 
 /** Callbacks der Pflege-Oberfläche; gebündelt, damit die Composables überschaubare Signaturen behalten. */
@@ -216,7 +217,7 @@ private fun TalkCatalogTab(state: TalkCatalogUiState, actions: TalkCatalogAction
 
 @Composable
 private fun TalkEditorCard(editor: TalkEditorState, isSaving: Boolean, actions: TalkCatalogActions) {
-    Card {
+    Card(colors = nightCardColors()) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(if (editor.isNew) "Neuer Vortrag" else "Vortrag ändern", style = MaterialTheme.typography.titleMedium)
             OutlinedTextField(
@@ -287,7 +288,7 @@ private fun WeekEventTab(state: WeekEventUiState, actions: WeekEventActions) {
 
 @Composable
 private fun WeekEventEditorCard(editor: WeekEventEditorState, isSaving: Boolean, actions: WeekEventActions) {
-    Card {
+    Card(colors = nightCardColors()) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
                 if (editor.isNew) "Neues Wochenereignis" else "Wochenereignis ändern",
