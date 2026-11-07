@@ -50,6 +50,29 @@ sealed interface ExternalDirectoryEditor {
     }
 }
 
+/** Was der FAB anlegen kann; [CIRCUIT] braucht keinen Elternteil, die anderen den Kreis bzw. die Versammlung. */
+enum class AddTarget(val label: String) {
+    CIRCUIT("Kreis hinzufügen"),
+    CONGREGATION("Versammlung hinzufügen"),
+    SPEAKER("Redner hinzufügen"),
+}
+
+data class AddAction(val target: AddTarget, val parentId: String = "")
+
+/**
+ * Die Anlege-Aktionen des FAB: Ist ein gespeicherter Kreis bzw. eine gespeicherte Versammlung geöffnet, steht zuerst
+ * die passende Unteraktion (Versammlung bzw. Redner dort anlegen), danach immer „Kreis hinzufügen“.
+ */
+val ExternalDirectoryUiState.addActions: List<AddAction>
+    get() {
+        val contextual = when (val current = editor) {
+            is ExternalDirectoryEditor.Circuit -> current.original?.let { AddAction(AddTarget.CONGREGATION, it.id) }
+            is ExternalDirectoryEditor.Congregation -> current.original?.let { AddAction(AddTarget.SPEAKER, it.id) }
+            else -> null
+        }
+        return listOfNotNull(contextual, AddAction(AddTarget.CIRCUIT))
+    }
+
 internal fun List<Int>.toText(): String = joinToString(", ")
 
 /** Zahlen getrennt durch Komma, Semikolon oder Leerzeichen; `null`, wenn ein Eintrag keine Zahl ist. */

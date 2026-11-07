@@ -49,6 +49,8 @@ import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.theming.nightCardColors
+import de.geosphere.congregationplaner.ui.button.SpeedDialFab
+import de.geosphere.congregationplaner.ui.button.SpeedDialItem
 
 /** Callbacks der Verwaltung; gebündelt, damit die Composables überschaubare Signaturen behalten. */
 internal data class ExternalDirectoryActions(
@@ -91,6 +93,12 @@ fun ExternalDirectoryScreen(viewModel: ExternalDirectoryViewModel, modifier: Mod
         ),
         modifier = modifier,
     )
+}
+
+private fun ExternalDirectoryActions.add(action: AddAction) = when (action.target) {
+    AddTarget.CIRCUIT -> onNewCircuit()
+    AddTarget.CONGREGATION -> onNewCongregation(action.parentId)
+    AddTarget.SPEAKER -> onNewSpeaker(action.parentId)
 }
 
 /** Was nach der Rückfrage gelöscht wird. */
@@ -154,13 +162,24 @@ internal fun ExternalDirectoryContent(
                 },
             )
         }
-        // On a phone the detail covers the list; the FAB would overlay it there.
-        if (state.canPlan && (!singlePane || !state.hasDetail)) {
-            FloatingActionButton(
-                onClick = { if (!state.isLoading && !isBusy) actions.onNewCircuit() },
-                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
-                    .semantics { contentDescription = "Kreis hinzufügen" },
-            ) { Text("+", style = MaterialTheme.typography.headlineMedium) }
+        val addActions = state.addActions
+        // On a phone the detail covers the list, so the FAB only stays there for the add actions of a saved entry.
+        if (state.canPlan && (!singlePane || !state.hasDetail || addActions.size > 1)) {
+            val fabModifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
+            val enabled = !state.isLoading && !isBusy
+            if (addActions.size == 1) {
+                FloatingActionButton(
+                    onClick = { if (enabled) actions.add(addActions.first()) },
+                    modifier = fabModifier.semantics { contentDescription = addActions.first().target.label },
+                ) { Text("+", style = MaterialTheme.typography.headlineMedium) }
+            } else {
+                SpeedDialFab(
+                    items = addActions.map { action -> SpeedDialItem(action.target.label) { actions.add(action) } },
+                    contentDescription = "Hinzufügen",
+                    modifier = fabModifier,
+                    enabled = enabled,
+                )
+            }
         }
     }
 
@@ -280,9 +299,6 @@ private fun ExternalDirectoryDetail(
             state = state,
             actions = actions,
             isBusy = isBusy,
-            extra = editor.original?.let { saved ->
-                { OutlinedButton(onClick = { actions.onNewCongregation(saved.id) }) { Text("Versammlung hinzufügen") } }
-            },
         ) {
             NameField("Name des Kreises", editor.circuit.name) {
                 actions.onEditorChange(editor.copy(circuit = editor.circuit.copy(name = it)))
@@ -295,9 +311,6 @@ private fun ExternalDirectoryDetail(
             state = state,
             actions = actions,
             isBusy = isBusy,
-            extra = editor.original?.let { saved ->
-                { OutlinedButton(onClick = { actions.onNewSpeaker(saved.id) }) { Text("Redner hinzufügen") } }
-            },
         ) {
             Text("Kreis: ${directory.circuitName(editor.congregation.circuitId)}")
             NameField("Name der Versammlung", editor.congregation.name) {
@@ -387,7 +400,6 @@ private fun EditorCard(
     state: ExternalDirectoryUiState,
     actions: ExternalDirectoryActions,
     isBusy: Boolean,
-    extra: (@Composable () -> Unit)? = null,
     fields: @Composable () -> Unit,
 ) {
     Card(modifier = Modifier.fillMaxWidth(), colors = nightCardColors()) {
@@ -400,7 +412,6 @@ private fun EditorCard(
                 }
                 TextButton(onClick = actions.onDiscard, enabled = !isBusy) { Text("Abbrechen") }
             }
-            extra?.invoke()
         }
     }
 }
