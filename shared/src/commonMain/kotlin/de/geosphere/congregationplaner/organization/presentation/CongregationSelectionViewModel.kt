@@ -31,7 +31,12 @@ data class OrgLevelSelection(
 }
 
 /** Eine neue Versammlung, die der Nutzer anlegen will: der Kreis steht fest, der Name wird eingegeben. */
-data class NewCongregationDraft(val circuitIds: List<String>, val circuitName: String, val name: String = "")
+data class NewCongregationDraft(
+    val circuitIds: List<String>,
+    val circuitName: String,
+    val name: String = "",
+    val confirmed: Boolean = false,
+)
 
 data class CongregationSelectionUiState(
     val selected: SelectedCongregation? = null,
@@ -58,6 +63,10 @@ data class CongregationSelectionUiState(
     /** Kreis und gültiger Name stehen fest; angelegt wird nach der Anmeldung. */
     val isNewCongregationReady: Boolean
         get() = newCongregation?.let { CongregationName.validate(it.name) == null } == true
+
+    /** Der Nutzer hat den gültigen Namen mit „Weiter“ bestätigt; erst dann folgt die Anmeldung. */
+    val isNewCongregationConfirmed: Boolean
+        get() = isNewCongregationReady && newCongregation?.confirmed == true
 }
 
 /**
@@ -134,6 +143,16 @@ class CongregationSelectionViewModel(
                 errorMessage = null,
             )
         }
+    }
+
+    fun confirmNewCongregation() {
+        if (!mutableUiState.value.isNewCongregationReady) return
+        mutableUiState.update { state -> state.copy(newCongregation = state.newCongregation?.copy(confirmed = true)) }
+    }
+
+    /** Zurück zur Namenseingabe, z. B. um den vorgemerkten Namen zu ändern. */
+    fun editNewCongregation() {
+        mutableUiState.update { state -> state.copy(newCongregation = state.newCongregation?.copy(confirmed = false)) }
     }
 
     fun cancelNewCongregation() {
