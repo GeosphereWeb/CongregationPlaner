@@ -50,6 +50,7 @@ import de.geosphere.congregationplaner.presentation.components.rememberListDetai
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
+import de.geosphere.congregationplaner.theming.nightCardColors
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import dev.zacsweers.metro.createGraph
 
@@ -279,7 +280,7 @@ private fun OrgUnitEditor(
     actions: OrganizationActions,
 ) {
     val unit = editor.unit
-    Card {
+    Card(colors = nightCardColors()) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
                 if (editor.isNew) "${level.label} anlegen" else "${level.label} bearbeiten",
