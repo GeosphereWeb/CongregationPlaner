@@ -31,7 +31,12 @@ class AppNavigationViewModel(private val access: NavigationAccess) : ViewModel()
 
     /** Berechnet die sichtbaren Bereiche neu, z. B. nach der Anmeldung oder einem Rollenwechsel. */
     fun onUserChanged(user: AppUser?) {
-        val visible = user?.let(access::visibleFor) ?: VisibleNavigation()
+        if (user == null) {
+            // Settings is always visible, so the filter below would keep it after signing out.
+            mutableState.value = AppNavigationState()
+            return
+        }
+        val visible = access.visibleFor(user)
         mutableState.update { state ->
             state.copy(
                 visible = visible,

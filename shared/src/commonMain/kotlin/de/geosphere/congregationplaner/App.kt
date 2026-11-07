@@ -230,6 +230,8 @@ fun App() {
         val signOut: () -> Unit = {
             scope.launch {
                 FirebaseAuthManager.signOut()
+                // The effect below does not run on the login screen, so reset here: the next sign-in starts at home.
+                navigationViewModel.onUserChanged(null)
                 isAuthenticated = false
                 authMode = AuthMode.LOGIN
                 globalLogin = false
