@@ -55,6 +55,8 @@ val sonarExclusions = listOf(
     // Gemeinsame Compose-Bausteine der Listen-/Detailansichten und die reinen Compose-Dateien der Pflegeseiten
     "**/ListDetailPane.kt",
     "**/SelectableListCard.kt",
+    // Vektor-Icons (Löschen, Bearbeiten) der Listeneinträge, wie die Navigations-Icons reine Pfaddaten
+    "**/ListIcons.kt",
     "**/CongregationDetail.kt",
     "**/TalkScheduleScreen.kt",
     "**/TalkSlotEditor.kt",

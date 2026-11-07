@@ -45,6 +45,7 @@ import de.geosphere.congregationplaner.talk.domain.model.ExternalCircuit
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCongregation
 import de.geosphere.congregationplaner.talk.domain.model.ExternalDirectory
 import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
+import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.theming.nightCardColors
@@ -207,50 +208,49 @@ private fun ExternalDirectoryTree(
                     },
                     actionsEnabled = !isBusy,
                     canDelete = true,
+                    accent = NightColors.Lavender,
                 ) {
                     Text("Kreis ${circuit.name}", style = MaterialTheme.typography.titleMedium)
-                    Text("${directory.congregations.count { it.circuitId == circuit.id }} Versammlungen")
+                    Text(congregationCountLabel(directory.congregations.count { it.circuitId == circuit.id }))
                 }
             }
             directory.congregations.filter { it.circuitId == circuit.id }.forEach { congregation ->
                 item(key = "congregation-${congregation.id}") {
-                    Column(modifier = Modifier.padding(start = 16.dp)) {
+                    SelectableListCard(
+                        selected = editor is ExternalDirectoryEditor.Congregation && editor.id == congregation.id,
+                        onSelect = { actions.onSelectCongregation(congregation) },
+                        onDelete = {
+                            onRequestDelete(
+                                DeleteRequest("Versammlung „${congregation.name}“ wird gelöscht.") {
+                                    actions.onDeleteCongregation(congregation)
+                                },
+                            )
+                        },
+                        actionsEnabled = !isBusy,
+                        canDelete = true,
+                        accent = NightColors.Sky,
+                    ) {
+                        Text("Versammlung ${congregation.name}", style = MaterialTheme.typography.titleSmall)
+                        Text("${directory.speakers.count { it.congregationId == congregation.id }} Redner")
+                    }
+                }
+                directory.speakers.filter { it.congregationId == congregation.id }.forEach { speaker ->
+                    item(key = "speaker-${speaker.id}") {
                         SelectableListCard(
-                            selected = editor is ExternalDirectoryEditor.Congregation && editor.id == congregation.id,
-                            onSelect = { actions.onSelectCongregation(congregation) },
+                            selected = editor is ExternalDirectoryEditor.Speaker && editor.id == speaker.id,
+                            onSelect = { actions.onSelectSpeaker(speaker) },
                             onDelete = {
                                 onRequestDelete(
-                                    DeleteRequest("Versammlung „${congregation.name}“ wird gelöscht.") {
-                                        actions.onDeleteCongregation(congregation)
+                                    DeleteRequest("Redner „${speaker.displayName()}“ wird gelöscht.") {
+                                        actions.onDeleteSpeaker(speaker)
                                     },
                                 )
                             },
                             actionsEnabled = !isBusy,
                             canDelete = true,
+                            accent = NightColors.Mint,
                         ) {
-                            Text("Versammlung ${congregation.name}", style = MaterialTheme.typography.titleSmall)
-                            Text("${directory.speakers.count { it.congregationId == congregation.id }} Redner")
-                        }
-                    }
-                }
-                directory.speakers.filter { it.congregationId == congregation.id }.forEach { speaker ->
-                    item(key = "speaker-${speaker.id}") {
-                        Column(modifier = Modifier.padding(start = 32.dp)) {
-                            SelectableListCard(
-                                selected = editor is ExternalDirectoryEditor.Speaker && editor.id == speaker.id,
-                                onSelect = { actions.onSelectSpeaker(speaker) },
-                                onDelete = {
-                                    onRequestDelete(
-                                        DeleteRequest("Redner „${speaker.displayName()}“ wird gelöscht.") {
-                                            actions.onDeleteSpeaker(speaker)
-                                        },
-                                    )
-                                },
-                                actionsEnabled = !isBusy,
-                                canDelete = true,
-                            ) {
-                                Text(speaker.displayName())
-                            }
+                            Text(speaker.displayName())
                         }
                     }
                 }
@@ -258,6 +258,8 @@ private fun ExternalDirectoryTree(
         }
     }
 }
+
+internal fun congregationCountLabel(count: Int): String = if (count == 1) "1 Versammlung" else "$count Versammlungen"
 
 private fun VisitingSpeaker.displayName(): String =
     listOf(lastName, firstName).filter(String::isNotBlank).joinToString(", ")
