@@ -44,7 +44,7 @@ class FirestoreCongregationMetadataRepositoryTest {
 
     init {
         every { firestore.collection(congregationCollectionPath(circuit)) } returns collection
-        every { firestore.collection(congregationNamesCollectionPath(circuit)) } returns names
+        every { firestore.collection(uniqueCongregationNamesCollectionPath(circuit)) } returns names
         every { firestore.batch() } returns batch
     }
 

@@ -87,7 +87,7 @@ await api('PATCH', `${CONG}/members/${adminPlanner.uid}`, fields({ email: 'admin
 // Ein eigener Admin für die Tests, in denen ein Admin die eigene Rollenliste ändert.
 const selfAdmin = await signUp('selfadmin@test.de');
 await api('PATCH', `${CONG}/members/${selfAdmin.uid}`, memberDoc('selfadmin@test.de', ['CONGREGATION_ADMIN']), owner);
-await api('PATCH', 'region/R/subregion/S/branch/B/circuit/C/congregationNames/berlin', fields({ congregationId: 'K' }), owner);
+await api('PATCH', 'region/R/subregion/S/branch/B/circuit/C/uniqueCongregationNames/berlin', fields({ congregationId: 'K' }), owner);
 const OTHER_CONG ='region/R/subregion/S/branch/B/circuit/C/congregation/OTHER';
 await api('PATCH', CONG, fields({ name: 'Berlin', midweek_meeting_time: '19:00', midweek_meeting_weekday: 3 }), owner);
 await api('PATCH', OTHER_CONG, fields({ name: 'Hamburg', midweek_meeting_time: '19:00', midweek_meeting_weekday: 3 }), owner);
@@ -400,8 +400,8 @@ await expect('Global Admin liest weiter die Admin-Kontakte', api('GET', CONTACTS
 await expect('Global Admin ändert den Namen der Versammlung nicht ohne Namensdokument', api('PATCH', `${CONG}${mask('name')}`, { fields: { name: { stringValue: 'Berlin-Mitte' } } }, admin.token), false);
 await expect('Global Admin ändert den Namen der Versammlung samt Namensdokument', commit([
   { update: { name: `${DOCS}/${CONG}`, fields: { name: { stringValue: 'Berlin-Mitte' } } }, updateMask: { fieldPaths: ['name'] } },
-  delDoc(`${CIRCUIT}/congregationNames/berlin`),
-  setDoc(`${CIRCUIT}/congregationNames/berlin-mitte`, { congregationId: 'K' }),
+  delDoc(`${CIRCUIT}/uniqueCongregationNames/berlin`),
+  setDoc(`${CIRCUIT}/uniqueCongregationNames/berlin-mitte`, { congregationId: 'K' }),
 ], admin.token), true);
 await expect('Global Admin ändert die Zeiten der Versammlung nicht', api('PATCH', `${CONG}${mask('midweek_meeting_time')}`, time('18:15'), admin.token), false);
 await expect('Global Admin ändert ein fremdes Feld der Versammlung nicht', api('PATCH', `${CONG}${mask('secret')}`, { fields: { secret: { stringValue: 'x' } } }, admin.token), false);
@@ -410,12 +410,12 @@ const newCongregation = (name, uid, extra = {}) => fields({ name, createdBy: uid
 await expect('Global Admin legt eine Versammlung nicht ohne Namensdokument an', api('PATCH', NEW_CONG, newCongregation('Neu', admin.uid), admin.token), false);
 await expect('Global Admin legt eine Versammlung mit Namensdokument an', commit([
   setDoc(NEW_CONG, { name: 'Neu', createdBy: admin.uid, midweek_meeting_time: '19:00', midweek_meeting_weekday: 3 }),
-  setDoc(`${CIRCUIT}/congregationNames/neu`, { congregationId: 'NEW' }),
+  setDoc(`${CIRCUIT}/uniqueCongregationNames/neu`, { congregationId: 'NEW' }),
 ], admin.token), true);
 await expect('Global Admin löscht eine Versammlung nicht ohne ihr Namensdokument', api('DELETE', NEW_CONG, undefined, admin.token), false);
 await expect('Global Admin löscht eine Versammlung mit ihrem Namensdokument', commit([
   delDoc(NEW_CONG),
-  delDoc(`${CIRCUIT}/congregationNames/neu`),
+  delDoc(`${CIRCUIT}/uniqueCongregationNames/neu`),
 ], admin.token), true);
 await expect('Global Admin pflegt weiter die Kreise', api('PATCH', 'region/R2', fields({ name: 'Region 2' }), admin.token), true);
 await expect('Normaler Nutzer pflegt keine Kreise', api('PATCH', 'region/R3', fields({ name: 'Region 3' }), plain.token), false);
@@ -468,7 +468,7 @@ const adminMember = (user, email, extra = {}) => ({
 });
 const createBatch = (circuit, congId, name, key, user, email, memberExtra = {}, congExtra = {}) => [
   setDoc(`${circuit}/congregation/${congId}`, { name, createdBy: user.uid, midweek_meeting_time: '19:00', midweek_meeting_weekday: 3, ...congExtra }),
-  setDoc(`${circuit}/congregationNames/${key}`, { congregationId: congId }),
+  setDoc(`${circuit}/uniqueCongregationNames/${key}`, { congregationId: congId }),
   setDoc(`${circuit}/congregation/${congId}/members/${user.uid}`, adminMember(user, email, memberExtra)),
 ];
 
@@ -494,14 +494,14 @@ await expect('Admin-Mitglied einer bestehenden Versammlung auch im Batch mit ein
 const renamed = (name) => ({ update: { name: `${DOCS}/${CIRCUIT}/congregation/GRAFING`, fields: { name: { stringValue: name } } }, updateMask: { fieldPaths: ['name'] } });
 await expect('Admin benennt um ohne neues Namensdokument', commit([renamed('Grafing Nord')], creator.token), false);
 await expect('Admin benennt um und nimmt einen vergebenen Namen', commit([
-  renamed('Berlin-Mitte'), delDoc(`${CIRCUIT}/congregationNames/grafing süd`), setDoc(`${CIRCUIT}/congregationNames/berlin-mitte`, { congregationId: 'GRAFING' }),
+  renamed('Berlin-Mitte'), delDoc(`${CIRCUIT}/uniqueCongregationNames/grafing süd`), setDoc(`${CIRCUIT}/uniqueCongregationNames/berlin-mitte`, { congregationId: 'GRAFING' }),
 ], creator.token), false);
-await expect('Admin gibt den Namen frei ohne umzubenennen', commit([delDoc(`${CIRCUIT}/congregationNames/grafing süd`)], creator.token), false);
+await expect('Admin gibt den Namen frei ohne umzubenennen', commit([delDoc(`${CIRCUIT}/uniqueCongregationNames/grafing süd`)], creator.token), false);
 await expect('Admin benennt um und führt das Namensdokument mit', commit([
-  renamed('Grafing Nord'), delDoc(`${CIRCUIT}/congregationNames/grafing süd`), setDoc(`${CIRCUIT}/congregationNames/grafing nord`, { congregationId: 'GRAFING' }),
+  renamed('Grafing Nord'), delDoc(`${CIRCUIT}/uniqueCongregationNames/grafing süd`), setDoc(`${CIRCUIT}/uniqueCongregationNames/grafing nord`, { congregationId: 'GRAFING' }),
 ], creator.token), true);
 await expect('Der alte Name ist nach dem Umbenennen wieder frei', commit(createBatch(CIRCUIT, 'AGAIN', 'Grafing Süd', 'grafing süd', intruder, 'intruder@test.de'), intruder.token), true);
-await expect('Namensdokumente sind ohne Anmeldung lesbar', api('GET', `${CIRCUIT}/congregationNames/${encodeURIComponent('grafing nord')}`), true);
+await expect('Namensdokumente sind ohne Anmeldung lesbar', api('GET', `${CIRCUIT}/uniqueCongregationNames/${encodeURIComponent('grafing nord')}`), true);
 
 console.log(`${count} checks, ${failures.length} failures`);
 failures.forEach((failure) => console.log(`FAILURE: ${failure}`));

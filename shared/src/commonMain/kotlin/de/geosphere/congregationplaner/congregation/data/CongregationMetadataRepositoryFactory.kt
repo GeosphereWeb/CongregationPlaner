@@ -13,8 +13,8 @@ import kotlinx.coroutines.flow.flow
 expect fun createCongregationMetadataRepository(): CongregationMetadataRepository
 
 /** Die Namensdokumente der Versammlungen unter dem Kreis [circuitIds] (siehe `CongregationName`). */
-internal fun congregationNamesCollectionPath(circuitIds: List<String>): String =
-    "${OrgLevel.CIRCUIT.collectionPath(circuitIds.dropLast(1))}/${circuitIds.last()}/congregationNames"
+internal fun uniqueCongregationNamesCollectionPath(circuitIds: List<String>): String =
+    "${OrgLevel.CIRCUIT.collectionPath(circuitIds.dropLast(1))}/${circuitIds.last()}/uniqueCongregationNames"
 
 /** Das Mitgliedsdokument des ersten Admins: freigegeben, Rolle Versammlungsadmin, Namen aus dem Auth-Profil. */
 internal fun NewCongregationAdmin.toMember(): AppUser = AppUser(
