@@ -207,7 +207,7 @@ private fun ExternalDirectoryTree(
                     actionsEnabled = !isBusy,
                     canDelete = true,
                 ) {
-                    Text(circuit.name, style = MaterialTheme.typography.titleMedium)
+                    Text("Kreis ${circuit.name}", style = MaterialTheme.typography.titleMedium)
                     Text("${directory.congregations.count { it.circuitId == circuit.id }} Versammlungen")
                 }
             }
@@ -227,7 +227,7 @@ private fun ExternalDirectoryTree(
                             actionsEnabled = !isBusy,
                             canDelete = true,
                         ) {
-                            Text(congregation.name, style = MaterialTheme.typography.titleSmall)
+                            Text("Versammlung ${congregation.name}", style = MaterialTheme.typography.titleSmall)
                             Text("${directory.speakers.count { it.congregationId == congregation.id }} Redner")
                         }
                     }
