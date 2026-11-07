@@ -60,18 +60,19 @@ enum class AddTarget(val label: String) {
 data class AddAction(val target: AddTarget, val parentId: String = "")
 
 /**
- * Die Anlege-Aktionen des FAB: Ist ein gespeicherter Kreis bzw. eine gespeicherte Versammlung geöffnet, steht zuerst
- * die passende Unteraktion (Versammlung bzw. Redner dort anlegen), danach immer „Kreis hinzufügen“.
+ * Die Anlege-Aktion des FAB: Ist ein gespeicherter Kreis bzw. eine gespeicherte Versammlung geöffnet, legt er nur
+ * die Unterebene dort an (Versammlung bzw. Redner); sonst einen Kreis.
  */
-val ExternalDirectoryUiState.addActions: List<AddAction>
-    get() {
-        val contextual = when (val current = editor) {
-            is ExternalDirectoryEditor.Circuit -> current.original?.let { AddAction(AddTarget.CONGREGATION, it.id) }
-            is ExternalDirectoryEditor.Congregation -> current.original?.let { AddAction(AddTarget.SPEAKER, it.id) }
-            else -> null
-        }
-        return listOfNotNull(contextual, AddAction(AddTarget.CIRCUIT))
-    }
+val ExternalDirectoryUiState.addAction: AddAction
+    get() = when (val current = editor) {
+        is ExternalDirectoryEditor.Circuit ->
+            current.original?.let { AddAction(AddTarget.CONGREGATION, it.id) }
+
+        is ExternalDirectoryEditor.Congregation ->
+            current.original?.let { AddAction(AddTarget.SPEAKER, it.id) }
+
+        else -> null
+    } ?: AddAction(AddTarget.CIRCUIT)
 
 internal fun List<Int>.toText(): String = joinToString(", ")
 

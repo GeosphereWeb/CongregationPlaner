@@ -49,8 +49,6 @@ import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.theming.nightCardColors
-import de.geosphere.congregationplaner.ui.button.SpeedDialFab
-import de.geosphere.congregationplaner.ui.button.SpeedDialItem
 
 /** Callbacks der Verwaltung; gebündelt, damit die Composables überschaubare Signaturen behalten. */
 internal data class ExternalDirectoryActions(
@@ -162,24 +160,14 @@ internal fun ExternalDirectoryContent(
                 },
             )
         }
-        val addActions = state.addActions
-        // On a phone the detail covers the list, so the FAB only stays there for the add actions of a saved entry.
-        if (state.canPlan && (!singlePane || !state.hasDetail || addActions.size > 1)) {
-            val fabModifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
-            val enabled = !state.isLoading && !isBusy
-            if (addActions.size == 1) {
-                FloatingActionButton(
-                    onClick = { if (enabled) actions.add(addActions.first()) },
-                    modifier = fabModifier.semantics { contentDescription = addActions.first().target.label },
-                ) { Text("+", style = MaterialTheme.typography.headlineMedium) }
-            } else {
-                SpeedDialFab(
-                    items = addActions.map { action -> SpeedDialItem(action.target.label) { actions.add(action) } },
-                    contentDescription = "Hinzufügen",
-                    modifier = fabModifier,
-                    enabled = enabled,
-                )
-            }
+        val addAction = state.addAction
+        // On a phone the detail covers the list, so the FAB only stays there for the add action of a saved entry.
+        if (state.canPlan && (!singlePane || !state.hasDetail || addAction.target != AddTarget.CIRCUIT)) {
+            FloatingActionButton(
+                onClick = { if (!state.isLoading && !isBusy) actions.add(addAction) },
+                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
+                    .semantics { contentDescription = addAction.target.label },
+            ) { Text("+", style = MaterialTheme.typography.headlineMedium) }
         }
     }
 
