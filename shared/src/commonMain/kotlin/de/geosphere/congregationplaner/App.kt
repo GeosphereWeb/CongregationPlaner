@@ -382,12 +382,14 @@ fun LoginScreen(
                     outlined = false,
                 )
             }
-            Text(
-                text = "Anmeldung folgt, sobald die Versammlung feststeht.",
-                modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                textAlign = TextAlign.Center,
-                style = nightTextStyle(13.sp, color = NightColors.OnBackgroundMuted),
-            )
+            if (!isNewCongregationFlow) {
+                Text(
+                    text = "Anmeldung folgt, sobald die Versammlung feststeht.",
+                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                    textAlign = TextAlign.Center,
+                    style = nightTextStyle(13.sp, color = NightColors.OnBackgroundMuted),
+                )
+            }
         }
         Text(
             text = firebaseStatus,
