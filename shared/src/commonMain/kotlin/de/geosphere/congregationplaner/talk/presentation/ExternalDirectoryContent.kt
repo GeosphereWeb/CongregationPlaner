@@ -202,7 +202,7 @@ private fun ExternalDirectoryTree(
     LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (directory.circuits.isEmpty()) item { Text("Noch keine Kreise angelegt.") }
         directory.circuits.forEach { circuit ->
-            item(key = "circuit-${circuit.id}") {
+            stickyHeader(key = "circuit-${circuit.id}") {
                 SelectableListCard(
                     selected = editor is ExternalDirectoryEditor.Circuit && editor.id == circuit.id,
                     onSelect = { actions.onSelectCircuit(circuit) },
@@ -222,7 +222,7 @@ private fun ExternalDirectoryTree(
                 }
             }
             directory.congregations.filter { it.circuitId == circuit.id }.forEach { congregation ->
-                item(key = "congregation-${congregation.id}") {
+                stickyHeader(key = "congregation-${congregation.id}") {
                     SelectableListCard(
                         selected = editor is ExternalDirectoryEditor.Congregation && editor.id == congregation.id,
                         onSelect = { actions.onSelectCongregation(congregation) },
