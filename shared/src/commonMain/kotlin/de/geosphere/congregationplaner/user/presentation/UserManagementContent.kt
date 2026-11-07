@@ -35,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
@@ -218,12 +219,16 @@ internal fun UserManagementContent(
 
 /** Fläche mit Rand und Radius 8 wie die übrigen Karten; Grundlage für Einladung und Zugang. */
 @Composable
-private fun DesignCard(content: @Composable ColumnScope.() -> Unit) {
+private fun DesignCard(
+    containerColor: Color = NightColors.Surface,
+    borderColor: Color = NightColors.Border,
+    content: @Composable ColumnScope.() -> Unit,
+) {
     val shape = RoundedCornerShape(8.dp)
     Column(
         modifier = Modifier.fillMaxWidth()
-            .background(NightColors.Surface, shape)
-            .border(1.dp, NightColors.Border, shape)
+            .background(containerColor, shape)
+            .border(1.dp, borderColor, shape)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
         content = content,
@@ -232,8 +237,9 @@ private fun DesignCard(content: @Composable ColumnScope.() -> Unit) {
 
 @Composable
 private fun InviteLinkCard(link: String) {
-    DesignCard {
-        Text("Einladungslink", style = MaterialTheme.typography.titleSmall, color = NightColors.OnBackground)
+    // Blau wie eine Info-Fläche, damit der Bereich nicht mit den Mitgliedern darunter verschwimmt.
+    DesignCard(containerColor = NightColors.SkyContainer, borderColor = NightColors.SkyBorder) {
+        Text("Einladungslink", style = MaterialTheme.typography.titleSmall, color = NightColors.Sky)
         Text(
             "Neue Nutzer können diesen Link im Login einfügen, um deine Versammlung auszuwählen.",
             style = MaterialTheme.typography.bodySmall,
