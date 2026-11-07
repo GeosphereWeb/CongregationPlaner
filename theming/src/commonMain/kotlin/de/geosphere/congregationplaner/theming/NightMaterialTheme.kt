@@ -1,6 +1,8 @@
 package de.geosphere.congregationplaner.theming
 
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CardColors
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
@@ -45,6 +47,13 @@ fun nightColorScheme(): ColorScheme = darkColorScheme(
     inverseOnSurface = NightColors.Background,
     inversePrimary = NightColors.Primary,
 )
+
+/**
+ * Karten mit Feldern: Die Standardfarbe (`surfaceContainerHighest`) ist dieselbe wie der Rahmen der Textfelder
+ * (`outline`), sodass Felder darin verschwinden.
+ */
+@Composable
+fun nightCardColors(): CardColors = CardDefaults.cardColors(containerColor = NightColors.Surface)
 
 /** Space Grotesk für alle Stile, JetBrains Mono nur für `labelSmall`. */
 @Composable
