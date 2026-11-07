@@ -111,7 +111,10 @@ class FirestoreRestCongregationMetadataRepositoryTest {
             "Grafing Süd",
             writes[0].getAsJsonObject("fields").getAsJsonObject("name").get("stringValue").asString,
         )
-        assertEquals("$prefix/${congregationNamesCollectionPath(circuit)}/grafing süd", writes[1].get("name").asString)
+        assertEquals(
+            "$prefix/${uniqueCongregationNamesCollectionPath(circuit)}/grafing süd",
+            writes[1].get("name").asString,
+        )
         assertEquals(
             created.id,
             writes[1].getAsJsonObject("fields").getAsJsonObject("congregationId").get("stringValue").asString,
@@ -150,7 +153,7 @@ class FirestoreRestCongregationMetadataRepositoryTest {
             val request = server.requests.single()
             assertEquals("GET", request.method)
             assertEquals(
-                "${FakeFirestoreRestServer.DOCUMENTS_PATH}/${congregationNamesCollectionPath(
+                "${FakeFirestoreRestServer.DOCUMENTS_PATH}/${uniqueCongregationNamesCollectionPath(
                     circuit,
                 )}/grafing%20s%C3%BCd",
                 request.path,
@@ -218,11 +221,11 @@ class FirestoreRestCongregationMetadataRepositoryTest {
                 writes[0].getAsJsonObject("update").get("name").asString,
             )
             assertEquals(
-                "$prefix/${congregationNamesCollectionPath(circuit)}/berlin",
+                "$prefix/${uniqueCongregationNamesCollectionPath(circuit)}/berlin",
                 writes[1].get("delete").asString,
             )
             assertEquals(
-                "$prefix/${congregationNamesCollectionPath(circuit)}/berlin-mitte",
+                "$prefix/${uniqueCongregationNamesCollectionPath(circuit)}/berlin-mitte",
                 writes[2].getAsJsonObject("update").get("name").asString,
             )
         }
@@ -272,7 +275,7 @@ class FirestoreRestCongregationMetadataRepositoryTest {
             assertEquals(
                 listOf(
                     "$prefix/${congregationCollectionPath(circuit)}/609a",
-                    "$prefix/${congregationNamesCollectionPath(circuit)}/grafing süd",
+                    "$prefix/${uniqueCongregationNamesCollectionPath(circuit)}/grafing süd",
                 ),
                 writes,
             )

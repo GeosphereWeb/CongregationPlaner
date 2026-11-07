@@ -29,7 +29,7 @@ internal class FirestoreCongregationMetadataRepository(private val firestore: Fi
 
     override suspend fun findNameOwner(circuitIds: List<String>, name: String): Result<String?> =
         runFirestoreCatching("find congregation name") {
-            val snapshot = firestore.collection(congregationNamesCollectionPath(circuitIds))
+            val snapshot = firestore.collection(uniqueCongregationNamesCollectionPath(circuitIds))
                 .document(CongregationName.key(name))
                 .get(Source.SERVER)
                 .awaitResult()
@@ -44,7 +44,7 @@ internal class FirestoreCongregationMetadataRepository(private val firestore: Fi
     ): Result<CongregationMetadata> = runFirestoreCatching("create congregation") {
         // document() ohne Pfad vergibt eine zufällige ID.
         val document = firestore.collection(congregationCollectionPath(circuitIds)).document()
-        val nameDocument = firestore.collection(congregationNamesCollectionPath(circuitIds))
+        val nameDocument = firestore.collection(uniqueCongregationNamesCollectionPath(circuitIds))
             .document(CongregationName.key(congregation.name))
         // Ein Batch: entweder entstehen Versammlung, Namensdokument und Admin zusammen oder gar nichts.
         val batch = firestore.batch()
@@ -66,7 +66,7 @@ internal class FirestoreCongregationMetadataRepository(private val firestore: Fi
     ): Result<CongregationMetadata> = runFirestoreCatching("save congregation") {
         require(congregation.id.isNotBlank()) { "A congregation ID is required to save a congregation." }
         val reference = firestore.collection(congregationCollectionPath(circuitIds)).document(congregation.id)
-        val names = firestore.collection(congregationNamesCollectionPath(circuitIds))
+        val names = firestore.collection(uniqueCongregationNamesCollectionPath(circuitIds))
         val oldKey = reference.get(Source.SERVER).awaitResult().getString("name")?.let(CongregationName::key)
         val newKey = CongregationName.key(congregation.name)
         if (oldKey == null || oldKey == newKey) {
@@ -87,7 +87,7 @@ internal class FirestoreCongregationMetadataRepository(private val firestore: Fi
             require(congregationId.isNotBlank()) { "A congregation ID is required to delete a congregation." }
             val reference = firestore.collection(congregationCollectionPath(circuitIds)).document(congregationId)
             val name = reference.get(Source.SERVER).awaitResult().getString("name")
-            val names = firestore.collection(congregationNamesCollectionPath(circuitIds))
+            val names = firestore.collection(uniqueCongregationNamesCollectionPath(circuitIds))
             val batch = firestore.batch()
             batch.delete(reference)
             name?.let { batch.delete(names.document(CongregationName.key(it))) }
