@@ -39,7 +39,7 @@ internal class FirestoreRestCongregationMetadataRepository(
     }
 
     override suspend fun findNameOwner(circuitIds: List<String>, name: String): Result<String?> = runCatchingIo {
-        val path = congregationNamesCollectionPath(circuitIds)
+        val path = uniqueCongregationNamesCollectionPath(circuitIds)
         client.requestOrNull("GET", client.documentUrl(path, CongregationName.key(name)))
             ?.let { parseDocument(it).fields.optionalStringField("congregationId") }
     }
@@ -52,7 +52,7 @@ internal class FirestoreRestCongregationMetadataRepository(
     ): Result<CongregationMetadata> = runCatchingIo {
         val id = newDocumentId()
         val documentPath = "${congregationCollectionPath(circuitIds)}/$id"
-        val namePath = "${congregationNamesCollectionPath(circuitIds)}/${CongregationName.key(congregation.name)}"
+        val namePath = "${uniqueCongregationNamesCollectionPath(circuitIds)}/${CongregationName.key(congregation.name)}"
         val fields = congregation.toFirestoreFields().apply { add("createdBy", firestoreString(createdBy)) }
         // Ein atomarer Schreibzugriff: Versammlung, Namensdokument und erster Admin entstehen zusammen oder gar nicht.
         val writes = buildList {
@@ -89,7 +89,7 @@ internal class FirestoreRestCongregationMetadataRepository(
             )
         } else {
             // Das Namensdokument zieht mit um: der alte Name wird frei, der neue vergeben.
-            val namesPath = congregationNamesCollectionPath(circuitIds)
+            val namesPath = uniqueCongregationNamesCollectionPath(circuitIds)
             client.commit(
                 listOf(
                     client.writeUpdate(
@@ -116,7 +116,11 @@ internal class FirestoreRestCongregationMetadataRepository(
         val writes = buildList {
             add(client.writeDelete("$path/$congregationId"))
             name?.let {
-                add(client.writeDelete("${congregationNamesCollectionPath(circuitIds)}/${CongregationName.key(it)}"))
+                add(
+                    client.writeDelete(
+                        "${uniqueCongregationNamesCollectionPath(circuitIds)}/${CongregationName.key(it)}",
+                    ),
+                )
             }
         }
         client.commit(writes)

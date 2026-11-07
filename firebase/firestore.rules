@@ -17,7 +17,7 @@ rules_version = '2';
 //       branch/{branchId}              - name: string (1..100)
 //         circuit/{circuitId}          - name: string (1..100), overseer_name: string (<= 100, optional)
 //           congregation/{congId}      - name: string, createdBy: uid, meeting times/weekdays
-//           congregationNames/{key}    - congregationId: string; one per congregation name of the circuit
+//           uniqueCongregationNames/{key}    - congregationId: string; one per congregation name of the circuit
 //             (key = name trimmed, lower case, blanks collapsed); makes the name unique within the circuit
 //
 // Collection: region/.../congregation/{congId}/members
@@ -113,7 +113,7 @@ service cloud.firestore {
     }
 
     function congregationNamePath(regionId, subregionId, branchId, circuitId, key) {
-      return /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/circuit/$(circuitId)/congregationNames/$(key);
+      return /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/circuit/$(circuitId)/uniqueCongregationNames/$(key);
     }
 
     function congregationDocPath(regionId, subregionId, branchId, circuitId, congId) {
@@ -576,7 +576,7 @@ service cloud.firestore {
             allow delete: if isGlobalAdmin();
 
             // Name documents: one per congregation name of the circuit; the document ID is the name key.
-            match /congregationNames/{nameKey} {
+            match /uniqueCongregationNames/{nameKey} {
               allow read: if true;
 
               allow create: if isAuthenticated() &&

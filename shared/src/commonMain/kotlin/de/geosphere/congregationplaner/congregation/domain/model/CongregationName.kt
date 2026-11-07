@@ -2,7 +2,7 @@ package de.geosphere.congregationplaner.congregation.domain.model
 
 /**
  * Der Name einer Versammlung ist pro Kreis eindeutig. Die Eindeutigkeit erzwingt das Namensdokument
- * `congregationNames/{key}` unter dem Kreis (Firestore-Regeln); [key] bildet die Regel nach.
+ * `uniqueCongregationNames/{key}` unter dem Kreis (Firestore-Regeln); [key] bildet die Regel nach.
  */
 object CongregationName {
     const val MAX_LENGTH = 100
