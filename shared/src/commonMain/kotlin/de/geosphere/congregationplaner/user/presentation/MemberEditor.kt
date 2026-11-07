@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
+import de.geosphere.congregationplaner.theming.nightCardColors
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
@@ -34,7 +35,7 @@ internal fun MemberEditor(
     onCancel: () -> Unit,
 ) {
     val profile = editor.profile
-    Card {
+    Card(colors = nightCardColors()) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
