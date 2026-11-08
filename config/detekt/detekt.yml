@@ -627,6 +627,8 @@ style:
     ignoreEnums: false
     ignoreRanges: false
     ignoreExtensionFunctions: true
+    # Preview functions use sample data, not production values.
+    ignoreAnnotated: ['Preview', 'ThemePreviews']
   MandatoryBracesLoops:
     active: false
   MaxChainedCallsOnSameLine:

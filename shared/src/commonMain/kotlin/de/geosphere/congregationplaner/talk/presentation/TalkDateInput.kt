@@ -15,6 +15,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
+import de.geosphere.congregationplaner.theming.ThemePreviews
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
@@ -71,4 +73,10 @@ internal fun LocalDate.toDisplayText(): String {
     val dayText = day.toString().padStart(2, '0')
     val monthText = month.number.toString().padStart(2, '0')
     return "${WEEKDAY_SHORT_NAMES[dayOfWeek.isoDayNumber - 1]}, $dayText.$monthText.$year"
+}
+
+@ThemePreviews
+@Composable
+private fun TalkDateInputPreview() = PreviewThemeWrapper {
+    TalkDateInput(date = LocalDate(2026, 10, 25), onDateChange = {})
 }

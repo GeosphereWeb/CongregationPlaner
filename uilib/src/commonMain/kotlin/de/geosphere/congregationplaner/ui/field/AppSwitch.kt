@@ -7,8 +7,8 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.tooling.preview.Preview
-import de.geosphere.congregationplaner.theming.AppTheme
+import de.geosphere.congregationplaner.theming.NightPreviewWrapper
+import de.geosphere.congregationplaner.theming.ThemePreviews
 
 private const val DISABLED_CHECKED_TRACK_ALPHA = 0.5f
 private const val DISABLED_CHECKED_THUMB_ALPHA = 0.7f
@@ -43,9 +43,9 @@ fun AppSwitch(
     )
 }
 
-@Preview(name = "AppSwitch states")
+@ThemePreviews
 @Composable
-private fun AppSwitchPreview() = AppTheme {
+private fun AppSwitchPreview() = NightPreviewWrapper {
     Column {
         AppSwitch(checked = true, onCheckedChange = {})
         AppSwitch(checked = false, onCheckedChange = {})
