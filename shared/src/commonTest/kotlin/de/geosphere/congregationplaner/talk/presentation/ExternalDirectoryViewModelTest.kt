@@ -83,24 +83,38 @@ class ExternalDirectoryViewModelTest {
     }
 
     @Test
-    fun `filtering applies at once and keeps the chosen circuit when a congregation is picked`() {
+    fun `filters apply at once and allow several choices and a name search`() {
         val south = ExternalCircuit("c2", "Süd")
         val zell = ExternalCongregation("g2", "c2", "Zell")
         repository.circuits.value += south
         repository.congregations.value += zell
         viewModel.onCurrentUserChanged(planner)
 
-        viewModel.filterByCongregation("g2")
+        viewModel.toggleCongregationFilter("g2")
         assertEquals(listOf(zell), state.visibleDirectory.congregations)
-        assertNull(state.filter.circuitId)
+        assertTrue(state.filter.circuitIds.isEmpty())
 
-        viewModel.filterByCircuit("c1") // g2 belongs to the other circuit, so it is dropped
-        assertEquals(DirectoryFilter("c1", null), state.filter)
+        viewModel.toggleCircuitFilter("c1") // g2 belongs to the other circuit, so it is dropped
+        assertEquals(DirectoryFilter(setOf("c1"), emptySet()), state.filter)
         assertEquals(listOf(altdorf), state.visibleDirectory.congregations)
 
-        viewModel.filterByCircuit(null)
+        viewModel.toggleCircuitFilter("c2")
         assertEquals(2, state.visibleDirectory.congregations.size)
-        assertEquals(listOf(berg), state.visibleDirectory.speakers.filter { it.congregationId == "g1" })
+
+        viewModel.clearCircuitFilter()
+        viewModel.searchCongregations("ze")
+        assertEquals("ze", state.congregationQuery)
+        assertEquals(
+            listOf("g2"),
+            state.directory.congregationOptions(state.filter, state.congregationQuery).map {
+                it.id
+            },
+        )
+
+        viewModel.toggleCongregationFilter("g1")
+        viewModel.clearCongregationFilter()
+        assertFalse(state.filter.isActive)
+        assertEquals("", state.congregationQuery)
     }
 
     @Test
