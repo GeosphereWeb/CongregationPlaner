@@ -259,6 +259,30 @@ steht in der App unter „Einstellungen“. Aktualisieren aus dem Repo-Root:
 python scripts/update_german_area_codes.py
 ```
 
+## 📥 Import aus dem alten Planungstool
+
+Die Desktop-App übernimmt die Excel-Exporte des alten Tools (Einstellungen → „Import aus dem alten Planungstool“).
+Auf Android und iOS gibt es keinen Import. Die Dateien enthalten personenbezogene Daten und gehören nie ins Repo.
+
+| Reihenfolge | Datei | Importiert | Wer darf |
+|-------------|-------|------------|----------|
+| 1 | `tblWochenereignis.xlsx` | Wochenereignisse | globaler Admin |
+| 2 | `Export_tblVortaege.xlsx` | Vortragsliste | globaler Admin |
+| 3 | `Export_Kreis-Versl-Redner-Vortraege.xlsx` | Kreise, Versammlungen, Redner mit Vorträgen | Vortragsplaner der Ziel-Versammlung |
+| 4 | `Export_Vortragsplanung.xlsx` | Termine und Vortragshistorie | Vortragsplaner der Ziel-Versammlung |
+
+Ablauf je Datei: wählen, Vorschau prüfen (anlegen / ändern / unverändert, Fehlerzeilen mit Zeilennummer), „Importieren“,
+Bericht lesen. Vor der Bestätigung wird nichts geschrieben.
+
+- Der Import geht über die normalen Speicher-Use-Cases; Berechtigung, Validierung und Firestore-Rules gelten unverändert.
+  Fehlt die Berechtigung, bricht der Schritt sofort ab.
+- Die Reihenfolge ist wichtig: Die Rednerliste prüft die Vortragsnummern gegen die Vortragsliste, die Planung ordnet
+  Ereignisse (über den Namen), Vortragsliste und Redner zu.
+- Wiederholbar: IDs stammen aus der Quelle, ein zweiter Lauf aktualisiert statt zu duplizieren. Bei der Planung werden nur
+  leere Termine gefüllt; ein Termin mit Vortrag oder Redner bleibt unberührt. Die Uhrzeit kommt aus den
+  Zusammenkunftszeiten der Versammlung.
+- Probelauf zuerst gegen den lokalen Firebase-Emulator (siehe oben), dann gegen die echte Umgebung.
+
 ## 🤝 Workflow & Konventionen
 
 - **Branches:** `feature/CP-<nr>-<beschreibung>` für Tickets, `jdi/<beschreibung>` für kleine Änderungen
