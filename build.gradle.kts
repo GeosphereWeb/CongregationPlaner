@@ -62,6 +62,10 @@ val sonarExclusions = listOf(
     "**/TalkSlotEditor.kt",
     // Reines Compose-Formular „Mein Profil“; Eingaben und Speichern sind in OwnProfileViewModel getestet
     "**/OwnProfileSection.kt",
+    // Compose-Oberfläche, deren einzige neue Zeilen die @ThemePreviews-Vorschau sind; Logik liegt in ViewModels/Modellen
+    "**/ContactFields.kt",
+    "**/TalkDateInput.kt",
+    "**/NewCongregationScreen.kt",
     // Exclude theming and ui modules from coverage
     "theming/**",
     "ui/**"
