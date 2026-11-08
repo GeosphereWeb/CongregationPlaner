@@ -16,7 +16,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
@@ -47,6 +46,7 @@ import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.theming.nightCardColors
 import de.geosphere.congregationplaner.ui.appbar.NightTabRow
+import de.geosphere.congregationplaner.ui.field.AppSwitch
 
 /** Callbacks der Pflege-Oberfläche; gebündelt, damit die Composables überschaubare Signaturen behalten. */
 internal data class TalkCatalogActions(
@@ -238,7 +238,9 @@ private fun TalkEditorCard(editor: TalkEditorState, isSaving: Boolean, actions: 
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Aktiv", modifier = Modifier.weight(1f))
-                Switch(checked = editor.active, onCheckedChange = { actions.onEditorChange(editor.copy(active = it)) })
+                AppSwitch(checked = editor.active, onCheckedChange = {
+                    actions.onEditorChange(editor.copy(active = it))
+                })
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = actions.onSave, enabled = !isSaving && editor.isDirty) {
@@ -303,7 +305,7 @@ private fun WeekEventEditorCard(editor: WeekEventEditorState, isSaving: Boolean,
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Vortrag entfällt", modifier = Modifier.weight(1f))
-                Switch(
+                AppSwitch(
                     checked = editor.cancelsTalk,
                     onCheckedChange = { actions.onEditorChange(editor.copy(cancelsTalk = it)) },
                 )

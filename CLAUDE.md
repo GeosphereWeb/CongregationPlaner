@@ -52,6 +52,10 @@ Bei Repository-/DB-Anbindung sind Interface + UseCase-Schicht Pflicht. Repositor
 - Kein natives SwiftUI, außer ausdrücklich verlangt.
 - Build-Änderungen minimal halten und der vorhandenen Struktur (Version Catalog, SourceSets) folgen.
 
+## UI
+
+- Jedes neue oder geänderte UI-Element (Composable) bekommt eine `@Preview`-Funktion in derselben Datei (`private fun …Preview()`), die die relevanten Zustände zeigt (z. B. an/aus, deaktiviert, Fehler) und mit dem App-Theme umhüllt ist. Previews sind reine Darstellung und brauchen keinen eigenen Test.
+
 ## Tests
 
 - `kotlin.test` als Basis, Turbine für Flows, MockK für Mocks (Versionen im Catalog).
