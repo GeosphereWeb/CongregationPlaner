@@ -334,7 +334,8 @@ private fun SpeakerFields(
     }
     NameField("Familienname", speaker.lastName) { onChange(editor.copy(speaker = speaker.copy(lastName = it))) }
     NameField("Vorname", speaker.firstName) { onChange(editor.copy(speaker = speaker.copy(firstName = it))) }
-    NameField("Telefon", speaker.phone) { onChange(editor.copy(speaker = speaker.copy(phone = it))) }
+    NameField("Handy", speaker.mobilePhone) { onChange(editor.copy(speaker = speaker.copy(mobilePhone = it))) }
+    NameField("Festnetz", speaker.landlinePhone) { onChange(editor.copy(speaker = speaker.copy(landlinePhone = it))) }
     NameField("E-Mail", speaker.email) { onChange(editor.copy(speaker = speaker.copy(email = it))) }
     OutlinedTextField(
         value = editor.talksText,
@@ -343,6 +344,25 @@ private fun SpeakerFields(
         supportingText = { Text("Nummern aus der Vortragsliste, z. B. 12, 45, 101") },
         modifier = Modifier.fillMaxWidth(),
     )
+    RankingBar(speaker.ranking) {
+        onChange(editor.copy(speaker = speaker.copy(ranking = nextRanking(speaker.ranking, it))))
+    }
+}
+
+/** Bewertung des Redners in Sternen; ein Tipp auf den aktuellen Stern löscht sie. */
+@Composable
+private fun RankingBar(ranking: Int, onTap: (Int) -> Unit) {
+    Column {
+        Text("Bewertung", style = MaterialTheme.typography.labelMedium)
+        Row {
+            rankingStars(ranking).forEachIndexed { index, filled ->
+                TextButton(
+                    onClick = { onTap(index + 1) },
+                    modifier = Modifier.semantics { contentDescription = "${index + 1} Sterne" },
+                ) { Text(if (filled) "★" else "☆", style = MaterialTheme.typography.titleLarge) }
+            }
+        }
+    }
 }
 
 /** Auswahl der Versammlung eines Redners; die Einträge nennen den Kreis, weil Namen doppelt vorkommen können. */
@@ -410,7 +430,17 @@ private fun EditorCard(
 private fun ExternalDirectoryContentPreview() = PreviewThemeWrapper {
     val circuit = ExternalCircuit("c1", "Kreis Nord")
     val congregation = ExternalCongregation("g1", "c1", "Musterstadt")
-    val speaker = VisitingSpeaker("s1", "g1", "Beispiel", "Tim", "0170 1234", "tim@example.org", listOf(12, 45))
+    val speaker = VisitingSpeaker(
+        id = "s1",
+        congregationId = "g1",
+        lastName = "Beispiel",
+        firstName = "Tim",
+        mobilePhone = "0170 1234",
+        landlinePhone = "08092 1234",
+        email = "tim@example.org",
+        talkNumbers = listOf(12, 45),
+        ranking = 3,
+    )
     ExternalDirectoryContent(
         state = ExternalDirectoryUiState(
             directory = ExternalDirectory(listOf(circuit), listOf(congregation), listOf(speaker)),
