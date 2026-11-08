@@ -10,7 +10,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -20,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.theming.nightCardColors
+import de.geosphere.congregationplaner.ui.field.AppSwitch
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
@@ -62,7 +62,7 @@ internal fun MemberEditor(
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Getauft", modifier = Modifier.weight(1f))
-                Switch(
+                AppSwitch(
                     checked = profile.baptized,
                     onCheckedChange = { onChange(profile.copy(baptized = it)) },
                     enabled = profile.category != MemberCategory.CHILD,
@@ -70,7 +70,7 @@ internal fun MemberEditor(
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Redner", modifier = Modifier.weight(1f))
-                Switch(
+                AppSwitch(
                     checked = profile.isSpeaker,
                     onCheckedChange = { onChange(profile.copy(isSpeaker = it)) },
                     enabled = profile.canBeSpeaker,
