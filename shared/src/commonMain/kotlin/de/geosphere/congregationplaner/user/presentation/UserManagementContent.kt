@@ -250,7 +250,8 @@ private fun InviteLinkCard(link: String) {
     }
 }
 
-// Das plattformübergreifende Setzen von Text gibt es nur über den LocalClipboardManager; ClipEntry ist plattformspezifisch.
+// Das plattformübergreifende Setzen von Text gibt es nur über den LocalClipboardManager; ClipEntry ist
+// plattformspezifisch.
 @Suppress("DEPRECATION")
 @Composable
 private fun CopyLinkButton(link: String) {

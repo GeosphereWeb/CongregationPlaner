@@ -162,7 +162,8 @@ internal fun ExternalDirectoryContent(
         }
         val addAction = state.addAction
         // On a phone the detail covers the list, so the FAB only stays there for the add action of a saved entry.
-        if (state.canPlan && (!singlePane || !state.hasDetail || addAction.target != AddTarget.CIRCUIT)) {
+        val coveredByDetail = singlePane && state.hasDetail && addAction.target == AddTarget.CIRCUIT
+        if (state.canPlan && !coveredByDetail) {
             FloatingActionButton(
                 onClick = { if (!state.isLoading && !isBusy) actions.add(addAction) },
                 modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)

@@ -164,7 +164,10 @@ class UserManagementViewModel(
         mutableUiState.update { it.copy(editor = null, errorMessage = null) }
     }
 
-    /** Verwirft Änderungen, lässt aber das ausgewählte Mitglied offen; eine neue, ungespeicherte Person wird geschlossen. */
+    /**
+     * Verwirft Änderungen, lässt aber das ausgewählte Mitglied offen; eine neue, ungespeicherte Person wird
+     * geschlossen.
+     */
     fun discardChanges() {
         if (mutableUiState.value.isSaving) return
         mutableUiState.update { state ->

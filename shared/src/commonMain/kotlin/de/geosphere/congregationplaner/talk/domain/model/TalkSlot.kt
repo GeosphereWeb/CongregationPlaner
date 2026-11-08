@@ -84,7 +84,8 @@ data class MemberRef(val memberId: String, val lastName: String, val firstName: 
 }
 
 /**
- * Ein Redner aus einer anderen Versammlung, den ein Planer in der Liste seiner Versammlung (`externalSpeakers/{id}`) pflegt.
+ * Ein Redner aus einer anderen Versammlung, den ein Planer in der Liste seiner Versammlung (`externalSpeakers/{id}`)
+ * pflegt.
  * [id] ist leer, solange er noch nicht gespeichert ist.
  */
 data class ExternalSpeaker(val id: String, val lastName: String, val firstName: String, val congregationName: String) {

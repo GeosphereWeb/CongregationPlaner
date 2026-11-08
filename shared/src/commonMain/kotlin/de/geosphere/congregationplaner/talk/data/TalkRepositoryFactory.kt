@@ -15,7 +15,9 @@ import de.geosphere.congregationplaner.talk.domain.repository.TalkScheduleReposi
 import de.geosphere.congregationplaner.talk.domain.repository.WeekEventRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.minus
 
 expect fun createTalkScheduleRepository(): TalkScheduleRepository
 
@@ -56,7 +58,7 @@ internal val CongregationRef.visitingSpeakersPath: String get() = "$documentPath
 
 /** Die Dokument-IDs des Jahres sind ISO-Daten und damit lexikographisch geordnet. */
 internal fun yearIdRange(year: Int): ClosedRange<String> =
-    LocalDate(year, 1, 1).toString()..LocalDate(year, 12, 31).toString()
+    LocalDate(year, 1, 1).toString()..LocalDate(year + 1, 1, 1).minus(1, DateTimeUnit.DAY).toString()
 
 fun unavailableTalkScheduleRepository(platform: String): TalkScheduleRepository = object : TalkScheduleRepository {
     private fun <T> unavailable(): Result<T> =

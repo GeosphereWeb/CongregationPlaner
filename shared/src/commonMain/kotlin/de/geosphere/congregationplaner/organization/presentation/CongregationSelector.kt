@@ -142,7 +142,8 @@ internal fun CongregationSelector(
 }
 
 /**
- * Eigener Schritt für eine neue Versammlung: nur der Name, ohne Ebenenauswahl und Einladungslink. Der Name wird hier nur
+ * Eigener Schritt für eine neue Versammlung: nur der Name, ohne Ebenenauswahl und Einladungslink. Der Name wird hier
+ * nur
  * vorgemerkt; angelegt wird nach der Anmeldung mit bestätigter E-Mail-Adresse. Nach „Weiter“ bleibt eine Karte stehen.
  */
 @Composable
