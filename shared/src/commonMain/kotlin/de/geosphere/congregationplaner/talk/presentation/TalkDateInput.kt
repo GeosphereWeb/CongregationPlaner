@@ -18,12 +18,6 @@ import androidx.compose.ui.Modifier
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.atStartOfDayIn
-import kotlinx.datetime.isoDayNumber
-import kotlinx.datetime.number
-import kotlinx.datetime.toLocalDateTime
-import kotlin.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,7 +37,7 @@ internal fun TalkDateInput(date: LocalDate, onDateChange: (LocalDate) -> Unit) {
     if (showDatePicker) {
         // Das Datum wird als UTC-Mitternacht gelesen und geschrieben, damit die Zeitzone das Datum nicht verschiebt.
         val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = date.atStartOfDayIn(TimeZone.UTC).toEpochMilliseconds(),
+            initialSelectedDateMillis = date.toPickerMillis(),
         )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
@@ -51,7 +45,7 @@ internal fun TalkDateInput(date: LocalDate, onDateChange: (LocalDate) -> Unit) {
                 TextButton(
                     onClick = {
                         datePickerState.selectedDateMillis?.let { millis ->
-                            onDateChange(Instant.fromEpochMilliseconds(millis).toLocalDateTime(TimeZone.UTC).date)
+                            onDateChange(dateFromPickerMillis(millis))
                         }
                         showDatePicker = false
                     },
@@ -64,15 +58,6 @@ internal fun TalkDateInput(date: LocalDate, onDateChange: (LocalDate) -> Unit) {
             DatePicker(state = datePickerState)
         }
     }
-}
-
-private val WEEKDAY_SHORT_NAMES = listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")
-
-/** Deutsche Anzeige mit Wochentag, z. B. `So, 25.10.2026`. */
-internal fun LocalDate.toDisplayText(): String {
-    val dayText = day.toString().padStart(2, '0')
-    val monthText = month.number.toString().padStart(2, '0')
-    return "${WEEKDAY_SHORT_NAMES[dayOfWeek.isoDayNumber - 1]}, $dayText.$monthText.$year"
 }
 
 @ThemePreviews

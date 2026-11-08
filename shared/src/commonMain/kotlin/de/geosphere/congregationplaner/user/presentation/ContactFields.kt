@@ -27,43 +27,6 @@ import de.geosphere.congregationplaner.ui.button.SecondaryButton
 import de.geosphere.congregationplaner.user.domain.model.EmergencyContact
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 
-/** Das erste E-Mail-Feld ist immer da, auch ohne gespeicherte Adresse; weitere kommen bei Bedarf dazu. */
-internal val MemberProfile.emailFields: List<String> get() = emails.ifEmpty { listOf("") }
-
-internal val MemberProfile.canAddEmail: Boolean get() = emailFields.size < MemberProfile.MAX_EMAILS
-
-internal val MemberProfile.canAddContact: Boolean
-    get() = emergencyContacts.size < MemberProfile.MAX_EMERGENCY_CONTACTS
-
-/** Bleibt nur ein leeres erstes Feld übrig, gibt es keine Adresse; so ändert sich das Profil nicht unnötig. */
-internal fun MemberProfile.withEmail(index: Int, value: String): MemberProfile =
-    copy(emails = emailFields.replaced(index, value).takeUnless { it == listOf("") }.orEmpty())
-
-internal fun MemberProfile.withAddedEmail(): MemberProfile = if (canAddEmail) copy(emails = emailFields + "") else this
-
-/** Das erste Feld bleibt immer; entfernt werden nur weitere. */
-internal fun MemberProfile.withoutEmail(index: Int): MemberProfile =
-    if (index == 0) this else copy(emails = emails.filterIndexed { i, _ -> i != index })
-
-internal fun MemberProfile.withContact(index: Int, contact: EmergencyContact): MemberProfile =
-    copy(emergencyContacts = emergencyContacts.replaced(index, contact))
-
-internal fun MemberProfile.withAddedContact(): MemberProfile =
-    if (canAddContact) copy(emergencyContacts = emergencyContacts + EmergencyContact()) else this
-
-internal fun MemberProfile.withoutContact(index: Int): MemberProfile =
-    copy(emergencyContacts = emergencyContacts.filterIndexed { i, _ -> i != index })
-
-private fun <T> List<T>.replaced(index: Int, value: T): List<T> = mapIndexed { i, old ->
-    if (i ==
-        index
-    ) {
-        value
-    } else {
-        old
-    }
-}
-
 /**
  * Telefon, E-Mail-Adressen, Adresse und Notfallkontakte eines Mitglieds; gemeinsam für „Mein Profil“ und den Editor
  * der Versammlungsadmins. Die Angaben sehen das Mitglied, die Admins und die Planer der Versammlung (ADR-0016).
@@ -87,7 +50,7 @@ internal fun ContactFields(
         profile.emailFields.forEachIndexed { index, email ->
             OutlinedTextField(
                 value = email,
-                onValueChange = { onChange(profile.withEmail(index, it.take(MemberProfile.MAX_EMAIL_LENGTH))) },
+                onValueChange = { onChange(profile.withEmail(index, it)) },
                 label = { Text("E-Mail ${index + 1}") },
                 leadingIcon = { Icon(mailIcon, contentDescription = null, tint = NightColors.OnBackgroundMuted) },
                 // Das erste Feld bleibt immer; nur die weiteren lassen sich entfernen.
@@ -213,18 +176,18 @@ private fun EmergencyContactCard(
                 label = "Telefon ${index + 1}",
                 icon = phoneKindIcon(phone),
                 enabled = enabled,
-                onValueChange = { value -> onChange(contact.copy(phones = contact.phones.replaced(index, value))) },
-                onRemove = if (contact.phones.size > 1) {
-                    { onChange(contact.copy(phones = contact.phones.filterIndexed { i, _ -> i != index })) }
+                onValueChange = { value -> onChange(contact.withPhone(index, value)) },
+                onRemove = if (contact.canRemovePhone) {
+                    { onChange(contact.withoutPhone(index)) }
                 } else {
                     null
                 },
             )
         }
-        if (contact.phones.size < MemberProfile.MAX_PHONES_PER_CONTACT) {
+        if (contact.canAddPhone) {
             SecondaryButton(
                 text = "Telefonnummer hinzufügen",
-                onClick = { onChange(contact.copy(phones = contact.phones + "")) },
+                onClick = { onChange(contact.withAddedPhone()) },
                 enabled = enabled,
                 outlined = false,
             )

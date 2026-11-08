@@ -55,6 +55,7 @@ Bei Repository-/DB-Anbindung sind Interface + UseCase-Schicht Pflicht. Repositor
 ## UI
 
 - Jedes neue oder geänderte UI-Element (Composable) bekommt eine Preview-Funktion in derselben Datei (`private fun …Preview()`) mit `@ThemePreviews` (Light/Dark) und `PreviewThemeWrapper` bzw. `NightPreviewWrapper`, die die relevanten Zustände zeigt (z. B. an/aus, deaktiviert, Fehler). Composables, die direkt an ViewModel oder Navigation hängen, werden in einen zustandslosen Teil mit Preview aufgeteilt. Previews sind reine Darstellung und brauchen keinen eigenen Test.
+- Composables enthalten keine Geschäfts- oder sonstige Logik (Validierung, Begrenzungen, Textformatierung, Umrechnungen, Listenoperationen auf Zustand). Sie rendern Zustand und leiten Ereignisse weiter; die Logik liegt in ViewModel, Domain oder reinen Hilfsfunktionen in eigenen Dateien und ist dort getestet.
 
 ## Tests
 
