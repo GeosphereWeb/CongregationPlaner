@@ -11,6 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.geosphere.congregationplaner.theming.NightColors
+import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
+import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.theming.nightTextStyle
 import de.geosphere.congregationplaner.ui.button.PrimaryButton
 import de.geosphere.congregationplaner.ui.button.SecondaryButton
@@ -66,4 +68,20 @@ internal fun NewCongregationScreen(
         Spacer(Modifier.weight(1f))
         SecondaryButton("Abmelden", onSignOut, Modifier.fillMaxWidth(), outlined = false)
     }
+}
+
+@ThemePreviews
+@Composable
+private fun NewCongregationScreenPreview() = PreviewThemeWrapper {
+    NewCongregationScreen(
+        draft = NewCongregationDraft(circuitIds = listOf("c1"), circuitName = "Süd", name = "Musterstadt"),
+        emailVerified = false,
+        isCreating = false,
+        errorMessage = null,
+        onCreate = {},
+        onRefresh = {},
+        onResend = {},
+        onChangeName = {},
+        onSignOut = {},
+    )
 }

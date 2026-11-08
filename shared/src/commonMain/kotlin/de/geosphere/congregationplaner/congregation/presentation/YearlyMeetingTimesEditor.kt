@@ -12,6 +12,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
 import de.geosphere.congregationplaner.congregation.domain.model.MeetingTimes
+import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
+import de.geosphere.congregationplaner.theming.ThemePreviews
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 import kotlin.time.Clock
@@ -65,4 +67,14 @@ internal fun YearlyMeetingTimesEditor(congregation: CongregationMetadata, onChan
             }
         }
     }
+}
+
+@ThemePreviews
+@Composable
+private fun YearlyMeetingTimesEditorPreview() = PreviewThemeWrapper {
+    val year = rememberCurrentYear() + 1
+    YearlyMeetingTimesEditor(
+        congregation = CongregationMetadata(name = "Musterstadt", yearlyMeetingTimes = mapOf(year to MeetingTimes())),
+        onChange = {},
+    )
 }
