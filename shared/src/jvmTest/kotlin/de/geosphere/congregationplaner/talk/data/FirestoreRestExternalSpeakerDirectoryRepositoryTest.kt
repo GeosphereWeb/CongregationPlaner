@@ -81,7 +81,7 @@ class FirestoreRestExternalSpeakerDirectoryRepositoryTest {
     }
 
     @Test
-    fun `speakers are read and written with phone, email and talk numbers`() = runWithRepository(
+    fun `speakers are read and written with phones, email, talk numbers and ranking`() = runWithRepository(
         responder = { request ->
             when (request.method) {
                 "GET" -> FakeResponse(
@@ -89,7 +89,8 @@ class FirestoreRestExternalSpeakerDirectoryRepositoryTest {
                     """{"documents":[
                         {"name":"x/visitingSpeakers/s1","fields":{
                             "congregationId":{"stringValue":"g1"},"lastName":{"stringValue":"Berg"},
-                            "firstName":{"stringValue":"Lea"},"phone":{"stringValue":"0170"},
+                            "firstName":{"stringValue":"Lea"},"mobilePhone":{"stringValue":"0170"},
+                            "landlinePhone":{"stringValue":"08092"},"ranking":{"integerValue":"4"},
                             "email":{"stringValue":"lea@example.org"},
                             "talkNumbers":{"arrayValue":{"values":[{"integerValue":"12"},{"integerValue":"45"}]}}}},
                         {"name":"x/visitingSpeakers/s2","fields":{}}]}""",
@@ -102,7 +103,7 @@ class FirestoreRestExternalSpeakerDirectoryRepositoryTest {
         val listed = repository.observeSpeakers(congregation).first()
         assertEquals(
             listOf(
-                VisitingSpeaker("s1", "g1", "Berg", "Lea", "0170", "lea@example.org", listOf(12, 45)),
+                VisitingSpeaker("s1", "g1", "Berg", "Lea", "0170", "08092", "lea@example.org", listOf(12, 45), 4),
                 VisitingSpeaker("s2", "", ""),
             ),
             listed,
@@ -118,7 +119,9 @@ class FirestoreRestExternalSpeakerDirectoryRepositoryTest {
         assertTrue(
             body.contains(""""talkNumbers":{"arrayValue":{"values":[{"integerValue":"7"},{"integerValue":"9"}]}}"""),
         )
-        assertTrue(body.contains(""""phone":{"stringValue":""}"""))
+        assertTrue(body.contains(""""mobilePhone":{"stringValue":""}"""))
+        assertTrue(body.contains(""""landlinePhone":{"stringValue":""}"""))
+        assertTrue(body.contains(""""ranking":{"integerValue":"0"}"""))
 
         assertTrue(repository.deleteSpeaker(congregation, "s1").isSuccess)
         assertEquals("$speakersPath/s1", server.requests.last().path)

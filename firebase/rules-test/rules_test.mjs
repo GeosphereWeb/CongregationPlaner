@@ -160,9 +160,11 @@ const validSpeaker = {
   congregationId: 'g1',
   lastName: 'Extern',
   firstName: 'Eva',
-  phone: '0170 1234',
+  mobilePhone: '0170 1234',
+  landlinePhone: '08092 1234',
   email: 'eva@example.org',
   talkNumbers: [12, 45],
+  ranking: 3,
 };
 await expect('externen Kreis anlegen', post(EXT_CIRCUITS, validCircuit), true);
 await expect('externer Kreis ohne Namen', post(EXT_CIRCUITS, { name: '' }), false);
@@ -174,7 +176,13 @@ await expect('externer Redner ohne Vortragsliste', post(EXT_SPEAKERS, { ...valid
 await expect('externer Redner ohne Versammlung', post(EXT_SPEAKERS, { ...validSpeaker, congregationId: '' }), false);
 await expect('externer Redner mit leerem Familiennamen', post(EXT_SPEAKERS, { ...validSpeaker, lastName: '' }), false);
 await expect('externer Redner mit Vortragsliste als Text', post(EXT_SPEAKERS, { ...validSpeaker, talkNumbers: '12' }), false);
-await expect('externer Redner mit zu langer Telefonnummer', post(EXT_SPEAKERS, { ...validSpeaker, phone: '1'.repeat(31) }), false);
+await expect('externer Redner mit zu langer Handynummer', post(EXT_SPEAKERS, { ...validSpeaker, mobilePhone: '1'.repeat(31) }), false);
+await expect('externer Redner mit zu langer Festnetznummer', post(EXT_SPEAKERS, { ...validSpeaker, landlinePhone: '1'.repeat(31) }), false);
+await expect('externer Redner mit Bewertung 5', post(EXT_SPEAKERS, { ...validSpeaker, ranking: 5 }), true);
+await expect('externer Redner mit Bewertung 6', post(EXT_SPEAKERS, { ...validSpeaker, ranking: 6 }), false);
+await expect('externer Redner mit negativer Bewertung', post(EXT_SPEAKERS, { ...validSpeaker, ranking: -1 }), false);
+await expect('externer Redner mit Bewertung als Text', post(EXT_SPEAKERS, { ...validSpeaker, ranking: '3' }), false);
+await expect('externer Redner ohne Bewertung', post(EXT_SPEAKERS, Object.fromEntries(Object.entries(validSpeaker).filter(([key]) => key !== 'ranking'))), false);
 await expect('externer Redner mit Zusatzfeld', post(EXT_SPEAKERS, { ...validSpeaker, x: 'y' }), false);
 await expect('externes Verzeichnis lesen als Planer', api('GET', EXT_SPEAKERS, undefined, planner.token), true);
 await expect('externe Kreise lesen ohne Planerrolle', api('GET', EXT_CIRCUITS, undefined, plain.token), false);

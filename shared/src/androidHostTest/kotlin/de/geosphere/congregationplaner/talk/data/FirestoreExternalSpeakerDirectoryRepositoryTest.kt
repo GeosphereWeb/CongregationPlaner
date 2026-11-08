@@ -83,27 +83,30 @@ class FirestoreExternalSpeakerDirectoryRepositoryTest {
     }
 
     @Test
-    fun `speakers are mapped including phone, email and talk numbers`() = runBlocking {
+    fun `speakers are mapped including phones, email, talk numbers and ranking`() = runBlocking {
         speakers.emit(
             mockk {
                 every { id } returns "s1"
                 every { getString("congregationId") } returns "g1"
                 every { getString("lastName") } returns "Berg"
                 every { getString("firstName") } returns "Lea"
-                every { getString("phone") } returns "0170"
+                every { getString("mobilePhone") } returns "0170"
+                every { getString("landlinePhone") } returns "08092"
+                every { getLong("ranking") } returns 4L
                 every { getString("email") } returns "lea@example.org"
                 every { this@mockk.get("talkNumbers") } returns listOf(12L, 45L, "x")
             },
             mockk {
                 every { id } returns "s2"
                 every { getString(any()) } returns null
+                every { getLong(any()) } returns null
                 every { this@mockk.get("talkNumbers") } returns null
             },
         )
 
         assertEquals(
             listOf(
-                VisitingSpeaker("s1", "g1", "Berg", "Lea", "0170", "lea@example.org", listOf(12, 45)),
+                VisitingSpeaker("s1", "g1", "Berg", "Lea", "0170", "08092", "lea@example.org", listOf(12, 45), 4),
                 VisitingSpeaker("s2", "", ""),
             ),
             repository.observeSpeakers(congregation).first(),
@@ -128,9 +131,11 @@ class FirestoreExternalSpeakerDirectoryRepositoryTest {
                 "congregationId" to "g1",
                 "lastName" to "Neu",
                 "firstName" to "",
-                "phone" to "",
+                "mobilePhone" to "",
+                "landlinePhone" to "",
                 "email" to "",
                 "talkNumbers" to listOf(7, 9),
+                "ranking" to 0,
             ),
             fields.captured,
         )
