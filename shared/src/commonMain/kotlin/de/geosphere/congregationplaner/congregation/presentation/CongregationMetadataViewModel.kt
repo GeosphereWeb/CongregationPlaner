@@ -128,7 +128,10 @@ class CongregationMetadataViewModel(
         updateState { it.copy(editor = null, editorOriginal = null, errorMessage = null) }
     }
 
-    /** Verwirft Änderungen, lässt aber die ausgewählte Versammlung geöffnet; eine neue, ungespeicherte wird geschlossen. */
+    /**
+     * Verwirft Änderungen, lässt aber die ausgewählte Versammlung geöffnet; eine neue, ungespeicherte wird
+     * geschlossen.
+     */
     fun discardChanges() {
         updateState { state ->
             val original = state.editorOriginal?.takeUnless { it.id.isBlank() }

@@ -198,7 +198,8 @@ internal fun TalkScheduleContent(
                                 item { Text("Keine Termine für diese Auswahl.") }
                             }
                             visibleSlots.groupBy { it.date.month }.values.forEach { monthSlots ->
-                                // Der Monat bleibt beim Scrollen oben stehen; der Hintergrund verdeckt die Termine darunter.
+                                // Der Monat bleibt beim Scrollen oben stehen; der Hintergrund verdeckt die Termine
+                                // darunter.
                                 stickyHeader(key = "month-${monthSlots.first().id}") {
                                     SectionLabel(
                                         slotMonthLabel(monthSlots.first().date),
@@ -325,7 +326,10 @@ private fun StatusFilterRow(slots: List<TalkSlot>, filter: Set<SlotStatus>, onTo
     }
 }
 
-/** Fläche und Rand eines gewählten Filter-Chips: Koralle für „Nicht geplant“, neutral für „Geplant“, Blau für „Entfällt“. */
+/**
+ * Fläche und Rand eines gewählten Filter-Chips: Koralle für „Nicht geplant“, neutral für „Geplant“, Blau für
+ * „Entfällt“.
+ */
 private fun filterChipColors(status: SlotStatus): Pair<Color, Color> = when (status) {
     SlotStatus.NOT_PLANNED -> NightColors.CoralContainer to NightColors.CoralBorder
     SlotStatus.CANCELLED -> NightColors.SkyContainer to NightColors.SkyBorder

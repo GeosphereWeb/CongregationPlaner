@@ -37,7 +37,8 @@ data class CongregationRef(
 
         fun fromIds(ids: List<String>): CongregationRef? {
             if (ids.size != OrgLevel.entries.size || !ids.all(::isValidSegment)) return null
-            return CongregationRef(ids[0], ids[1], ids[2], ids[3], ids[4])
+            val id = ids.iterator()
+            return CongregationRef(id.next(), id.next(), id.next(), id.next(), id.next())
         }
 
         /**

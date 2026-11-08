@@ -21,13 +21,15 @@ private const val PLANNED_YEARS_AHEAD = 2
 @Composable
 internal fun rememberCurrentYear(): Int = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()).year }
 
-/** Erlaubt je einem der nächsten zwei Kalenderjahre abweichende Zusammenkunftszeiten (z. B. für die Vortragsplanung). */
+/**
+ * Erlaubt je einem der nächsten zwei Kalenderjahre abweichende Zusammenkunftszeiten (z. B. für die Vortragsplanung).
+ */
 @Composable
 internal fun YearlyMeetingTimesEditor(congregation: CongregationMetadata, onChange: (CongregationMetadata) -> Unit) {
     val currentYear = rememberCurrentYear()
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Zeiten der nächsten Jahre", style = MaterialTheme.typography.titleSmall)
-        (1..PLANNED_YEARS_AHEAD).map { currentYear + it }.forEach { year ->
+        for (year in (currentYear + 1)..(currentYear + PLANNED_YEARS_AHEAD)) {
             val override = congregation.yearlyMeetingTimes[year]
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(
