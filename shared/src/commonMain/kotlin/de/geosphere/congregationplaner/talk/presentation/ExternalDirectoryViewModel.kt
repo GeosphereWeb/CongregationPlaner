@@ -89,9 +89,13 @@ data class ExternalDirectoryUiState(
     val canPlan: Boolean = false,
     override val isSaving: Boolean = false,
     val isDeleting: Boolean = false,
+    val filter: DirectoryFilter = DirectoryFilter(),
     override val errorMessage: String? = null,
 ) : ListDetailState {
     override val hasDetail: Boolean get() = editor != null
+
+    /** Das Verzeichnis, wie es die Liste zeigt: auf den gewählten Kreis und die Versammlung eingegrenzt. */
+    val visibleDirectory: ExternalDirectory get() = directory.filtered(filter)
 }
 
 /** Pflege des Verzeichnisses externer Redner (Kreis → Versammlung → Redner) durch die Planer der Versammlung. */
@@ -162,6 +166,16 @@ class ExternalDirectoryViewModel(
             }
             state.copy(editor = reset, errorMessage = null)
         }
+    }
+
+    /** Filtert sofort auf den Kreis; `null` zeigt alle. Eine gewählte Versammlung eines anderen Kreises entfällt. */
+    fun filterByCircuit(circuitId: String?) {
+        mutableUiState.update { it.copy(filter = it.filter.withCircuit(it.directory, circuitId)) }
+    }
+
+    /** Filtert sofort auf die Versammlung; `null` zeigt alle. Der gewählte Kreis bleibt unverändert. */
+    fun filterByCongregation(congregationId: String?) {
+        mutableUiState.update { it.copy(filter = it.filter.copy(congregationId = congregationId)) }
     }
 
     fun dismissError() {

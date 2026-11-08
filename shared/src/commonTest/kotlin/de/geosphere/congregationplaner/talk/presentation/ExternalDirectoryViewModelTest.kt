@@ -83,6 +83,27 @@ class ExternalDirectoryViewModelTest {
     }
 
     @Test
+    fun `filtering applies at once and keeps the chosen circuit when a congregation is picked`() {
+        val south = ExternalCircuit("c2", "Süd")
+        val zell = ExternalCongregation("g2", "c2", "Zell")
+        repository.circuits.value += south
+        repository.congregations.value += zell
+        viewModel.onCurrentUserChanged(planner)
+
+        viewModel.filterByCongregation("g2")
+        assertEquals(listOf(zell), state.visibleDirectory.congregations)
+        assertNull(state.filter.circuitId)
+
+        viewModel.filterByCircuit("c1") // g2 belongs to the other circuit, so it is dropped
+        assertEquals(DirectoryFilter("c1", null), state.filter)
+        assertEquals(listOf(altdorf), state.visibleDirectory.congregations)
+
+        viewModel.filterByCircuit(null)
+        assertEquals(2, state.visibleDirectory.congregations.size)
+        assertEquals(listOf(berg), state.visibleDirectory.speakers.filter { it.congregationId == "g1" })
+    }
+
+    @Test
     fun `member without permission sees nothing and cannot open an editor`() {
         viewModel.onCurrentUserChanged(member)
         viewModel.newCircuit()
