@@ -6,7 +6,10 @@ enum class ImportKind { CREATE, UPDATE, SKIP }
 data class PlanEntry<T>(val item: T, val kind: ImportKind)
 
 /** A source row that cannot be imported; [row] is the 1-based row number in the file. */
-data class ImportError(val row: Int, val message: String)
+data class ImportError(val row: Int, val message: String) {
+    /** Row 0 stands for a note that belongs to the whole file. */
+    val description: String get() = if (row > 0) "Zeile $row: $message" else message
+}
 
 /** The preview of an import step: nothing is written before the user confirms it. */
 data class ImportPlan<T>(val entries: List<PlanEntry<T>>, val errors: List<ImportError>) {
