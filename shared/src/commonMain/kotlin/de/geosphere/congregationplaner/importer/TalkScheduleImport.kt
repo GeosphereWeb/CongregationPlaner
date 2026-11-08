@@ -57,7 +57,7 @@ private class ScheduleRun(val context: ScheduleImportContext) {
     val newSpeakers = linkedMapOf<String, VisitingSpeaker>()
     val seenDates = mutableSetOf<LocalDate>()
     val existingByDate = context.existingSlots.associateBy { it.date }
-    val speakersById get() = context.directory.speakers.associateBy { it.id } + newSpeakers
+    fun speaker(id: String): VisitingSpeaker? = newSpeakers[id] ?: context.directory.speakers.find { it.id == id }
 }
 
 /** Maps `Export_Vortragsplanung` to slots; an existing slot that already has a talk or a speaker stays untouched. */
@@ -79,6 +79,11 @@ private fun slotEntry(row: ImportRow, run: ScheduleRun): PlanEntry<TalkSlot>? {
     }
     val existing = run.existingByDate[date]
     if (existing != null && (existing.talkNumber != null || existing.hasSpeaker)) {
+        // An earlier run may have saved the slot but failed to save its speaker: add the speaker again if it is missing.
+        val speakerId = row.idText(SPEAKER_ID)
+        if (speakerId != null && existing.externalSpeakerId == speakerId && run.speaker(speakerId) == null) {
+            createSpeaker(speakerId, row, run)
+        }
         return PlanEntry(existing, ImportKind.SKIP)
     }
     val imported = buildSlot(row, date, run)
@@ -125,7 +130,7 @@ private fun buildSlot(row: ImportRow, date: LocalDate, run: ScheduleRun): TalkSl
 
 private fun withSpeaker(slot: TalkSlot, row: ImportRow, run: ScheduleRun): TalkSlot {
     val speakerId = row.idText(SPEAKER_ID) ?: return slot
-    val speaker = run.speakersById[speakerId] ?: createSpeaker(speakerId, row, run) ?: return slot
+    val speaker = run.speaker(speakerId) ?: createSpeaker(speakerId, row, run) ?: return slot
     val congregation = run.context.directory.congregations.firstOrNull { it.id == speaker.congregationId }?.name
         ?: row.text(CONGREGATION_NAME)
     return slot.copy(
