@@ -154,4 +154,25 @@ class TalkHistoryViewModelTest {
 
         assertEquals(first, state.selected?.talk)
     }
+
+    @Test
+    fun `groups follow the frequency and the speaker search applies at once`() {
+        history.entries.value = listOf(
+            TalkHistoryEntry(1, listOf(spring, autumn), speakers = mapOf(autumn to "Muster, Max")),
+            TalkHistoryEntry(2, listOf(spring), speakers = mapOf(spring to "Berg, Lea")),
+        )
+        viewModel.onCurrentUserChanged(planner)
+
+        assertEquals(listOf(2, 1), viewModel.uiState.value.groups.map { it.count })
+        assertFalse(viewModel.uiState.value.isSearching)
+
+        viewModel.search("m")
+        assertFalse(viewModel.uiState.value.isSearching)
+        assertTrue(viewModel.uiState.value.speakerResults.isEmpty())
+
+        viewModel.search("mus")
+        assertTrue(viewModel.uiState.value.isSearching)
+        assertEquals(listOf("Muster, Max"), viewModel.uiState.value.speakerResults.map { it.speaker })
+        assertEquals(listOf(1), viewModel.uiState.value.speakerResults.single().talks.map { it.talkNumber })
+    }
 }

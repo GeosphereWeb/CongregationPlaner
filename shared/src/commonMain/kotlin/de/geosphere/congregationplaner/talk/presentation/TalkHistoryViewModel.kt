@@ -27,6 +27,7 @@ data class TalkHistoryUiState(
     val isLoading: Boolean = true,
     val canPlan: Boolean = false,
     val selectedNumber: Int? = null,
+    val query: String = "",
     override val errorMessage: String? = null,
 ) : ListDetailState {
     override val hasDetail: Boolean get() = selected != null
@@ -41,6 +42,14 @@ data class TalkHistoryUiState(
         }
 
     val selected: TalkHistoryRow? get() = rows.firstOrNull { it.talk.number == selectedNumber }
+
+    /** Die Vorträge nach Häufigkeit gruppiert (häufigste zuerst, nie gehaltene zuletzt). */
+    val groups: List<FrequencyGroup> get() = rows.groupedByFrequency()
+
+    /** Ergebnis der Rednersuche; leer, solange die Suche nicht aktiv ist (weniger als zwei Buchstaben). */
+    val speakerResults: List<SpeakerHistory> get() = searchSpeakerHistory(talks, history, query)
+
+    val isSearching: Boolean get() = query.trim().length >= MIN_SEARCH_LENGTH
 }
 
 /** Übersicht, wann welcher Vortrag in der Versammlung gehalten wurde (nur lesend). */
@@ -76,6 +85,11 @@ class TalkHistoryViewModel(
     /** Wählt einen Vortrag über seine Nummer, z. B. beim Wechsel aus der Planung am Wochenende. */
     fun selectTalkNumber(number: Int) {
         mutableUiState.update { it.copy(selectedNumber = number) }
+    }
+
+    /** Sucht Redner nach Namen (ab dem zweiten Buchstaben); die Liste ändert sich sofort. */
+    fun search(query: String) {
+        mutableUiState.update { it.copy(query = query) }
     }
 
     fun closeDetail() {

@@ -7,10 +7,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
@@ -39,6 +41,8 @@ import kotlinx.datetime.LocalDate
 /** Callbacks der Historie; gebündelt, damit die Composables überschaubare Signaturen behalten. */
 internal data class TalkHistoryActions(
     val onSelect: (Talk) -> Unit = {},
+    val onSelectNumber: (Int) -> Unit = {},
+    val onSearch: (String) -> Unit = {},
     val onClose: () -> Unit = {},
     val onDismissError: () -> Unit = {},
 )
@@ -50,6 +54,8 @@ fun TalkHistoryScreen(viewModel: TalkHistoryViewModel, modifier: Modifier = Modi
         state = state,
         actions = TalkHistoryActions(
             onSelect = viewModel::selectTalk,
+            onSelectNumber = viewModel::selectTalkNumber,
+            onSearch = viewModel::search,
             onClose = viewModel::closeDetail,
             onDismissError = viewModel::dismissError,
         ),
@@ -79,6 +85,14 @@ internal fun TalkHistoryContent(state: TalkHistoryUiState, actions: TalkHistoryA
         }
         val neverHeld = state.rows.count { it.entry == null }
         Text("$neverHeld von ${state.rows.size} Vorträgen wurden noch nie gehalten.")
+        OutlinedTextField(
+            value = state.query,
+            onValueChange = actions.onSearch,
+            label = { Text("Redner suchen") },
+            supportingText = { Text("Ab dem zweiten Buchstaben: zeigt seine Vorträge und wann er sie gehalten hat") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
         ListDetailPaneScaffold(
             directive = navigator.scaffoldDirective,
             scaffoldState = navigator.scaffoldState,
@@ -101,19 +115,53 @@ internal fun TalkHistoryContent(state: TalkHistoryUiState, actions: TalkHistoryA
 @Composable
 private fun TalkHistoryList(state: TalkHistoryUiState, actions: TalkHistoryActions) {
     LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (state.isSearching) {
+            speakerResults(state, actions)
+            return@LazyColumn
+        }
         if (state.rows.isEmpty()) item { Text("Noch keine Vorträge in der Liste.") }
-        items(state.rows, key = { it.talk.number }) { row ->
+        state.groups.forEach { group ->
+            item(key = "group-${group.count}") {
+                Text("${group.title} (${group.rows.size})", style = MaterialTheme.typography.titleSmall)
+            }
+            items(group.rows, key = { it.talk.number }) { row ->
+                SelectableListCard(
+                    selected = state.selectedNumber == row.talk.number,
+                    onSelect = { actions.onSelect(row.talk) },
+                    onDelete = {},
+                    actionsEnabled = true,
+                    canDelete = false,
+                ) {
+                    Text("${row.talk.number} – ${row.talk.title}", style = MaterialTheme.typography.titleMedium)
+                    val last = row.entry?.lastHeldOn
+                    Text(if (last == null) "noch nie gehalten" else "zuletzt ${last.toDisplayText()}")
+                }
+            }
+        }
+    }
+}
+
+/** Je gefundenem Redner seine Vorträge mit den Tagen; ein Tipp öffnet den Vortrag. */
+private fun LazyListScope.speakerResults(state: TalkHistoryUiState, actions: TalkHistoryActions) {
+    val results = state.speakerResults
+    if (results.isEmpty()) item { Text("Kein Redner gefunden.") }
+    results.forEach { speaker ->
+        item(key = "speaker-${speaker.speaker}") {
+            Text(speaker.speaker, style = MaterialTheme.typography.titleSmall)
+        }
+        items(speaker.talks, key = { "${speaker.speaker}-${it.talkNumber}" }) { held ->
             SelectableListCard(
-                selected = state.selectedNumber == row.talk.number,
-                onSelect = { actions.onSelect(row.talk) },
+                selected = state.selectedNumber == held.talkNumber,
+                onSelect = { actions.onSelectNumber(held.talkNumber) },
                 onDelete = {},
                 actionsEnabled = true,
                 canDelete = false,
             ) {
-                Text("${row.talk.number} – ${row.talk.title}", style = MaterialTheme.typography.titleMedium)
-                val last = row.entry?.lastHeldOn
-                val count = row.entry?.heldOn?.size
-                Text(if (last == null) "noch nie gehalten" else "zuletzt ${last.toDisplayText()} ($count×)")
+                Text(
+                    "${held.talkNumber} – ${held.talk?.title.orEmpty()}",
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(held.days.joinToString(", ") { it.toDisplayText() })
             }
         }
     }
@@ -157,6 +205,38 @@ private fun TalkHistoryContentPreview() = PreviewThemeWrapper {
             isLoading = false,
             canPlan = true,
             selectedNumber = 1,
+        ),
+        actions = TalkHistoryActions(),
+    )
+}
+
+@ThemePreviews
+@Composable
+private fun TalkHistorySearchPreview() = PreviewThemeWrapper {
+    val talks = listOf(Talk(1, "Beispielvortrag"), Talk(2, "Zweiter Vortrag"), Talk(3, "Noch nie gehalten"))
+    TalkHistoryContent(
+        state = TalkHistoryUiState(
+            talks = talks,
+            history = listOf(
+                TalkHistoryEntry(
+                    1,
+                    listOf(LocalDate(2026, 3, 1), LocalDate(2026, 10, 25)),
+                    speakers = mapOf(
+                        LocalDate(2026, 3, 1) to "Beispiel, Tim (Nord)",
+                        LocalDate(2026, 10, 25) to "Muster, Max",
+                    ),
+                ),
+                TalkHistoryEntry(
+                    2,
+                    listOf(LocalDate(2026, 5, 3)),
+                    speakers = mapOf(
+                        LocalDate(2026, 5, 3) to "Muster, Max",
+                    ),
+                ),
+            ),
+            isLoading = false,
+            canPlan = true,
+            query = "mus",
         ),
         actions = TalkHistoryActions(),
     )
