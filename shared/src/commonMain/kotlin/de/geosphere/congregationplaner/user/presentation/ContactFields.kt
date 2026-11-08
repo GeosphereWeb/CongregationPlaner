@@ -21,6 +21,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.theming.NightColors
+import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
+import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.ui.button.SecondaryButton
 import de.geosphere.congregationplaner.user.domain.model.EmergencyContact
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
@@ -294,4 +296,25 @@ internal fun ProfileField(
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         modifier = modifier,
     )
+}
+
+@ThemePreviews
+@Composable
+private fun ContactFieldsPreview() = PreviewThemeWrapper {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        ContactFields(
+            profile = MemberProfile(
+                mobilePhone = "0171 1234567",
+                emails = listOf("max@example.org", "max@work.example"),
+                street = "Hauptstraße 1",
+                postalCode = "12345",
+                city = "Musterstadt",
+                emergencyContacts = listOf(EmergencyContact("Erika Muster", "Ehefrau", listOf("0171 7654321"))),
+            ),
+            enabled = true,
+            onChange = {},
+        )
+        ContactFields(profile = MemberProfile(), enabled = false, onChange = {
+        }, showAddressAndEmergencyContacts = false)
+    }
 }
