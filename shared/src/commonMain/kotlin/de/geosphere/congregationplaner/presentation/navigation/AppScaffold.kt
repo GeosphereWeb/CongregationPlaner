@@ -36,6 +36,7 @@ import androidx.navigationevent.compose.rememberNavigationEventState
 import androidx.window.core.layout.WindowSizeClass
 import de.geosphere.congregationplaner.home.presentation.HomeContent
 import de.geosphere.congregationplaner.home.presentation.HomeUiState
+import de.geosphere.congregationplaner.importer.ImportSection
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.organization.domain.model.SelectedCongregation
 import de.geosphere.congregationplaner.theming.AppTheme
@@ -153,6 +154,7 @@ private fun SettingsContent(currentUser: AppUser, onSignOut: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             OwnProfileSection(currentUser, Modifier.padding(top = 24.dp).widthIn(max = 480.dp))
+            ImportSection(currentUser, Modifier.padding(top = 32.dp).widthIn(max = 480.dp))
             DataSources(Modifier.padding(top = 32.dp).widthIn(max = 480.dp))
         }
     }
