@@ -160,8 +160,9 @@ class TalkSlotPresentationTest {
     }
 
     @Test
-    fun `title shows the talk number or that nothing is planned`() {
-        assertEquals("Vortrag Nr. 12", slotTitle(slot(block = withTalk)))
+    fun `title shows the talk number and topic or that nothing is planned`() {
+        assertEquals("Vortrag Nr. 12 – Der Weg zum Glück", slotTitle(slot(block = withTalk)))
+        assertEquals("Vortrag Nr. 12", slotTitle(slot { it.copy(talkNumber = 12, talkTitle = null) }))
         assertEquals("Noch nicht geplant", slotTitle(slot()))
     }
 
