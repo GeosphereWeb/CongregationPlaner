@@ -66,6 +66,8 @@ internal data class ExternalDirectoryActions(
     val onDeleteCongregation: (ExternalCongregation) -> Unit = {},
     val onDeleteSpeaker: (VisitingSpeaker) -> Unit = {},
     val onDismissError: () -> Unit = {},
+    val onFilterCircuit: (String?) -> Unit = {},
+    val onFilterCongregation: (String?) -> Unit = {},
 )
 
 @Composable
@@ -88,6 +90,8 @@ fun ExternalDirectoryScreen(viewModel: ExternalDirectoryViewModel, modifier: Mod
             onDeleteCongregation = viewModel::delete,
             onDeleteSpeaker = viewModel::delete,
             onDismissError = viewModel::dismissError,
+            onFilterCircuit = viewModel::filterByCircuit,
+            onFilterCongregation = viewModel::filterByCongregation,
         ),
         modifier = modifier,
     )
@@ -137,7 +141,10 @@ internal fun ExternalDirectoryContent(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 listPane = {
                     AnimatedPane {
-                        ExternalDirectoryTree(state, actions, isBusy) { deleteRequest = it }
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            DirectoryFilterBar(state, actions)
+                            ExternalDirectoryTree(state, actions, isBusy) { deleteRequest = it }
+                        }
                     }
                 },
                 detailPane = {
@@ -198,10 +205,14 @@ private fun ExternalDirectoryTree(
     isBusy: Boolean,
     onRequestDelete: (DeleteRequest) -> Unit,
 ) {
-    val directory = state.directory
+    val directory = state.visibleDirectory
     val editor = state.editor
     LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (directory.circuits.isEmpty()) item { Text("Noch keine Kreise angelegt.") }
+        if (directory.circuits.isEmpty()) {
+            item {
+                Text(if (state.filter.isActive) "Keine Einträge für diesen Filter." else "Noch keine Kreise angelegt.")
+            }
+        }
         directory.circuits.forEach { circuit ->
             stickyHeader(key = "circuit-${circuit.id}") {
                 SelectableListCard(
@@ -262,6 +273,57 @@ private fun ExternalDirectoryTree(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+/** Filter nach Kreis und Versammlung; die Auswahl gilt sofort. Ohne Kreis stehen alle Versammlungen zur Wahl. */
+@Composable
+private fun DirectoryFilterBar(state: ExternalDirectoryUiState, actions: ExternalDirectoryActions) {
+    val directory = state.directory
+    if (directory.circuits.isEmpty()) return
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        FilterMenu(
+            "Kreis",
+            directory.circuitOptions(),
+            state.filter.circuitId,
+            actions.onFilterCircuit,
+            Modifier.weight(1f),
+        )
+        FilterMenu(
+            "Versammlung",
+            directory.congregationOptions(state.filter.circuitId),
+            state.filter.congregationId,
+            actions.onFilterCongregation,
+            Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun FilterMenu(
+    title: String,
+    options: List<FilterOption>,
+    selectedId: String?,
+    onSelect: (String?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Column(modifier) {
+        Text(title, style = MaterialTheme.typography.labelMedium)
+        OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
+            Text(options.firstOrNull { it.id == selectedId }?.label ?: options.first().label, maxLines = 1)
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option.label) },
+                    onClick = {
+                        onSelect(option.id)
+                        expanded = false
+                    },
+                )
             }
         }
     }
@@ -450,4 +512,28 @@ private fun ExternalDirectoryContentPreview() = PreviewThemeWrapper {
         ),
         actions = ExternalDirectoryActions(),
     )
+}
+
+@ThemePreviews
+@Composable
+private fun ExternalDirectoryFilteredPreview() = PreviewThemeWrapper {
+    val north = ExternalCircuit("c1", "Kreis Nord")
+    val south = ExternalCircuit("c2", "Kreis Süd")
+    val musterstadt = ExternalCongregation("g1", "c1", "Musterstadt")
+    val zell = ExternalCongregation("g2", "c2", "Zell")
+    val tim = VisitingSpeaker(id = "s1", congregationId = "g1", lastName = "Beispiel", firstName = "Tim")
+    val eva = VisitingSpeaker(id = "s2", congregationId = "g2", lastName = "Muster", firstName = "Eva")
+    val directory = ExternalDirectory(listOf(north, south), listOf(musterstadt, zell), listOf(tim, eva))
+    Column {
+        // Nur die Versammlung gewählt: der Kreis steht auf „Alle“, die Liste zeigt nur Zell.
+        ExternalDirectoryContent(
+            state = ExternalDirectoryUiState(
+                directory = directory,
+                filter = DirectoryFilter(congregationId = "g2"),
+                isLoading = false,
+                canPlan = true,
+            ),
+            actions = ExternalDirectoryActions(),
+        )
+    }
 }
