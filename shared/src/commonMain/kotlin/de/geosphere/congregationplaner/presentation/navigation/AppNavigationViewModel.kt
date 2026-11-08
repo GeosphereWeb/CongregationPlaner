@@ -16,7 +16,9 @@ data class AppNavigationState(
     val destination: TopLevelDestination = TopLevelDestination.HOME,
     val congregationSection: CongregationSection? = null,
     val globalSection: GlobalSection? = null,
-    /** Der Vortrag, der in der Vortragshistorie vorausgewählt ist, solange man von der Planung dorthin gewechselt ist. */
+    /**
+     * Der Vortrag, der in der Vortragshistorie vorausgewählt ist, solange man von der Planung dorthin gewechselt ist.
+     */
     val historyTalkNumber: Int? = null,
 ) {
     /** Zurück führt vom Unterbereich zur Übersicht und von dort zu Home; auf Home gibt es nichts mehr. */

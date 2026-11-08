@@ -60,7 +60,8 @@ private fun Modifier.bleed(end: Dp, bottom: Dp): Modifier = layout { measurable,
 
 /**
  * Detailbereich einer Listen-/Detailansicht. Auf großen Fenstern (Liste sichtbar) liegt er auf `SurfaceDetail` mit
- * 28 × 32 dp Innenabstand und ragt rechts und unten über den Seitenrand bis an den Fensterrand; auf dem Handy ([showBack]) erscheint oben „Zurück zur Liste“, weil die Liste verdeckt ist.
+ * 28 × 32 dp Innenabstand und ragt rechts und unten über den Seitenrand bis an den Fensterrand; auf dem Handy
+ * ([showBack]) erscheint oben „Zurück zur Liste“, weil die Liste verdeckt ist.
  */
 @Composable
 fun DetailPane(

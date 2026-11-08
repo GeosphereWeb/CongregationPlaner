@@ -65,7 +65,8 @@ class DeleteTalkHistoryEntryUseCase(
 
 /**
  * Hält die Vortragshistorie zu einem gespeicherten oder gelöschten Termin aktuell: Der Tag des Termins wird beim
- * Vortrag des Termins als geplanter Tag mit seinem Redner eingetragen und beim Vortrag des bisherigen Termins ([previous]) entfernt, wenn sich Vortrag
+ * Vortrag des Termins als geplanter Tag mit seinem Redner eingetragen und beim Vortrag des bisherigen Termins
+ * ([previous]) entfernt, wenn sich Vortrag
  * oder Tag geändert haben, der Termin gelöscht oder der Vortrag abgesagt wurde. Ein Vortrag ohne Tage verliert
  * seinen Eintrag. [current] ist `null`, wenn der Termin gelöscht wurde, [previous] `null` bei einem neuen Termin.
  */

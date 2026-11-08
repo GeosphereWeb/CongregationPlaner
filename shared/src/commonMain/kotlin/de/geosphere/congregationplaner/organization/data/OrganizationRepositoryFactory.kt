@@ -67,7 +67,9 @@ internal class KeyValueCongregationSelectionStore(private val storage: KeyValueS
     }
 }
 
-/** Fallback, falls die Plattform keinen dauerhaften Speicher bereitstellt; die Auswahl gilt dann nur bis zum Neustart. */
+/**
+ * Fallback, falls die Plattform keinen dauerhaften Speicher bereitstellt; die Auswahl gilt dann nur bis zum Neustart.
+ */
 internal class InMemoryKeyValueStorage : KeyValueStorage {
     private val values = mutableMapOf<String, String>()
 
