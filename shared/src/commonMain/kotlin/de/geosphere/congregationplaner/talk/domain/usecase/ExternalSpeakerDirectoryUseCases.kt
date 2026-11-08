@@ -100,13 +100,15 @@ class SaveVisitingSpeakerUseCase(
         val cleaned = speaker.copy(
             lastName = speaker.lastName.trim(),
             firstName = speaker.firstName.trim(),
-            phone = speaker.phone.trim(),
+            mobilePhone = speaker.mobilePhone.trim(),
+            landlinePhone = speaker.landlinePhone.trim(),
             email = speaker.email.trim(),
             talkNumbers = speaker.talkNumbers.distinct().sorted(),
         )
         val valid = cleaned.lastName.isNotEmpty() &&
             maxOf(cleaned.lastName.length, cleaned.firstName.length) <= MAX_NAME &&
-            cleaned.phone.length <= VisitingSpeaker.MAX_PHONE_LENGTH &&
+            maxOf(cleaned.mobilePhone.length, cleaned.landlinePhone.length) <= VisitingSpeaker.MAX_PHONE_LENGTH &&
+            cleaned.ranking in 0..VisitingSpeaker.MAX_RANKING &&
             cleaned.email.length <= VisitingSpeaker.MAX_EMAIL_LENGTH &&
             cleaned.talkNumbers.size <= VisitingSpeaker.MAX_TALKS &&
             cleaned.talkNumbers.all { it in 1..Talk.MAX_NUMBER } &&

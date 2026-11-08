@@ -12,3 +12,9 @@ data class ImportError(val row: Int, val message: String)
 data class ImportPlan<T>(val entries: List<PlanEntry<T>>, val errors: List<ImportError>) {
     fun count(kind: ImportKind): Int = entries.count { it.kind == kind }
 }
+
+internal fun <T> kindFor(current: T?, wanted: T): ImportKind = when (current) {
+    null -> ImportKind.CREATE
+    wanted -> ImportKind.SKIP
+    else -> ImportKind.UPDATE
+}

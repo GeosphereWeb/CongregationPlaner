@@ -6,9 +6,11 @@ import de.geosphere.congregationplaner.firestore.FirestoreRestClient
 import de.geosphere.congregationplaner.firestore.FirestoreRestDocument
 import de.geosphere.congregationplaner.firestore.firestoreFields
 import de.geosphere.congregationplaner.firestore.firestoreIntegerArray
+import de.geosphere.congregationplaner.firestore.firestoreNullableInteger
 import de.geosphere.congregationplaner.firestore.firestoreString
 import de.geosphere.congregationplaner.firestore.intArrayField
 import de.geosphere.congregationplaner.firestore.listAllDocuments
+import de.geosphere.congregationplaner.firestore.optionalIntField
 import de.geosphere.congregationplaner.firestore.optionalStringField
 import de.geosphere.congregationplaner.firestore.parseDocument
 import de.geosphere.congregationplaner.firestore.pollingFlow
@@ -71,9 +73,11 @@ internal class FirestoreRestExternalSpeakerDirectoryRepository(
             add("congregationId", firestoreString(speaker.congregationId))
             add("lastName", firestoreString(speaker.lastName))
             add("firstName", firestoreString(speaker.firstName))
-            add("phone", firestoreString(speaker.phone))
+            add("mobilePhone", firestoreString(speaker.mobilePhone))
+            add("landlinePhone", firestoreString(speaker.landlinePhone))
             add("email", firestoreString(speaker.email))
             add("talkNumbers", firestoreIntegerArray(speaker.talkNumbers))
+            add("ranking", firestoreNullableInteger(speaker.ranking))
         },
     ) { speaker.copy(id = it) }
 
@@ -106,8 +110,10 @@ internal class FirestoreRestExternalSpeakerDirectoryRepository(
         congregationId = fields.optionalStringField("congregationId").orEmpty(),
         lastName = fields.optionalStringField("lastName").orEmpty(),
         firstName = fields.optionalStringField("firstName").orEmpty(),
-        phone = fields.optionalStringField("phone").orEmpty(),
+        mobilePhone = fields.optionalStringField("mobilePhone").orEmpty(),
+        landlinePhone = fields.optionalStringField("landlinePhone").orEmpty(),
         email = fields.optionalStringField("email").orEmpty(),
         talkNumbers = fields.intArrayField("talkNumbers"),
+        ranking = fields.optionalIntField("ranking") ?: 0,
     )
 }

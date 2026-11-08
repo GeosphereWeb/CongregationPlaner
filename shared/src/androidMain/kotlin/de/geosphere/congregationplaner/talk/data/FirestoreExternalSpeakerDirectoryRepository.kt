@@ -43,11 +43,13 @@ internal class FirestoreExternalSpeakerDirectoryRepository(private val firestore
             congregationId = it.getString("congregationId").orEmpty(),
             lastName = it.getString("lastName").orEmpty(),
             firstName = it.getString("firstName").orEmpty(),
-            phone = it.getString("phone").orEmpty(),
+            mobilePhone = it.getString("mobilePhone").orEmpty(),
+            landlinePhone = it.getString("landlinePhone").orEmpty(),
             email = it.getString("email").orEmpty(),
             talkNumbers = (it.get("talkNumbers") as? List<*>).orEmpty().mapNotNull { number ->
                 (number as? Number)?.toInt()
             },
+            ranking = it.getLong("ranking")?.toInt() ?: 0,
         )
     }
 
@@ -72,9 +74,11 @@ internal class FirestoreExternalSpeakerDirectoryRepository(private val firestore
             "congregationId" to speaker.congregationId,
             "lastName" to speaker.lastName,
             "firstName" to speaker.firstName,
-            "phone" to speaker.phone,
+            "mobilePhone" to speaker.mobilePhone,
+            "landlinePhone" to speaker.landlinePhone,
             "email" to speaker.email,
             "talkNumbers" to speaker.talkNumbers,
+            "ranking" to speaker.ranking,
         ),
     ) { speaker.copy(id = it) }
 
