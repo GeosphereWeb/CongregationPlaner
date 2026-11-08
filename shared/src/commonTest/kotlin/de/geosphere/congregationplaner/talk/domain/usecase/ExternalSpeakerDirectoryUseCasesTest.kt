@@ -101,14 +101,24 @@ class ExternalSpeakerDirectoryUseCasesTest {
                 congregationId = "g1",
                 lastName = " Neu ",
                 firstName = " Nina ",
-                phone = " 0170 ",
+                mobilePhone = " 0170 ",
+                landlinePhone = " 08092 ",
                 email = " nina@example.org ",
                 talkNumbers = listOf(45, 12, 45),
             ),
         ).getOrThrow()
 
         assertEquals(
-            VisitingSpeaker("s-1", "g1", "Neu", "Nina", "0170", "nina@example.org", listOf(12, 45)),
+            VisitingSpeaker(
+                "s-1",
+                "g1",
+                "Neu",
+                "Nina",
+                "0170",
+                "08092",
+                "nina@example.org",
+                listOf(12, 45),
+            ),
             saved,
         )
     }
@@ -132,7 +142,10 @@ class ExternalSpeakerDirectoryUseCasesTest {
             valid.copy(lastName = " "),
             valid.copy(congregationId = "unknown"),
             valid.copy(lastName = "x".repeat(VisitingSpeaker.MAX_NAME_LENGTH + 1)),
-            valid.copy(phone = "1".repeat(VisitingSpeaker.MAX_PHONE_LENGTH + 1)),
+            valid.copy(mobilePhone = "1".repeat(VisitingSpeaker.MAX_PHONE_LENGTH + 1)),
+            valid.copy(landlinePhone = "1".repeat(VisitingSpeaker.MAX_PHONE_LENGTH + 1)),
+            valid.copy(ranking = -1),
+            valid.copy(ranking = VisitingSpeaker.MAX_RANKING + 1),
             valid.copy(email = "e".repeat(VisitingSpeaker.MAX_EMAIL_LENGTH + 1)),
             valid.copy(talkNumbers = listOf(0)),
             valid.copy(talkNumbers = listOf(10_000)),

@@ -14,21 +14,25 @@ data class ExternalCongregation(val id: String = "", val circuitId: String, val 
  * Ein Redner einer [ExternalCongregation] (`…/visitingSpeakers/{id}`), der für die Vortragsplanung zur Verfügung steht.
  *
  * @param talkNumbers Nummern der Vorträge aus der Vortragsliste, die der Redner hält.
+ * @param ranking Bewertung des Redners in Sternen, 0 (nicht bewertet) bis [MAX_RANKING].
  */
 data class VisitingSpeaker(
     val id: String = "",
     val congregationId: String,
     val lastName: String,
     val firstName: String = "",
-    val phone: String = "",
+    val mobilePhone: String = "",
+    val landlinePhone: String = "",
     val email: String = "",
     val talkNumbers: List<Int> = emptyList(),
+    val ranking: Int = 0,
 ) {
     companion object {
         const val MAX_NAME_LENGTH = 100
         const val MAX_PHONE_LENGTH = 30
         const val MAX_EMAIL_LENGTH = 200
         const val MAX_TALKS = 200
+        const val MAX_RANKING = 5
     }
 }
 
@@ -56,8 +60,9 @@ sealed class ExternalDirectoryException(message: String) : Exception(message) {
     class InvalidSpeaker :
         ExternalDirectoryException(
             "Der Redner ist ungültig: Familienname und Versammlung erforderlich, Namen mit höchstens " +
-                "${VisitingSpeaker.MAX_NAME_LENGTH} Zeichen, Telefon bis ${VisitingSpeaker.MAX_PHONE_LENGTH} und " +
-                "E-Mail bis ${VisitingSpeaker.MAX_EMAIL_LENGTH} Zeichen.",
+                "${VisitingSpeaker.MAX_NAME_LENGTH} Zeichen, Telefonnummern bis " +
+                "${VisitingSpeaker.MAX_PHONE_LENGTH} und E-Mail bis ${VisitingSpeaker.MAX_EMAIL_LENGTH} Zeichen, " +
+                "Bewertung 0 bis ${VisitingSpeaker.MAX_RANKING}.",
         )
 
     class CircuitNotEmpty : ExternalDirectoryException("Der Kreis hat noch Versammlungen. Entferne sie zuerst.")
