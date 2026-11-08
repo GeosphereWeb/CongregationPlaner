@@ -18,7 +18,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
@@ -49,6 +48,7 @@ import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.ui.button.SecondaryButton
 import de.geosphere.congregationplaner.ui.button.SpeedDialFab
 import de.geosphere.congregationplaner.ui.button.SpeedDialItem
+import de.geosphere.congregationplaner.ui.field.AppSwitch
 import de.geosphere.congregationplaner.ui.nav.NavCardRow
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
@@ -287,7 +287,7 @@ private fun MemberAccessCard(member: AppUser, isBusy: Boolean, actions: UserMana
                 modifier = Modifier.weight(1f),
                 color = NightColors.OnBackgroundBody,
             )
-            Switch(
+            AppSwitch(
                 checked = member.approved,
                 onCheckedChange = { actions.onApprovedChange(member, it) },
                 enabled = actions.canEdit(member) && !isBusy,
