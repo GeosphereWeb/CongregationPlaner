@@ -131,3 +131,6 @@ detekt {
 //    allRules = false
     ignoreFailures = false
 }
+
+// Generated resource accessors are not ours to fix.
+tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach { exclude("**/generated/**") }
