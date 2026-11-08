@@ -145,4 +145,24 @@ class TalkScheduleImportTest {
         val skipped = slots.copy(entries = slots.entries.map { it.copy(kind = ImportKind.SKIP) })
         assertTrue(planTalkHistory(skipped, emptyList()).entries.isEmpty())
     }
+
+    @Test
+    fun skippedSlotStillGetsItsMissingScheduleOnlySpeakerOnRepeat() {
+        val first = planTalkSchedule(table(full(speaker = "99", talk = "45")), context())
+        val saved = first.slots.entries.map { it.item }
+
+        val again = planTalkSchedule(table(full(speaker = "99", talk = "45")), context(saved))
+
+        assertEquals(listOf(ImportKind.SKIP), again.slots.entries.map { it.kind })
+        assertEquals(listOf("99"), again.newSpeakers.map { it.id })
+    }
+
+    @Test
+    fun skippedSlotDoesNotRecreateASpeakerThatAlreadyExists() {
+        val saved = planTalkSchedule(table(full()), context()).slots.entries.map { it.item }
+
+        val again = planTalkSchedule(table(full()), context(saved))
+
+        assertEquals(emptyList(), again.newSpeakers)
+    }
 }
