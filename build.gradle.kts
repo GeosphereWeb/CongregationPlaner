@@ -66,6 +66,10 @@ val sonarExclusions = listOf(
     "**/ContactFields.kt",
     "**/TalkDateInput.kt",
     "**/NewCongregationScreen.kt",
+    // Import: Swing-Dateidialog braucht ein Display, ImportGraph ist reine DI-Verdrahtung, Android hat nur den Stub
+    "**/SwingImportFileSource.kt",
+    "**/ImportGraph.kt",
+    "**/AndroidImportFileSource.kt",
     // Exclude theming and ui modules from coverage
     "theming/**",
     "ui/**"
