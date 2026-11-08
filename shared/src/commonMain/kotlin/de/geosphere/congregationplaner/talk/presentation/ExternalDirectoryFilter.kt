@@ -1,52 +1,82 @@
 package de.geosphere.congregationplaner.talk.presentation
 
-import de.geosphere.congregationplaner.talk.domain.model.ExternalCongregation
 import de.geosphere.congregationplaner.talk.domain.model.ExternalDirectory
 
-/** The filter of the speaker list; `null` means "all". An ID that no longer exists is ignored. */
-data class DirectoryFilter(val circuitId: String? = null, val congregationId: String? = null) {
-    val isActive: Boolean get() = circuitId != null || congregationId != null
+/** The name search of the congregation filter starts with this many letters. */
+internal const val MIN_SEARCH_LENGTH = 2
+
+/**
+ * The filter of the speaker list. An empty set means "all"; several IDs show everything that belongs to any of them.
+ * IDs that no longer exist are ignored.
+ */
+data class DirectoryFilter(val circuitIds: Set<String> = emptySet(), val congregationIds: Set<String> = emptySet()) {
+    val isActive: Boolean get() = circuitIds.isNotEmpty() || congregationIds.isNotEmpty()
 }
 
-/** One entry of a filter menu; [id] `null` is the "all" entry. */
-data class FilterOption(val id: String?, val label: String)
+/** One entry of a filter menu. */
+data class FilterOption(val id: String, val label: String, val selected: Boolean = false)
 
-/** The directory reduced to the chosen circuit and/or congregation, with its circuits, congregations and speakers. */
+/** The directory reduced to the chosen circuits and congregations, with their circuits, congregations and speakers. */
 internal fun ExternalDirectory.filtered(filter: DirectoryFilter): ExternalDirectory {
-    val congregation = congregations.firstOrNull { it.id == filter.congregationId }
-    val circuitId = circuits.firstOrNull { it.id == filter.circuitId }?.id ?: congregation?.circuitId
+    val chosenCircuits = circuits.map { it.id }.filter { it in filter.circuitIds }.toSet()
+    val chosenCongregations = congregations.filter { it.id in filter.congregationIds }
     val shownCongregations = congregations.filter {
-        (circuitId == null || it.circuitId == circuitId) && (congregation == null || it.id == congregation.id)
+        (chosenCircuits.isEmpty() || it.circuitId in chosenCircuits) &&
+            (chosenCongregations.isEmpty() || chosenCongregations.any { chosen -> chosen.id == it.id })
+    }
+    val shownCircuitIds = when {
+        chosenCircuits.isNotEmpty() -> chosenCircuits
+        chosenCongregations.isNotEmpty() -> chosenCongregations.map { it.circuitId }.toSet()
+        else -> circuits.map { it.id }.toSet()
     }
     val shownIds = shownCongregations.map { it.id }.toSet()
     return ExternalDirectory(
-        circuits = circuits.filter { circuitId == null || it.id == circuitId },
+        circuits = circuits.filter { it.id in shownCircuitIds },
         congregations = shownCongregations,
         speakers = speakers.filter { it.congregationId in shownIds },
     )
 }
 
-/** "Alle Kreise" plus every circuit. */
-internal fun ExternalDirectory.circuitOptions(): List<FilterOption> =
-    listOf(FilterOption(null, "Alle Kreise")) + circuits.map { FilterOption(it.id, it.name) }
+/** Every circuit, marked if chosen. */
+internal fun ExternalDirectory.circuitOptions(filter: DirectoryFilter): List<FilterOption> =
+    circuits.map { FilterOption(it.id, it.name, it.id in filter.circuitIds) }
 
 /**
- * "Alle Versammlungen" plus the congregations of the chosen circuit, or all congregations if no circuit is chosen. In
- * that case the label names the circuit, because congregation names can occur in several circuits.
+ * The congregations to choose from: those of the chosen circuits, or all if no circuit is chosen (then the label names
+ * the circuit, because congregation names can occur in several circuits). A [query] of at least [MIN_SEARCH_LENGTH]
+ * letters narrows them to names containing it; chosen congregations stay in the list so they can be unchecked.
  */
-internal fun ExternalDirectory.congregationOptions(circuitId: String?): List<FilterOption> {
-    val circuitKnown = circuits.any { it.id == circuitId }
-    val shown: List<ExternalCongregation> =
-        if (circuitKnown) congregations.filter { it.circuitId == circuitId } else congregations
+internal fun ExternalDirectory.congregationOptions(filter: DirectoryFilter, query: String): List<FilterOption> {
+    val circuitKnown = circuits.any { it.id in filter.circuitIds }
     val circuitNames = circuits.associate { it.id to it.name }
-    return listOf(FilterOption(null, "Alle Versammlungen")) + shown.map {
-        FilterOption(it.id, if (circuitKnown) it.name else "${it.name} (${circuitNames[it.circuitId].orEmpty()})")
-    }
+    val search = query.trim().takeIf { it.length >= MIN_SEARCH_LENGTH }
+    return congregations
+        .filter { !circuitKnown || it.circuitId in filter.circuitIds }
+        .filter { search == null || it.name.contains(search, ignoreCase = true) || it.id in filter.congregationIds }
+        .map {
+            val label = if (circuitKnown) it.name else "${it.name} (${circuitNames[it.circuitId].orEmpty()})"
+            FilterOption(it.id, label, it.id in filter.congregationIds)
+        }
 }
 
-/** The filter after choosing a circuit: a chosen congregation of another circuit is dropped. */
-internal fun DirectoryFilter.withCircuit(directory: ExternalDirectory, circuitId: String?): DirectoryFilter {
-    val congregation = directory.congregations.firstOrNull { it.id == congregationId }
-    val keep = circuitId == null || congregation?.circuitId == circuitId
-    return DirectoryFilter(circuitId, congregationId.takeIf { keep })
+/** Text of a filter button: "Alle …", the single choice, or the number of choices. */
+internal fun filterSummary(selectedLabels: List<String>, allLabel: String, pluralLabel: String): String =
+    when (selectedLabels.size) {
+        0 -> allLabel
+        1 -> selectedLabels.single()
+        else -> "${selectedLabels.size} $pluralLabel gewählt"
+    }
+
+/** The filter after (un)checking a circuit: chosen congregations that belong to none of the chosen circuits go. */
+internal fun DirectoryFilter.toggleCircuit(directory: ExternalDirectory, circuitId: String): DirectoryFilter {
+    val circuits = circuitIds.toggled(circuitId)
+    val kept = congregationIds.filter { id ->
+        circuits.isEmpty() || directory.congregations.firstOrNull { it.id == id }?.circuitId in circuits
+    }
+    return DirectoryFilter(circuits, kept.toSet())
 }
+
+internal fun DirectoryFilter.toggleCongregation(congregationId: String) =
+    copy(congregationIds = congregationIds.toggled(congregationId))
+
+private fun Set<String>.toggled(id: String): Set<String> = if (id in this) this - id else this + id
