@@ -34,7 +34,8 @@ import de.geosphere.congregationplaner.theming.ThemePreviews
 /**
  * Listeneintrag einer Listen-/Detailansicht: hervorgehoben, wenn [selected], und mit Löschen-Icon rechts,
  * sofern [canDelete]; mit [onEdit] steht davor ein Bearbeiten-Icon (wenn ein Tipp auf den Eintrag etwas anderes
- * tut). [accent] färbt einen Streifen links, z. B. je Ebene einer Hierarchie. Die Aktionen stehen neben dem Inhalt, damit die Einträge niedrig bleiben. Der fachliche Inhalt kommt aus
+ * tut). [accent] färbt einen Streifen links, z. B. je Ebene einer Hierarchie. Die Aktionen stehen neben dem Inhalt,
+ * damit die Einträge niedrig bleiben. Der fachliche Inhalt kommt aus
  * [content].
  */
 @Composable

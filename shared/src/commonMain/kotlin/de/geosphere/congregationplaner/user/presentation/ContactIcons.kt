@@ -18,7 +18,8 @@ internal fun phoneKindIcon(phone: String): ImageVector = when (phoneKind(phone))
 // Smartphone und Telefonhörer aus den Material Icons (Apache 2.0).
 internal val smartphoneIcon = vectorIcon(
     "smartphone",
-    "M17,1.01L7,1c-1.1,0 -2,0.9 -2,2v18c0,1.1 0.9,2 2,2h10c1.1,0 2,-0.9 2,-2V3c0,-1.1 -0.9,-1.99 -2,-1.99zM17,19H7V5h10v14z",
+    "M17,1.01L7,1c-1.1,0 -2,0.9 -2,2v18c0,1.1 0.9,2 2,2h10c1.1,0 2,-0.9 2,-2V3c0,-1.1 -0.9,-1.99 -2,-1.99z" +
+        "M17,19H7V5h10v14z",
 )
 
 internal val callIcon = vectorIcon(

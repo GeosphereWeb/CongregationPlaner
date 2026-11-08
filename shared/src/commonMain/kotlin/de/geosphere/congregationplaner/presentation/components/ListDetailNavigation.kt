@@ -54,7 +54,8 @@ internal fun rememberListDetailNavigation(
     // Nach erfolgreichem Speichern zurück zur Liste, wenn diese sonst verdeckt wäre
     var wasSaving by remember { mutableStateOf(false) }
     LaunchedEffect(isSaving) {
-        if (wasSaving && !isSaving && !hasError && singlePane) onClose()
+        val saveFinished = wasSaving && !isSaving
+        if (saveFinished && !hasError && singlePane) onClose()
         wasSaving = isSaving
     }
     return navigator

@@ -26,7 +26,9 @@ internal object InviteLinkCodec {
             .cipher(tagSize = 128.bits)
     }
 
-    /** Liefert den URL-sicheren Text für [path]; der Nonce ist zufällig, daher ergibt jeder Aufruf einen anderen Text. */
+    /**
+     * Liefert den URL-sicheren Text für [path]; der Nonce ist zufällig, daher ergibt jeder Aufruf einen anderen Text.
+     */
     fun encrypt(path: String): String = base64.encode(cipher.encryptBlocking(path.encodeToByteArray(), associatedData))
 
     /** Liefert den Pfad zu [token] oder `null`, wenn der Text nicht von der App erzeugt wurde. */
