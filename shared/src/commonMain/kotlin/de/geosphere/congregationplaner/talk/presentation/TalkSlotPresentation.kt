@@ -81,7 +81,10 @@ internal fun slotChip(slot: TalkSlot, status: SlotStatus): SlotChip = when (stat
  */
 internal fun slotEventLine(slot: TalkSlot): String? = slot.weekEventName?.takeUnless { slot.talkCancelled }
 
-internal fun slotTitle(slot: TalkSlot): String = slot.talkNumber?.let { "Vortrag Nr. $it" } ?: "Noch nicht geplant"
+/** „Vortrag Nr. 12 – Thema“ (wie auf der Startseite); ohne gespeichertes Thema nur die Nummer. */
+internal fun slotTitle(slot: TalkSlot): String = slot.talkNumber?.let { number ->
+    slot.talkTitle?.takeIf { it.isNotBlank() }?.let { "Vortrag Nr. $number – $it" } ?: "Vortrag Nr. $number"
+} ?: "Noch nicht geplant"
 
 /** Redner mit Herkunft: „Muster, Max · eigene Versammlung“, „Extern, Eva · Gast aus Nord“ oder „Redner noch offen“. */
 internal fun slotSpeakerLine(slot: TalkSlot): String {
