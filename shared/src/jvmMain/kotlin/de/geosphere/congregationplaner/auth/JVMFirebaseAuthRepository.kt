@@ -202,7 +202,7 @@ internal fun buildDesktopAuthUrl(
     configuredHost: String?,
     configuredPort: String?,
 ): String {
-    val host = configuredHost ?: DEFAULT_FIREBASE_AUTH_EMULATOR_HOST
+    val host = configuredHost ?: DEFAULT_EMULATOR_HOST
     val normalizedHost = host
         .removePrefix("http://")
         .removePrefix("https://")
@@ -211,7 +211,7 @@ internal fun buildDesktopAuthUrl(
             if (':' in host.substringAfterLast('/')) {
                 host
             } else {
-                val port = configuredPort ?: DEFAULT_FIREBASE_AUTH_EMULATOR_PORT
+                val port = configuredPort ?: DEFAULT_EMULATOR_PORT
                 "$host:$port"
             }
         }
@@ -219,8 +219,8 @@ internal fun buildDesktopAuthUrl(
     return "http://$normalizedHost/identitytoolkit.googleapis.com/v1/$endpoint?key=$apiKey"
 }
 
-private const val DEFAULT_FIREBASE_AUTH_EMULATOR_HOST = "127.0.0.1:9099"
-private const val DEFAULT_FIREBASE_AUTH_EMULATOR_PORT = "9099"
+private const val DEFAULT_EMULATOR_HOST = "127.0.0.1:9099"
+private const val DEFAULT_EMULATOR_PORT = "9099"
 
 private fun resolveDesktopApiKey(): String? = DesktopEnv.getValue(
     "FIREBASE_WEB_API_KEY",
