@@ -24,6 +24,9 @@ data class ImportReport(
     val skipped: Int = 0,
     val failures: List<String> = emptyList(),
 ) {
+    val description: String
+        get() = "$created angelegt, $updated geändert, $skipped unverändert, ${failures.size} Fehler"
+
     operator fun plus(other: ImportReport) = ImportReport(
         created + other.created,
         updated + other.updated,
