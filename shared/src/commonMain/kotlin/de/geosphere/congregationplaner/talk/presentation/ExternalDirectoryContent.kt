@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -66,8 +67,11 @@ internal data class ExternalDirectoryActions(
     val onDeleteCongregation: (ExternalCongregation) -> Unit = {},
     val onDeleteSpeaker: (VisitingSpeaker) -> Unit = {},
     val onDismissError: () -> Unit = {},
-    val onFilterCircuit: (String?) -> Unit = {},
-    val onFilterCongregation: (String?) -> Unit = {},
+    val onToggleCircuit: (String) -> Unit = {},
+    val onClearCircuits: () -> Unit = {},
+    val onToggleCongregation: (String) -> Unit = {},
+    val onClearCongregations: () -> Unit = {},
+    val onSearchCongregations: (String) -> Unit = {},
 )
 
 @Composable
@@ -90,8 +94,11 @@ fun ExternalDirectoryScreen(viewModel: ExternalDirectoryViewModel, modifier: Mod
             onDeleteCongregation = viewModel::delete,
             onDeleteSpeaker = viewModel::delete,
             onDismissError = viewModel::dismissError,
-            onFilterCircuit = viewModel::filterByCircuit,
-            onFilterCongregation = viewModel::filterByCongregation,
+            onToggleCircuit = viewModel::toggleCircuitFilter,
+            onClearCircuits = viewModel::clearCircuitFilter,
+            onToggleCongregation = viewModel::toggleCongregationFilter,
+            onClearCongregations = viewModel::clearCongregationFilter,
+            onSearchCongregations = viewModel::searchCongregations,
         ),
         modifier = modifier,
     )
@@ -278,51 +285,76 @@ private fun ExternalDirectoryTree(
     }
 }
 
-/** Filter nach Kreis und Versammlung; die Auswahl gilt sofort. Ohne Kreis stehen alle Versammlungen zur Wahl. */
+/**
+ * Filter nach Kreisen und Versammlungen (je mehrere wählbar); jede Auswahl gilt sofort. Ohne Kreis stehen alle
+ * Versammlungen zur Wahl; die Suche grenzt sie ab dem zweiten Buchstaben ein.
+ */
 @Composable
 private fun DirectoryFilterBar(state: ExternalDirectoryUiState, actions: ExternalDirectoryActions) {
     val directory = state.directory
     if (directory.circuits.isEmpty()) return
+    val circuits = directory.circuitOptions(state.filter)
+    val congregations = directory.congregationOptions(state.filter, state.congregationQuery)
+    val chosenCongregations = directory.congregationOptions(state.filter, "").filter { it.selected }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
         FilterMenu(
-            "Kreis",
-            directory.circuitOptions(),
-            state.filter.circuitId,
-            actions.onFilterCircuit,
-            Modifier.weight(1f),
+            title = "Kreis",
+            summary = filterSummary(circuits.filter { it.selected }.map { it.label }, "Alle Kreise", "Kreise"),
+            options = circuits,
+            actions = FilterMenuActions(actions.onToggleCircuit, actions.onClearCircuits, "Alle Kreise"),
+            modifier = Modifier.weight(1f),
         )
         FilterMenu(
-            "Versammlung",
-            directory.congregationOptions(state.filter.circuitId),
-            state.filter.congregationId,
-            actions.onFilterCongregation,
-            Modifier.weight(1f),
+            title = "Versammlung",
+            summary = filterSummary(chosenCongregations.map { it.label }, "Alle Versammlungen", "Versammlungen"),
+            options = congregations,
+            actions = FilterMenuActions(
+                actions.onToggleCongregation,
+                actions.onClearCongregations,
+                "Alle Versammlungen",
+            ),
+            query = state.congregationQuery,
+            onQueryChange = actions.onSearchCongregations,
+            modifier = Modifier.weight(1f),
         )
     }
 }
 
+private class FilterMenuActions(val onToggle: (String) -> Unit, val onClear: () -> Unit, val clearLabel: String)
+
+/** Auswahlfeld mit Häkchen je Eintrag; das Menü bleibt offen, damit man mehrere wählen kann. */
 @Composable
 private fun FilterMenu(
     title: String,
+    summary: String,
     options: List<FilterOption>,
-    selectedId: String?,
-    onSelect: (String?) -> Unit,
+    actions: FilterMenuActions,
     modifier: Modifier = Modifier,
+    query: String? = null,
+    onQueryChange: (String) -> Unit = {},
 ) {
     var expanded by remember { mutableStateOf(false) }
     Column(modifier) {
         Text(title, style = MaterialTheme.typography.labelMedium)
-        OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
-            Text(options.firstOrNull { it.id == selectedId }?.label ?: options.first().label, maxLines = 1)
-        }
+        OutlinedButton(onClick = {
+            expanded = true
+        }, modifier = Modifier.fillMaxWidth()) { Text(summary, maxLines = 1) }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            if (query != null) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    label = { Text("Name suchen") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                )
+            }
+            DropdownMenuItem(text = { Text(actions.clearLabel) }, onClick = actions.onClear)
             options.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(option.label) },
-                    onClick = {
-                        onSelect(option.id)
-                        expanded = false
-                    },
+                    leadingIcon = { Checkbox(checked = option.selected, onCheckedChange = null) },
+                    onClick = { actions.onToggle(option.id) },
                 )
             }
         }
@@ -529,7 +561,8 @@ private fun ExternalDirectoryFilteredPreview() = PreviewThemeWrapper {
         ExternalDirectoryContent(
             state = ExternalDirectoryUiState(
                 directory = directory,
-                filter = DirectoryFilter(congregationId = "g2"),
+                filter = DirectoryFilter(congregationIds = setOf("g2")),
+                congregationQuery = "ze",
                 isLoading = false,
                 canPlan = true,
             ),

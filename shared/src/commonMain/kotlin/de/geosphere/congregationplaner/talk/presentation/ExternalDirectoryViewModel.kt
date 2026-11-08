@@ -90,6 +90,7 @@ data class ExternalDirectoryUiState(
     override val isSaving: Boolean = false,
     val isDeleting: Boolean = false,
     val filter: DirectoryFilter = DirectoryFilter(),
+    val congregationQuery: String = "",
     override val errorMessage: String? = null,
 ) : ListDetailState {
     override val hasDetail: Boolean get() = editor != null
@@ -168,14 +169,27 @@ class ExternalDirectoryViewModel(
         }
     }
 
-    /** Filtert sofort auf den Kreis; `null` zeigt alle. Eine gewählte Versammlung eines anderen Kreises entfällt. */
-    fun filterByCircuit(circuitId: String?) {
-        mutableUiState.update { it.copy(filter = it.filter.withCircuit(it.directory, circuitId)) }
+    /** Wählt einen Kreis an oder ab; die Liste ändert sich sofort. Versammlungen anderer Kreise entfallen. */
+    fun toggleCircuitFilter(circuitId: String) {
+        mutableUiState.update { it.copy(filter = it.filter.toggleCircuit(it.directory, circuitId)) }
     }
 
-    /** Filtert sofort auf die Versammlung; `null` zeigt alle. Der gewählte Kreis bleibt unverändert. */
-    fun filterByCongregation(congregationId: String?) {
-        mutableUiState.update { it.copy(filter = it.filter.copy(congregationId = congregationId)) }
+    /** Wählt eine Versammlung an oder ab; die Liste ändert sich sofort. */
+    fun toggleCongregationFilter(congregationId: String) {
+        mutableUiState.update { it.copy(filter = it.filter.toggleCongregation(congregationId)) }
+    }
+
+    fun clearCircuitFilter() {
+        mutableUiState.update { it.copy(filter = it.filter.copy(circuitIds = emptySet())) }
+    }
+
+    fun clearCongregationFilter() {
+        mutableUiState.update { it.copy(filter = it.filter.copy(congregationIds = emptySet()), congregationQuery = "") }
+    }
+
+    /** Die Suche nach dem Namen einer Versammlung; sie grenzt die Auswahl ab dem zweiten Buchstaben ein. */
+    fun searchCongregations(query: String) {
+        mutableUiState.update { it.copy(congregationQuery = query) }
     }
 
     fun dismissError() {
