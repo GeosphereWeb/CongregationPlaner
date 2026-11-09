@@ -253,9 +253,9 @@ internal fun TalkScheduleContent(
                                             onDelete = { actions.onDelete(slot) },
                                             actionsEnabled = !state.isSaving,
                                             canDelete = true,
-                                            highlighted = isCurrentWeek(slot.date, today),
+                                            highlight = slotHighlight(slot, today),
                                         ) {
-                                            SlotSummary(slot, slotChip(slot, slotStatus(slot, nextDate)))
+                                            SlotSummary(slot, listSlotChip(slot, slotStatus(slot, nextDate)))
                                         }
                                     }
                                 }
@@ -405,7 +405,7 @@ private fun Modifier.monthHeader(): Modifier =
 
 /** Datumsblock, Vortrag und Redner mit Herkunft sowie die Statusmarke. */
 @Composable
-private fun SlotSummary(slot: TalkSlot, chip: SlotChip) {
+private fun SlotSummary(slot: TalkSlot, chip: SlotChip?) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         DateBadge(germanWeekdayName(slot.date).take(WEEKDAY_SHORT_LENGTH), slot.date.day.toString())
         Column(Modifier.weight(1f)) {
@@ -419,7 +419,7 @@ private fun SlotSummary(slot: TalkSlot, chip: SlotChip) {
                 Text(event, style = MaterialTheme.typography.bodySmall, color = StatusTone.Sky.content)
             }
         }
-        StatusChip(chip.text, chip.tone)
+        chip?.let { StatusChip(it.text, it.tone) }
     }
 }
 

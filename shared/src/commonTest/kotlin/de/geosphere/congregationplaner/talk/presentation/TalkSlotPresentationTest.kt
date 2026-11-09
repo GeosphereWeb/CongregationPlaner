@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner.talk.presentation
 
+import de.geosphere.congregationplaner.presentation.components.CardHighlight
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.ui.chip.StatusTone
 import kotlinx.datetime.LocalDate
@@ -163,8 +164,8 @@ class TalkSlotPresentationTest {
 
     @Test
     fun `title shows the talk number and topic or that nothing is planned`() {
-        assertEquals("Vortrag Nr. 12 – Der Weg zum Glück", slotTitle(slot(block = withTalk)))
-        assertEquals("Vortrag Nr. 12", slotTitle(slot { it.copy(talkNumber = 12, talkTitle = null) }))
+        assertEquals("Nr. 12 – Der Weg zum Glück", slotTitle(slot(block = withTalk)))
+        assertEquals("Nr. 12", slotTitle(slot { it.copy(talkNumber = 12, talkTitle = null) }))
         assertEquals("Noch nicht geplant", slotTitle(slot()))
     }
 
@@ -201,6 +202,33 @@ class TalkSlotPresentationTest {
         assertTrue(isCurrentWeek(LocalDate(2026, 11, 8), wednesday))
         assertFalse(isCurrentWeek(LocalDate(2026, 11, 1), wednesday))
         assertFalse(isCurrentWeek(LocalDate(2026, 11, 9), wednesday))
+    }
+
+    @Test
+    fun `highlight marks the current week blue and upcoming unplanned slots red`() {
+        val wednesday = LocalDate(2026, 11, 4)
+        val thisWeek = slot(LocalDate(2026, 11, 8))
+        val laterUnplanned = slot(LocalDate(2026, 11, 15))
+        val laterPlanned = slot(LocalDate(2026, 11, 22), withMember)
+        val pastUnplanned = slot(LocalDate(2026, 10, 25))
+        val laterCancelled = slot(LocalDate(2026, 11, 29)) { it.copy(talkCancelled = true) }
+
+        // The current week wins even when the slot is not planned yet.
+        assertEquals(CardHighlight.Info, slotHighlight(thisWeek, wednesday))
+        assertEquals(CardHighlight.Warning, slotHighlight(laterUnplanned, wednesday))
+        assertEquals(CardHighlight.None, slotHighlight(laterPlanned, wednesday))
+        assertEquals(CardHighlight.None, slotHighlight(pastUnplanned, wednesday))
+        assertEquals(CardHighlight.None, slotHighlight(laterCancelled, wednesday))
+    }
+
+    @Test
+    fun `the list shows no chip for a planned slot but keeps the others`() {
+        val s = slot()
+
+        assertNull(listSlotChip(s, SlotStatus.PLANNED))
+        assertEquals(SlotChip("Informiert", StatusTone.Mint), listSlotChip(s, SlotStatus.INFORMED))
+        assertEquals(SlotChip("Nicht geplant", StatusTone.Coral), listSlotChip(s, SlotStatus.NOT_PLANNED))
+        assertEquals(SlotChip("Nächster", StatusTone.Gold), listSlotChip(s, SlotStatus.NEXT))
     }
 
     @Test
