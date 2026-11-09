@@ -244,6 +244,7 @@ internal fun TalkScheduleContent(
                                             onDelete = { actions.onDelete(slot) },
                                             actionsEnabled = !state.isSaving,
                                             canDelete = true,
+                                            highlighted = isCurrentWeek(slot.date, today),
                                         ) {
                                             SlotSummary(slot, slotChip(slot, slotStatus(slot, nextDate)))
                                         }

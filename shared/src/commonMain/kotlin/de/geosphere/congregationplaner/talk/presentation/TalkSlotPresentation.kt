@@ -5,6 +5,7 @@ import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.upcomingTalkSlots
 import de.geosphere.congregationplaner.ui.chip.StatusTone
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.isoDayNumber
 
 /**
  * Wo ein Termin der Vortragsplanung steht; bestimmt die Marke in der Liste und im Detail. Vortrag und Redner werden
@@ -53,6 +54,11 @@ internal data class SlotChip(val text: String, val tone: StatusTone)
 /** Der erste Termin ab [today], an dem ein Vortrag gehalten wird; abgesagte Termine zählen nicht. */
 internal fun nextSlotDate(slots: List<TalkSlot>, today: LocalDate): LocalDate? =
     slots.upcomingTalkSlots(today).firstOrNull()?.date
+
+/** True, wenn [date] in derselben Woche (Montag bis Sonntag) wie [today] liegt. */
+internal fun isCurrentWeek(date: LocalDate, today: LocalDate): Boolean = weekStartDays(date) == weekStartDays(today)
+
+private fun weekStartDays(date: LocalDate): Long = date.toEpochDays() - (date.dayOfWeek.isoDayNumber - 1)
 
 /**
  * Reihenfolge der Prüfung: abgesagt, nächster Termin, dann nach Vollständigkeit. „Nächster“ gilt damit nur für einen

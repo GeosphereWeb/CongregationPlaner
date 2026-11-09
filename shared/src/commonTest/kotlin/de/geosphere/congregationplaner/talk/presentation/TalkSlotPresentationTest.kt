@@ -6,7 +6,9 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class TalkSlotPresentationTest {
     private val today = LocalDate(2026, 11, 1)
@@ -189,5 +191,15 @@ class TalkSlotPresentationTest {
     @Test
     fun `headline has day and month and year`() {
         assertEquals("1. November 2026", slotDateHeadline(LocalDate(2026, 11, 1)))
+    }
+
+    @Test
+    fun `current week runs from monday to sunday around today`() {
+        val wednesday = LocalDate(2026, 11, 4)
+
+        assertTrue(isCurrentWeek(LocalDate(2026, 11, 2), wednesday))
+        assertTrue(isCurrentWeek(LocalDate(2026, 11, 8), wednesday))
+        assertFalse(isCurrentWeek(LocalDate(2026, 11, 1), wednesday))
+        assertFalse(isCurrentWeek(LocalDate(2026, 11, 9), wednesday))
     }
 }
