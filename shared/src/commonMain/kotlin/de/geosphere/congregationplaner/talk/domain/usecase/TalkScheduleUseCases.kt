@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
 
 /** Beobachtet die Termine des Jahres in der Versammlung des Nutzers; ohne Versammlung gibt es keine. */
 @Inject
@@ -118,6 +119,35 @@ class CreateYearSlotsUseCase(
         val slots = datesOfWeekdayIn(year, times.weekendWeekday).map { TalkSlot(date = it, time = times.weekendTime) }
         return repository.createMissingSlots(congregation, slots)
             .map { created -> YearSlotsResult(created = created, alreadyExisting = slots.size - created) }
+    }
+}
+
+/**
+ * Setzt die Uhrzeit aller Termine des Jahres auf [time]; alle übrigen Felder der Termine bleiben unverändert.
+ * Termine, die schon diese Uhrzeit haben, werden nicht geschrieben. Liefert die Zahl der geänderten Termine.
+ * Schlägt ein Schreiben fehl, bricht die Änderung ab; bereits geänderte Termine behalten die neue Uhrzeit.
+ */
+@Inject
+class ChangeYearSlotTimesUseCase(
+    private val repository: TalkScheduleRepository,
+    private val policy: TalkSchedulePermissionPolicy,
+) {
+    suspend operator fun invoke(user: AppUser, year: Int, time: LocalTime): Result<Int> {
+        val congregation = user.congregation
+        if (congregation == null || !policy.canPlanTalks(user)) {
+            return Result.failure(TalkScheduleException.NotAllowed())
+        }
+        val outdated = try {
+            repository.observeYear(congregation, year).first().filter { it.time != time }
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (@Suppress("TooGenericExceptionCaught") exception: Exception) {
+            return Result.failure(exception)
+        }
+        outdated.forEach { slot ->
+            repository.saveSlot(congregation, slot.copy(time = time)).onFailure { return Result.failure(it) }
+        }
+        return Result.success(outdated.size)
     }
 }
 

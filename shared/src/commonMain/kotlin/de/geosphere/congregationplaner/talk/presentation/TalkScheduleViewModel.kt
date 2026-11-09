@@ -13,6 +13,7 @@ import de.geosphere.congregationplaner.talk.domain.model.TalkScheduleException
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
+import de.geosphere.congregationplaner.talk.domain.usecase.ChangeYearSlotTimesUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.CreateYearSlotsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.MoveTalkSlotUseCase
@@ -33,6 +34,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 import kotlin.time.Clock
@@ -60,6 +62,8 @@ data class TalkScheduleUiState(
     val editor: TalkSlotEditorState? = null,
     /** `true`, solange die Rückfrage zu „Jahr anlegen“ offen ist. */
     val confirmCreateYear: Boolean = false,
+    /** Die im Dialog „Uhrzeit ändern“ gewählte Uhrzeit; `null`, solange der Dialog zu ist. */
+    val yearTimeDialog: LocalTime? = null,
     val infoMessage: String? = null,
     override val errorMessage: String? = null,
     override val isSaving: Boolean = false,
@@ -77,6 +81,7 @@ class TalkScheduleViewModel(
     private val loadExternalSpeakers: ObserveExternalSpeakersUseCase,
     private val moveSlot: MoveTalkSlotUseCase,
     private val createYearSlots: CreateYearSlotsUseCase,
+    private val changeYearTimes: ChangeYearSlotTimesUseCase,
     private val deleteSlot: DeleteTalkSlotUseCase,
     private val syncHistory: SyncTalkHistoryWithSlotUseCase,
     private val permissionPolicy: TalkSchedulePermissionPolicy,
@@ -272,6 +277,40 @@ class TalkScheduleViewModel(
         }
     }
 
+    /** Öffnet den Dialog mit der häufigsten Uhrzeit des Jahres; geändert wird erst nach [changeYearTime]. */
+    fun askChangeYearTime() {
+        val state = mutableUiState.value
+        if (state.isSaving || !checkAllowed()) return
+        val initial = commonSlotTime(state.slots) ?: DEFAULT_YEAR_TIME
+        mutableUiState.update { it.copy(yearTimeDialog = initial, errorMessage = null, infoMessage = null) }
+    }
+
+    fun selectYearTime(time: LocalTime) {
+        mutableUiState.update { if (it.yearTimeDialog == null) it else it.copy(yearTimeDialog = time) }
+    }
+
+    fun dismissYearTime() {
+        mutableUiState.update { it.copy(yearTimeDialog = null) }
+    }
+
+    /** Setzt die gewählte Uhrzeit bei allen Terminen des gewählten Jahres. */
+    fun changeYearTime() {
+        val state = mutableUiState.value
+        val time = state.yearTimeDialog ?: return
+        if (state.isSaving || !checkAllowed()) return
+        val user = currentUser ?: return
+        val year = state.year
+        mutableUiState.update { it.copy(yearTimeDialog = null, isSaving = true, errorMessage = null) }
+        viewModelScope.launch {
+            changeYearTimes(user, year, time)
+                .onSuccess { changed ->
+                    mutableUiState.update {
+                        it.copy(isSaving = false, infoMessage = yearTimeMessage(year, changed, time))
+                    }
+                }.onFailure { exception -> fail(exception, "Uhrzeit konnte nicht geändert werden.") }
+        }
+    }
+
     fun dismissInfo() {
         mutableUiState.update { it.copy(infoMessage = null) }
     }
@@ -416,5 +455,6 @@ class TalkScheduleViewModel(
     private companion object {
         const val MISSING_PERMISSION_MESSAGE = "Dafür fehlt dir die Berechtigung."
         const val MEMBERS_NAME = "Redner und Vorsitzende"
+        val DEFAULT_YEAR_TIME = LocalTime(10, 0)
     }
 }

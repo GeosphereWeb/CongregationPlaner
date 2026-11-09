@@ -13,6 +13,7 @@ import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
+import de.geosphere.congregationplaner.talk.domain.usecase.ChangeYearSlotTimesUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.CreateYearSlotsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.MoveTalkSlotUseCase
@@ -149,6 +150,7 @@ class TalkScheduleViewModelTest {
             ObserveExternalSpeakersUseCase(ObserveExternalDirectoryUseCase(externals)),
             MoveTalkSlotUseCase(save, delete),
             CreateYearSlotsUseCase(repository, congregations, policy),
+            ChangeYearSlotTimesUseCase(repository, policy),
             delete,
             SyncTalkHistoryWithSlotUseCase(history, policy),
             policy,
@@ -224,6 +226,61 @@ class TalkScheduleViewModelTest {
 
         assertFalse(state.confirmCreateYear)
         assertTrue(repository.createdSlots.isEmpty())
+        assertEquals("Dafür fehlt dir die Berechtigung.", state.errorMessage)
+    }
+
+    @Test
+    fun `changing the year time asks first and then sets the time on all slots`() {
+        viewModel.onCurrentUserChanged(planner)
+
+        viewModel.askChangeYearTime()
+
+        // The dialog starts with the most common time of the year.
+        assertEquals(LocalTime(17, 30), state.yearTimeDialog)
+        assertTrue(repository.savedSlots.isEmpty())
+
+        viewModel.selectYearTime(LocalTime(9, 30))
+        viewModel.changeYearTime()
+
+        assertNull(state.yearTimeDialog)
+        assertFalse(state.isSaving)
+        assertEquals(listOf(october25, november1).map { it.copy(time = LocalTime(9, 30)) }, repository.savedSlots)
+        assertEquals("Uhrzeit von 2 Terminen in 2026 auf 09:30 Uhr geändert.", state.infoMessage)
+    }
+
+    @Test
+    fun `dismissing the year time dialog changes nothing`() {
+        viewModel.onCurrentUserChanged(planner)
+        viewModel.askChangeYearTime()
+
+        viewModel.dismissYearTime()
+        viewModel.changeYearTime()
+
+        assertNull(state.yearTimeDialog)
+        assertTrue(repository.savedSlots.isEmpty())
+    }
+
+    @Test
+    fun `changing the year time shows the error`() {
+        viewModel.onCurrentUserChanged(planner)
+        repository.saveResult = Result.failure(IllegalStateException("denied"))
+
+        viewModel.askChangeYearTime()
+        viewModel.selectYearTime(LocalTime(9, 30))
+        viewModel.changeYearTime()
+
+        assertEquals("denied", state.errorMessage)
+        assertNull(state.infoMessage)
+        assertFalse(state.isSaving)
+    }
+
+    @Test
+    fun `changing the year time is not possible without the permission to plan`() {
+        viewModel.onCurrentUserChanged(member)
+
+        viewModel.askChangeYearTime()
+
+        assertNull(state.yearTimeDialog)
         assertEquals("Dafür fehlt dir die Berechtigung.", state.errorMessage)
     }
 
