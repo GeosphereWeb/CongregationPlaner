@@ -1,16 +1,14 @@
-package de.geosphere.congregationplaner.presentation.components
+package de.geosphere.congregationplaner.ui.list
 
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertFalse
-import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
-class HeaderVisibilityTest {
+class CollapsingHeaderColumnTest {
     @Test
     fun scrollingListUpHidesHeader() = assertFalse(nextHeaderVisible(current = true, scrollDeltaY = -5f))
 
@@ -54,7 +52,4 @@ class HeaderVisibilityTest {
         state.showWhenAtListStart(flowOf(false, true))
         assertTrue(state.visible)
     }
-
-    @Test
-    fun scrollModifierIsAttached() = assertNotEquals(Modifier, Modifier.collapsingHeaderScroll(CollapsingHeaderState()))
 }

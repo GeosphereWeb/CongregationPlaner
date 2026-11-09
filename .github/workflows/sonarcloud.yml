@@ -58,7 +58,7 @@ jobs:
           fi
 
           # Schritt 1: Nur die Tests ausführen
-          ./gradlew :shared:jvmTest :shared:testAndroidHostTest --no-daemon --info
+          ./gradlew :shared:jvmTest :shared:testAndroidHostTest :uilib:jvmTest --no-daemon --info
 
           # Schritt 2: Modulberichte getrennt erzeugen; Sonar importiert sie direkt.
           ./gradlew :shared:koverXmlReport :androidApp:koverXmlReport :desktopApp:koverXmlReport --no-daemon --info

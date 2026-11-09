@@ -30,13 +30,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import de.geosphere.congregationplaner.presentation.components.CollapsingHeader
 import de.geosphere.congregationplaner.presentation.components.DetailPane
 import de.geosphere.congregationplaner.presentation.components.DetailPlaceholder
 import de.geosphere.congregationplaner.presentation.components.ListPaneHeader
 import de.geosphere.congregationplaner.presentation.components.SelectableListCard
-import de.geosphere.congregationplaner.presentation.components.collapsingHeaderScroll
-import de.geosphere.congregationplaner.presentation.components.rememberCollapsingHeaderState
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkHistoryEntry
@@ -44,6 +41,7 @@ import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.theming.nightCardColors
 import de.geosphere.congregationplaner.ui.field.AppSwitch
+import de.geosphere.congregationplaner.ui.list.CollapsingHeaderColumn
 import kotlinx.datetime.LocalDate
 
 /** Callbacks der Historie; gebündelt, damit die Composables überschaubare Signaturen behalten. */
@@ -78,9 +76,8 @@ fun TalkHistoryScreen(viewModel: TalkHistoryViewModel, modifier: Modifier = Modi
 internal fun TalkHistoryContent(state: TalkHistoryUiState, actions: TalkHistoryActions, modifier: Modifier = Modifier) {
     val navigator = rememberListDetailNavigation(state, onClose = actions.onClose)
     val listState = rememberLazyListState()
-    val header = rememberCollapsingHeaderState(listState)
     Column(
-        modifier = modifier.fillMaxSize().collapsingHeaderScroll(header).padding(16.dp),
+        modifier = modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         ListPaneHeader("Vortragshistorie")
@@ -98,23 +95,30 @@ internal fun TalkHistoryContent(state: TalkHistoryUiState, actions: TalkHistoryA
             CircularProgressIndicator()
             return@Column
         }
-        CollapsingHeader(visible = header.visible || state.isSearching) { TalkHistoryHeader(state, actions) }
-        ListDetailPaneScaffold(
-            directive = navigator.scaffoldDirective,
-            scaffoldState = navigator.scaffoldState,
+        CollapsingHeaderColumn(
+            listState = listState,
+            header = { TalkHistoryHeader(state, actions) },
+            forceVisible = state.isSearching,
             modifier = Modifier.weight(1f).fillMaxWidth(),
-            listPane = { AnimatedPane { TalkHistoryList(state, actions, listState) } },
-            detailPane = {
-                AnimatedPane {
-                    DetailPane(
-                        showBack = navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Hidden,
-                        onBack = actions.onClose,
-                    ) {
-                        TalkHistoryDetail(state.selected)
+        ) {
+            ListDetailPaneScaffold(
+                directive = navigator.scaffoldDirective,
+                scaffoldState = navigator.scaffoldState,
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                listPane = { AnimatedPane { TalkHistoryList(state, actions, listState) } },
+                detailPane = {
+                    AnimatedPane {
+                        DetailPane(
+                            showBack = navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] ==
+                                PaneAdaptedValue.Hidden,
+                            onBack = actions.onClose,
+                        ) {
+                            TalkHistoryDetail(state.selected)
+                        }
                     }
-                }
-            },
-        )
+                },
+            )
+        }
     }
 }
 
