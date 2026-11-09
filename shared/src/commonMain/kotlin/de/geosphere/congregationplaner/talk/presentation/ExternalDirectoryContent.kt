@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -37,10 +39,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import de.geosphere.congregationplaner.presentation.components.CollapsingHeader
 import de.geosphere.congregationplaner.presentation.components.DetailPane
 import de.geosphere.congregationplaner.presentation.components.DetailPlaceholder
 import de.geosphere.congregationplaner.presentation.components.ListPaneHeader
 import de.geosphere.congregationplaner.presentation.components.SelectableListCard
+import de.geosphere.congregationplaner.presentation.components.collapsingHeaderScroll
+import de.geosphere.congregationplaner.presentation.components.rememberCollapsingHeaderState
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCircuit
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCongregation
@@ -124,9 +129,14 @@ internal fun ExternalDirectoryContent(
     val isBusy = state.isSaving || state.isDeleting
     val navigator = rememberListDetailNavigation(state, onClose = actions.onClose)
     val singlePane = navigator.scaffoldDirective.maxHorizontalPartitions == 1
+    val listState = rememberLazyListState()
+    val header = rememberCollapsingHeaderState(listState)
 
     Box(modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(
+            Modifier.fillMaxSize().collapsingHeaderScroll(header).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             ListPaneHeader("Externe Redner")
             if (!state.canPlan) {
                 Text("Dafür fehlt dir die Berechtigung.")
@@ -149,8 +159,8 @@ internal fun ExternalDirectoryContent(
                 listPane = {
                     AnimatedPane {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            DirectoryFilterBar(state, actions)
-                            ExternalDirectoryTree(state, actions, isBusy) { deleteRequest = it }
+                            CollapsingHeader(visible = header.visible) { DirectoryFilterBar(state, actions) }
+                            ExternalDirectoryTree(state, actions, isBusy, listState) { deleteRequest = it }
                         }
                     }
                 },
@@ -210,11 +220,16 @@ private fun ExternalDirectoryTree(
     state: ExternalDirectoryUiState,
     actions: ExternalDirectoryActions,
     isBusy: Boolean,
+    listState: LazyListState,
     onRequestDelete: (DeleteRequest) -> Unit,
 ) {
     val directory = state.visibleDirectory
     val editor = state.editor
-    LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         if (directory.circuits.isEmpty()) {
             item {
                 Text(if (state.filter.isActive) "Keine Einträge für diesen Filter." else "Noch keine Kreise angelegt.")

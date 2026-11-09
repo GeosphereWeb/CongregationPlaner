@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -28,10 +30,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import de.geosphere.congregationplaner.presentation.components.CollapsingHeader
 import de.geosphere.congregationplaner.presentation.components.DetailPane
 import de.geosphere.congregationplaner.presentation.components.DetailPlaceholder
 import de.geosphere.congregationplaner.presentation.components.ListPaneHeader
 import de.geosphere.congregationplaner.presentation.components.SelectableListCard
+import de.geosphere.congregationplaner.presentation.components.collapsingHeaderScroll
+import de.geosphere.congregationplaner.presentation.components.rememberCollapsingHeaderState
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkHistoryEntry
@@ -72,7 +77,12 @@ fun TalkHistoryScreen(viewModel: TalkHistoryViewModel, modifier: Modifier = Modi
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 internal fun TalkHistoryContent(state: TalkHistoryUiState, actions: TalkHistoryActions, modifier: Modifier = Modifier) {
     val navigator = rememberListDetailNavigation(state, onClose = actions.onClose)
-    Column(modifier = modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    val listState = rememberLazyListState()
+    val header = rememberCollapsingHeaderState(listState)
+    Column(
+        modifier = modifier.fillMaxSize().collapsingHeaderScroll(header).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         ListPaneHeader("Vortragshistorie")
         if (!state.canPlan) {
             Text("Dafür fehlt dir die Berechtigung.")
@@ -88,25 +98,12 @@ internal fun TalkHistoryContent(state: TalkHistoryUiState, actions: TalkHistoryA
             CircularProgressIndicator()
             return@Column
         }
-        val neverHeld = state.rows.count { it.entry == null }
-        Text("$neverHeld von ${state.rows.size} Vorträgen wurden noch nie gehalten.")
-        OutlinedTextField(
-            value = state.query,
-            onValueChange = actions.onSearch,
-            label = { Text("Redner suchen") },
-            supportingText = { Text("Ab dem zweiten Buchstaben: zeigt seine Vorträge und wann er sie gehalten hat") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            AppSwitch(checked = state.groupByFrequency, onCheckedChange = actions.onGroupByFrequency)
-            Text("Nach Häufigkeit gruppieren")
-        }
+        CollapsingHeader(visible = header.visible || state.isSearching) { TalkHistoryHeader(state, actions) }
         ListDetailPaneScaffold(
             directive = navigator.scaffoldDirective,
             scaffoldState = navigator.scaffoldState,
             modifier = Modifier.weight(1f).fillMaxWidth(),
-            listPane = { AnimatedPane { TalkHistoryList(state, actions) } },
+            listPane = { AnimatedPane { TalkHistoryList(state, actions, listState) } },
             detailPane = {
                 AnimatedPane {
                     DetailPane(
@@ -122,9 +119,33 @@ internal fun TalkHistoryContent(state: TalkHistoryUiState, actions: TalkHistoryA
 }
 
 @Composable
+private fun TalkHistoryHeader(state: TalkHistoryUiState, actions: TalkHistoryActions) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        val neverHeld = state.rows.count { it.entry == null }
+        Text("$neverHeld von ${state.rows.size} Vorträgen wurden noch nie gehalten.")
+        OutlinedTextField(
+            value = state.query,
+            onValueChange = actions.onSearch,
+            label = { Text("Redner suchen") },
+            supportingText = { Text("Ab dem zweiten Buchstaben: zeigt seine Vorträge und wann er sie gehalten hat") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            AppSwitch(checked = state.groupByFrequency, onCheckedChange = actions.onGroupByFrequency)
+            Text("Nach Häufigkeit gruppieren")
+        }
+    }
+}
+
+@Composable
 @OptIn(ExperimentalFoundationApi::class)
-private fun TalkHistoryList(state: TalkHistoryUiState, actions: TalkHistoryActions) {
-    LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+private fun TalkHistoryList(state: TalkHistoryUiState, actions: TalkHistoryActions, listState: LazyListState) {
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         if (state.isSearching) {
             speakerResults(state, actions)
             return@LazyColumn

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
@@ -40,10 +41,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.addPathNodes
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.geosphere.congregationplaner.presentation.components.CollapsingHeader
 import de.geosphere.congregationplaner.presentation.components.DetailPane
 import de.geosphere.congregationplaner.presentation.components.DetailPlaceholder
 import de.geosphere.congregationplaner.presentation.components.ListPaneHeader
 import de.geosphere.congregationplaner.presentation.components.SelectableListCard
+import de.geosphere.congregationplaner.presentation.components.collapsingHeaderScroll
+import de.geosphere.congregationplaner.presentation.components.rememberCollapsingHeaderState
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.presentation.navigation.germanWeekdayName
 import de.geosphere.congregationplaner.talk.domain.model.Chairman
@@ -142,8 +146,13 @@ internal fun TalkScheduleContent(
     val singlePane = navigator.scaffoldDirective.maxHorizontalPartitions == 1
     val onCancelEditing = if (singlePane) actions.onCancelEditing else actions.onDiscardChanges
     val nextDate = nextSlotDate(state.slots, today)
+    val listState = rememberLazyListState()
+    val header = rememberCollapsingHeaderState(listState)
 
-    Column(modifier = modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(
+        modifier = modifier.fillMaxSize().collapsingHeaderScroll(header).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         ListPaneHeader(
             title = "Planung am Wochenende",
             subtitle = state.year.toString(),
@@ -176,7 +185,9 @@ internal fun TalkScheduleContent(
             return@Column
         }
 
-        StatusFilterRow(state.slots, state.statusFilter, actions.onToggleStatusFilter)
+        CollapsingHeader(visible = header.visible) {
+            StatusFilterRow(state.slots, state.statusFilter, actions.onToggleStatusFilter)
+        }
         val visibleSlots = filterSlots(state.slots, state.statusFilter)
 
         ListDetailPaneScaffold(
@@ -187,6 +198,7 @@ internal fun TalkScheduleContent(
                 AnimatedPane {
                     Box(Modifier.fillMaxSize()) {
                         LazyColumn(
+                            state = listState,
                             modifier = Modifier.fillMaxSize(),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             // Platz unter dem letzten Termin, damit der FAB ihn nicht verdeckt.
