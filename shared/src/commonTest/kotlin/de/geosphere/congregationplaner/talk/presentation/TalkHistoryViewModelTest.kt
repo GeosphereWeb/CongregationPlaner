@@ -76,6 +76,19 @@ class TalkHistoryViewModelTest {
     }
 
     @Test
+    fun `the list is sorted by number and grouping is off until switched on`() {
+        val unsorted = TalkHistoryUiState(talks = listOf(Talk(3, "C"), Talk(1, "A"), Talk(2, "B")))
+
+        assertEquals(listOf(1, 2, 3), unsorted.rows.map { it.talk.number })
+        assertFalse(unsorted.groupByFrequency)
+
+        viewModel.setGroupByFrequency(true)
+        assertTrue(state.groupByFrequency)
+        viewModel.setGroupByFrequency(false)
+        assertFalse(state.groupByFrequency)
+    }
+
+    @Test
     fun `other users do not load anything`() {
         viewModel.onCurrentUserChanged(member)
         viewModel.selectTalk(first)
