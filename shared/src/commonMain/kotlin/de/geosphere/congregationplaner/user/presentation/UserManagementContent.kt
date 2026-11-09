@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
@@ -38,9 +39,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
+import de.geosphere.congregationplaner.presentation.components.CollapsingHeader
 import de.geosphere.congregationplaner.presentation.components.DetailPane
 import de.geosphere.congregationplaner.presentation.components.DetailPlaceholder
 import de.geosphere.congregationplaner.presentation.components.ListPaneHeader
+import de.geosphere.congregationplaner.presentation.components.collapsingHeaderScroll
+import de.geosphere.congregationplaner.presentation.components.rememberCollapsingHeaderState
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
@@ -112,8 +116,13 @@ internal fun UserManagementContent(
     val navigator = rememberListDetailNavigation(state, onClose = actions.onCancelEditing)
     val singlePane = navigator.scaffoldDirective.maxHorizontalPartitions == 1
     val onCancelEditing = if (singlePane) actions.onCancelEditing else actions.onDiscardChanges
+    val listState = rememberLazyListState()
+    val header = rememberCollapsingHeaderState(listState)
 
-    Column(modifier = modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(
+        modifier = modifier.fillMaxSize().collapsingHeaderScroll(header).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         ListPaneHeader("Userverwaltung")
         if (!state.canManage) {
             Text("Dafür fehlt dir die Berechtigung.")
@@ -132,6 +141,8 @@ internal fun UserManagementContent(
             return@Column
         }
 
+        state.inviteLink?.let { link -> CollapsingHeader(visible = header.visible) { InviteLinkCard(link) } }
+
         ListDetailPaneScaffold(
             directive = navigator.scaffoldDirective,
             scaffoldState = navigator.scaffoldState,
@@ -140,12 +151,12 @@ internal fun UserManagementContent(
                 AnimatedPane {
                     Box(Modifier.fillMaxSize()) {
                         LazyColumn(
+                            state = listState,
                             modifier = Modifier.fillMaxSize(),
                             verticalArrangement = Arrangement.spacedBy(10.dp),
                             // Platz unter dem letzten Mitglied, damit der FAB es nicht verdeckt.
                             contentPadding = PaddingValues(bottom = FAB_CLEARANCE),
                         ) {
-                            state.inviteLink?.let { link -> item { InviteLinkCard(link) } }
                             if (state.members.isEmpty()) {
                                 item { Text("Noch keine Mitglieder.") }
                             }
