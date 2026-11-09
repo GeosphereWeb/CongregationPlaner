@@ -5,6 +5,7 @@ import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.upcomingTalkSlots
 import de.geosphere.congregationplaner.ui.chip.StatusTone
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
 import kotlinx.datetime.isoDayNumber
 
 /**
@@ -111,3 +112,8 @@ internal fun slotMonthLabel(date: LocalDate): String = "${germanMonthName(date)}
 
 /** Datum für die Überschrift des Detailbereichs, z. B. „1. November 2026“. */
 internal fun slotDateHeadline(date: LocalDate): String = "${date.day}. ${germanMonthName(date)} ${date.year}"
+
+/** Die häufigste Uhrzeit der [slots]; bei Gleichstand die früheste, ohne Termine `null`. */
+internal fun commonSlotTime(slots: List<TalkSlot>): LocalTime? = slots.groupingBy { it.time }.eachCount().entries
+    .sortedWith(compareBy({ -it.value }, { it.key }))
+    .firstOrNull()?.key

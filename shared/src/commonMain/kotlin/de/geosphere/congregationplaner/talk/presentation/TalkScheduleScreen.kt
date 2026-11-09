@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.vector.addPathNodes
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.geosphere.congregationplaner.congregation.presentation.MeetingTimeInput
 import de.geosphere.congregationplaner.presentation.components.DetailPane
 import de.geosphere.congregationplaner.presentation.components.DetailPlaceholder
 import de.geosphere.congregationplaner.presentation.components.ListPaneHeader
@@ -90,6 +91,10 @@ internal data class TalkScheduleActions(
     val onAskCreateYear: () -> Unit = {},
     val onConfirmCreateYear: () -> Unit = {},
     val onDismissCreateYear: () -> Unit = {},
+    val onAskChangeYearTime: () -> Unit = {},
+    val onYearTimeChange: (LocalTime) -> Unit = {},
+    val onConfirmChangeYearTime: () -> Unit = {},
+    val onDismissChangeYearTime: () -> Unit = {},
     val onDismissInfo: () -> Unit = {},
     val onToggleStatusFilter: (SlotStatus) -> Unit = {},
 )
@@ -125,6 +130,10 @@ fun TalkScheduleScreen(
             onAskCreateYear = viewModel::askCreateYear,
             onConfirmCreateYear = viewModel::createYear,
             onDismissCreateYear = viewModel::dismissCreateYear,
+            onAskChangeYearTime = viewModel::askChangeYearTime,
+            onYearTimeChange = viewModel::selectYearTime,
+            onConfirmChangeYearTime = viewModel::changeYearTime,
+            onDismissChangeYearTime = viewModel::dismissYearTime,
             onDismissInfo = viewModel::dismissInfo,
             onToggleStatusFilter = viewModel::toggleStatusFilter,
         ),
@@ -254,6 +263,10 @@ internal fun TalkScheduleContent(
                             SpeedDialFab(
                                 items = listOf(
                                     SpeedDialItem("Alle Termine ${state.year} anlegen", actions.onAskCreateYear),
+                                    SpeedDialItem(
+                                        "Uhrzeit aller Termine ${state.year} ändern",
+                                        actions.onAskChangeYearTime,
+                                    ),
                                     SpeedDialItem("Termin anlegen", actions.onNewSlot),
                                 ),
                                 contentDescription = "Termine anlegen",
@@ -313,6 +326,21 @@ internal fun TalkScheduleContent(
             },
             confirmButton = { TextButton(onClick = actions.onConfirmCreateYear) { Text("Anlegen") } },
             dismissButton = { TextButton(onClick = actions.onDismissCreateYear) { Text("Abbrechen") } },
+        )
+    }
+
+    state.yearTimeDialog?.let { time ->
+        AlertDialog(
+            onDismissRequest = actions.onDismissChangeYearTime,
+            title = { Text("Uhrzeit aller Termine ${state.year} ändern?") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Die Uhrzeit wird bei allen Terminen des Jahres gesetzt. Alle anderen Angaben bleiben.")
+                    MeetingTimeInput("Neue Uhrzeit", time, onTimeChange = actions.onYearTimeChange)
+                }
+            },
+            confirmButton = { TextButton(onClick = actions.onConfirmChangeYearTime) { Text("Ändern") } },
+            dismissButton = { TextButton(onClick = actions.onDismissChangeYearTime) { Text("Abbrechen") } },
         )
     }
 }
@@ -448,6 +476,22 @@ private val previewSlots = listOf(
 private fun TalkScheduleContentPreview() = PreviewThemeWrapper {
     TalkScheduleContent(
         state = TalkScheduleUiState(year = 2026, slots = previewSlots, isLoading = false, canPlan = true),
+        actions = TalkScheduleActions(),
+        today = previewToday,
+    )
+}
+
+@ThemePreviews
+@Composable
+private fun TalkScheduleYearTimeDialogPreview() = PreviewThemeWrapper {
+    TalkScheduleContent(
+        state = TalkScheduleUiState(
+            year = 2027,
+            slots = previewSlots,
+            isLoading = false,
+            canPlan = true,
+            yearTimeDialog = LocalTime(9, 30),
+        ),
         actions = TalkScheduleActions(),
         today = previewToday,
     )
