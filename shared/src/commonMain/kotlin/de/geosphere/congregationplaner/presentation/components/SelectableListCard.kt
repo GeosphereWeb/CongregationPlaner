@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.theming.NightColors
@@ -35,7 +36,7 @@ import de.geosphere.congregationplaner.theming.ThemePreviews
  * Listeneintrag einer Listen-/Detailansicht: hervorgehoben, wenn [selected], und mit Löschen-Icon rechts,
  * sofern [canDelete]; mit [onEdit] steht davor ein Bearbeiten-Icon (wenn ein Tipp auf den Eintrag etwas anderes
  * tut). [accent] färbt einen Streifen links, z. B. je Ebene einer Hierarchie. Die Aktionen stehen neben dem Inhalt,
- * damit die Einträge niedrig bleiben. Der fachliche Inhalt kommt aus
+ * damit die Einträge niedrig bleiben. [highlighted] hebt den Eintrag farblich mit einem leichten Schein ab. Der fachliche Inhalt kommt aus
  * [content].
  */
 @Composable
@@ -48,14 +49,37 @@ internal fun SelectableListCard(
     canDelete: Boolean,
     onEdit: (() -> Unit)? = null,
     accent: Color? = null,
+    highlighted: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val shape = RoundedCornerShape(8.dp)
+    val background = when {
+        selected -> NightColors.SurfaceActive
+        highlighted -> NightColors.SkyContainer
+        else -> NightColors.Surface
+    }
+    val borderColor = when {
+        selected -> NightColors.Lavender
+        highlighted -> NightColors.Sky
+        else -> NightColors.Border
+    }
     Row(
         modifier = Modifier.fillMaxWidth()
+            .then(
+                if (highlighted) {
+                    Modifier.shadow(
+                        8.dp,
+                        shape,
+                        ambientColor = NightColors.Sky,
+                        spotColor = NightColors.Sky,
+                    )
+                } else {
+                    Modifier
+                },
+            )
             .clip(shape)
-            .background(if (selected) NightColors.SurfaceActive else NightColors.Surface)
-            .border(1.dp, if (selected) NightColors.Lavender else NightColors.Border, shape)
+            .background(background)
+            .border(1.dp, borderColor, shape)
             .clickable(onClick = onSelect)
             .height(IntrinsicSize.Min),
         verticalAlignment = Alignment.CenterVertically,
@@ -84,7 +108,19 @@ internal fun SelectableListCard(
 @ThemePreviews
 @Composable
 private fun SelectableListCardPreview() = PreviewThemeWrapper {
-    SelectableListCard(selected = true, onSelect = {}, onDelete = {}, actionsEnabled = true, canDelete = true) {
-        Text("Eintrag", style = MaterialTheme.typography.titleMedium)
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SelectableListCard(selected = true, onSelect = {}, onDelete = {}, actionsEnabled = true, canDelete = true) {
+            Text("Ausgewählt", style = MaterialTheme.typography.titleMedium)
+        }
+        SelectableListCard(
+            selected = false,
+            onSelect = {},
+            onDelete = {},
+            actionsEnabled = true,
+            canDelete = true,
+            highlighted = true,
+        ) {
+            Text("Diese Woche", style = MaterialTheme.typography.titleMedium)
+        }
     }
 }
