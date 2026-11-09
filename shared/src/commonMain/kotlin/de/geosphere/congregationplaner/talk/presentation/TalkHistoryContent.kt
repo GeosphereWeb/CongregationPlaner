@@ -1,5 +1,7 @@
 package de.geosphere.congregationplaner.talk.presentation
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,6 +15,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
@@ -43,6 +46,7 @@ internal data class TalkHistoryActions(
     val onSelect: (Talk) -> Unit = {},
     val onSelectNumber: (Int) -> Unit = {},
     val onSearch: (String) -> Unit = {},
+    val onGroupByFrequency: (Boolean) -> Unit = {},
     val onClose: () -> Unit = {},
     val onDismissError: () -> Unit = {},
 )
@@ -56,6 +60,7 @@ fun TalkHistoryScreen(viewModel: TalkHistoryViewModel, modifier: Modifier = Modi
             onSelect = viewModel::selectTalk,
             onSelectNumber = viewModel::selectTalkNumber,
             onSearch = viewModel::search,
+            onGroupByFrequency = viewModel::setGroupByFrequency,
             onClose = viewModel::closeDetail,
             onDismissError = viewModel::dismissError,
         ),
@@ -93,6 +98,10 @@ internal fun TalkHistoryContent(state: TalkHistoryUiState, actions: TalkHistoryA
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Switch(checked = state.groupByFrequency, onCheckedChange = actions.onGroupByFrequency)
+            Text("Nach Häufigkeit gruppieren")
+        }
         ListDetailPaneScaffold(
             directive = navigator.scaffoldDirective,
             scaffoldState = navigator.scaffoldState,
@@ -113,6 +122,7 @@ internal fun TalkHistoryContent(state: TalkHistoryUiState, actions: TalkHistoryA
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun TalkHistoryList(state: TalkHistoryUiState, actions: TalkHistoryActions) {
     LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (state.isSearching) {
@@ -120,24 +130,38 @@ private fun TalkHistoryList(state: TalkHistoryUiState, actions: TalkHistoryActio
             return@LazyColumn
         }
         if (state.rows.isEmpty()) item { Text("Noch keine Vorträge in der Liste.") }
-        state.groups.forEach { group ->
-            item(key = "group-${group.count}") {
-                Text("${group.title} (${group.rows.size})", style = MaterialTheme.typography.titleSmall)
-            }
-            items(group.rows, key = { it.talk.number }) { row ->
-                SelectableListCard(
-                    selected = state.selectedNumber == row.talk.number,
-                    onSelect = { actions.onSelect(row.talk) },
-                    onDelete = {},
-                    actionsEnabled = true,
-                    canDelete = false,
-                ) {
-                    Text("${row.talk.number} – ${row.talk.title}", style = MaterialTheme.typography.titleMedium)
-                    val last = row.entry?.lastHeldOn
-                    Text(if (last == null) "noch nie gehalten" else "zuletzt ${last.toDisplayText()}")
-                }
-            }
+        if (!state.groupByFrequency) {
+            items(state.rows, key = { it.talk.number }) { row -> TalkRowCard(row, state, actions) }
+            return@LazyColumn
         }
+        state.groups.forEach { group ->
+            stickyHeader(key = "group-${group.count}") {
+                Text(
+                    "${group.title} (${group.rows.size})",
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(vertical = 8.dp),
+                )
+            }
+            items(group.rows, key = { it.talk.number }) { row -> TalkRowCard(row, state, actions) }
+        }
+    }
+}
+
+@Composable
+private fun TalkRowCard(row: TalkHistoryRow, state: TalkHistoryUiState, actions: TalkHistoryActions) {
+    SelectableListCard(
+        selected = state.selectedNumber == row.talk.number,
+        onSelect = { actions.onSelect(row.talk) },
+        onDelete = {},
+        actionsEnabled = true,
+        canDelete = false,
+    ) {
+        Text("${row.talk.number} – ${row.talk.title}", style = MaterialTheme.typography.titleMedium)
+        val last = row.entry?.lastHeldOn
+        Text(if (last == null) "noch nie gehalten" else "zuletzt ${last.toDisplayText()}")
     }
 }
 
@@ -237,6 +261,22 @@ private fun TalkHistorySearchPreview() = PreviewThemeWrapper {
             isLoading = false,
             canPlan = true,
             query = "mus",
+        ),
+        actions = TalkHistoryActions(),
+    )
+}
+
+@ThemePreviews
+@Composable
+private fun TalkHistoryGroupedPreview() = PreviewThemeWrapper {
+    val talks = listOf(Talk(1, "Beispielvortrag"), Talk(2, "Zweiter Vortrag"), Talk(3, "Noch nie gehalten"))
+    TalkHistoryContent(
+        state = TalkHistoryUiState(
+            talks = talks,
+            history = listOf(TalkHistoryEntry(2, listOf(LocalDate(2026, 5, 3)))),
+            isLoading = false,
+            canPlan = true,
+            groupByFrequency = true,
         ),
         actions = TalkHistoryActions(),
     )
