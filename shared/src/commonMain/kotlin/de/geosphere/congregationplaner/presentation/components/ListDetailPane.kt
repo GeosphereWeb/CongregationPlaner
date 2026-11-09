@@ -17,6 +17,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -120,6 +121,7 @@ fun ListPaneHeader(
     previousDescription: String = "Zurück",
     onNext: (() -> Unit)? = null,
     nextDescription: String = "Vor",
+    onToday: (() -> Unit)? = null,
 ) {
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
@@ -128,6 +130,7 @@ fun ListPaneHeader(
                 Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = NightColors.OnBackgroundMuted)
             }
         }
+        if (onToday != null) TextButton(onClick = onToday) { Text("Heute") }
         if (onPrevious != null) {
             IconButton(onClick = onPrevious, modifier = Modifier.size(44.dp)) {
                 Icon(arrowBackIcon, contentDescription = previousDescription)
@@ -152,7 +155,7 @@ private fun DetailPanePhonePreview() = AppTheme {
 @Composable
 private fun DetailPaneWidePreview() = AppTheme {
     Column {
-        ListPaneHeader("Planung am Wochenende", subtitle = "2026", onPrevious = {}, onNext = {})
+        ListPaneHeader("Planung am Wochenende", subtitle = "2026", onPrevious = {}, onNext = {}, onToday = {})
         DetailPane(showBack = false, onBack = {}) { DetailPlaceholder("Wähle einen Termin zum Bearbeiten aus.") }
     }
 }

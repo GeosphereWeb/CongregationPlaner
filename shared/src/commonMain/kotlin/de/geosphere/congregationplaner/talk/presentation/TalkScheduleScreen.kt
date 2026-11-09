@@ -29,9 +29,11 @@ import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffold
 import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
 import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.addPathNodes
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.geosphere.congregationplaner.presentation.components.DetailPane
@@ -61,6 +64,7 @@ import de.geosphere.congregationplaner.ui.chip.StatusChip
 import de.geosphere.congregationplaner.ui.chip.StatusTone
 import de.geosphere.congregationplaner.ui.list.CollapsingHeaderColumn
 import de.geosphere.congregationplaner.ui.nav.SectionLabel
+import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
@@ -145,6 +149,11 @@ internal fun TalkScheduleContent(
     val onCancelEditing = if (singlePane) actions.onCancelEditing else actions.onDiscardChanges
     val nextDate = nextSlotDate(state.slots, today)
     val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    val visibleSlots = filterSlots(state.slots, state.statusFilter)
+    val todayIndex = slotListIndex(visibleSlots, today)
+    // The sticky month header covers the top of the list, so the target sits just below it.
+    val headerOffset = -with(LocalDensity.current) { MONTH_HEADER_HEIGHT.roundToPx() }
 
     Column(
         modifier = modifier.fillMaxSize().padding(16.dp),
@@ -157,6 +166,13 @@ internal fun TalkScheduleContent(
             previousDescription = "Vorheriges Jahr",
             onNext = { actions.onYearChange(state.year + 1) },
             nextDescription = "Nächstes Jahr",
+            onToday = {
+                if (state.year != today.year) {
+                    actions.onYearChange(today.year)
+                } else {
+                    todayIndex?.let { scope.launch { listState.animateScrollToItem(it, headerOffset) } }
+                }
+            },
         )
         if (!state.canPlan) {
             Text("Dafür fehlt dir die Berechtigung.")
@@ -182,7 +198,10 @@ internal fun TalkScheduleContent(
             return@Column
         }
 
-        val visibleSlots = filterSlots(state.slots, state.statusFilter)
+        // Opening the list (and switching the year) puts the next upcoming slot at the top.
+        LaunchedEffect(state.year, state.slots.isEmpty()) {
+            todayIndex?.let { listState.scrollToItem(it, headerOffset) }
+        }
 
         CollapsingHeaderColumn(
             listState = listState,
@@ -298,6 +317,7 @@ internal fun TalkScheduleContent(
 }
 
 private val FAB_CLEARANCE = 88.dp
+private val MONTH_HEADER_HEIGHT = 40.dp
 
 /**
  * Zahl der Termine je Stand im angezeigten Jahr; jeder Stand ist ein Filter. Nicht gewählt sind alle neutral, ein
