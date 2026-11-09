@@ -28,6 +28,7 @@ data class TalkHistoryUiState(
     val canPlan: Boolean = false,
     val selectedNumber: Int? = null,
     val query: String = "",
+    val groupByFrequency: Boolean = false,
     override val errorMessage: String? = null,
 ) : ListDetailState {
     override val hasDetail: Boolean get() = selected != null
@@ -38,7 +39,7 @@ data class TalkHistoryUiState(
     val rows: List<TalkHistoryRow>
         get() {
             val byNumber = history.associateBy { it.talkNumber }
-            return talks.map { TalkHistoryRow(it, byNumber[it.number]) }
+            return talks.sortedBy { it.number }.map { TalkHistoryRow(it, byNumber[it.number]) }
         }
 
     val selected: TalkHistoryRow? get() = rows.firstOrNull { it.talk.number == selectedNumber }
@@ -90,6 +91,11 @@ class TalkHistoryViewModel(
     /** Sucht Redner nach Namen (ab dem zweiten Buchstaben); die Liste ändert sich sofort. */
     fun search(query: String) {
         mutableUiState.update { it.copy(query = query) }
+    }
+
+    /** Schaltet zwischen der Liste nach Nummer und der nach Häufigkeit gruppierten Darstellung um. */
+    fun setGroupByFrequency(enabled: Boolean) {
+        mutableUiState.update { it.copy(groupByFrequency = enabled) }
     }
 
     fun closeDetail() {
