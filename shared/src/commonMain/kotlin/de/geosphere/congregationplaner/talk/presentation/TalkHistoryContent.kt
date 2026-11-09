@@ -15,7 +15,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
@@ -39,6 +38,7 @@ import de.geosphere.congregationplaner.talk.domain.model.TalkHistoryEntry
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.theming.nightCardColors
+import de.geosphere.congregationplaner.ui.field.AppSwitch
 import kotlinx.datetime.LocalDate
 
 /** Callbacks der Historie; gebündelt, damit die Composables überschaubare Signaturen behalten. */
@@ -99,7 +99,7 @@ internal fun TalkHistoryContent(state: TalkHistoryUiState, actions: TalkHistoryA
             modifier = Modifier.fillMaxWidth(),
         )
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Switch(checked = state.groupByFrequency, onCheckedChange = actions.onGroupByFrequency)
+            AppSwitch(checked = state.groupByFrequency, onCheckedChange = actions.onGroupByFrequency)
             Text("Nach Häufigkeit gruppieren")
         }
         ListDetailPaneScaffold(
