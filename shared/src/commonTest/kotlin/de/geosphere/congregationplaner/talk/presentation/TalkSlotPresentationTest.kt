@@ -202,4 +202,12 @@ class TalkSlotPresentationTest {
         assertFalse(isCurrentWeek(LocalDate(2026, 11, 1), wednesday))
         assertFalse(isCurrentWeek(LocalDate(2026, 11, 9), wednesday))
     }
+
+    @Test
+    fun `common time is the most frequent one and the earliest on a tie`() {
+        val early = LocalTime(9, 30)
+        assertEquals(time, commonSlotTime(listOf(slot(), slot(), slot { it.copy(time = early) })))
+        assertEquals(early, commonSlotTime(listOf(slot(), slot { it.copy(time = early) })))
+        assertNull(commonSlotTime(emptyList()))
+    }
 }
