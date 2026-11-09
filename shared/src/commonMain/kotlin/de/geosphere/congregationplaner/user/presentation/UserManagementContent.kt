@@ -39,12 +39,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
-import de.geosphere.congregationplaner.presentation.components.CollapsingHeader
 import de.geosphere.congregationplaner.presentation.components.DetailPane
 import de.geosphere.congregationplaner.presentation.components.DetailPlaceholder
 import de.geosphere.congregationplaner.presentation.components.ListPaneHeader
-import de.geosphere.congregationplaner.presentation.components.collapsingHeaderScroll
-import de.geosphere.congregationplaner.presentation.components.rememberCollapsingHeaderState
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
@@ -53,6 +50,7 @@ import de.geosphere.congregationplaner.ui.button.SecondaryButton
 import de.geosphere.congregationplaner.ui.button.SpeedDialFab
 import de.geosphere.congregationplaner.ui.button.SpeedDialItem
 import de.geosphere.congregationplaner.ui.field.AppSwitch
+import de.geosphere.congregationplaner.ui.list.CollapsingHeaderColumn
 import de.geosphere.congregationplaner.ui.nav.NavCardRow
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
@@ -117,10 +115,9 @@ internal fun UserManagementContent(
     val singlePane = navigator.scaffoldDirective.maxHorizontalPartitions == 1
     val onCancelEditing = if (singlePane) actions.onCancelEditing else actions.onDiscardChanges
     val listState = rememberLazyListState()
-    val header = rememberCollapsingHeaderState(listState)
 
     Column(
-        modifier = modifier.fillMaxSize().collapsingHeaderScroll(header).padding(16.dp),
+        modifier = modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         ListPaneHeader("Userverwaltung")
@@ -141,90 +138,95 @@ internal fun UserManagementContent(
             return@Column
         }
 
-        state.inviteLink?.let { link -> CollapsingHeader(visible = header.visible) { InviteLinkCard(link) } }
-
-        ListDetailPaneScaffold(
-            directive = navigator.scaffoldDirective,
-            scaffoldState = navigator.scaffoldState,
+        CollapsingHeaderColumn(
+            listState = listState,
+            header = { state.inviteLink?.let { link -> InviteLinkCard(link) } },
             modifier = Modifier.weight(1f).fillMaxWidth(),
-            listPane = {
-                AnimatedPane {
-                    Box(Modifier.fillMaxSize()) {
-                        LazyColumn(
-                            state = listState,
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(10.dp),
-                            // Platz unter dem letzten Mitglied, damit der FAB es nicht verdeckt.
-                            contentPadding = PaddingValues(bottom = FAB_CLEARANCE),
-                        ) {
-                            if (state.members.isEmpty()) {
-                                item { Text("Noch keine Mitglieder.") }
+        ) {
+            ListDetailPaneScaffold(
+                directive = navigator.scaffoldDirective,
+                scaffoldState = navigator.scaffoldState,
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                listPane = {
+                    AnimatedPane {
+                        Box(Modifier.fillMaxSize()) {
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier.fillMaxSize(),
+                                verticalArrangement = Arrangement.spacedBy(10.dp),
+                                // Platz unter dem letzten Mitglied, damit der FAB es nicht verdeckt.
+                                contentPadding = PaddingValues(bottom = FAB_CLEARANCE),
+                            ) {
+                                if (state.members.isEmpty()) {
+                                    item { Text("Noch keine Mitglieder.") }
+                                }
+                                items(state.members, key = { it.uid }) { member ->
+                                    NavCardRow(
+                                        title = memberTitle(member, member.uid == state.currentUserId),
+                                        onClick = {
+                                            if (actions.canEditProfile(member) && member.uid !in state.busyMemberIds) {
+                                                actions.onEditProfile(member)
+                                            }
+                                        },
+                                        supportingText = memberSubtitle(member),
+                                        selected = editor?.member?.uid == member.uid,
+                                        badge = memberBadge(member),
+                                    )
+                                }
                             }
-                            items(state.members, key = { it.uid }) { member ->
-                                NavCardRow(
-                                    title = memberTitle(member, member.uid == state.currentUserId),
-                                    onClick = {
-                                        if (actions.canEditProfile(member) && member.uid !in state.busyMemberIds) {
-                                            actions.onEditProfile(member)
-                                        }
-                                    },
-                                    supportingText = memberSubtitle(member),
-                                    selected = editor?.member?.uid == member.uid,
-                                    badge = memberBadge(member),
-                                )
-                            }
-                        }
-                        SpeedDialFab(
-                            items = listOf(
-                                SpeedDialItem("Person ohne Konto hinzufügen", actions.onAddMemberWithoutAccount),
-                            ),
-                            contentDescription = "Mitglieder hinzufügen",
-                            enabled = !state.isSaving,
-                            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
-                        )
-                    }
-                }
-            },
-            detailPane = {
-                AnimatedPane {
-                    DetailPane(
-                        showBack = navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Hidden,
-                        onBack = actions.onCancelEditing,
-                        backEnabled = !state.isSaving,
-                    ) {
-                        if (editor != null) {
-                            // Freigabe und Rollen ändern sich sofort; deshalb gilt der aktuelle Stand aus der Liste.
-                            val member = editor.member?.let { selected ->
-                                state.members.firstOrNull { it.uid == selected.uid } ?: selected
-                            }
-                            val isBusy = member?.uid in state.busyMemberIds
-                            if (member != null && member.hasAccount) {
-                                MemberAccessCard(member, isBusy, actions)
-                            }
-                            MemberEditor(
-                                editor = editor,
-                                isSaving = state.isSaving,
-                                isDirty = editor.isDirty,
-                                onChange = actions.onEditorChange,
-                                onSave = actions.onSaveProfile,
-                                onCancel = onCancelEditing,
+                            SpeedDialFab(
+                                items = listOf(
+                                    SpeedDialItem("Person ohne Konto hinzufügen", actions.onAddMemberWithoutAccount),
+                                ),
+                                contentDescription = "Mitglieder hinzufügen",
+                                enabled = !state.isSaving,
+                                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
                             )
-                            if (member != null && actions.canEdit(member)) {
-                                SecondaryButton(
-                                    text = "Aus der Versammlung entfernen",
-                                    onClick = { actions.onRemove(member) },
-                                    enabled = !isBusy && !state.isSaving,
-                                    outlined = false,
-                                    contentColor = NightColors.Coral,
-                                )
-                            }
-                        } else {
-                            DetailPlaceholder("Wähle ein Mitglied zum Bearbeiten aus.")
                         }
                     }
-                }
-            },
-        )
+                },
+                detailPane = {
+                    AnimatedPane {
+                        DetailPane(
+                            showBack = navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] ==
+                                PaneAdaptedValue.Hidden,
+                            onBack = actions.onCancelEditing,
+                            backEnabled = !state.isSaving,
+                        ) {
+                            if (editor != null) {
+                                // Freigabe und Rollen ändern sich sofort; deshalb gilt der aktuelle Stand aus der Liste.
+                                val member = editor.member?.let { selected ->
+                                    state.members.firstOrNull { it.uid == selected.uid } ?: selected
+                                }
+                                val isBusy = member?.uid in state.busyMemberIds
+                                if (member != null && member.hasAccount) {
+                                    MemberAccessCard(member, isBusy, actions)
+                                }
+                                MemberEditor(
+                                    editor = editor,
+                                    isSaving = state.isSaving,
+                                    isDirty = editor.isDirty,
+                                    onChange = actions.onEditorChange,
+                                    onSave = actions.onSaveProfile,
+                                    onCancel = onCancelEditing,
+                                )
+                                if (member != null && actions.canEdit(member)) {
+                                    SecondaryButton(
+                                        text = "Aus der Versammlung entfernen",
+                                        onClick = { actions.onRemove(member) },
+                                        enabled = !isBusy && !state.isSaving,
+                                        outlined = false,
+                                        contentColor = NightColors.Coral,
+                                    )
+                                }
+                            } else {
+                                DetailPlaceholder("Wähle ein Mitglied zum Bearbeiten aus.")
+                            }
+                        }
+                    }
+                },
+            )
+        }
     }
 }
 

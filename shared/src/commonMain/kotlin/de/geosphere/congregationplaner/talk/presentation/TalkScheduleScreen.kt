@@ -41,13 +41,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.addPathNodes
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import de.geosphere.congregationplaner.presentation.components.CollapsingHeader
 import de.geosphere.congregationplaner.presentation.components.DetailPane
 import de.geosphere.congregationplaner.presentation.components.DetailPlaceholder
 import de.geosphere.congregationplaner.presentation.components.ListPaneHeader
 import de.geosphere.congregationplaner.presentation.components.SelectableListCard
-import de.geosphere.congregationplaner.presentation.components.collapsingHeaderScroll
-import de.geosphere.congregationplaner.presentation.components.rememberCollapsingHeaderState
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.presentation.navigation.germanWeekdayName
 import de.geosphere.congregationplaner.talk.domain.model.Chairman
@@ -62,6 +59,7 @@ import de.geosphere.congregationplaner.ui.button.SpeedDialItem
 import de.geosphere.congregationplaner.ui.card.DateBadge
 import de.geosphere.congregationplaner.ui.chip.StatusChip
 import de.geosphere.congregationplaner.ui.chip.StatusTone
+import de.geosphere.congregationplaner.ui.list.CollapsingHeaderColumn
 import de.geosphere.congregationplaner.ui.nav.SectionLabel
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
@@ -147,10 +145,9 @@ internal fun TalkScheduleContent(
     val onCancelEditing = if (singlePane) actions.onCancelEditing else actions.onDiscardChanges
     val nextDate = nextSlotDate(state.slots, today)
     val listState = rememberLazyListState()
-    val header = rememberCollapsingHeaderState(listState)
 
     Column(
-        modifier = modifier.fillMaxSize().collapsingHeaderScroll(header).padding(16.dp),
+        modifier = modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         ListPaneHeader(
@@ -185,99 +182,103 @@ internal fun TalkScheduleContent(
             return@Column
         }
 
-        CollapsingHeader(visible = header.visible) {
-            StatusFilterRow(state.slots, state.statusFilter, actions.onToggleStatusFilter)
-        }
         val visibleSlots = filterSlots(state.slots, state.statusFilter)
 
-        ListDetailPaneScaffold(
-            directive = navigator.scaffoldDirective,
-            scaffoldState = navigator.scaffoldState,
+        CollapsingHeaderColumn(
+            listState = listState,
+            header = { StatusFilterRow(state.slots, state.statusFilter, actions.onToggleStatusFilter) },
             modifier = Modifier.weight(1f).fillMaxWidth(),
-            listPane = {
-                AnimatedPane {
-                    Box(Modifier.fillMaxSize()) {
-                        LazyColumn(
-                            state = listState,
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            // Platz unter dem letzten Termin, damit der FAB ihn nicht verdeckt.
-                            contentPadding = PaddingValues(bottom = FAB_CLEARANCE),
-                        ) {
-                            if (state.slots.isEmpty()) {
-                                item { Text("Für ${state.year} sind noch keine Termine angelegt.") }
-                            } else if (visibleSlots.isEmpty()) {
-                                item { Text("Keine Termine für diese Auswahl.") }
-                            }
-                            visibleSlots.groupBy { it.date.month }.values.forEach { monthSlots ->
-                                // Der Monat bleibt beim Scrollen oben stehen; der Hintergrund verdeckt die Termine
-                                // darunter.
-                                stickyHeader(key = "month-${monthSlots.first().id}") {
-                                    SectionLabel(
-                                        slotMonthLabel(monthSlots.first().date),
-                                        Modifier.monthHeader(),
-                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 13.sp),
-                                    )
+        ) {
+            ListDetailPaneScaffold(
+                directive = navigator.scaffoldDirective,
+                scaffoldState = navigator.scaffoldState,
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                listPane = {
+                    AnimatedPane {
+                        Box(Modifier.fillMaxSize()) {
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier.fillMaxSize(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                // Platz unter dem letzten Termin, damit der FAB ihn nicht verdeckt.
+                                contentPadding = PaddingValues(bottom = FAB_CLEARANCE),
+                            ) {
+                                if (state.slots.isEmpty()) {
+                                    item { Text("Für ${state.year} sind noch keine Termine angelegt.") }
+                                } else if (visibleSlots.isEmpty()) {
+                                    item { Text("Keine Termine für diese Auswahl.") }
                                 }
-                                items(monthSlots, key = { it.id }) { slot ->
-                                    SelectableListCard(
-                                        selected = editor?.original?.date == slot.date,
-                                        onSelect = { actions.onEditSlot(slot) },
-                                        onDelete = { actions.onDelete(slot) },
-                                        actionsEnabled = !state.isSaving,
-                                        canDelete = true,
-                                    ) {
-                                        SlotSummary(slot, slotChip(slot, slotStatus(slot, nextDate)))
+                                visibleSlots.groupBy { it.date.month }.values.forEach { monthSlots ->
+                                    // Der Monat bleibt beim Scrollen oben stehen; der Hintergrund verdeckt die Termine
+                                    // darunter.
+                                    stickyHeader(key = "month-${monthSlots.first().id}") {
+                                        SectionLabel(
+                                            slotMonthLabel(monthSlots.first().date),
+                                            Modifier.monthHeader(),
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 13.sp),
+                                        )
+                                    }
+                                    items(monthSlots, key = { it.id }) { slot ->
+                                        SelectableListCard(
+                                            selected = editor?.original?.date == slot.date,
+                                            onSelect = { actions.onEditSlot(slot) },
+                                            onDelete = { actions.onDelete(slot) },
+                                            actionsEnabled = !state.isSaving,
+                                            canDelete = true,
+                                        ) {
+                                            SlotSummary(slot, slotChip(slot, slotStatus(slot, nextDate)))
+                                        }
                                     }
                                 }
                             }
-                        }
-                        SpeedDialFab(
-                            items = listOf(
-                                SpeedDialItem("Alle Termine ${state.year} anlegen", actions.onAskCreateYear),
-                                SpeedDialItem("Termin anlegen", actions.onNewSlot),
-                            ),
-                            contentDescription = "Termine anlegen",
-                            enabled = !state.isSaving,
-                            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
-                        )
-                    }
-                }
-            },
-            detailPane = {
-                AnimatedPane {
-                    DetailPane(
-                        showBack = navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Hidden,
-                        onBack = actions.onCancelEditing,
-                        backEnabled = !state.isSaving,
-                    ) {
-                        if (editor != null) {
-                            TalkSlotEditor(
-                                editor = editor,
-                                chip = slotChip(editor.slot, slotStatus(editor.slot, nextDate)),
-                                weekEvents = state.weekEvents,
-                                talks = state.talks,
-                                speakers = state.speakers,
-                                chairmen = state.chairmen,
-                                externalSpeakers = state.externalSpeakers,
-                                canViewMembers = state.canViewMembers,
-                                isSaving = state.isSaving,
-                                onChange = actions.onEditorChange,
-                                onSelectWeekEvent = actions.onSelectWeekEvent,
-                                onSelectTalk = actions.onSelectTalk,
-                                speakerActions = actions.speaker,
-                                onSelectChairman = actions.onSelectChairman,
-                                onOpenHistory = actions.onOpenHistory,
-                                onSave = actions.onSave,
-                                onCancel = onCancelEditing,
+                            SpeedDialFab(
+                                items = listOf(
+                                    SpeedDialItem("Alle Termine ${state.year} anlegen", actions.onAskCreateYear),
+                                    SpeedDialItem("Termin anlegen", actions.onNewSlot),
+                                ),
+                                contentDescription = "Termine anlegen",
+                                enabled = !state.isSaving,
+                                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
                             )
-                        } else {
-                            DetailPlaceholder("Wähle einen Termin zum Bearbeiten aus.")
                         }
                     }
-                }
-            },
-        )
+                },
+                detailPane = {
+                    AnimatedPane {
+                        DetailPane(
+                            showBack = navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] ==
+                                PaneAdaptedValue.Hidden,
+                            onBack = actions.onCancelEditing,
+                            backEnabled = !state.isSaving,
+                        ) {
+                            if (editor != null) {
+                                TalkSlotEditor(
+                                    editor = editor,
+                                    chip = slotChip(editor.slot, slotStatus(editor.slot, nextDate)),
+                                    weekEvents = state.weekEvents,
+                                    talks = state.talks,
+                                    speakers = state.speakers,
+                                    chairmen = state.chairmen,
+                                    externalSpeakers = state.externalSpeakers,
+                                    canViewMembers = state.canViewMembers,
+                                    isSaving = state.isSaving,
+                                    onChange = actions.onEditorChange,
+                                    onSelectWeekEvent = actions.onSelectWeekEvent,
+                                    onSelectTalk = actions.onSelectTalk,
+                                    speakerActions = actions.speaker,
+                                    onSelectChairman = actions.onSelectChairman,
+                                    onOpenHistory = actions.onOpenHistory,
+                                    onSave = actions.onSave,
+                                    onCancel = onCancelEditing,
+                                )
+                            } else {
+                                DetailPlaceholder("Wähle einen Termin zum Bearbeiten aus.")
+                            }
+                        }
+                    }
+                },
+            )
+        }
     }
 
     if (state.confirmCreateYear) {

@@ -39,13 +39,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import de.geosphere.congregationplaner.presentation.components.CollapsingHeader
 import de.geosphere.congregationplaner.presentation.components.DetailPane
 import de.geosphere.congregationplaner.presentation.components.DetailPlaceholder
 import de.geosphere.congregationplaner.presentation.components.ListPaneHeader
 import de.geosphere.congregationplaner.presentation.components.SelectableListCard
-import de.geosphere.congregationplaner.presentation.components.collapsingHeaderScroll
-import de.geosphere.congregationplaner.presentation.components.rememberCollapsingHeaderState
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCircuit
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCongregation
@@ -55,6 +52,7 @@ import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.theming.nightCardColors
+import de.geosphere.congregationplaner.ui.list.CollapsingHeaderColumn
 
 /** Callbacks der Verwaltung; gebündelt, damit die Composables überschaubare Signaturen behalten. */
 internal data class ExternalDirectoryActions(
@@ -130,11 +128,10 @@ internal fun ExternalDirectoryContent(
     val navigator = rememberListDetailNavigation(state, onClose = actions.onClose)
     val singlePane = navigator.scaffoldDirective.maxHorizontalPartitions == 1
     val listState = rememberLazyListState()
-    val header = rememberCollapsingHeaderState(listState)
 
     Box(modifier.fillMaxSize()) {
         Column(
-            Modifier.fillMaxSize().collapsingHeaderScroll(header).padding(16.dp),
+            Modifier.fillMaxSize().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             ListPaneHeader("Externe Redner")
@@ -158,8 +155,11 @@ internal fun ExternalDirectoryContent(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 listPane = {
                     AnimatedPane {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            CollapsingHeader(visible = header.visible) { DirectoryFilterBar(state, actions) }
+                        CollapsingHeaderColumn(
+                            listState = listState,
+                            header = { DirectoryFilterBar(state, actions) },
+                            spacing = 8.dp,
+                        ) {
                             ExternalDirectoryTree(state, actions, isBusy, listState) { deleteRequest = it }
                         }
                     }

@@ -1,8 +1,12 @@
-package de.geosphere.congregationplaner.presentation.components
+package de.geosphere.congregationplaner.ui.list
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,6 +22,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
@@ -44,7 +49,7 @@ internal fun isAtListStart(firstVisibleItemIndex: Int, firstVisibleItemScrollOff
 
 /** Scroll-driven visibility of a header above a list; shown again whenever [listState] is back at the top. */
 @Stable
-class CollapsingHeaderState {
+internal class CollapsingHeaderState {
     var visible by mutableStateOf(true)
         internal set
 
@@ -62,7 +67,7 @@ internal suspend fun CollapsingHeaderState.showWhenAtListStart(atListStart: Flow
 }
 
 @Composable
-fun rememberCollapsingHeaderState(listState: LazyListState): CollapsingHeaderState {
+internal fun rememberCollapsingHeaderState(listState: LazyListState): CollapsingHeaderState {
     val state = remember { CollapsingHeaderState() }
     LaunchedEffect(listState) {
         state.showWhenAtListStart(
@@ -72,22 +77,42 @@ fun rememberCollapsingHeaderState(listState: LazyListState): CollapsingHeaderSta
     return state
 }
 
-/** Put on the container that holds both the header and the scrolling list. */
-fun Modifier.collapsingHeaderScroll(state: CollapsingHeaderState): Modifier = nestedScroll(state.connection)
+/**
+ * Column with a [header] above a list that hides while the list scrolls up. Only a fast downward scroll or
+ * reaching the top of [listState] shows it again; [forceVisible] keeps it shown (e.g. while searching).
+ * [content] holds the list that uses [listState].
+ */
+@Composable
+fun CollapsingHeaderColumn(
+    listState: LazyListState,
+    header: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    forceVisible: Boolean = false,
+    spacing: Dp = 12.dp,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val state = rememberCollapsingHeaderState(listState)
+    Column(modifier = modifier.nestedScroll(state.connection), verticalArrangement = Arrangement.spacedBy(spacing)) {
+        CollapsingHeader(visible = state.visible || forceVisible, spacing = spacing, content = header)
+        content()
+    }
+}
 
 @Composable
-fun CollapsingHeader(visible: Boolean, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+internal fun CollapsingHeader(visible: Boolean, modifier: Modifier = Modifier, spacing: Dp = 12.dp, content: @Composable () -> Unit) {
     AnimatedVisibility(visible = visible, modifier = modifier) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { content() }
+        Column(verticalArrangement = Arrangement.spacedBy(spacing)) { content() }
     }
 }
 
 @ThemePreviews
 @Composable
-private fun CollapsingHeaderPreview() = PreviewThemeWrapper {
+private fun CollapsingHeaderColumnPreview() = PreviewThemeWrapper {
     Column {
         CollapsingHeader(visible = true) { Text("Header sichtbar") }
         CollapsingHeader(visible = false) { Text("Header ausgeblendet") }
-        Text("Liste")
+        CollapsingHeaderColumn(listState = rememberLazyListState(), header = { Text("Header") }) {
+            LazyColumn { items(count = 3) { Text("Eintrag $it") } }
+        }
     }
 }
