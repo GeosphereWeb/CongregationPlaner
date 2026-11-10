@@ -2,7 +2,7 @@ package de.geosphere.congregationplaner.user.di
 
 import de.geosphere.congregationplaner.user.data.createUserRepository
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
-import de.geosphere.congregationplaner.user.presentation.OwnProfileViewModel
+import de.geosphere.congregationplaner.user.presentation.profile.OwnProfileViewModel
 import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Provides
 

@@ -6,7 +6,7 @@ import de.geosphere.congregationplaner.organization.data.createCongregationSelec
 import de.geosphere.congregationplaner.organization.data.createOrganizationRepository
 import de.geosphere.congregationplaner.organization.domain.repository.CongregationSelectionStore
 import de.geosphere.congregationplaner.organization.domain.repository.OrganizationRepository
-import de.geosphere.congregationplaner.organization.presentation.CongregationSelectionViewModel
+import de.geosphere.congregationplaner.organization.presentation.selection.CongregationSelectionViewModel
 import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Provides
 

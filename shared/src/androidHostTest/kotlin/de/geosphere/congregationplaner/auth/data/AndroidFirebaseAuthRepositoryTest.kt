@@ -1,0 +1,489 @@
+package de.geosphere.congregationplaner.auth.data
+
+import android.app.Activity
+import android.content.Context
+import android.text.TextUtils
+import android.util.Log
+import com.google.android.gms.tasks.OnCompleteListener
+import com.google.android.gms.tasks.Task
+import com.google.firebase.auth.AuthResult
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.GetTokenResult
+import com.google.firebase.auth.UserProfileChangeRequest
+import io.mockk.Runs
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.slot
+import io.mockk.unmockkStatic
+import io.mockk.verify
+import kotlinx.coroutines.runBlocking
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+class AndroidFirebaseAuthRepositoryTest {
+    @Test
+    fun `android auth repository fails safely when firebase app is missing`() {
+        val previousContext = FirebaseAndroidContextHolder.context
+        FirebaseAndroidContextHolder.context = null
+
+        try {
+            assertFailsWith<RuntimeException> {
+                FirebaseAuthPlatformService()
+            }
+        } finally {
+            FirebaseAndroidContextHolder.context = previousContext
+        }
+    }
+
+    @Test
+    fun `android sign in maps successful auth result into FirebaseUser`() = runBlocking {
+        val auth = mockk<FirebaseAuth>()
+        val resultTask = mockk<Task<AuthResult>>()
+        val authResult = mockk<AuthResult>()
+        val currentUser = mockk<FirebaseUser>()
+
+        mockkStatic(FirebaseAuth::class)
+        try {
+            every { FirebaseAuth.getInstance() } returns auth
+            every { auth.signInWithEmailAndPassword("user@example.com", "secret") } returns resultTask
+            every { resultTask.addOnCompleteListener(any<OnCompleteListener<AuthResult>>()) } answers {
+                val listener = firstArg<OnCompleteListener<AuthResult>>()
+                listener.onComplete(resultTask)
+                resultTask
+            }
+            every { resultTask.isSuccessful } returns true
+            every { resultTask.result } returns authResult
+            every { authResult.user } returns currentUser
+            every { auth.currentUser } returns currentUser
+            every { currentUser.uid } returns "android-user"
+            every { currentUser.email } returns "user@example.com"
+            every { currentUser.displayName } returns "Android User"
+            every { currentUser.isEmailVerified } returns false
+
+            val service = FirebaseAuthPlatformService()
+            val user = service.signInWithEmailAndPassword("user@example.com", "secret")
+
+            assertEquals("android-user", user?.uid)
+            assertEquals("user@example.com", user?.email)
+            assertEquals("Android User", user?.displayName)
+            assertNull(user?.idToken)
+            assertTrue(service.isSignedIn())
+            assertEquals("android-user", service.currentUserId())
+        } finally {
+            unmockkStatic(FirebaseAuth::class)
+        }
+    }
+
+    @Test
+    fun `android create user succeeds when verification email succeeds`() = runBlocking {
+        val auth = mockk<FirebaseAuth>()
+        val createTask = mockk<Task<AuthResult>>()
+        val verificationTask = mockk<Task<Void>>()
+        val authResult = mockk<AuthResult>()
+        val currentUser = mockk<FirebaseUser>()
+
+        mockkStatic(FirebaseAuth::class)
+        try {
+            every { FirebaseAuth.getInstance() } returns auth
+            every { auth.createUserWithEmailAndPassword("new@example.com", "secret") } returns createTask
+            every { createTask.addOnCompleteListener(any<OnCompleteListener<AuthResult>>()) } answers {
+                val listener = firstArg<OnCompleteListener<AuthResult>>()
+                listener.onComplete(createTask)
+                createTask
+            }
+            every { createTask.isSuccessful } returns true
+            every { createTask.result } returns authResult
+            every { authResult.user } returns currentUser
+            every { auth.currentUser } returns currentUser
+            every { currentUser.uid } returns "new-android-user"
+            every { currentUser.email } returns "new@example.com"
+            every { currentUser.displayName } returns "New User"
+            every { currentUser.isEmailVerified } returns false
+            every { currentUser.sendEmailVerification() } returns verificationTask
+            every { verificationTask.addOnCompleteListener(any<OnCompleteListener<Void>>()) } answers {
+                val listener = firstArg<OnCompleteListener<Void>>()
+                listener.onComplete(verificationTask)
+                verificationTask
+            }
+            every { verificationTask.isSuccessful } returns true
+
+            val service = FirebaseAuthPlatformService()
+            val user = service.createUserWithEmailAndPassword("new@example.com", "secret")
+
+            assertEquals("new-android-user", user?.uid)
+            assertEquals("new@example.com", user?.email)
+        } finally {
+            unmockkStatic(FirebaseAuth::class)
+        }
+    }
+
+    @Test
+    fun `android create user stores the display name in the auth profile`() = runBlocking {
+        val auth = mockk<FirebaseAuth>()
+        val createTask = mockk<Task<AuthResult>>()
+        val profileTask = mockk<Task<Void>>()
+        val verificationTask = mockk<Task<Void>>()
+        val authResult = mockk<AuthResult>()
+        val currentUser = mockk<FirebaseUser>()
+        val request = slot<UserProfileChangeRequest>()
+
+        mockkStatic(FirebaseAuth::class, TextUtils::class)
+        try {
+            // Die Host-Tests kennen android.text nicht; der Builder des Profils braucht TextUtils.
+            every { TextUtils.isEmpty(any()) } answers { firstArg<CharSequence?>().isNullOrEmpty() }
+            every { FirebaseAuth.getInstance() } returns auth
+            every { auth.createUserWithEmailAndPassword("new@example.com", "secret") } returns createTask
+            every { createTask.addOnCompleteListener(any<OnCompleteListener<AuthResult>>()) } answers {
+                firstArg<OnCompleteListener<AuthResult>>().onComplete(createTask)
+                createTask
+            }
+            every { createTask.isSuccessful } returns true
+            every { createTask.result } returns authResult
+            every { authResult.user } returns currentUser
+            every { auth.currentUser } returns currentUser
+            every { currentUser.uid } returns "new-android-user"
+            every { currentUser.email } returns "new@example.com"
+            every { currentUser.displayName } returns "Max Muster"
+            every { currentUser.isEmailVerified } returns false
+            every { currentUser.updateProfile(capture(request)) } returns profileTask
+            every { profileTask.addOnCompleteListener(any<OnCompleteListener<Void>>()) } answers {
+                firstArg<OnCompleteListener<Void>>().onComplete(profileTask)
+                profileTask
+            }
+            every { profileTask.isSuccessful } returns true
+            every { currentUser.sendEmailVerification() } returns verificationTask
+            every { verificationTask.addOnCompleteListener(any<OnCompleteListener<Void>>()) } answers {
+                firstArg<OnCompleteListener<Void>>().onComplete(verificationTask)
+                verificationTask
+            }
+            every { verificationTask.isSuccessful } returns true
+
+            val user = FirebaseAuthPlatformService()
+                .createUserWithEmailAndPassword("new@example.com", "secret", " Max Muster ")
+
+            assertEquals("Max Muster", request.captured.displayName)
+            assertEquals("Max Muster", user?.displayName)
+        } finally {
+            unmockkStatic(FirebaseAuth::class, TextUtils::class)
+        }
+    }
+
+    @Test
+    fun `android user reports the confirmed e-mail address and refresh reloads the account and the token`() =
+        runBlocking {
+            val auth = mockk<FirebaseAuth>()
+            val currentUser = mockk<FirebaseUser>()
+            val reloadTask = mockk<Task<Void>>()
+            val tokenTask = mockk<Task<GetTokenResult>>()
+            mockkStatic(FirebaseAuth::class)
+            try {
+                every { FirebaseAuth.getInstance() } returns auth
+                every { auth.currentUser } returns currentUser
+                every { currentUser.uid } returns "u"
+                every { currentUser.email } returns "a@b.de"
+                every { currentUser.displayName } returns "Max Muster"
+                every { currentUser.isEmailVerified } returns true
+                every { currentUser.reload() } returns reloadTask
+                every { reloadTask.addOnCompleteListener(any<OnCompleteListener<Void>>()) } answers {
+                    firstArg<OnCompleteListener<Void>>().onComplete(reloadTask)
+                    reloadTask
+                }
+                every { reloadTask.isSuccessful } returns true
+                every { currentUser.getIdToken(true) } returns tokenTask
+                every { tokenTask.addOnCompleteListener(any<OnCompleteListener<GetTokenResult>>()) } answers {
+                    firstArg<OnCompleteListener<GetTokenResult>>().onComplete(tokenTask)
+                    tokenTask
+                }
+                every { tokenTask.isSuccessful } returns true
+
+                val refreshed = FirebaseAuthPlatformService().refreshCurrentUser()
+
+                assertEquals(true, refreshed?.emailVerified)
+                verify { currentUser.getIdToken(true) }
+            } finally {
+                unmockkStatic(FirebaseAuth::class)
+            }
+        }
+
+    @Test
+    fun `android refresh without a user returns null and resend sends the verification mail`() = runBlocking {
+        val auth = mockk<FirebaseAuth>()
+        val currentUser = mockk<FirebaseUser>()
+        val mailTask = mockk<Task<Void>>()
+        mockkStatic(FirebaseAuth::class)
+        try {
+            every { FirebaseAuth.getInstance() } returns auth
+            every { auth.currentUser } returns null
+            val service = FirebaseAuthPlatformService()
+            assertNull(service.refreshCurrentUser())
+            assertEquals(false, service.resendVerificationEmail())
+
+            every { auth.currentUser } returns currentUser
+            every { currentUser.sendEmailVerification() } returns mailTask
+            every { mailTask.addOnCompleteListener(any<OnCompleteListener<Void>>()) } answers {
+                firstArg<OnCompleteListener<Void>>().onComplete(mailTask)
+                mailTask
+            }
+            every { mailTask.isSuccessful } returns true
+            assertTrue(service.resendVerificationEmail())
+        } finally {
+            unmockkStatic(FirebaseAuth::class)
+        }
+    }
+
+    @Test
+    fun `android create user fails when verification email fails`() = runBlocking {
+        val auth = mockk<FirebaseAuth>()
+        val createTask = mockk<Task<AuthResult>>()
+        val verificationTask = mockk<Task<Void>>()
+        val authResult = mockk<AuthResult>()
+        val currentUser = mockk<FirebaseUser>()
+
+        mockkStatic(FirebaseAuth::class)
+        try {
+            every { FirebaseAuth.getInstance() } returns auth
+            every { auth.createUserWithEmailAndPassword("new@example.com", "secret") } returns createTask
+            every { createTask.addOnCompleteListener(any<OnCompleteListener<AuthResult>>()) } answers {
+                val listener = firstArg<OnCompleteListener<AuthResult>>()
+                listener.onComplete(createTask)
+                createTask
+            }
+            every { createTask.isSuccessful } returns true
+            every { createTask.result } returns authResult
+            every { authResult.user } returns currentUser
+            every { auth.currentUser } returns currentUser
+            every { currentUser.uid } returns "new-android-user"
+            every { currentUser.email } returns "new@example.com"
+            every { currentUser.displayName } returns "New User"
+            every { currentUser.isEmailVerified } returns false
+            every { currentUser.sendEmailVerification() } returns verificationTask
+            every { verificationTask.addOnCompleteListener(any<OnCompleteListener<Void>>()) } answers {
+                val listener = firstArg<OnCompleteListener<Void>>()
+                listener.onComplete(verificationTask)
+                verificationTask
+            }
+            every { verificationTask.isSuccessful } returns false
+            every { verificationTask.exception } returns null
+            mockkStatic(Log::class)
+            every { Log.e(any(), any(), any<Throwable>()) } returns 0
+
+            val service = FirebaseAuthPlatformService()
+            val user = service.createUserWithEmailAndPassword("new@example.com", "secret")
+
+            assertNull(user)
+        } finally {
+            unmockkStatic(FirebaseAuth::class)
+            unmockkStatic(Log::class)
+        }
+    }
+
+    @Test
+    fun `android create user returns null and logs when auth task fails`() = runBlocking {
+        val auth = mockk<FirebaseAuth>()
+        val createTask = mockk<Task<AuthResult>>()
+
+        mockkStatic(FirebaseAuth::class)
+        mockkStatic(Log::class)
+        try {
+            every { FirebaseAuth.getInstance() } returns auth
+            every { auth.createUserWithEmailAndPassword("new@example.com", "secret") } returns createTask
+            every { createTask.addOnCompleteListener(any<OnCompleteListener<AuthResult>>()) } answers {
+                firstArg<OnCompleteListener<AuthResult>>().onComplete(createTask)
+                createTask
+            }
+            every { createTask.isSuccessful } returns false
+            every { createTask.exception } returns null
+            every { Log.e(any(), any(), any<Throwable>()) } returns 0
+
+            assertNull(FirebaseAuthPlatformService().createUserWithEmailAndPassword("new@example.com", "secret"))
+        } finally {
+            unmockkStatic(FirebaseAuth::class)
+            unmockkStatic(Log::class)
+        }
+    }
+
+    @Test
+    fun `android create user skips email verification when using auth emulator`() = runBlocking {
+        val auth = mockk<FirebaseAuth>()
+        val createTask = mockk<Task<AuthResult>>()
+        val authResult = mockk<AuthResult>()
+        val user = mockk<FirebaseUser>()
+        val previousContext = FirebaseAndroidContextHolder.context
+        val previousActivity = FirebaseAndroidContextHolder.activity
+        val previousUseEmulator = FirebaseAndroidContextHolder.useAuthEmulator
+        val previousHost = FirebaseAndroidContextHolder.authEmulatorHost
+        val context = mockk<Context>(relaxed = true)
+        val activity = mockk<Activity>(relaxed = true)
+
+        FirebaseAndroidContextHolder.configure(context, activity, true, "auth.local")
+        mockkStatic(FirebaseAuth::class)
+        try {
+            every { FirebaseAuth.getInstance() } returns auth
+            every { auth.useEmulator("auth.local", 9099) } just Runs
+            every { auth.createUserWithEmailAndPassword("new@example.com", "secret") } returns createTask
+            every { createTask.addOnCompleteListener(any<OnCompleteListener<AuthResult>>()) } answers {
+                firstArg<OnCompleteListener<AuthResult>>().onComplete(createTask)
+                createTask
+            }
+            every { createTask.isSuccessful } returns true
+            every { createTask.result } returns authResult
+            every { authResult.user } returns user
+            every { user.uid } returns "emulator-user"
+            every { user.email } returns "new@example.com"
+            every { user.displayName } returns null
+            every { user.isEmailVerified } returns false
+
+            val created = FirebaseAuthPlatformService().createUserWithEmailAndPassword("new@example.com", "secret")
+
+            assertEquals("emulator-user", created?.uid)
+        } finally {
+            unmockkStatic(FirebaseAuth::class)
+            FirebaseAndroidContextHolder.configure(
+                previousContext ?: mockk(relaxed = true),
+                previousActivity ?: mockk(relaxed = true),
+                previousUseEmulator,
+                previousHost,
+            )
+            FirebaseAndroidContextHolder.context = previousContext
+            FirebaseAndroidContextHolder.activity = previousActivity
+        }
+    }
+
+    @Test
+    fun `android google sign in reports unavailable without activity or client id`() = runBlocking {
+        val previousContext = FirebaseAndroidContextHolder.context
+        val previousActivity = FirebaseAndroidContextHolder.activity
+        val auth = mockk<FirebaseAuth>()
+        val activity = mockk<Activity>(relaxed = true)
+
+        try {
+            FirebaseAndroidContextHolder.activity = null
+            mockkStatic(FirebaseAuth::class)
+            every { FirebaseAuth.getInstance() } returns auth
+
+            val service = FirebaseAuthPlatformService()
+            assertFalse(service.isGoogleSignInAvailable())
+            assertNull(service.signInWithGoogle())
+
+            FirebaseAndroidContextHolder.activity = activity
+            every { activity.resources.getIdentifier(any(), any(), any()) } returns 0
+            mockkStatic(Log::class)
+            every { Log.e(any(), any()) } returns 0
+
+            assertTrue(service.isGoogleSignInAvailable())
+            assertNull(service.signInWithGoogle())
+        } finally {
+            unmockkStatic(FirebaseAuth::class)
+            unmockkStatic(Log::class)
+            FirebaseAndroidContextHolder.context = previousContext
+            FirebaseAndroidContextHolder.activity = previousActivity
+        }
+    }
+
+    @Test
+    fun `android platform factory creates a Firebase auth service`() {
+        val auth = mockk<FirebaseAuth>()
+
+        mockkStatic(FirebaseAuth::class)
+        try {
+            every { FirebaseAuth.getInstance() } returns auth
+
+            val service = createFirebaseAuthPlatformService()
+
+            assertTrue(service is FirebaseAuthPlatformService)
+        } finally {
+            unmockkStatic(FirebaseAuth::class)
+        }
+    }
+
+    @Test
+    fun `android sign in returns null when auth task fails`() = runBlocking {
+        val auth = mockk<FirebaseAuth>()
+        val resultTask = mockk<Task<AuthResult>>()
+
+        mockkStatic(FirebaseAuth::class)
+        mockkStatic(Log::class)
+        try {
+            every { FirebaseAuth.getInstance() } returns auth
+            every { auth.signInWithEmailAndPassword("user@example.com", "secret") } returns resultTask
+            every { resultTask.addOnCompleteListener(any<OnCompleteListener<AuthResult>>()) } answers {
+                val listener = firstArg<OnCompleteListener<AuthResult>>()
+                listener.onComplete(resultTask)
+                resultTask
+            }
+            every { resultTask.isSuccessful } returns false
+            every { resultTask.exception } returns null
+            every { Log.e(any(), any(), any<Throwable>()) } returns 0
+
+            val service = FirebaseAuthPlatformService()
+            val user = service.signInWithEmailAndPassword("user@example.com", "secret")
+
+            assertNull(user)
+        } finally {
+            unmockkStatic(FirebaseAuth::class)
+            unmockkStatic(Log::class)
+        }
+    }
+
+    @Test
+    fun `android create user returns null when no current user exists after signup`() = runBlocking {
+        val auth = mockk<FirebaseAuth>()
+        val createTask = mockk<Task<AuthResult>>()
+        val authResult = mockk<AuthResult>()
+
+        mockkStatic(FirebaseAuth::class)
+        try {
+            every { FirebaseAuth.getInstance() } returns auth
+            every { auth.createUserWithEmailAndPassword("new@example.com", "secret") } returns createTask
+            every { createTask.addOnCompleteListener(any<OnCompleteListener<AuthResult>>()) } answers {
+                val listener = firstArg<OnCompleteListener<AuthResult>>()
+                listener.onComplete(createTask)
+                createTask
+            }
+            every { createTask.isSuccessful } returns true
+            every { createTask.result } returns authResult
+            every { authResult.user } returns null
+            every { auth.currentUser } returns null
+
+            val service = FirebaseAuthPlatformService()
+            val user = service.createUserWithEmailAndPassword("new@example.com", "secret")
+
+            assertNull(user)
+        } finally {
+            unmockkStatic(FirebaseAuth::class)
+        }
+    }
+
+    @Test
+    fun `android auth service tracks sign out and user state`() {
+        val auth = mockk<FirebaseAuth>()
+        val currentUser = mockk<FirebaseUser>()
+
+        mockkStatic(FirebaseAuth::class)
+        try {
+            every { FirebaseAuth.getInstance() } returns auth
+            every { auth.currentUser } returnsMany listOf(currentUser, currentUser, null)
+            every { currentUser.uid } returns "uid-42"
+            every { auth.signOut() } just Runs
+
+            val service = FirebaseAuthPlatformService()
+
+            assertTrue(service.isSignedIn())
+            assertEquals("uid-42", service.currentUserId())
+
+            runBlocking { service.signOut() }
+
+            assertFalse(service.isSignedIn())
+            assertNull(service.currentUserId())
+        } finally {
+            unmockkStatic(FirebaseAuth::class)
+        }
+    }
+}

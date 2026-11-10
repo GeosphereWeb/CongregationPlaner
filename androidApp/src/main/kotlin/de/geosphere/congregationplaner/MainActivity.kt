@@ -11,10 +11,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import de.geosphere.congregationplaner.auth.FirebaseAndroidContextHolder
-import de.geosphere.congregationplaner.auth.FirebaseSupport
-import de.geosphere.congregationplaner.organization.InviteLinkInbox
-
+import de.geosphere.congregationplaner.auth.data.FirebaseAndroidContextHolder
+import de.geosphere.congregationplaner.auth.data.FirebaseSupport
+import de.geosphere.congregationplaner.organization.presentation.selection.InviteLinkInbox
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()

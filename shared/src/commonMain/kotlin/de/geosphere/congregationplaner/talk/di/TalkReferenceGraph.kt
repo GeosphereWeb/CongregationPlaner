@@ -4,8 +4,8 @@ import de.geosphere.congregationplaner.talk.data.createTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.data.createWeekEventRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkCatalogRepository
 import de.geosphere.congregationplaner.talk.domain.repository.WeekEventRepository
-import de.geosphere.congregationplaner.talk.presentation.TalkCatalogManagementViewModel
-import de.geosphere.congregationplaner.talk.presentation.WeekEventManagementViewModel
+import de.geosphere.congregationplaner.talk.presentation.reference.TalkCatalogManagementViewModel
+import de.geosphere.congregationplaner.talk.presentation.reference.WeekEventManagementViewModel
 import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Provides
 
