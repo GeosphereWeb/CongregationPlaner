@@ -8,15 +8,15 @@ Nach jeder Phase hier abhaken und Ticket und PR eintragen.
 
 | Phase | Inhalt | Ticket | PR | Status |
 |---|---|---|---|---|
-| 0 | Package-Struktur | CP-130 | – | in Review |
-| 1 | Policies vereinheitlichen | – | – | offen |
+| 0 | Package-Struktur | CP-130 | #148 | in Review |
+| 1 | Policies vereinheitlichen | CP-131 | – | in Review |
 | 2 | Login entkoppeln | – | – | offen |
 | 3 | Logik aus Composables holen | – | – | offen |
 | 4 | Große Klassen aufteilen | – | – | offen |
 | 5 | `uilib` auffüllen | – | – | offen |
 | 6 | UiState-Feinschliff | – | – | offen |
 
-Nächster Schritt: Phase 1 (Policies vereinheitlichen), sobald der PR zu Phase 0 gemergt ist.
+Nächster Schritt: Phase 2 (Login entkoppeln). Die Branches sind gestapelt: jede Phase baut auf dem Branch der vorigen auf, bis deren PR gemergt ist.
 
 ## Ziele
 
@@ -158,6 +158,14 @@ Umgesetzt in CP-130 (Abweichungen vom Entwurf):
 10. ADR-0024 „Policy-Durchsetzung im UseCase, Rechte als UiState“ schreiben und im Index eintragen.
 
 Risiko: Bestehende ViewModel-Tests können brechen, wenn die UseCases neu ablehnen. Sie werden angepasst, nicht abgeschwächt.
+
+Umgesetzt in CP-131:
+
+- `MidweekPermissionPolicy` liegt in `midweek/domain/permission`.
+- `UpdateMemberUseCase` ist in `SetMemberApprovalUseCase` und `SetMemberRoleUseCase` geteilt, weil Freigabe und Rollen unterschiedliche Rechte brauchen; das Anlegen einer Versammlung in `CreateCongregationUseCase` (globaler Admin) und `CreateOwnCongregationUseCase` (Login, ADR-0018).
+- Die Talk-ViewModels prüfen vor dem Öffnen eines Editors weiterhin selbst (UI-Steuerung); die Schreibaktionen schützen ihre UseCases schon.
+- `UserAccessViewModel.canManageUsers` ist entfernt (nicht genutzt).
+- Abgleich mit `firebase/firestore.rules`: keine Abweichung, die Rules bleiben unverändert. Nur der Schutz der letzten Admin-Rolle existiert allein in der App.
 
 ### Phase 2: Login entkoppeln
 
