@@ -15,6 +15,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class FirestoreRestTalkRepositoriesTest {
@@ -304,5 +305,28 @@ class FirestoreRestTalkRepositoriesTest {
         FakeFirestoreRestServer(responder).use { server ->
             withFirestoreRestConfig(server) { runBlocking { block(server) } }
         }
+    }
+
+    @Test
+    fun `setConfirmed patches only the confirmed field of an existing slot`() = runWithServer({
+        FakeResponse(200, "{}")
+    }) { server ->
+        val repository = FirestoreRestTalkScheduleRepository(idTokenProvider = { "token-123" })
+
+        assertTrue(repository.setConfirmed(congregation, LocalDate(2026, 10, 25), true).isSuccess)
+
+        val request = server.requests.single()
+        assertEquals("PATCH", request.method)
+        assertTrue(request.path.endsWith("/2026-10-25"))
+        assertEquals("updateMask.fieldPaths=confirmed&currentDocument.exists=true", request.query)
+        assertTrue(request.body.contains(""""confirmed":{"booleanValue":true}"""))
+        assertFalse(request.body.contains("time"))
+    }
+
+    @Test
+    fun `setConfirmed reports a rejected write`() = runWithServer({ FakeResponse(403) }) { _ ->
+        val repository = FirestoreRestTalkScheduleRepository(idTokenProvider = { "token-123" })
+
+        assertTrue(repository.setConfirmed(congregation, LocalDate(2026, 10, 25), true).isFailure)
     }
 }

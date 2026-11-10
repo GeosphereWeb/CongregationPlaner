@@ -52,6 +52,17 @@ internal class FirestoreTalkScheduleRepository(private val firestore: FirebaseFi
         runFirestoreCatching("delete talk slot") {
             firestore.collection(congregation.talkSchedulePath).document(date.toString()).delete().awaitResult()
         }
+
+    // update() ändert nur dieses Feld und legt keinen fehlenden Termin an; die Rules erlauben dem Helfer genau das.
+    override suspend fun setConfirmed(
+        congregation: CongregationRef,
+        date: LocalDate,
+        confirmed: Boolean,
+    ): Result<Unit> = runFirestoreCatching("confirm talk slot speaker") {
+        firestore.collection(congregation.talkSchedulePath).document(date.toString())
+            .update(mapOf("confirmed" to confirmed))
+            .awaitResult()
+    }
 }
 
 // Ein Dokument mit ungültiger ID oder Zeit wird übersprungen, damit es nicht das ganze Jahr blockiert.

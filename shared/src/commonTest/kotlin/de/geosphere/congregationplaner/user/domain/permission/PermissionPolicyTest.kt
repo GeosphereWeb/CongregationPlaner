@@ -170,4 +170,13 @@ class PermissionPolicyTest {
         assertFalse(policy.canPlanMidweek(planner.copy(roles = setOf(CongregationRole.CONGREGATION_ADMIN))))
         assertFalse(policy.canPlanMidweek(AppUser(uid = "2", isGlobalAdmin = true)))
     }
+
+    @Test
+    fun `talk helper may view members but not manage them`() {
+        val helper = AppUser(uid = "4", approved = true, roles = setOf(CongregationRole.TALK_HELPER))
+
+        assertTrue(userPolicy.canViewMembers(helper))
+        assertFalse(userPolicy.canManageUsers(helper))
+        assertFalse(userPolicy.canViewMembers(helper.copy(approved = false)))
+    }
 }

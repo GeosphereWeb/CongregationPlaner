@@ -74,6 +74,12 @@ fun unavailableTalkScheduleRepository(platform: String): TalkScheduleRepository 
         unavailable()
 
     override suspend fun deleteSlot(congregation: CongregationRef, date: LocalDate): Result<Unit> = unavailable()
+
+    override suspend fun setConfirmed(
+        congregation: CongregationRef,
+        date: LocalDate,
+        confirmed: Boolean,
+    ): Result<Unit> = unavailable()
 }
 
 fun unavailableWeekEventRepository(platform: String): WeekEventRepository = object : WeekEventRepository {

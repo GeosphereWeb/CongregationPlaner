@@ -18,4 +18,10 @@ interface TalkScheduleRepository {
     suspend fun createMissingSlots(congregation: CongregationRef, slots: List<TalkSlot>): Result<Int>
 
     suspend fun deleteSlot(congregation: CongregationRef, date: LocalDate): Result<Unit>
+
+    /**
+     * Setzt nur das Feld `confirmed` des Termins vom [date]; alle anderen Felder bleiben unverändert. Ein Termin, den
+     * es nicht gibt, wird nicht angelegt, sondern meldet einen Fehler.
+     */
+    suspend fun setConfirmed(congregation: CongregationRef, date: LocalDate, confirmed: Boolean): Result<Unit>
 }
