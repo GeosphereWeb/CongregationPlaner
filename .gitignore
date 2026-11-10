@@ -29,3 +29,6 @@ node_modules/
 
 # Firebase emulator data (local accounts and documents)
 /firebase/emulator-data/
+
+# Graphify knowledge graph output (local, regenerable)
+/graphify-out/
