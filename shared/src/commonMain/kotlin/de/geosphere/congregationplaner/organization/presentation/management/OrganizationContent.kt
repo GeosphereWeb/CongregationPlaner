@@ -288,7 +288,7 @@ private fun OrgUnitEditor(
             )
             OutlinedTextField(
                 value = unit.name,
-                onValueChange = { actions.onUpdate(unit.copy(name = it.take(OrgUnit.MAX_NAME_LENGTH))) },
+                onValueChange = { actions.onUpdate(unit.copy(name = it)) },
                 label = { Text("Name") },
                 singleLine = true,
                 enabled = !isBusy,
@@ -297,7 +297,7 @@ private fun OrgUnitEditor(
             if (level == OrgLevel.CIRCUIT) {
                 OutlinedTextField(
                     value = unit.overseerName,
-                    onValueChange = { actions.onUpdate(unit.copy(overseerName = it.take(OrgUnit.MAX_NAME_LENGTH))) },
+                    onValueChange = { actions.onUpdate(unit.copy(overseerName = it)) },
                     label = { Text("Kreisaufseher (optional)") },
                     singleLine = true,
                     enabled = !isBusy,

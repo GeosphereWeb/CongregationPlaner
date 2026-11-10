@@ -168,4 +168,15 @@ class OrganizationViewModelTest {
         assertFalse(state.canManage)
         assertNull(state.editor)
     }
+
+    @Test
+    fun `names in the editor are cut to the allowed length`() {
+        viewModel.edit(emea)
+        val tooLong = "x".repeat(OrgUnit.MAX_NAME_LENGTH + 4)
+
+        viewModel.updateEditor(OrgUnit("r1", tooLong, tooLong))
+
+        assertEquals(OrgUnit.MAX_NAME_LENGTH, state.editor?.unit?.name?.length)
+        assertEquals(OrgUnit.MAX_NAME_LENGTH, state.editor?.unit?.overseerName?.length)
+    }
 }

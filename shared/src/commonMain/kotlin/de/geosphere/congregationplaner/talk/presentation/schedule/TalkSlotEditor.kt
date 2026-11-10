@@ -190,7 +190,7 @@ internal fun TalkSlotEditor(
 
         OutlinedTextField(
             value = slot.note.orEmpty(),
-            onValueChange = { onChange(slot.copy(note = it.take(TalkSlot.MAX_NOTE_LENGTH).ifEmpty { null })) },
+            onValueChange = { onChange(slot.copy(note = it)) },
             label = { Text("Notiz") },
             supportingText = { Text("${slot.note.orEmpty().length} / ${TalkSlot.MAX_NOTE_LENGTH}") },
             minLines = 2,

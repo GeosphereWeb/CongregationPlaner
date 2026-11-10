@@ -46,10 +46,10 @@ internal fun MemberEditor(
                 editor.member?.let { "Angaben von ${it.label}" } ?: "Neue Person ohne Konto",
                 style = MaterialTheme.typography.titleMedium,
             )
-            ProfileField(profile.firstName, "Vorname", !isSaving, MemberProfile.MAX_NAME_LENGTH, {
+            ProfileField(profile.firstName, "Vorname", !isSaving, {
                 onChange(profile.copy(firstName = it))
             })
-            ProfileField(profile.lastName, "Familienname", !isSaving, MemberProfile.MAX_NAME_LENGTH, {
+            ProfileField(profile.lastName, "Familienname", !isSaving, {
                 onChange(profile.copy(lastName = it))
             })
 

@@ -10,13 +10,13 @@ Nach jeder Phase hier abhaken und Ticket und PR eintragen.
 |---|---|---|---|---|
 | 0 | Package-Struktur | CP-130 | #148 | in Review |
 | 1 | Policies vereinheitlichen | CP-131 | #149 | in Review |
-| 2 | Login entkoppeln | CP-132 | – | in Review |
-| 3 | Logik aus Composables holen | – | – | offen |
+| 2 | Login entkoppeln | CP-132 | #150 | in Review |
+| 3 | Logik aus Composables holen | CP-133 | – | in Review |
 | 4 | Große Klassen aufteilen | – | – | offen |
 | 5 | `uilib` auffüllen | – | – | offen |
 | 6 | UiState-Feinschliff | – | – | offen |
 
-Nächster Schritt: Phase 3 (Logik aus Composables holen). Die Branches sind gestapelt: jede Phase baut auf dem Branch der vorigen auf, bis deren PR gemergt ist.
+Nächster Schritt: Phase 4 (Große Klassen aufteilen). Die Branches sind gestapelt: jede Phase baut auf dem Branch der vorigen auf, bis deren PR gemergt ist.
 
 ## Ziele
 
@@ -191,6 +191,14 @@ Umgesetzt in CP-132:
 4. Abgeleitete Texte und Schalter (Titel in `CongregationEditor`, `enabled`-Bedingungen in `CongregationSelector`) als Felder im State liefern.
 5. `ImportContent`: die Begrenzung der angezeigten Probleme in den State verlagern.
 6. Tests für jede verlagerte Logik.
+
+Umgesetzt in CP-133:
+
+- Suchfilter der Picker in `TalkSearch.kt` und `SpeakerSearch.kt` (zwei Dateien, weil gleichnamige Erweiterungen auf `List` auf der JVM kollidieren).
+- Verzeichnis: Zuordnung, Zähler, Beschriftungen und Filterzusammenfassungen in `ExternalDirectoryLabels.kt`.
+- Wochenplan: `slotsByMonth`, `withLimitedNote` (im ViewModel angewendet), `weekdayShortName`.
+- Längenbegrenzungen: Organisation im `OrganizationViewModel`, Profile über `MemberProfile.withinInputLimits()` in beiden ViewModels; `ProfileField` und `PhoneField` begrenzen nicht mehr selbst.
+- Abgeleitete Werte im Zustand: `neverHeldCount`, `canApplyInviteLink`, `selectedMember`, `CongregationMetadata.isNew`; `shownProblems` und `talkPlanningTabs` als reine Funktionen.
 
 ### Phase 4: Große Klassen aufteilen
 

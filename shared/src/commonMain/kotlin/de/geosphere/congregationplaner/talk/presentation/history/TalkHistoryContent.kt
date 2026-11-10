@@ -126,8 +126,7 @@ internal fun TalkHistoryContent(state: TalkHistoryUiState, actions: TalkHistoryA
 @Composable
 private fun TalkHistoryHeader(state: TalkHistoryUiState, actions: TalkHistoryActions) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        val neverHeld = state.rows.count { it.entry == null }
-        Text("$neverHeld von ${state.rows.size} Vorträgen wurden noch nie gehalten.")
+        Text("${state.neverHeldCount} von ${state.rows.size} Vorträgen wurden noch nie gehalten.")
         OutlinedTextField(
             value = state.query,
             onValueChange = actions.onSearch,
@@ -211,7 +210,7 @@ private fun LazyListScope.speakerResults(state: TalkHistoryUiState, actions: Tal
                     "${held.talkNumber} – ${held.talk?.title.orEmpty()}",
                     style = MaterialTheme.typography.titleMedium,
                 )
-                Text(held.days.joinToString(", ") { it.toDisplayText() })
+                Text(held.daysText())
             }
         }
     }

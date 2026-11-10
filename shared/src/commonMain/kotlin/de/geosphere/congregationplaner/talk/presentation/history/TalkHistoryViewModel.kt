@@ -37,6 +37,8 @@ data class TalkHistoryUiState(
     /** Die Historie wird nur angezeigt; sie ändert sich ausschließlich durch die Planung. */
     override val isSaving: Boolean get() = false
 
+    val neverHeldCount: Int get() = rows.count { it.entry == null }
+
     val rows: List<TalkHistoryRow>
         get() {
             val byNumber = history.associateBy { it.talkNumber }
