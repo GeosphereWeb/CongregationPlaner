@@ -3,6 +3,7 @@ package de.geosphere.congregationplaner.user.domain.usecase
 import app.cash.turbine.test
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.UserAccessState
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
 import de.geosphere.congregationplaner.user.testing.FakeUserRepository
@@ -13,6 +14,8 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class ObserveUserAccessUseCaseTest {
     private val authUser = testAuthUser()
@@ -57,6 +60,71 @@ class ObserveUserAccessUseCaseTest {
     }
 
     @Test
+    fun `global admin without a member document carries the contact data of the admin document`() = runBlocking {
+        val repository = FakeUserRepository()
+        repository.globalAdminResult = Result.success(true)
+        val adminProfile = MemberProfile(lastName = "Admin", firstName = "Anna", mobilePhone = "0170")
+        repository.adminProfile.value = adminProfile
+
+        listOf(null, testCongregation).forEach { congregation ->
+            ObserveUserAccessUseCase(repository)(authUser, congregation).test {
+                assertEquals(UserAccessState.Loading, awaitItem())
+                val user = (awaitItem() as UserAccessState.Authorized).user
+                assertEquals(adminProfile, user.profile)
+                assertTrue(user.isGlobalAdmin)
+                assertFalse(user.isMember)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+    }
+
+    @Test
+    fun `global admin with a member document keeps the member profile`() = runBlocking {
+        val memberProfile = MemberProfile(lastName = "Mitglied", firstName = "Max")
+        val repository = FakeUserRepository(AppUser(uid = "uid-1", approved = true, profile = memberProfile))
+        repository.globalAdminResult = Result.success(true)
+        repository.adminProfile.value = MemberProfile(lastName = "Admin")
+
+        ObserveUserAccessUseCase(repository)(authUser, testCongregation).test {
+            assertEquals(UserAccessState.Loading, awaitItem())
+            assertEquals(memberProfile, (awaitItem() as UserAccessState.Authorized).user.profile)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `a failing admin profile does not lock the global admin out`() = runBlocking {
+        val repository = object : UserRepository by FakeUserRepository() {
+            override suspend fun isGlobalAdmin(uid: String): Result<Boolean> = Result.success(true)
+
+            override fun observeGlobalAdminProfile(uid: String): Flow<MemberProfile> =
+                flow { throw IllegalStateException("offline") }
+        }
+
+        ObserveUserAccessUseCase(repository)(authUser, null).test {
+            assertEquals(UserAccessState.Loading, awaitItem())
+            val user = (awaitItem() as UserAccessState.Authorized).user
+            assertTrue(user.isGlobalAdmin)
+            assertEquals(MemberProfile(), user.profile)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `global admin with a member document is a member`() = runBlocking {
+        val repository = FakeUserRepository(AppUser(uid = "uid-1", approved = true))
+        repository.globalAdminResult = Result.success(true)
+
+        ObserveUserAccessUseCase(repository)(authUser, testCongregation).test {
+            assertEquals(UserAccessState.Loading, awaitItem())
+            val user = (awaitItem() as UserAccessState.Authorized).user
+            assertTrue(user.isGlobalAdmin)
+            assertTrue(user.isMember)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun `global admin is authorized without approval`() = runBlocking {
         val repository = FakeUserRepository(AppUser(uid = "uid-1", approved = false))
         repository.globalAdminResult = Result.success(true)
@@ -80,11 +148,17 @@ class ObserveUserAccessUseCaseTest {
             assertEquals(UserAccessState.Loading, awaitItem())
             assertEquals(
                 UserAccessState.Authorized(
-                    AppUser(uid = "uid-1", email = "user@example.com", approved = true, isGlobalAdmin = true),
+                    AppUser(
+                        uid = "uid-1",
+                        email = "user@example.com",
+                        approved = true,
+                        isGlobalAdmin = true,
+                        isMember = false,
+                    ),
                 ),
                 awaitItem(),
             )
-            awaitComplete()
+            cancelAndIgnoreRemainingEvents()
         }
         assertEquals(0, repository.loadCount)
     }
@@ -104,6 +178,7 @@ class ObserveUserAccessUseCaseTest {
                         approved = true,
                         congregation = testCongregation,
                         isGlobalAdmin = true,
+                        isMember = false,
                     ),
                 ),
                 awaitItem(),

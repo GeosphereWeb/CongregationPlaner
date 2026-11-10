@@ -15,6 +15,8 @@ import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
  * @param hasAccount `false` für Personen (z. B. Kinder), die der Admin ohne eigenes Login erfasst hat;
  *   sie sind nie freigegeben und haben keine Rolle.
  * @param profile Persönliche Angaben, die der Admin pflegt.
+ * @param isMember `false` für einen globalen Admin, für den es kein Mitgliedsdokument gibt: Seine Angaben sind aus dem
+ *   Login zusammengestellt, und es gibt nichts, das er als Mitglied speichern könnte.
  */
 data class AppUser(
     val uid: String = "",
@@ -26,6 +28,7 @@ data class AppUser(
     val isGlobalAdmin: Boolean = false,
     val hasAccount: Boolean = true,
     val profile: MemberProfile = MemberProfile(),
+    val isMember: Boolean = true,
 ) {
     val label: String
         get() = profile.fullName.takeIf(String::isNotBlank)

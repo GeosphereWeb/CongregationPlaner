@@ -3,6 +3,7 @@ package de.geosphere.congregationplaner.user.domain.usecase
 import de.geosphere.congregationplaner.auth.FirebaseUser
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.UserAccessState
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
 import dev.zacsweers.metro.Inject
@@ -10,6 +11,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -61,6 +63,8 @@ class ObserveUserAccessUseCase(private val userRepository: UserRepository) {
     }
 
     private fun globalAdminAccess(authUser: FirebaseUser, congregation: CongregationRef?): Flow<UserAccessState> {
+        // Ein Ausfall beim Lesen der Kontaktdaten sperrt den globalen Admin nicht aus der App aus.
+        val adminProfile = userRepository.observeGlobalAdminProfile(authUser.uid).catch { emit(MemberProfile()) }
         val globalOnly = AppUser(
             uid = authUser.uid,
             email = authUser.email,
@@ -68,12 +72,15 @@ class ObserveUserAccessUseCase(private val userRepository: UserRepository) {
             approved = true,
             congregation = congregation,
             isGlobalAdmin = true,
+            isMember = false,
         )
-        if (congregation == null) return flowOf(UserAccessState.Authorized(globalOnly))
+        if (congregation == null) {
+            return adminProfile.map { profile -> UserAccessState.Authorized(globalOnly.copy(profile = profile)) }
+        }
         // Ein Mitgliedsdokument wird nur beobachtet, nie angelegt: Rollen gelten nur dort, wo er ausdrücklich
-        // Mitglied ist.
-        return userRepository.observeUser(congregation, authUser.uid).map { member ->
-            UserAccessState.Authorized((member ?: globalOnly).copy(isGlobalAdmin = true))
+        // Mitglied ist. Ohne eines gelten die Kontaktdaten aus dem Admin-Dokument.
+        return combine(userRepository.observeUser(congregation, authUser.uid), adminProfile) { member, profile ->
+            UserAccessState.Authorized((member ?: globalOnly.copy(profile = profile)).copy(isGlobalAdmin = true))
         }
     }
 

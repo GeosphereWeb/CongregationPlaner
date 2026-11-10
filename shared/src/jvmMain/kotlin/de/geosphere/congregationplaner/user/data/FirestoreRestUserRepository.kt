@@ -50,6 +50,22 @@ internal class FirestoreRestUserRepository(
         client.requestOrNull("GET", client.documentUrl(ADMINS_COLLECTION_PATH, uid)) != null
     }
 
+    override fun observeGlobalAdminProfile(uid: String): Flow<MemberProfile> = pollingFlow {
+        client.requestOrNull("GET", client.documentUrl(ADMINS_COLLECTION_PATH, uid))
+            ?.let { parseDocument(it).fields.toAdminProfile() }
+            ?: MemberProfile()
+    }
+
+    override suspend fun updateGlobalAdminProfile(uid: String, profile: MemberProfile): Result<Unit> = runCatchingIo {
+        // currentDocument.exists: das Admin-Dokument legt nur die Konsole an, ein PATCH darf es nicht neu erzeugen.
+        client.request(
+            method = "PATCH",
+            url = "${client.documentUrl(ADMINS_COLLECTION_PATH, uid)}?${client.updateMask(ADMIN_FIELD_NAMES)}" +
+                "&currentDocument.exists=true",
+            body = firestoreFields(profile.adminFields()),
+        )
+    }
+
     override fun observeMembers(congregation: CongregationRef): Flow<List<AppUser>> = pollingFlow {
         parseDocuments(client.request("GET", "${client.collectionUrl(congregation.membersPath)}?pageSize=1000"))
             .map { it.toUser(congregation) }
@@ -163,6 +179,9 @@ internal class FirestoreRestUserRepository(
     private companion object {
         val ACCESS_FIELD_NAMES = listOf("approved", "roles")
 
+        /** Die Kontaktdaten im Admin-Dokument; die Rules erlauben genau diese fünf Felder. */
+        val ADMIN_FIELD_NAMES = listOf("lastName", "firstName", "mobilePhone", "landlinePhone", "emails")
+
         /** Die Felder, die ein Mitglied im eigenen Dokument ändern darf (`ownFields()` in den Rules). */
         val OWN_PROFILE_FIELD_NAMES = listOf(
             "lastName",
@@ -178,6 +197,22 @@ internal class FirestoreRestUserRepository(
         val PROFILE_FIELD_NAMES = OWN_PROFILE_FIELD_NAMES + listOf("category", "baptized", "appointment", "isSpeaker")
     }
 }
+
+private fun MemberProfile.adminFields(): JsonObject = JsonObject().apply {
+    add("lastName", firestoreString(lastName))
+    add("firstName", firestoreString(firstName))
+    add("mobilePhone", firestoreString(mobilePhone))
+    add("landlinePhone", firestoreString(landlinePhone))
+    add("emails", firestoreStringArray(emails))
+}
+
+private fun JsonObject.toAdminProfile(): MemberProfile = MemberProfile(
+    lastName = optionalStringField("lastName").orEmpty(),
+    firstName = optionalStringField("firstName").orEmpty(),
+    mobilePhone = optionalStringField("mobilePhone").orEmpty(),
+    landlinePhone = optionalStringField("landlinePhone").orEmpty(),
+    emails = stringArrayField("emails").filterNotNull(),
+)
 
 internal fun AppUser.allFields(): JsonObject = accessFields().apply {
     add("email", firestoreNullableString(email))

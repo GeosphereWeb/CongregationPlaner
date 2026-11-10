@@ -10,6 +10,7 @@ import de.geosphere.congregationplaner.organization.domain.model.OrgLevel
 import de.geosphere.congregationplaner.organization.domain.model.OrgUnit
 import de.geosphere.congregationplaner.user.data.unavailableUserRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -34,6 +35,10 @@ class UnavailableRepositoriesTest {
         assertIs<UnsupportedOperationException>(failure)
         assertEquals("Firestore is not configured for iOS.", failure.message)
         assertIs<UnsupportedOperationException>(repository.isGlobalAdmin("uid-1").exceptionOrNull())
+        assertIs<UnsupportedOperationException>(
+            repository.updateGlobalAdminProfile("uid-1", MemberProfile()).exceptionOrNull(),
+        )
+        assertFailsWith<UnsupportedOperationException> { repository.observeGlobalAdminProfile("uid-1").first() }
         assertIs<UnsupportedOperationException>(
             repository.updateMember(congregation, AppUser(uid = "uid-1")).exceptionOrNull(),
         )

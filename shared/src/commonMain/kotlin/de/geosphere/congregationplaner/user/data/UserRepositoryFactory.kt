@@ -68,6 +68,12 @@ fun unavailableUserRepository(platform: String): UserRepository = object : UserR
 
     override suspend fun isGlobalAdmin(uid: String): Result<Boolean> = unavailable()
 
+    override fun observeGlobalAdminProfile(uid: String): Flow<MemberProfile> = flow {
+        throw UnsupportedOperationException("Firestore is not configured for $platform.")
+    }
+
+    override suspend fun updateGlobalAdminProfile(uid: String, profile: MemberProfile): Result<Unit> = unavailable()
+
     override fun observeMembers(congregation: CongregationRef): Flow<List<AppUser>> = flow {
         throw UnsupportedOperationException("Firestore is not configured for $platform.")
     }
