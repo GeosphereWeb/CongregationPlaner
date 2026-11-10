@@ -5,11 +5,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -42,6 +45,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.addPathNodes
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.geosphere.congregationplaner.congregation.presentation.MeetingTimeInput
@@ -61,8 +66,8 @@ import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.ui.button.SpeedDialFab
 import de.geosphere.congregationplaner.ui.button.SpeedDialItem
 import de.geosphere.congregationplaner.ui.card.DateBadge
-import de.geosphere.congregationplaner.ui.chip.StatusChip
 import de.geosphere.congregationplaner.ui.chip.StatusTone
+import de.geosphere.congregationplaner.ui.chip.VerticalStatusTag
 import de.geosphere.congregationplaner.ui.list.CollapsingHeaderColumn
 import de.geosphere.congregationplaner.ui.nav.SectionLabel
 import kotlinx.coroutines.launch
@@ -250,9 +255,9 @@ internal fun TalkScheduleContent(
                                         SelectableListCard(
                                             selected = editor?.original?.date == slot.date,
                                             onSelect = { actions.onEditSlot(slot) },
-                                            onDelete = { actions.onDelete(slot) },
+                                            onDelete = {},
                                             actionsEnabled = !state.isSaving,
-                                            canDelete = true,
+                                            canDelete = false,
                                             highlight = slotHighlight(slot, today),
                                         ) {
                                             SlotSummary(slot, listSlotChip(slot, slotStatus(slot, nextDate)))
@@ -287,7 +292,7 @@ internal fun TalkScheduleContent(
                             if (editor != null) {
                                 TalkSlotEditor(
                                     editor = editor,
-                                    chip = slotChip(editor.slot, slotStatus(editor.slot, nextDate)),
+                                    chip = slotChip(slotStatus(editor.slot, nextDate)),
                                     weekEvents = state.weekEvents,
                                     talks = state.talks,
                                     speakers = state.speakers,
@@ -303,6 +308,7 @@ internal fun TalkScheduleContent(
                                     onOpenHistory = actions.onOpenHistory,
                                     onSave = actions.onSave,
                                     onCancel = onCancelEditing,
+                                    onDelete = { editor.original?.let(actions.onDelete) },
                                 )
                             } else {
                                 DetailPlaceholder("Wähle einen Termin zum Bearbeiten aus.")
@@ -403,27 +409,62 @@ private fun filterChipColors(status: SlotStatus): Pair<Color, Color> = when (sta
 private fun Modifier.monthHeader(): Modifier =
     fillMaxWidth().background(MaterialTheme.colorScheme.background).padding(vertical = 8.dp)
 
-/** Datumsblock, Vortrag und Redner mit Herkunft sowie die Statusmarke. */
+/**
+ * Datumsblock links, daneben Wochenereignis, Vortrag (bis zu zwei Zeilen) und Redner mit Herkunft (eine Zeile), rechts
+ * die senkrechte Statusmarke.
+ */
 @Composable
 private fun SlotSummary(slot: TalkSlot, chip: SlotChip?) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        modifier = Modifier.heightIn(min = SLOT_MIN_HEIGHT).height(IntrinsicSize.Min),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         DateBadge(germanWeekdayName(slot.date).take(WEEKDAY_SHORT_LENGTH), slot.date.day.toString())
         Column(Modifier.weight(1f)) {
-            Text(slotTitle(slot), style = MaterialTheme.typography.titleMedium, color = NightColors.OnBackground)
-            Text(
-                slotSpeakerLine(slot),
-                style = MaterialTheme.typography.bodySmall,
-                color = NightColors.OnBackgroundMuted,
-            )
             slotEventLine(slot)?.let { event ->
-                Text(event, style = MaterialTheme.typography.bodySmall, color = StatusTone.Sky.content)
+                Text(
+                    event,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = StatusTone.Sky.content,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            slotListTitle(slot)?.let { title ->
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Normal,
+                        lineHeight = SLOT_TITLE_LINE_HEIGHT,
+                    ),
+                    color = NightColors.OnBackground.copy(alpha = SLOT_TITLE_ALPHA),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            slotListSpeakerLine(slot)?.let { speaker ->
+                Text(
+                    speaker,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NightColors.OnBackgroundMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
-        chip?.let { StatusChip(it.text, it.tone) }
+        chip?.let { VerticalStatusTag(it.text, it.tone, Modifier.fillMaxHeight()) }
     }
 }
 
 private const val WEEKDAY_SHORT_LENGTH = 2
+
+// Mindesthöhe, damit der senkrechte Marketext auch bei einem kurzen Eintrag Platz hat.
+private val SLOT_MIN_HEIGHT = 64.dp
+
+private const val SLOT_TITLE_ALPHA = 1.0f
+
+// Enger als der Standard (24 sp bei 16 sp Schrift), damit zwei Titelzeilen dichter beieinander stehen.
+private val SLOT_TITLE_LINE_HEIGHT = 20.sp
 
 // Das Häkchen aus den Material Symbols (Apache 2.0).
 private val checkIcon = ImageVector.Builder(
