@@ -4,9 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.geosphere.congregationplaner.auth.domain.repository.FirebaseUser
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
-import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.UserAccessState
-import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
 import de.geosphere.congregationplaner.user.domain.usecase.GetAdminContactsUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.ObserveUserAccessUseCase
 import dev.zacsweers.metro.Inject
@@ -25,7 +23,6 @@ import kotlinx.coroutines.flow.update
 @Inject
 class UserAccessViewModel(
     private val observeUserAccess: ObserveUserAccessUseCase,
-    private val userPermissionPolicy: UserPermissionPolicy,
     private val getAdminContacts: GetAdminContactsUseCase,
 ) : ViewModel() {
     private val session = MutableStateFlow<AuthSession>(AuthSession.Unknown)
@@ -80,8 +77,6 @@ class UserAccessViewModel(
             if (current is AuthSession.SignedIn) current.copy(retry = current.retry + 1) else current
         }
     }
-
-    fun canManageUsers(user: AppUser): Boolean = userPermissionPolicy.canManageUsers(user)
 
     private sealed interface AuthSession {
         data object Unknown : AuthSession

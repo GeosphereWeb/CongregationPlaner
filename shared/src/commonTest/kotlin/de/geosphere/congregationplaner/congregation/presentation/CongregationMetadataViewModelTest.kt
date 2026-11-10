@@ -2,6 +2,7 @@ package de.geosphere.congregationplaner.congregation.presentation
 
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
 import de.geosphere.congregationplaner.congregation.domain.model.NewCongregationAdmin
+import de.geosphere.congregationplaner.congregation.domain.permission.CongregationPermissionPolicy
 import de.geosphere.congregationplaner.congregation.domain.repository.CongregationMetadataRepository
 import de.geosphere.congregationplaner.congregation.domain.usecase.CreateCongregationUseCase
 import de.geosphere.congregationplaner.congregation.domain.usecase.DeleteCongregationUseCase
@@ -10,7 +11,6 @@ import de.geosphere.congregationplaner.congregation.domain.usecase.SaveCongregat
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
-import de.geosphere.congregationplaner.user.domain.permission.CongregationPermissionPolicy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -271,9 +271,9 @@ class CongregationMetadataViewModelTest {
 
     private fun createViewModel(user: AppUser? = null) = CongregationMetadataViewModel(
         ObserveCongregationsUseCase(repository),
-        SaveCongregationUseCase(repository),
-        CreateCongregationUseCase(repository),
-        DeleteCongregationUseCase(repository),
+        SaveCongregationUseCase(repository, CongregationPermissionPolicy()),
+        CreateCongregationUseCase(repository, CongregationPermissionPolicy()),
+        DeleteCongregationUseCase(repository, CongregationPermissionPolicy()),
         CongregationPermissionPolicy(),
     ).also { viewModel -> viewModel.onCurrentUserChanged(user, circuitIds = circuit) }
 

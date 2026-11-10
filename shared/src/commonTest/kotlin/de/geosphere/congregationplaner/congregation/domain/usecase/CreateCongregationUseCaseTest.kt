@@ -4,7 +4,11 @@ import de.geosphere.congregationplaner.congregation.domain.model.CongregationExc
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationName
 import de.geosphere.congregationplaner.congregation.domain.model.NewCongregationAdmin
+import de.geosphere.congregationplaner.congregation.domain.permission.CongregationPermissionPolicy
 import de.geosphere.congregationplaner.congregation.domain.repository.CongregationMetadataRepository
+import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
+import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.runBlocking
@@ -19,6 +23,14 @@ class CreateCongregationUseCaseTest {
     private val circuit = listOf("EMEA", "europe", "central", "609a")
     private val repository = FakeRepository()
     private val admin = NewCongregationAdmin("uid-1", "max@example.com", "Max Muster", "Max", "Muster", true)
+    private val policy = CongregationPermissionPolicy()
+    private val globalAdmin = AppUser(uid = "global-uid", isGlobalAdmin = true)
+    private val congregationAdmin = AppUser(
+        uid = "uid-2",
+        approved = true,
+        roles = setOf(CongregationRole.CONGREGATION_ADMIN),
+        congregation = CongregationRef.fromIds(circuit + "k1"),
+    )
 
     @Test
     fun `the name key ignores case and blanks`() {
@@ -28,7 +40,7 @@ class CreateCongregationUseCaseTest {
 
     @Test
     fun `a free name creates the congregation for the creator as first admin`() = runBlocking<Unit> {
-        val created = CreateCongregationUseCase(repository)(circuit, "  Grafing Süd ", "uid-1", admin).getOrThrow()
+        val created = CreateOwnCongregationUseCase(repository)(circuit, "  Grafing Süd ", admin).getOrThrow()
 
         assertEquals("new-id", created.id)
         assertEquals("Grafing Süd", repository.created.single().name)
@@ -39,21 +51,30 @@ class CreateCongregationUseCaseTest {
 
     @Test
     fun `a global admin creates without becoming a member`() = runBlocking<Unit> {
-        CreateCongregationUseCase(repository)(circuit, "Nord", "global-uid").getOrThrow()
+        CreateCongregationUseCase(repository, policy)(globalAdmin, circuit, "Nord").getOrThrow()
 
         assertNull(repository.firstAdmin)
         assertEquals("global-uid", repository.createdBy)
     }
 
     @Test
-    fun `invalid names are rejected before anything is read or written`() = runBlocking<Unit> {
-        val useCase = CreateCongregationUseCase(repository)
+    fun `only a global admin creates a congregation without becoming its admin`() = runBlocking<Unit> {
+        val failure = CreateCongregationUseCase(repository, policy)(congregationAdmin, circuit, "Nord")
 
-        assertIs<CongregationException.MissingName>(useCase(circuit, "   ", "uid-1", admin).exceptionOrNull())
+        assertIs<CongregationException.NotAllowed>(failure.exceptionOrNull())
+        assertTrue(repository.created.isEmpty())
+        assertTrue(repository.lookedUp.isEmpty())
+    }
+
+    @Test
+    fun `invalid names are rejected before anything is read or written`() = runBlocking<Unit> {
+        val useCase = CreateOwnCongregationUseCase(repository)
+
+        assertIs<CongregationException.MissingName>(useCase(circuit, "   ", admin).exceptionOrNull())
         assertIs<CongregationException.NameTooLong>(
-            useCase(circuit, "x".repeat(CongregationName.MAX_LENGTH + 1), "uid-1", admin).exceptionOrNull(),
+            useCase(circuit, "x".repeat(CongregationName.MAX_LENGTH + 1), admin).exceptionOrNull(),
         )
-        assertIs<CongregationException.InvalidName>(useCase(circuit, "Nord/Süd", "uid-1", admin).exceptionOrNull())
+        assertIs<CongregationException.InvalidName>(useCase(circuit, "Nord/Süd", admin).exceptionOrNull())
         assertTrue(repository.created.isEmpty())
         assertTrue(repository.lookedUp.isEmpty())
     }
@@ -62,7 +83,7 @@ class CreateCongregationUseCaseTest {
     fun `a taken name is reported`() = runBlocking<Unit> {
         repository.nameOwner = "other-congregation"
 
-        val failure = CreateCongregationUseCase(repository)(circuit, "Grafing Süd", "uid-1", admin).exceptionOrNull()
+        val failure = CreateOwnCongregationUseCase(repository)(circuit, "Grafing Süd", admin).exceptionOrNull()
 
         assertIs<CongregationException.NameTaken>(failure)
         assertTrue(repository.created.isEmpty())
@@ -70,10 +91,9 @@ class CreateCongregationUseCaseTest {
 
     @Test
     fun `an unconfirmed e-mail address cannot create a congregation as admin`() = runBlocking<Unit> {
-        val failure = CreateCongregationUseCase(repository)(
+        val failure = CreateOwnCongregationUseCase(repository)(
             circuit,
             "Grafing Süd",
-            "uid-1",
             admin.copy(emailVerified = false),
         ).exceptionOrNull()
 
@@ -86,27 +106,41 @@ class CreateCongregationUseCaseTest {
         val error = IllegalStateException("offline")
         repository.lookupError = error
 
-        assertEquals(error, CreateCongregationUseCase(repository)(circuit, "Nord", "uid-1", admin).exceptionOrNull())
+        assertEquals(error, CreateOwnCongregationUseCase(repository)(circuit, "Nord", admin).exceptionOrNull())
         assertTrue(repository.created.isEmpty())
     }
 
     @Test
     fun `saving may keep the own name but not take the name of another congregation`() = runBlocking<Unit> {
-        val useCase = SaveCongregationUseCase(repository)
+        val useCase = SaveCongregationUseCase(repository, policy)
         val own = CongregationMetadata(id = "k1", name = " Grafing Süd ")
 
         repository.nameOwner = "k1"
-        assertEquals("Grafing Süd", useCase(circuit, own).getOrThrow().name)
+        assertEquals("Grafing Süd", useCase(congregationAdmin, circuit, own).getOrThrow().name)
 
         repository.nameOwner = "k2"
-        assertIs<CongregationException.NameTaken>(useCase(circuit, own).exceptionOrNull())
-        assertIs<CongregationException.MissingName>(useCase(circuit, own.copy(name = " ")).exceptionOrNull())
+        assertIs<CongregationException.NameTaken>(useCase(globalAdmin, circuit, own).exceptionOrNull())
+        assertIs<CongregationException.MissingName>(
+            useCase(globalAdmin, circuit, own.copy(name = " ")).exceptionOrNull(),
+        )
+    }
+
+    @Test
+    fun `a congregation admin cannot save another congregation`() = runBlocking<Unit> {
+        val other = CongregationMetadata(id = "k2", name = "Nord")
+
+        val failure = SaveCongregationUseCase(repository, policy)(congregationAdmin, circuit, other)
+
+        assertIs<CongregationException.NotAllowed>(failure.exceptionOrNull())
+        assertTrue(repository.lookedUp.isEmpty())
     }
 
     @Test
     fun `saving needs an existing congregation`() {
         assertFailsWith<IllegalArgumentException> {
-            runBlocking { SaveCongregationUseCase(repository)(circuit, CongregationMetadata(name = "Nord")) }
+            runBlocking {
+                SaveCongregationUseCase(repository, policy)(globalAdmin, circuit, CongregationMetadata(name = "Nord"))
+            }
         }
     }
 

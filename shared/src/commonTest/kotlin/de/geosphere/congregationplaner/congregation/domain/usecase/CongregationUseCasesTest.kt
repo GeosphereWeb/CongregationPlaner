@@ -1,8 +1,11 @@
 package de.geosphere.congregationplaner.congregation.domain.usecase
 
+import de.geosphere.congregationplaner.congregation.domain.model.CongregationException
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
 import de.geosphere.congregationplaner.congregation.domain.model.NewCongregationAdmin
+import de.geosphere.congregationplaner.congregation.domain.permission.CongregationPermissionPolicy
 import de.geosphere.congregationplaner.congregation.domain.repository.CongregationMetadataRepository
+import de.geosphere.congregationplaner.user.domain.model.AppUser
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -10,9 +13,13 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNull
 
 class CongregationUseCasesTest {
     private val circuit = listOf("EMEA", "europe", "central-europe", "609a")
+    private val policy = CongregationPermissionPolicy()
+    private val globalAdmin = AppUser(uid = "global-uid", isGlobalAdmin = true)
 
     @Test
     fun `observe use case returns the congregations of the circuit`() = runBlocking {
@@ -35,7 +42,7 @@ class CongregationUseCasesTest {
         )
         val repository = FakeCongregationMetadataRepository(emptyList())
 
-        assertEquals(expected, SaveCongregationUseCase(repository)(circuit, expected).getOrThrow())
+        assertEquals(expected, SaveCongregationUseCase(repository, policy)(globalAdmin, circuit, expected).getOrThrow())
         assertEquals(expected, repository.savedCongregation)
         assertEquals(circuit, repository.circuit)
     }
@@ -44,9 +51,25 @@ class CongregationUseCasesTest {
     fun `delete use case delegates congregation id and circuit to repository`() = runBlocking {
         val repository = FakeCongregationMetadataRepository(emptyList())
 
-        assertEquals(Unit, DeleteCongregationUseCase(repository)(circuit, "k1").getOrThrow())
+        val congregation = CongregationMetadata(id = "k1", name = "Berlin")
+
+        assertEquals(
+            Unit,
+            DeleteCongregationUseCase(repository, policy)(globalAdmin, circuit, congregation).getOrThrow(),
+        )
         assertEquals("k1", repository.deletedCongregationId)
         assertEquals(circuit, repository.circuit)
+    }
+
+    @Test
+    fun `only a global admin deletes a congregation`() = runBlocking {
+        val repository = FakeCongregationMetadataRepository(emptyList())
+        val member = AppUser(uid = "u1", approved = true)
+
+        val failure = DeleteCongregationUseCase(repository, policy)(member, circuit, CongregationMetadata(id = "k1"))
+
+        assertIs<CongregationException.NotAllowed>(failure.exceptionOrNull())
+        assertNull(repository.deletedCongregationId)
     }
 
     private class FakeCongregationMetadataRepository(private val congregations: List<CongregationMetadata>) :

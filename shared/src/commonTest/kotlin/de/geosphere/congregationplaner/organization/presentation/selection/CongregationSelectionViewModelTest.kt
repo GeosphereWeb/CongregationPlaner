@@ -6,7 +6,7 @@ import de.geosphere.congregationplaner.congregation.domain.model.CongregationMet
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationName
 import de.geosphere.congregationplaner.congregation.domain.model.NewCongregationAdmin
 import de.geosphere.congregationplaner.congregation.domain.repository.CongregationMetadataRepository
-import de.geosphere.congregationplaner.congregation.domain.usecase.CreateCongregationUseCase
+import de.geosphere.congregationplaner.congregation.domain.usecase.CreateOwnCongregationUseCase
 import de.geosphere.congregationplaner.organization.data.InMemoryKeyValueStorage
 import de.geosphere.congregationplaner.organization.data.KeyValueCongregationSelectionStore
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
@@ -63,7 +63,7 @@ class CongregationSelectionViewModelTest {
     private fun createViewModel() = CongregationSelectionViewModel(
         LoadOrganizationUnitsUseCase(repository),
         store,
-        CreateCongregationUseCase(congregations),
+        CreateOwnCongregationUseCase(congregations),
     )
 
     private val authUser = object : FirebaseUser {

@@ -1,10 +1,10 @@
 package de.geosphere.congregationplaner.presentation.navigation
 
+import de.geosphere.congregationplaner.midweek.domain.permission.MidweekPermissionPolicy
+import de.geosphere.congregationplaner.organization.domain.permission.OrganizationPermissionPolicy
 import de.geosphere.congregationplaner.talk.domain.permission.TalkReferenceDataPolicy
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.user.domain.model.AppUser
-import de.geosphere.congregationplaner.user.domain.permission.MidweekPermissionPolicy
-import de.geosphere.congregationplaner.user.domain.permission.OrganizationPermissionPolicy
 import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
 import dev.zacsweers.metro.Inject
 

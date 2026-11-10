@@ -1,4 +1,4 @@
-package de.geosphere.congregationplaner.user.domain.permission
+package de.geosphere.congregationplaner.congregation.domain.permission
 
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
 import de.geosphere.congregationplaner.user.domain.model.AppUser
@@ -22,10 +22,10 @@ class CongregationPermissionPolicy {
         user.isGlobalAdmin || canEditMeetingTimes(user, congregation)
 
     // Darf der User die Zusammenkunftszeiten ändern? Nur der freigegebene Versammlungsadmin der eigenen Versammlung.
-    fun canEditMeetingTimes(user: AppUser, congregation: CongregationMetadata): Boolean = user.approved &&
-        CongregationRole.CONGREGATION_ADMIN in user.roles &&
-        congregation.id.isNotBlank() &&
-        user.congregation?.congregationId == congregation.id
+    fun canEditMeetingTimes(user: AppUser, congregation: CongregationMetadata): Boolean =
+        user.hasRole(CongregationRole.CONGREGATION_ADMIN) &&
+            congregation.id.isNotBlank() &&
+            user.congregation?.congregationId == congregation.id
 
     // Darf der User diese Versammlung löschen?
     @Suppress("UnusedParameter")
