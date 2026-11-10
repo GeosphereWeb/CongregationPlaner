@@ -57,11 +57,11 @@ import de.geosphere.congregationplaner.presentation.components.DetailPlaceholder
 import de.geosphere.congregationplaner.presentation.components.ListPaneHeader
 import de.geosphere.congregationplaner.presentation.components.SelectableListCard
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
-import de.geosphere.congregationplaner.presentation.navigation.germanWeekdayName
 import de.geosphere.congregationplaner.talk.domain.model.Chairman
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
+import de.geosphere.congregationplaner.talk.presentation.common.weekdayShortName
 import de.geosphere.congregationplaner.talk.presentation.picker.SpeakerActions
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
@@ -248,7 +248,7 @@ internal fun TalkScheduleContent(
                                 } else if (visibleSlots.isEmpty()) {
                                     item { Text("Keine Termine für diese Auswahl.") }
                                 }
-                                visibleSlots.groupBy { it.date.month }.values.forEach { monthSlots ->
+                                slotsByMonth(visibleSlots).forEach { monthSlots ->
                                     // Der Monat bleibt beim Scrollen oben stehen; der Hintergrund verdeckt die Termine
                                     // darunter.
                                     stickyHeader(key = "month-${monthSlots.first().id}") {
@@ -451,7 +451,7 @@ private fun SlotSummary(slot: TalkSlot, chip: SlotChip?) {
         modifier = Modifier.heightIn(min = SLOT_MIN_HEIGHT).height(IntrinsicSize.Min),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        DateBadge(germanWeekdayName(slot.date).take(WEEKDAY_SHORT_LENGTH), slot.date.day.toString())
+        DateBadge(slot.date.weekdayShortName(), slot.date.day.toString())
         Column(Modifier.weight(1f)) {
             slotEventLine(slot)?.let { event ->
                 Text(
@@ -487,8 +487,6 @@ private fun SlotSummary(slot: TalkSlot, chip: SlotChip?) {
         chip?.let { VerticalStatusTag(it.text, it.tone, Modifier.fillMaxHeight()) }
     }
 }
-
-private const val WEEKDAY_SHORT_LENGTH = 2
 
 // Mindesthöhe, damit der senkrechte Marketext auch bei einem kurzen Eintrag Platz hat.
 private val SLOT_MIN_HEIGHT = 64.dp

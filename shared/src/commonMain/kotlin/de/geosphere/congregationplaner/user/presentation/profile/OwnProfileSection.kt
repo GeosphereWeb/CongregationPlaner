@@ -16,7 +16,6 @@ import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.ui.button.PrimaryButton
 import de.geosphere.congregationplaner.user.di.OwnProfileGraph
 import de.geosphere.congregationplaner.user.domain.model.AppUser
-import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.presentation.contact.ContactFields
 import de.geosphere.congregationplaner.user.presentation.contact.ProfileField
 import dev.zacsweers.metro.createGraph
@@ -46,10 +45,10 @@ private fun OwnProfileForm(
     val enabled = !state.isSaving
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Mein Profil", style = MaterialTheme.typography.titleMedium)
-        ProfileField(form.firstName, "Vorname", enabled, MemberProfile.MAX_NAME_LENGTH, {
+        ProfileField(form.firstName, "Vorname", enabled, {
             viewModel.onFormChange(form.copy(firstName = it))
         })
-        ProfileField(form.lastName, "Nachname", enabled, MemberProfile.MAX_NAME_LENGTH, {
+        ProfileField(form.lastName, "Nachname", enabled, {
             viewModel.onFormChange(form.copy(lastName = it))
         })
         ContactFields(form, enabled, viewModel::onFormChange, showAddressAndEmergencyContacts)

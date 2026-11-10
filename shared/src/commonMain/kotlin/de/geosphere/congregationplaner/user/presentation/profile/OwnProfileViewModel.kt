@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.usecase.UpdateOwnProfileUseCase
+import de.geosphere.congregationplaner.user.presentation.contact.withinInputLimits
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,7 +41,8 @@ class OwnProfileViewModel(private val updateOwnProfile: UpdateOwnProfileUseCase)
         }
     }
 
-    fun onFormChange(form: MemberProfile) = mutableUiState.update { it.copy(form = form, message = null) }
+    fun onFormChange(form: MemberProfile) =
+        mutableUiState.update { it.copy(form = form.withinInputLimits(), message = null) }
 
     fun save() {
         val current = user ?: return

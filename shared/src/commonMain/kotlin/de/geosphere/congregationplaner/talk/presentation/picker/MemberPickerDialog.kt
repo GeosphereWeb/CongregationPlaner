@@ -64,14 +64,6 @@ internal fun MemberPickerDialog(
     )
 }
 
-/** Die Eingabe passt auf Familien- oder Vornamen, ohne Rücksicht auf Groß- und Kleinschreibung. */
-internal fun List<MemberRef>.matching(query: String): List<MemberRef> {
-    val text = query.trim().lowercase()
-    return filter { member ->
-        text.isEmpty() || member.lastName.lowercase().contains(text) || member.firstName.lowercase().contains(text)
-    }
-}
-
 @ThemePreviews
 @Composable
 private fun MemberPickerDialogPreview() = PreviewThemeWrapper {

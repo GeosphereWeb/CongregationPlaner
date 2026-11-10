@@ -119,7 +119,7 @@ internal fun CongregationSelector(
                 text = if (state.isResolvingLink) "Prüft …" else "Link übernehmen",
                 onClick = onApplyInviteLink,
                 modifier = Modifier.weight(1f),
-                enabled = state.inviteLinkInput.isNotBlank() && !state.isResolvingLink,
+                enabled = state.canApplyInviteLink,
                 height = 48.dp,
             )
             SecondaryButton(
