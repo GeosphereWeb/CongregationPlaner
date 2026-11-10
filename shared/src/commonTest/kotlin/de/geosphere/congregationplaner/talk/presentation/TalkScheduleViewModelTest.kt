@@ -14,6 +14,7 @@ import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.talk.domain.usecase.ChangeYearSlotTimesUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.ConfirmSpeakerUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.CreateYearSlotsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.MoveTalkSlotUseCase
@@ -153,6 +154,7 @@ class TalkScheduleViewModelTest {
             ChangeYearSlotTimesUseCase(repository, policy),
             delete,
             SyncTalkHistoryWithSlotUseCase(history, policy),
+            ConfirmSpeakerUseCase(repository, policy),
             policy,
             UserPermissionPolicy(),
         )
@@ -467,12 +469,11 @@ class TalkScheduleViewModelTest {
     }
 
     @Test
-    fun `talk helper sees the slots and speakers but cannot open or create an editor`() {
+    fun `talk helper sees the slots and speakers and cannot create a slot`() {
         val helper = planner.copy(uid = "helper", roles = setOf(CongregationRole.TALK_HELPER))
         repository.slots.value = listOf(october25)
 
         viewModel.onCurrentUserChanged(helper)
-        viewModel.editSlot(october25)
         viewModel.newSlot()
 
         assertTrue(state.canView)
@@ -487,17 +488,101 @@ class TalkScheduleViewModelTest {
     }
 
     @Test
-    fun `switching from planner to helper closes the editor and stops the catalog`() {
+    fun `switching from planner to helper closes a new slot but keeps a saved one`() {
         val helper = planner.copy(uid = "helper", roles = setOf(CongregationRole.TALK_HELPER))
         viewModel.onCurrentUserChanged(planner)
         viewModel.newSlot()
         assertNotNull(state.editor)
 
         viewModel.onCurrentUserChanged(helper)
+        assertNull(state.editor)
+
         viewModel.editSlot(october25)
+        assertNotNull(state.editor)
+        viewModel.onCurrentUserChanged(planner)
+        viewModel.onCurrentUserChanged(helper)
+        assertNotNull(state.editor)
+        assertTrue(state.canView)
+    }
+
+    private val plannedSlot = october25.copy(
+        talkNumber = 12,
+        talkTitle = "Titel",
+        speakerMemberId = "m1",
+        speakerLastName = "Muster",
+        speakerFirstName = "Max",
+    )
+
+    @Test
+    fun `talk helper marks the speaker as informed and saves only that`() {
+        val helper = planner.copy(uid = "helper", roles = setOf(CongregationRole.TALK_HELPER))
+        repository.slots.value = listOf(plannedSlot)
+        viewModel.onCurrentUserChanged(helper)
+
+        viewModel.editSlot(plannedSlot)
+        viewModel.setSpeakerInformed(true)
+        assertTrue(state.editor!!.isDirty)
+        viewModel.save()
+
+        assertEquals(listOf(plannedSlot.date to true), repository.confirmedUpdates)
+        assertTrue(repository.savedSlots.isEmpty())
+        assertFalse(state.editor!!.isDirty)
+        assertTrue(state.editor!!.slot.confirmed)
+        assertFalse(state.isSaving)
+        assertNull(state.errorMessage)
+    }
+
+    @Test
+    fun `talk helper cannot mark an incomplete slot as informed`() {
+        val helper = planner.copy(uid = "helper", roles = setOf(CongregationRole.TALK_HELPER))
+        repository.slots.value = listOf(october25)
+        viewModel.onCurrentUserChanged(helper)
+
+        viewModel.editSlot(october25)
+        viewModel.setSpeakerInformed(true)
+
+        assertFalse(state.editor!!.slot.confirmed)
+    }
+
+    @Test
+    fun `a failing informed save keeps the editor and shows the error`() {
+        val helper = planner.copy(uid = "helper", roles = setOf(CongregationRole.TALK_HELPER))
+        repository.slots.value = listOf(plannedSlot)
+        repository.confirmResult = Result.failure(IllegalStateException("offline"))
+        viewModel.onCurrentUserChanged(helper)
+
+        viewModel.editSlot(plannedSlot)
+        viewModel.setSpeakerInformed(true)
+        viewModel.save()
+
+        assertEquals("offline", state.errorMessage)
+        assertTrue(state.editor!!.isDirty)
+        assertFalse(state.isSaving)
+    }
+
+    @Test
+    fun `discarding drops the informed change of the helper`() {
+        val helper = planner.copy(uid = "helper", roles = setOf(CongregationRole.TALK_HELPER))
+        repository.slots.value = listOf(plannedSlot)
+        viewModel.onCurrentUserChanged(helper)
+
+        viewModel.editSlot(plannedSlot)
+        viewModel.setSpeakerInformed(true)
+        viewModel.discardChanges()
+
+        assertFalse(state.editor!!.slot.confirmed)
+    }
+
+    @Test
+    fun `a member without roles cannot open an editor or mark informed`() {
+        viewModel.onCurrentUserChanged(member)
+
+        viewModel.editSlot(plannedSlot)
+        viewModel.setSpeakerInformed(true)
+        viewModel.save()
 
         assertNull(state.editor)
-        assertTrue(state.canView)
+        assertTrue(repository.confirmedUpdates.isEmpty())
     }
 
     @Test

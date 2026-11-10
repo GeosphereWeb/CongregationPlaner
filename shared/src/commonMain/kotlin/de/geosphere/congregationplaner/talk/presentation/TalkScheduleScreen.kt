@@ -85,6 +85,7 @@ internal data class TalkScheduleActions(
     val onNewSlot: () -> Unit = {},
     val onEditSlot: (TalkSlot) -> Unit = {},
     val onEditorChange: (TalkSlot) -> Unit = {},
+    val onInformedChange: (Boolean) -> Unit = {},
     val onSelectWeekEvent: (WeekEvent?) -> Unit = {},
     val onSelectTalk: (Talk?) -> Unit = {},
     val speaker: SpeakerActions = SpeakerActions(),
@@ -121,6 +122,7 @@ fun TalkScheduleScreen(
             onNewSlot = viewModel::newSlot,
             onEditSlot = viewModel::editSlot,
             onEditorChange = viewModel::updateEditor,
+            onInformedChange = viewModel::setSpeakerInformed,
             onSelectWeekEvent = viewModel::selectWeekEvent,
             onSelectTalk = viewModel::selectTalk,
             speaker = SpeakerActions(
@@ -309,7 +311,16 @@ internal fun TalkScheduleContent(
                             onBack = actions.onCancelEditing,
                             backEnabled = !state.isSaving,
                         ) {
-                            if (editor != null) {
+                            if (editor != null && !state.canPlan) {
+                                TalkSlotConfirmEditor(
+                                    editor = editor,
+                                    chip = slotChip(slotStatus(editor.slot, nextDate)),
+                                    isSaving = state.isSaving,
+                                    onInformedChange = actions.onInformedChange,
+                                    onSave = actions.onSave,
+                                    onCancel = onCancelEditing,
+                                )
+                            } else if (editor != null) {
                                 TalkSlotEditor(
                                     editor = editor,
                                     chip = slotChip(slotStatus(editor.slot, nextDate)),
