@@ -1,0 +1,39 @@
+name: Firestore Rules Test
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'firebase/**'
+      - '.github/workflows/firestore-rules.yml'
+  pull_request:
+    paths:
+      - 'firebase/**'
+      - '.github/workflows/firestore-rules.yml'
+
+jobs:
+  rules:
+    name: Firestore Rules Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up JDK 21 (Firestore emulator)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Run the rules test against the emulators
+        run: node firebase/rules-test/run.mjs
