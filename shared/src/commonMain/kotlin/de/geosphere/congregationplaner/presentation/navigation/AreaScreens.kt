@@ -174,7 +174,7 @@ private fun AreaLayout(
 
 @Composable
 internal fun CongregationArea(
-    state: AppNavigationState,
+    state: AppNavigationUiState,
     currentUser: AppUser,
     isWide: Boolean,
     congregation: SelectedCongregation?,
@@ -208,7 +208,7 @@ internal fun CongregationArea(
 
 @Composable
 internal fun GlobalArea(
-    state: AppNavigationState,
+    state: AppNavigationUiState,
     currentUser: AppUser,
     isWide: Boolean,
     congregation: SelectedCongregation?,

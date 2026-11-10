@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.update
  * Der Navigationszustand der angemeldeten App. [congregationSection] und [globalSection] sind `null`, solange die
  * Übersicht des Hauptbereichs offen ist.
  */
-data class AppNavigationState(
+data class AppNavigationUiState(
     val visible: VisibleNavigation = VisibleNavigation(),
     val destination: TopLevelDestination = TopLevelDestination.HOME,
     val congregationSection: CongregationSection? = null,
@@ -28,14 +28,14 @@ data class AppNavigationState(
 /** Hält die Auswahl und setzt sie auf Home bzw. die Übersicht zurück, wenn ein Bereich nicht mehr sichtbar ist. */
 @Inject
 class AppNavigationViewModel(private val access: NavigationAccess) : ViewModel() {
-    private val mutableState = MutableStateFlow(AppNavigationState())
+    private val mutableState = MutableStateFlow(AppNavigationUiState())
     val uiState = mutableState.asStateFlow()
 
     /** Berechnet die sichtbaren Bereiche neu, z. B. nach der Anmeldung oder einem Rollenwechsel. */
     fun onUserChanged(user: AppUser?) {
         if (user == null) {
             // Settings is always visible, so the filter below would keep it after signing out.
-            mutableState.value = AppNavigationState()
+            mutableState.value = AppNavigationUiState()
             return
         }
         val visible = access.visibleFor(user)

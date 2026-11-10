@@ -19,15 +19,28 @@ import kotlinx.coroutines.launch
 /** A parsed file waiting for the user's confirmation. */
 class PendingImport(val source: ImportSource, val prepared: PreparedImport)
 
+/** Where the import stands; a preview and a report never show at the same time. */
+sealed interface ImportStep {
+    data object Idle : ImportStep
+
+    /** A parsed file waits for the user's confirmation. */
+    data class Preview(val pending: PendingImport) : ImportStep
+
+    /** The import ran; [report] says what was written. */
+    data class Done(val source: ImportSource, val report: ImportReport) : ImportStep
+}
+
 data class ImportUiState(
     /** The sources this user may import; empty if the platform cannot import or the user has no right to. */
     val allowedSources: List<ImportSource> = emptyList(),
-    val pending: PendingImport? = null,
-    val report: ImportReport? = null,
-    val reportSource: ImportSource? = null,
+    val step: ImportStep = ImportStep.Idle,
     val isBusy: Boolean = false,
     val errorMessage: String? = null,
-)
+) {
+    val pending: PendingImport? get() = (step as? ImportStep.Preview)?.pending
+    val report: ImportReport? get() = (step as? ImportStep.Done)?.report
+    val reportSource: ImportSource? get() = (step as? ImportStep.Done)?.source
+}
 
 /** Drives the import: choose a file, preview what will happen, confirm, show the report. */
 @Inject
@@ -48,7 +61,8 @@ class ImportViewModel(
         mutableUiState.update { state ->
             state.copy(
                 allowedSources = allowed,
-                pending = state.pending?.takeIf { it.source in allowed },
+                step = state.step.takeUnless { it is ImportStep.Preview && it.pending.source !in allowed }
+                    ?: ImportStep.Idle,
             )
         }
     }
@@ -59,7 +73,7 @@ class ImportViewModel(
     fun choose(source: ImportSource) {
         val user = currentUser
         if (user == null || mutableUiState.value.isBusy || source !in mutableUiState.value.allowedSources) return
-        mutableUiState.update { it.copy(isBusy = true, errorMessage = null, report = null, pending = null) }
+        mutableUiState.update { it.copy(isBusy = true, errorMessage = null, step = ImportStep.Idle) }
         viewModelScope.launch {
             val table = fileSource.pickTable("${source.label}: ${source.fileHint}").getOrElse {
                 return@launch fail("Die Datei konnte nicht gelesen werden: ${it.message}")
@@ -70,7 +84,9 @@ class ImportViewModel(
             }
             prepare(user, source, table)
                 .onSuccess { prepared ->
-                    mutableUiState.update { it.copy(isBusy = false, pending = PendingImport(source, prepared)) }
+                    mutableUiState.update {
+                        it.copy(isBusy = false, step = ImportStep.Preview(PendingImport(source, prepared)))
+                    }
                 }
                 .onFailure { fail("Die Vorschau konnte nicht erstellt werden: ${it.message}") }
         }
@@ -83,14 +99,16 @@ class ImportViewModel(
         viewModelScope.launch {
             val report = pending.prepared.run()
             mutableUiState.update {
-                it.copy(isBusy = false, pending = null, report = report, reportSource = pending.source)
+                it.copy(isBusy = false, step = ImportStep.Done(pending.source, report))
             }
         }
     }
 
-    fun cancel() = mutableUiState.update { it.copy(pending = null) }
+    fun cancel() = mutableUiState.update { if (it.step is ImportStep.Preview) it.copy(step = ImportStep.Idle) else it }
 
-    fun dismissReport() = mutableUiState.update { it.copy(report = null, reportSource = null) }
+    fun dismissReport() = mutableUiState.update {
+        if (it.step is ImportStep.Done) it.copy(step = ImportStep.Idle) else it
+    }
 
     fun dismissError() = mutableUiState.update { it.copy(errorMessage = null) }
 
