@@ -44,6 +44,13 @@ class NavigationAccessTest {
     }
 
     @Test
+    fun `a talk helper sees the talk planning`() {
+        val visible = access.visibleFor(member(CongregationRole.TALK_HELPER))
+
+        assertEquals(CongregationSection.talkPlanning, visible.congregationSections)
+    }
+
+    @Test
     fun `a task planner sees only the midweek planning`() {
         val visible = access.visibleFor(member(CongregationRole.TASK_PLANNER))
 

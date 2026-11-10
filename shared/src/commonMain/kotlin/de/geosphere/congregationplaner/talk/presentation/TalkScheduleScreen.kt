@@ -192,7 +192,7 @@ internal fun TalkScheduleContent(
                 }
             },
         )
-        if (!state.canPlan) {
+        if (!state.canView) {
             Text("Dafür fehlt dir die Berechtigung.")
             return@Column
         }
@@ -283,19 +283,21 @@ internal fun TalkScheduleContent(
                                     }
                                 }
                             }
-                            SpeedDialFab(
-                                items = listOf(
-                                    SpeedDialItem("Alle Termine ${state.year} anlegen", actions.onAskCreateYear),
-                                    SpeedDialItem(
-                                        "Uhrzeit aller Termine ${state.year} ändern",
-                                        actions.onAskChangeYearTime,
+                            if (state.canPlan) {
+                                SpeedDialFab(
+                                    items = listOf(
+                                        SpeedDialItem("Alle Termine ${state.year} anlegen", actions.onAskCreateYear),
+                                        SpeedDialItem(
+                                            "Uhrzeit aller Termine ${state.year} ändern",
+                                            actions.onAskChangeYearTime,
+                                        ),
+                                        SpeedDialItem("Termin anlegen", actions.onNewSlot),
                                     ),
-                                    SpeedDialItem("Termin anlegen", actions.onNewSlot),
-                                ),
-                                contentDescription = "Termine anlegen",
-                                enabled = !state.isSaving,
-                                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
-                            )
+                                    contentDescription = "Termine anlegen",
+                                    enabled = !state.isSaving,
+                                    modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+                                )
+                            }
                         }
                     }
                 },
@@ -534,7 +536,13 @@ private val previewSlots = listOf(
 @Composable
 private fun TalkScheduleContentPreview() = PreviewThemeWrapper {
     TalkScheduleContent(
-        state = TalkScheduleUiState(year = 2026, slots = previewSlots, isLoading = false, canPlan = true),
+        state = TalkScheduleUiState(
+            year = 2026,
+            slots = previewSlots,
+            isLoading = false,
+            canView = true,
+            canPlan = true,
+        ),
         actions = TalkScheduleActions(),
         today = previewToday,
     )
@@ -548,6 +556,7 @@ private fun TalkScheduleYearTimeDialogPreview() = PreviewThemeWrapper {
             year = 2027,
             slots = previewSlots,
             isLoading = false,
+            canView = true,
             canPlan = true,
             yearTimeDialog = LocalTime(9, 30),
         ),

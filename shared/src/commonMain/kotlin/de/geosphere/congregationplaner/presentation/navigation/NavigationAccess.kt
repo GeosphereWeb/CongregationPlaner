@@ -35,7 +35,7 @@ class NavigationAccess(
         CongregationSection.WEEKEND_TALKS,
         CongregationSection.EXTERNAL_SPEAKERS,
         CongregationSection.TALK_HISTORY,
-        -> talkSchedulePolicy.canPlanTalks(user)
+        -> talkSchedulePolicy.canViewTalkPlanning(user)
     }
 
     private fun canSee(user: AppUser, section: GlobalSection): Boolean = when (section) {
