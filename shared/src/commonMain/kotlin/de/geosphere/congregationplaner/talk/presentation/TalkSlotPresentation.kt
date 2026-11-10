@@ -1,5 +1,8 @@
 package de.geosphere.congregationplaner.talk.presentation
 
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.font.FontWeight
 import de.geosphere.congregationplaner.presentation.components.CardHighlight
 import de.geosphere.congregationplaner.presentation.navigation.germanMonthName
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
@@ -57,9 +60,12 @@ internal data class SlotChip(val text: String, val tone: StatusTone)
 internal fun nextSlotDate(slots: List<TalkSlot>, today: LocalDate): LocalDate? =
     slots.upcomingTalkSlots(today).firstOrNull()?.date
 
-/** Marke eines Termins in der Liste: ein geplanter Termin ist der Normalfall und bekommt keine Marke. */
+/**
+ * Marke eines Termins in der Liste: ein geplanter Termin ist der Normalfall und ein nicht geplanter zeigt schon die
+ * rote Hervorhebung ([slotHighlight]); beide bekommen keine Marke.
+ */
 internal fun listSlotChip(slot: TalkSlot, status: SlotStatus): SlotChip? =
-    if (status == SlotStatus.PLANNED) null else slotChip(slot, status)
+    if (status == SlotStatus.PLANNED || status == SlotStatus.NOT_PLANNED) null else slotChip(status)
 
 /**
  * Hervorhebung eines Termins in der Liste: der Termin der aktuellen Woche (Info) hat Vorrang vor einem noch nicht
@@ -88,32 +94,43 @@ internal fun slotStatus(slot: TalkSlot, nextSlotDate: LocalDate?): SlotStatus = 
     else -> SlotStatus.PLANNED
 }
 
-/** Bei einem abgesagten Termin mit Wochenereignis steht dessen Name in der Marke. */
-internal fun slotChip(slot: TalkSlot, status: SlotStatus): SlotChip = when (status) {
+/** Text und Farbe der Statusmarke; der Name des Wochenereignisses steht nie in der Marke, sondern in [slotEventLine]. */
+internal fun slotChip(status: SlotStatus): SlotChip = when (status) {
     SlotStatus.NEXT -> SlotChip(statusLabel(status), StatusTone.Gold)
-    SlotStatus.CANCELLED -> SlotChip(slot.weekEventName ?: statusLabel(status), StatusTone.Sky)
+    SlotStatus.CANCELLED -> SlotChip(statusLabel(status), StatusTone.Sky)
     SlotStatus.NOT_PLANNED -> SlotChip(statusLabel(status), StatusTone.Coral)
     SlotStatus.PLANNED -> SlotChip(statusLabel(status), StatusTone.Sky)
     SlotStatus.INFORMED -> SlotChip(statusLabel(status), StatusTone.Mint)
 }
 
-/**
- * Name des Wochenereignisses als eigene Zeile in der Liste. Bei einem abgesagten Termin steht er schon in der
- * Marke ([slotChip]); dann `null`, damit er nicht doppelt erscheint.
- */
-internal fun slotEventLine(slot: TalkSlot): String? = slot.weekEventName?.takeUnless { slot.talkCancelled }
+/** Name des Wochenereignisses als Zeile über dem Titel in der Liste; nur dort steht er. */
+internal fun slotEventLine(slot: TalkSlot): String? = slot.weekEventName
 
 /** „Nr. 12 – Thema“; ohne gespeichertes Thema nur die Nummer. */
 internal fun slotTitle(slot: TalkSlot): String = slot.talkNumber?.let { number ->
     slot.talkTitle?.takeIf { it.isNotBlank() }?.let { "Nr. $number – $it" } ?: "Nr. $number"
 } ?: "Noch nicht geplant"
 
-/** Redner mit Herkunft: „Muster, Max · eigene Versammlung“, „Extern, Eva · Gast aus Nord“ oder „Redner noch offen“. */
+/**
+ * Titel in der Liste mit fetter Vortragsnummer („**Nr. 34** – Thema“); an einem entfallenden Termin ist nichts geplant,
+ * also steht dort nichts.
+ */
+internal fun slotListTitle(slot: TalkSlot): AnnotatedString? {
+    if (slot.talkCancelled) return null
+    val boldLength = slot.talkNumber?.let { "Nr. $it".length } ?: 0
+    val bold = AnnotatedString.Range(SpanStyle(fontWeight = FontWeight.Bold), 0, boldLength)
+    return AnnotatedString(slotTitle(slot), listOf(bold))
+}
+
+/** Redner in der Liste; an einem entfallenden Termin steht dort nichts (siehe [slotListTitle]). */
+internal fun slotListSpeakerLine(slot: TalkSlot): String? = slotSpeakerLine(slot).takeUnless { slot.talkCancelled }
+
+/** Redner mit Herkunft: „Muster, Max · eigene Versammlung“, „Extern, Eva · Nord“ oder „Redner noch offen“. */
 internal fun slotSpeakerLine(slot: TalkSlot): String {
     val external = slot.externalSpeaker
     val member = slot.speaker
     return when {
-        external != null -> "${personName(slot)} · Gast aus ${external.congregationName}"
+        external != null -> "${personName(slot)} · ${external.congregationName}"
         member != null -> "${member.displayName} · eigene Versammlung"
         else -> "Redner noch offen"
     }
