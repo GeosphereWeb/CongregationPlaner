@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -63,8 +65,10 @@ internal fun TalkSlotEditor(
     onOpenHistory: (Int) -> Unit,
     onSave: () -> Unit,
     onCancel: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     val slot = editor.slot
+    var showDeleteConfirm by remember { mutableStateOf(false) }
     var showTalkPicker by remember { mutableStateOf(false) }
     var showSpeakerPicker by remember { mutableStateOf(false) }
     var showChairmanPicker by remember { mutableStateOf(false) }
@@ -196,6 +200,28 @@ internal fun TalkSlotEditor(
             discardEnabled = !isSaving,
             onSave = onSave,
             onDiscard = onCancel,
+            // Nur ein gespeicherter Termin lässt sich löschen; ein neuer ist noch nicht angelegt.
+            onDelete = if (editor.original != null) ({ showDeleteConfirm = true }) else null,
+            deleteText = "Termin löschen",
+            deleteEnabled = !isSaving,
+        )
+    }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Termin löschen?") },
+            text = { Text("Der Termin ${slotDateHeadline(slot.date)} wird endgültig gelöscht.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteConfirm = false
+                        onDelete()
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = NightColors.Coral),
+                ) { Text("Löschen") }
+            },
+            dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text("Abbrechen") } },
         )
     }
 
@@ -271,35 +297,52 @@ private fun FieldActions(changeLabel: String, enabled: Boolean, onChange: () -> 
     }
 }
 
-/** Auf dem Handy volle Breite untereinander, sonst nebeneinander rechts. */
+/**
+ * Speichern, Verwerfen und (mit [onDelete]) Löschen eines Eintrags in der Detailansicht: auf dem Handy volle Breite
+ * untereinander, sonst nebeneinander rechts; „Löschen“ steht als roter Textbutton darunter.
+ */
 @Composable
-private fun EditorActions(
+@Suppress("LongParameterList")
+internal fun EditorActions(
     saveText: String,
     saveEnabled: Boolean,
     discardEnabled: Boolean,
     onSave: () -> Unit,
     onDiscard: () -> Unit,
+    onDelete: (() -> Unit)? = null,
+    deleteText: String = "Löschen",
+    deleteEnabled: Boolean = true,
 ) {
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
-        if (maxWidth < COMPACT_WIDTH) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                PrimaryButton(saveText, onSave, Modifier.fillMaxWidth(), saveEnabled, BUTTON_HEIGHT)
-                SecondaryButton(
-                    "Verwerfen",
-                    onDiscard,
-                    Modifier.fillMaxWidth(),
-                    discardEnabled,
-                    height = BUTTON_HEIGHT,
-                )
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            if (maxWidth < COMPACT_WIDTH) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PrimaryButton(saveText, onSave, Modifier.fillMaxWidth(), saveEnabled, BUTTON_HEIGHT)
+                    SecondaryButton(
+                        "Verwerfen",
+                        onDiscard,
+                        Modifier.fillMaxWidth(),
+                        discardEnabled,
+                        height = BUTTON_HEIGHT,
+                    )
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                ) {
+                    SecondaryButton("Verwerfen", onDiscard, enabled = discardEnabled, height = BUTTON_HEIGHT)
+                    PrimaryButton(saveText, onSave, enabled = saveEnabled, height = BUTTON_HEIGHT)
+                }
             }
-        } else {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-            ) {
-                SecondaryButton("Verwerfen", onDiscard, enabled = discardEnabled, height = BUTTON_HEIGHT)
-                PrimaryButton(saveText, onSave, enabled = saveEnabled, height = BUTTON_HEIGHT)
-            }
+        }
+        if (onDelete != null) {
+            TextButton(
+                onClick = onDelete,
+                enabled = deleteEnabled,
+                modifier = Modifier.align(Alignment.End),
+                colors = ButtonDefaults.textButtonColors(contentColor = NightColors.Coral),
+            ) { Text(deleteText) }
         }
     }
 }
@@ -341,6 +384,7 @@ private fun EditorPreview(slot: TalkSlot, original: TalkSlot?, chip: SlotChip) =
         onOpenHistory = {},
         onSave = {},
         onCancel = {},
+        onDelete = {},
     )
 }
 

@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner.talk.presentation
 
+import androidx.compose.ui.text.font.FontWeight
 import de.geosphere.congregationplaner.presentation.components.CardHighlight
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.ui.chip.StatusTone
@@ -95,11 +96,11 @@ class TalkSlotPresentationTest {
     fun `chips follow the design`() {
         val s = slot()
 
-        assertEquals(SlotChip("Nächster", StatusTone.Gold), slotChip(s, SlotStatus.NEXT))
-        assertEquals(SlotChip("Entfällt", StatusTone.Sky), slotChip(s, SlotStatus.CANCELLED))
-        assertEquals(SlotChip("Nicht geplant", StatusTone.Coral), slotChip(s, SlotStatus.NOT_PLANNED))
-        assertEquals(SlotChip("Geplant", StatusTone.Sky), slotChip(s, SlotStatus.PLANNED))
-        assertEquals(SlotChip("Informiert", StatusTone.Mint), slotChip(s, SlotStatus.INFORMED))
+        assertEquals(SlotChip("Nächster", StatusTone.Gold), slotChip(SlotStatus.NEXT))
+        assertEquals(SlotChip("Entfällt", StatusTone.Sky), slotChip(SlotStatus.CANCELLED))
+        assertEquals(SlotChip("Nicht geplant", StatusTone.Coral), slotChip(SlotStatus.NOT_PLANNED))
+        assertEquals(SlotChip("Geplant", StatusTone.Sky), slotChip(SlotStatus.PLANNED))
+        assertEquals(SlotChip("Informiert", StatusTone.Mint), slotChip(SlotStatus.INFORMED))
     }
 
     @Test
@@ -145,21 +146,43 @@ class TalkSlotPresentationTest {
     }
 
     @Test
-    fun `the week event name is always visible either as its own line or in the chip`() {
+    fun `the week event name is its own line also for a cancelled slot`() {
         val withEvent = slot { it.copy(weekEventId = "besuch", weekEventName = "Dienstwoche") }
         val cancelled = slot { it.copy(weekEventId = "kongress", weekEventName = "Kongress", talkCancelled = true) }
 
         assertEquals("Dienstwoche", slotEventLine(withEvent))
-        assertNull(slotEventLine(cancelled))
-        assertEquals("Kongress", slotChip(cancelled, SlotStatus.CANCELLED).text)
+        assertEquals("Kongress", slotEventLine(cancelled))
         assertNull(slotEventLine(slot()))
     }
 
     @Test
-    fun `a cancelled slot shows the week event name`() {
+    fun `a cancelled slot keeps the cancelled chip and has the week event name only in the event line`() {
         val s = slot { it.copy(weekEventId = "kongress", weekEventName = "Kongress", talkCancelled = true) }
 
-        assertEquals(SlotChip("Kongress", StatusTone.Sky), slotChip(s, SlotStatus.CANCELLED))
+        assertEquals(SlotChip("Entfällt", StatusTone.Sky), listSlotChip(s, SlotStatus.CANCELLED))
+        assertEquals("Kongress", slotEventLine(s))
+    }
+
+    @Test
+    fun `a cancelled slot shows neither title nor speaker in the list`() {
+        val cancelled = slot { it.copy(weekEventId = "kongress", weekEventName = "Kongress", talkCancelled = true) }
+        val open = slot()
+
+        assertNull(slotListTitle(cancelled))
+        assertNull(slotListSpeakerLine(cancelled))
+        assertEquals("Noch nicht geplant", slotListTitle(open)?.text)
+        assertEquals("Redner noch offen", slotListSpeakerLine(open))
+    }
+
+    @Test
+    fun `the list title shows the talk number in bold`() {
+        val title = slotListTitle(slot(block = withTalk))!!
+
+        assertEquals("Nr. 12 – Der Weg zum Glück", title.text)
+        assertEquals(1, title.spanStyles.size)
+        assertEquals(FontWeight.Bold, title.spanStyles.single().item.fontWeight)
+        assertEquals("Nr. 12", title.text.substring(title.spanStyles.single().start, title.spanStyles.single().end))
+        assertEquals("Nr. 12", slotListTitle(slot { it.copy(talkNumber = 12, talkTitle = null) })!!.text)
     }
 
     @Test
@@ -181,7 +204,7 @@ class TalkSlotPresentationTest {
                 speakerCongregation = "Nord",
             )
         }
-        assertEquals("Extern, Eva · Gast aus Nord", slotSpeakerLine(external))
+        assertEquals("Extern, Eva · Nord", slotSpeakerLine(external))
     }
 
     @Test
@@ -222,12 +245,12 @@ class TalkSlotPresentationTest {
     }
 
     @Test
-    fun `the list shows no chip for a planned slot but keeps the others`() {
+    fun `the list shows no chip for a planned or unplanned slot but keeps the others`() {
         val s = slot()
 
         assertNull(listSlotChip(s, SlotStatus.PLANNED))
         assertEquals(SlotChip("Informiert", StatusTone.Mint), listSlotChip(s, SlotStatus.INFORMED))
-        assertEquals(SlotChip("Nicht geplant", StatusTone.Coral), listSlotChip(s, SlotStatus.NOT_PLANNED))
+        assertNull(listSlotChip(s, SlotStatus.NOT_PLANNED))
         assertEquals(SlotChip("Nächster", StatusTone.Gold), listSlotChip(s, SlotStatus.NEXT))
     }
 
