@@ -16,7 +16,10 @@ rules_version = '2';
 //     subregion/{subregionId}          - name: string (1..100)
 //       branch/{branchId}              - name: string (1..100)
 //         circuit/{circuitId}          - name: string (1..100), overseer_name: string (<= 100, optional)
-//           congregation/{congId}      - name: string, createdBy: uid, meeting times/weekdays
+//           congregation/{congId}      - name: string, createdBy: uid, midweek_meeting_time / weekend_meeting_time
+//             ('HH:mm'), midweek_meeting_weekday / weekend_meeting_weekday (1 Monday .. 7 Sunday),
+//             yearly_meeting_times (list, <= 100 entries); all of them are required. A congregation is only created in an
+//             existing circuit.
 //           uniqueCongregationNames/{key}    - congregationId: string; one per congregation name of the circuit
 //             (key = name trimmed, lower case, blanks collapsed); makes the name unique within the circuit
 //
@@ -29,17 +32,17 @@ rules_version = '2';
 //   - approved: bool (required) - set by the congregation admin
 //   - roles: list<string> (required, <= 10 distinct values from ['CONGREGATION_ADMIN', 'TALK_PLANNER',
 //     'TASK_PLANNER']; empty for a plain member, see ADR-0012)
-//   - hasAccount: bool (optional, immutable, default true) - false for persons
+//   - hasAccount: bool (required, immutable) - false for persons
 //     without an account; they are never approved and have no role
-// Profile fields (optional because older documents do not have them yet). Admins maintain all of them; a member
+// Profile fields (all required, a fresh member carries the defaults). Admins maintain all of them; a member
 // maintains the own contact fields (see ownFields()). Admins and planners read every member (ADR-0016):
 //   - lastName, firstName: string (<= 100 chars)
 //   - category: string | null ('BROTHER' | 'SISTER' | 'CHILD')
-//   - baptized: bool (default false; never true for 'CHILD')
+//   - baptized: bool (never true for 'CHILD')
 //   - appointment: string ('NONE' | 'MINISTERIAL_SERVANT' | 'ELDER';
 //     anything but 'NONE' only for baptized brothers)
 //   - mobilePhone, landlinePhone: string (<= 30 chars, digits and + ( ) / - space)
-//   - isSpeaker: bool (default false; marks talk speakers, only for category 'BROTHER')
+//   - isSpeaker: bool (marks talk speakers, only for category 'BROTHER')
 //   - emails: list (<= 3) of string (an e-mail address, <= 254 chars): further addresses besides the sign-in `email`
 //   - street (<= 100 chars), postalCode (<= 10 chars), city (<= 100 chars): string
 //   - emergencyContacts: list (<= 5) of maps {name: string (1..100), relation: string (<= 50, optional),
@@ -53,10 +56,10 @@ rules_version = '2';
 // Fields:
 //   - time: string (required, 'HH:mm')
 //   - talkCancelled: bool (required)
-//   - confirmed: bool (optional, missing counts as false): the planner has confirmed the slot.
+//   - confirmed: bool (required): the planner has confirmed the slot.
 //   - note: string (optional, <= 500 chars): free note of the planner on the slot.
 //   - weekEventId, weekEventName: string | null (<= 100 chars, both set or both null)
-//   - talkNumber: int | null (>= 1), talkTitle: string | null (1..200 chars); both set or both null.
+//   - talkNumber: int | null (1..9999), talkTitle: string | null (1..200 chars); both set or both null.
 //     The title is a snapshot of the talk list so that old slots stay unchanged.
 //   - speakerMemberId: string | null (member uid), speakerLastName: string | null (1..100 chars),
 //     speakerFirstName: string | null (<= 100 chars); all three set or all three null (snapshot of the member).
@@ -72,8 +75,9 @@ rules_version = '2';
 //   region/.../congregation/{congId}/externalCongregations: circuitId: string (id of an external circuit),
 //     name: string (1..100)
 //   region/.../congregation/{congId}/visitingSpeakers: congregationId: string (id of an external congregation),
-//     lastName: string (1..100), firstName: string (<= 100), phone: string (<= 30), email: string (<= 200),
-//     talkNumbers: list<int> (<= 200 entries, the talk numbers the speaker gives)
+//     lastName: string (1..100), firstName: string (<= 100), mobilePhone, landlinePhone: string (<= 30 each),
+//     email: string (<= 200), talkNumbers: list<int> (<= 200 entries, the talk numbers the speaker gives),
+//     ranking: int (0..5); all of them are required
 // The rules check the form only, not whether circuitId/congregationId exist; the app does that.
 //
 // Collection: weekEvents (global, identical for all congregations)
@@ -116,6 +120,10 @@ service cloud.firestore {
       return /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/circuit/$(circuitId)/uniqueCongregationNames/$(key);
     }
 
+    function circuitDocPath(regionId, subregionId, branchId, circuitId) {
+      return /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/circuit/$(circuitId);
+    }
+
     function congregationDocPath(regionId, subregionId, branchId, circuitId, congId) {
       return /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/circuit/$(circuitId)/congregation/$(congId);
     }
@@ -125,13 +133,31 @@ service cloud.firestore {
         !name.matches('.*/.*');
     }
 
+    function isMeetingTime(value) {
+      return value is string && value.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$');
+    }
+
+    function isMeetingWeekday(value) {
+      return value is int && value >= 1 && value <= 7;
+    }
+
+    // The meeting times of a congregation; the list of yearly times holds one encoded entry per year, which the app
+    // checks (rules have no loops).
+    function isValidMeetingTimes(data) {
+      return isMeetingTime(data.midweek_meeting_time) && isMeetingWeekday(data.midweek_meeting_weekday) &&
+        isMeetingTime(data.weekend_meeting_time) && isMeetingWeekday(data.weekend_meeting_weekday) &&
+        data.yearly_meeting_times is list && data.yearly_meeting_times.size() <= 100;
+    }
+
     // A new congregation carries its creator and comes together with the name document of its circuit, so that a
     // name is taken at most once per circuit.
     function isValidNewCongregation(regionId, subregionId, branchId, circuitId, congId, data) {
       return data.keys().hasOnly(['name', 'createdBy', 'midweek_meeting_time', 'midweek_meeting_weekday',
           'weekend_meeting_time', 'weekend_meeting_weekday', 'yearly_meeting_times']) &&
-        data.keys().hasAll(['name', 'createdBy']) &&
+        data.keys().hasAll(['name', 'createdBy', 'midweek_meeting_time', 'midweek_meeting_weekday',
+          'weekend_meeting_time', 'weekend_meeting_weekday', 'yearly_meeting_times']) &&
         data.createdBy == request.auth.uid &&
+        isValidMeetingTimes(data) &&
         isValidCongregationName(data.name) &&
         existsAfter(congregationNamePath(regionId, subregionId, branchId, circuitId, congregationNameKey(data.name))) &&
         getAfter(congregationNamePath(regionId, subregionId, branchId, circuitId, congregationNameKey(data.name))).data.congregationId == congId;
@@ -159,7 +185,7 @@ service cloud.firestore {
         data.get('approved', null) == true &&
         data.get('roles', []) == ['CONGREGATION_ADMIN'] &&
         data.get('email', null) == request.auth.token.get('email', null) &&
-        data.get('hasAccount', true) == true &&
+        data.get('hasAccount', null) == true &&
         hasDefaultProfile(data) &&
         isValidMember(data);
     }
@@ -280,7 +306,7 @@ service cloud.firestore {
     function isValidTalkFields(data) {
       let talkNumber = data.get('talkNumber', null);
       let talkTitle = data.get('talkTitle', null);
-      return (talkNumber == null || (talkNumber is int && talkNumber >= 1)) &&
+      return (talkNumber == null || (talkNumber is int && talkNumber >= 1 && talkNumber <= 9999)) &&
         isOptionalText(talkTitle, 1, 200) &&
         ((talkNumber == null) == (talkTitle == null));
     }
@@ -317,17 +343,24 @@ service cloud.firestore {
         ((memberId == null) == (firstName == null));
     }
 
+    // yyyy-MM-dd with a day that exists in the month (29 February in every year, the app never writes a wrong one).
+    function isValidDateId(date) {
+      return date.matches('^[0-9]{4}-(0[13578]|1[02])-(0[1-9]|[12][0-9]|3[01])$') ||
+        date.matches('^[0-9]{4}-(0[469]|11)-(0[1-9]|[12][0-9]|30)$') ||
+        date.matches('^[0-9]{4}-02-(0[1-9]|1[0-9]|2[0-9])$');
+    }
+
     function isValidTalkSlot(date, data) {
       let eventId = data.get('weekEventId', null);
       let eventName = data.get('weekEventName', null);
-      return date.matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$') &&
+      return isValidDateId(date) &&
         data.keys().hasOnly(['time', 'talkCancelled', 'confirmed', 'note', 'weekEventId', 'weekEventName', 'talkNumber', 'talkTitle',
           'speakerMemberId', 'speakerLastName', 'speakerFirstName',
           'chairmanMemberId', 'chairmanLastName', 'chairmanFirstName', 'externalSpeakerId', 'speakerCongregation']) &&
-        data.keys().hasAll(['time', 'talkCancelled']) &&
+        data.keys().hasAll(['time', 'talkCancelled', 'confirmed']) &&
         data.time is string && data.time.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$') &&
         data.talkCancelled is bool &&
-        data.get('confirmed', false) is bool &&
+        data.confirmed is bool &&
         isNullableString(data.get('note', null), 500) &&
         isNullableString(eventId, 100) &&
         isNullableString(eventName, 100) &&
@@ -430,38 +463,36 @@ service cloud.firestore {
       return ownFields().concat(['category', 'baptized', 'appointment', 'isSpeaker']);
     }
 
-    // Missing profile fields fall back to the defaults of a freshly registered member.
+    // Every profile field is present (the app writes them all).
     function isValidProfile(data) {
-      let category = data.get('category', null);
-      let baptized = data.get('baptized', false);
-      let appointment = data.get('appointment', 'NONE');
-      let contacts = data.get('emergencyContacts', []);
-      return isShortString(data.get('lastName', ''), 100) &&
-        isShortString(data.get('firstName', ''), 100) &&
+      let category = data.category;
+      let appointment = data.appointment;
+      return isShortString(data.lastName, 100) &&
+        isShortString(data.firstName, 100) &&
         (category == null || category in ['BROTHER', 'SISTER', 'CHILD']) &&
-        baptized is bool &&
-        !(category == 'CHILD' && baptized) &&
+        data.baptized is bool &&
+        !(category == 'CHILD' && data.baptized) &&
         appointment in ['NONE', 'MINISTERIAL_SERVANT', 'ELDER'] &&
-        (appointment == 'NONE' || (category == 'BROTHER' && baptized)) &&
-        isValidPhone(data.get('mobilePhone', '')) &&
-        isValidPhone(data.get('landlinePhone', '')) &&
-        isValidEmails(data.get('emails', [])) &&
-        isShortString(data.get('street', ''), 100) &&
-        isShortString(data.get('postalCode', ''), 10) &&
-        isShortString(data.get('city', ''), 100) &&
-        isValidEmergencyContacts(contacts) &&
-        data.get('isSpeaker', false) is bool &&
-        (data.get('isSpeaker', false) == false || category == 'BROTHER');
+        (appointment == 'NONE' || (category == 'BROTHER' && data.baptized)) &&
+        isValidPhone(data.mobilePhone) &&
+        isValidPhone(data.landlinePhone) &&
+        isValidEmails(data.emails) &&
+        isShortString(data.street, 100) &&
+        isShortString(data.postalCode, 10) &&
+        isShortString(data.city, 100) &&
+        isValidEmergencyContacts(data.emergencyContacts) &&
+        data.isSpeaker is bool &&
+        (data.isSpeaker == false || category == 'BROTHER');
     }
 
     // The names may be filled: they come from the display name of the sign-up.
     function hasDefaultProfile(data) {
-      return data.get('category', null) == null &&
-        data.get('baptized', false) == false &&
-        data.get('appointment', 'NONE') == 'NONE' &&
-        data.get('mobilePhone', '') == '' &&
-        data.get('landlinePhone', '') == '' &&
-        data.get('isSpeaker', false) == false;
+      return data.category == null &&
+        data.baptized == false &&
+        data.appointment == 'NONE' &&
+        data.mobilePhone == '' &&
+        data.landlinePhone == '' &&
+        data.isSpeaker == false;
     }
 
     // Persons without an account never get access to the app.
@@ -473,27 +504,29 @@ service cloud.firestore {
     function isValidMember(data) {
       return data.keys().hasOnly(['email', 'displayName', 'approved', 'hasAccount'].concat(roleFields())
           .concat(profileFields())) &&
-        data.keys().hasAll(['email', 'displayName', 'approved', 'roles']) &&
+        data.keys().hasAll(['email', 'displayName', 'approved', 'hasAccount'].concat(roleFields())
+          .concat(profileFields())) &&
         isNullableString(data.email, 320) &&
         isNullableString(data.displayName, 200) &&
         data.approved is bool &&
         isValidRoles(data.roles) &&
-        data.get('hasAccount', true) is bool &&
-        (data.get('hasAccount', true) == true || hasNoAccess(data)) &&
+        data.hasAccount is bool &&
+        (data.hasAccount == true || hasNoAccess(data)) &&
         isValidProfile(data);
     }
 
-    // A user may only register themselves: unapproved, without roles,
+    // A user may only register themselves in an existing congregation: unapproved, without roles,
     // with the e-mail address from their auth token. The full validation comes last because rules evaluate at most
     // 1000 expressions per request.
-    function isValidSelfRegistration(uid) {
+    function isValidSelfRegistration(regionId, subregionId, branchId, circuitId, congId, uid) {
       let data = request.resource.data;
       return isAuthenticated() &&
         request.auth.uid == uid &&
+        exists(congregationDocPath(regionId, subregionId, branchId, circuitId, congId)) &&
         data.get('approved', null) == false &&
         data.get('roles', []).size() == 0 &&
         data.get('email', null) == request.auth.token.get('email', null) &&
-        data.get('hasAccount', true) == true &&
+        data.get('hasAccount', null) == true &&
         hasDefaultProfile(data) &&
         isValidMember(data);
     }
@@ -503,7 +536,7 @@ service cloud.firestore {
       let data = request.resource.data;
       return isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) &&
         isValidMember(data) &&
-        data.get('hasAccount', true) == false &&
+        data.hasAccount == false &&
         data.email == null &&
         data.displayName == null &&
         data.get('lastName', '') != '' &&
@@ -601,6 +634,7 @@ service cloud.firestore {
               // Every signed-in user with a confirmed e-mail address may create a congregation (and becomes its admin);
               // global admins always may.
               allow create: if (isGlobalAdmin() || isVerifiedEmail()) &&
+                exists(circuitDocPath(regionId, subregionId, branchId, circuitId)) &&
                 isValidNewCongregation(regionId, subregionId, branchId, circuitId, congId, request.resource.data);
               // The name document goes with the congregation.
               allow delete: if isGlobalAdmin() &&
@@ -613,7 +647,8 @@ service cloud.firestore {
                 isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) &&
                 request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                   'name', 'midweek_meeting_time', 'midweek_meeting_weekday',
-                  'weekend_meeting_time', 'weekend_meeting_weekday', 'yearly_meeting_times'])
+                  'weekend_meeting_time', 'weekend_meeting_weekday', 'yearly_meeting_times']) &&
+                isValidMeetingTimes(request.resource.data)
               ));
 
               // ---------------------------------------------------------
@@ -627,7 +662,7 @@ service cloud.firestore {
 
                 allow list: if canViewMembers(regionId, subregionId, branchId, circuitId, congId);
 
-                allow create: if isValidSelfRegistration(uid) ||
+                allow create: if isValidSelfRegistration(regionId, subregionId, branchId, circuitId, congId, uid) ||
                   isValidMemberWithoutAccount(regionId, subregionId, branchId, circuitId, congId) ||
                   isFirstAdminOfNewCongregation(regionId, subregionId, branchId, circuitId, congId, uid);
 
@@ -643,9 +678,11 @@ service cloud.firestore {
                    (request.auth.uid == uid && onlyFieldsChanged(ownFields()))) &&
                   isValidMember(request.resource.data);
 
+                // A member may leave, but an admin may not delete the own document: the congregation would be
+                // left without an admin (another admin may remove them).
                 allow delete: if isAuthenticated() && (
-                  request.auth.uid == uid ||
-                  isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId)
+                  (request.auth.uid == uid && !hasRole(resource.data, 'CONGREGATION_ADMIN')) ||
+                  (request.auth.uid != uid && isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId))
                 );
               }
 

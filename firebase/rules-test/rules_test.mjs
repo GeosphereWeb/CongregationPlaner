@@ -66,8 +66,19 @@ async function expect(name, pending, allowed) {
   if (!ok) failures.push(`${name}: expected ${allowed ? 200 : 403}, got ${status} ${text.slice(0, 160)}`);
 }
 
-// Mitgliedsdokument im neuen Format (ADR-0012): nur `roles`.
-const memberDoc = (email, roles) => fields({ email, displayName: email, approved: true, roles });
+// Vollständiges Mitgliedsdokument: die Rules verlangen alle Profilfelder, die App schreibt sie immer.
+const fullProfile = {
+  lastName: '', firstName: '', category: null, baptized: false, appointment: 'NONE', mobilePhone: '', landlinePhone: '',
+  isSpeaker: false, emails: [], street: '', postalCode: '', city: '', emergencyContacts: [],
+};
+const memberFields = (email, roles, extra = {}) =>
+  ({ email, displayName: email, approved: true, roles, hasAccount: true, ...fullProfile, ...extra });
+const memberDoc = (email, roles, extra = {}) => fields(memberFields(email, roles, extra));
+// Alle Zeitfelder einer Versammlung; die Rules verlangen sie vollständig.
+const fullMeeting = {
+  midweek_meeting_time: '19:00', midweek_meeting_weekday: 3, weekend_meeting_time: '17:30', weekend_meeting_weekday: 7,
+  yearly_meeting_times: [],
+};
 
 // ---------- Nutzer und Daten (Seeding mit dem Owner-Token umgeht die Rules) ----------
 const admin = await signUp('admin@test.de');
@@ -81,19 +92,22 @@ await api('PATCH', `${CONG}/members/${planner.uid}`, memberDoc('planner@test.de'
 await api('PATCH', `${CONG}/members/${taskPlanner.uid}`, memberDoc('taskplanner@test.de', ['TASK_PLANNER']), owner);
 await api('PATCH', `${CONG}/members/${plain.uid}`, memberDoc('plain@test.de', []), owner);
 const congAdmin = await signUp('congadmin@test.de');
-await api('PATCH', `${CONG}/members/${congAdmin.uid}`, fields({ email: 'congadmin@test.de', displayName: 'ca', approved: true, roles: ['CONGREGATION_ADMIN'] }), owner);
+await api('PATCH', `${CONG}/members/${congAdmin.uid}`, memberDoc('congadmin@test.de', ['CONGREGATION_ADMIN'], { displayName: 'ca' }), owner);
 const adminPlanner = await signUp('adminplanner@test.de');
-await api('PATCH', `${CONG}/members/${adminPlanner.uid}`, fields({ email: 'adminplanner@test.de', displayName: 'ap', approved: true, roles: ['CONGREGATION_ADMIN', 'TALK_PLANNER'] }), owner);
+await api('PATCH', `${CONG}/members/${adminPlanner.uid}`, memberDoc('adminplanner@test.de', ['CONGREGATION_ADMIN', 'TALK_PLANNER'], { displayName: 'ap' }), owner);
 // Ein eigener Admin für die Tests, in denen ein Admin die eigene Rollenliste ändert.
 const selfAdmin = await signUp('selfadmin@test.de');
 await api('PATCH', `${CONG}/members/${selfAdmin.uid}`, memberDoc('selfadmin@test.de', ['CONGREGATION_ADMIN']), owner);
 await api('PATCH', 'region/R/subregion/S/branch/B/circuit/C/uniqueCongregationNames/berlin', fields({ congregationId: 'K' }), owner);
 const OTHER_CONG ='region/R/subregion/S/branch/B/circuit/C/congregation/OTHER';
-await api('PATCH', CONG, fields({ name: 'Berlin', midweek_meeting_time: '19:00', midweek_meeting_weekday: 3 }), owner);
-await api('PATCH', OTHER_CONG, fields({ name: 'Hamburg', midweek_meeting_time: '19:00', midweek_meeting_weekday: 3 }), owner);
+// Die Kreise müssen existieren: eine Versammlung entsteht nur in einem vorhandenen Kreis.
+await api('PATCH', CIRCUIT, fields({ name: 'Kreis C' }), owner);
+await api('PATCH', 'region/R/subregion/S/branch/B/circuit/C2', fields({ name: 'Kreis C2' }), owner);
+await api('PATCH', CONG, fields({ name: 'Berlin', ...fullMeeting }), owner);
+await api('PATCH', OTHER_CONG, fields({ name: 'Hamburg', ...fullMeeting }), owner);
 
 const SLOT = `${CONG}/talkSchedule`;
-const base = { time: '17:30', talkCancelled: false };
+const base = { time: '17:30', talkCancelled: false, confirmed: false };
 const speaker = { speakerMemberId: 'm1', speakerLastName: 'Muster', speakerFirstName: 'Max' };
 const chairman = { chairmanMemberId: 'm2', chairmanLastName: 'Alt', chairmanFirstName: 'Anton' };
 const external = {
@@ -135,6 +149,14 @@ await expect('Wochenereignis mit ID und Name', putSlot('2026-10-25', { ...base, 
 await expect('Wochenereignis nur mit ID', putSlot('2026-10-25', { ...base, weekEventId: 'k' }), false);
 await expect('ungültiges Datum 2026-13-01', putSlot('2026-13-01', base), false);
 await expect('ungültiges Datum 2026-2-1', putSlot('2026-2-1', base), false);
+await expect('Datum 2026-02-31 gibt es nicht', putSlot('2026-02-31', base), false);
+await expect('Datum 2026-04-31 gibt es nicht', putSlot('2026-04-31', base), false);
+await expect('Datum 2026-02-30 gibt es nicht', putSlot('2026-02-30', base), false);
+await expect('Schalttag 2028-02-29', putSlot('2028-02-29', base), true);
+await expect('Jahresende 2026-12-31', putSlot('2026-12-31', base), true);
+await expect('Termin ohne Bestätigungsfeld', putSlot('2026-10-25', { time: '17:30', talkCancelled: false }), false);
+await expect('Vortragsnummer 9999', putSlot('2026-10-25', { ...base, talkNumber: 9999, talkTitle: 'x' }), true);
+await expect('Vortragsnummer 10000', putSlot('2026-10-25', { ...base, talkNumber: 10000, talkTitle: 'x' }), false);
 await expect('unbekanntes Feld', putSlot('2026-10-25', { ...base, extra: 'x' }), false);
 await expect('Termin bestätigt', putSlot('2026-10-25', { ...base, confirmed: true }), true);
 await expect('Termin nicht bestätigt', putSlot('2026-10-25', { ...base, confirmed: false }), true);
@@ -143,7 +165,7 @@ await expect('Notiz gültig', putSlot('2026-10-25', { ...base, note: 'Redner bri
 await expect('Notiz 500 Zeichen', putSlot('2026-10-25', { ...base, note: 'x'.repeat(500) }), true);
 await expect('Notiz 501 Zeichen', putSlot('2026-10-25', { ...base, note: 'x'.repeat(501) }), false);
 await expect('Notiz kein String', putSlot('2026-10-25', { ...base, note: 5 }), false);
-await expect('ungültige Uhrzeit', putSlot('2026-10-25', { time: '25:00', talkCancelled: false }), false);
+await expect('ungültige Uhrzeit', putSlot('2026-10-25', { time: '25:00', talkCancelled: false, confirmed: false }), false);
 await expect('Planer liest Termin', api('GET', `${SLOT}/2026-10-25`, undefined, planner.token), true);
 await expect('Nutzer ohne Planerrolle schreibt Termin', putSlot('2026-11-01', base, plain.token), false);
 await expect('Nutzer ohne Planerrolle liest Termin', api('GET', `${SLOT}/2026-10-25`, undefined, plain.token), false);
@@ -251,6 +273,15 @@ await expect('Wochenereignis löschen als Global Admin', api('DELETE', 'weekEven
 const mask = (name) => `?updateMask.fieldPaths=${name}`;
 const time = (value) => ({ fields: { midweek_meeting_time: { stringValue: value } } });
 await expect('Versammlungsadmin ändert Zeiten der eigenen Versammlung', api('PATCH', `${CONG}${mask('midweek_meeting_time')}`, time('18:30'), congAdmin.token), true);
+const weekdayBody = (value) => ({ fields: { midweek_meeting_weekday: { integerValue: String(value) } } });
+await expect('Versammlungsadmin setzt ungültige Uhrzeit', api('PATCH', `${CONG}${mask('midweek_meeting_time')}`, time('25:00'), congAdmin.token), false);
+await expect('Versammlungsadmin setzt Uhrzeit als Zahl', api('PATCH', `${CONG}${mask('midweek_meeting_time')}`, { fields: { midweek_meeting_time: { integerValue: '19' } } }, congAdmin.token), false);
+await expect('Versammlungsadmin setzt Wochentag 7', api('PATCH', `${CONG}${mask('midweek_meeting_weekday')}`, weekdayBody(7), congAdmin.token), true);
+await expect('Versammlungsadmin setzt Wochentag 0', api('PATCH', `${CONG}${mask('midweek_meeting_weekday')}`, weekdayBody(0), congAdmin.token), false);
+await expect('Versammlungsadmin setzt Wochentag 8', api('PATCH', `${CONG}${mask('midweek_meeting_weekday')}`, weekdayBody(8), congAdmin.token), false);
+await expect('Versammlungsadmin setzt Jahreszeiten als Text', api('PATCH', `${CONG}${mask('yearly_meeting_times')}`, { fields: { yearly_meeting_times: { stringValue: 'x' } } }, congAdmin.token), false);
+await expect('Versammlungsadmin setzt Jahreszeiten', api('PATCH', `${CONG}${mask('yearly_meeting_times')}`, { fields: { yearly_meeting_times: { arrayValue: { values: [{ stringValue: '2026|3|19:00|7|17:30' }] } } } }, congAdmin.token), true);
+await expect('Versammlungsadmin setzt zu viele Jahreszeiten', api('PATCH', `${CONG}${mask('yearly_meeting_times')}`, { fields: { yearly_meeting_times: { arrayValue: { values: Array.from({ length: 101 }, () => ({ stringValue: '2026|3|19:00|7|17:30' })) } } } }, congAdmin.token), false);
 await expect('Versammlungsadmin ändert fremdes Feld der eigenen Versammlung', api('PATCH', `${CONG}${mask('secret')}`, { fields: { secret: { stringValue: 'x' } } }, congAdmin.token), false);
 await expect('Versammlungsadmin ändert Zeiten einer fremden Versammlung', api('PATCH', `${OTHER_CONG}${mask('midweek_meeting_time')}`, time('18:30'), congAdmin.token), false);
 await expect('Versammlungsadmin löscht die eigene Versammlung', api('DELETE', CONG, undefined, congAdmin.token), false);
@@ -337,7 +368,8 @@ await expect('Aufgabenplaner schreibt keinen Termin', putSlot('2026-11-08', base
 await expect('Versammlungsadmin mit Vortragsplaner-Rolle schreibt Termin', putSlot('2026-11-08', base, adminPlanner.token), true);
 
 // ---------- Selbstregistrierung: ohne Rollen und ohne die veralteten Felder ----------
-const registerBody = (email, extra = {}) => fields({ email, displayName: 'n', approved: false, roles: [], ...extra });
+const registerFields = (email, extra = {}) => ({ email, displayName: 'n', approved: false, roles: [], hasAccount: true, ...fullProfile, ...extra });
+const registerBody = (email, extra = {}) => fields(registerFields(email, extra));
 const newcomer = await signUp('newcomer@test.de');
 const newcomer2 = await signUp('newcomer2@test.de');
 const newcomer3 = await signUp('newcomer3@test.de');
@@ -356,10 +388,10 @@ await expect('Selbstregistrierung mit fremder E-Mail-Adresse', api('PATCH', regi
 
 // ---------- Admin-Kontakte: Namen der Admins, auch vor der Freigabe lesbar ----------
 const pending = await signUp('pending@test.de');
-await api('PATCH', `${CONG}/members/${pending.uid}`, fields({ email: 'pending@test.de', displayName: 'p', approved: false, roles: [] }), owner);
+await api('PATCH', `${CONG}/members/${pending.uid}`, memberDoc('pending@test.de', [], { displayName: 'p', approved: false }), owner);
 const outsider = await signUp('outsider@test.de');
 const namedAdmin = await signUp('named@test.de');
-await api('PATCH', `${CONG}/members/${namedAdmin.uid}`, fields({ email: 'named@test.de', displayName: 'n', approved: true, roles: ['CONGREGATION_ADMIN'], firstName: 'Anna', lastName: 'Admin' }), owner);
+await api('PATCH', `${CONG}/members/${namedAdmin.uid}`, memberDoc('named@test.de', ['CONGREGATION_ADMIN'], { displayName: 'n', firstName: 'Anna', lastName: 'Admin' }), owner);
 const CONTACTS = `${CONG}/adminContacts`;
 const contact = (firstName, lastName) => fields({ firstName, lastName });
 const putContact = (uid, data, token) => api('PATCH', `${CONTACTS}/${uid}`, data, token);
@@ -414,10 +446,10 @@ await expect('Global Admin ändert den Namen der Versammlung samt Namensdokument
 await expect('Global Admin ändert die Zeiten der Versammlung nicht', api('PATCH', `${CONG}${mask('midweek_meeting_time')}`, time('18:15'), admin.token), false);
 await expect('Global Admin ändert ein fremdes Feld der Versammlung nicht', api('PATCH', `${CONG}${mask('secret')}`, { fields: { secret: { stringValue: 'x' } } }, admin.token), false);
 const NEW_CONG = `${CIRCUIT}/congregation/NEW`;
-const newCongregation = (name, uid, extra = {}) => fields({ name, createdBy: uid, midweek_meeting_time: '19:00', midweek_meeting_weekday: 3, ...extra });
+const newCongregation = (name, uid, extra = {}) => fields({ name, createdBy: uid, ...fullMeeting, ...extra });
 await expect('Global Admin legt eine Versammlung nicht ohne Namensdokument an', api('PATCH', NEW_CONG, newCongregation('Neu', admin.uid), admin.token), false);
 await expect('Global Admin legt eine Versammlung mit Namensdokument an', commit([
-  setDoc(NEW_CONG, { name: 'Neu', createdBy: admin.uid, midweek_meeting_time: '19:00', midweek_meeting_weekday: 3 }),
+  setDoc(NEW_CONG, { name: 'Neu', createdBy: admin.uid, ...fullMeeting }),
   setDoc(`${CIRCUIT}/uniqueCongregationNames/neu`, { congregationId: 'NEW' }),
 ], admin.token), true);
 await expect('Global Admin löscht eine Versammlung nicht ohne ihr Namensdokument', api('DELETE', NEW_CONG, undefined, admin.token), false);
@@ -472,10 +504,10 @@ const creator = await signUpVerified('creator@test.de');
 const unverified = await signUp('unverified@test.de');
 const intruder = await signUpVerified('intruder@test.de');
 const adminMember = (user, email, extra = {}) => ({
-  email, displayName: 'Max Muster', approved: true, roles: ['CONGREGATION_ADMIN'], firstName: 'Max', lastName: 'Muster', hasAccount: true, ...extra,
+  ...fullProfile, email, displayName: 'Max Muster', approved: true, roles: ['CONGREGATION_ADMIN'], firstName: 'Max', lastName: 'Muster', hasAccount: true, ...extra,
 });
 const createBatch = (circuit, congId, name, key, user, email, memberExtra = {}, congExtra = {}) => [
-  setDoc(`${circuit}/congregation/${congId}`, { name, createdBy: user.uid, midweek_meeting_time: '19:00', midweek_meeting_weekday: 3, ...congExtra }),
+  setDoc(`${circuit}/congregation/${congId}`, { name, createdBy: user.uid, ...fullMeeting, ...congExtra }),
   setDoc(`${circuit}/uniqueCongregationNames/${key}`, { congregationId: congId }),
   setDoc(`${circuit}/congregation/${congId}/members/${user.uid}`, adminMember(user, email, memberExtra)),
 ];
@@ -486,7 +518,7 @@ await expect('Neue Versammlung ohne bestätigte E-Mail-Adresse', commit(createBa
 await expect('Gleicher Name im selben Kreis (Groß-/Kleinschreibung und Leerzeichen egal)', commit(createBatch(CIRCUIT, 'DUP', ' GRAFING   süd ', 'grafing süd', intruder, 'intruder@test.de'), intruder.token), false);
 await expect('Gleicher Name in einem anderen Kreis', commit(createBatch(CIRCUIT_2, 'GRAFING2', 'Grafing Süd', 'grafing süd', intruder, 'intruder@test.de'), intruder.token), true);
 await expect('Versammlung ohne Namensdokument', commit([
-  setDoc(`${CIRCUIT}/congregation/NONAME`, { name: 'Ohne Namensdokument', createdBy: intruder.uid }),
+  setDoc(`${CIRCUIT}/congregation/NONAME`, { name: 'Ohne Namensdokument', createdBy: intruder.uid, ...fullMeeting }),
 ], intruder.token), false);
 await expect('Namensdokument mit falschem Schlüssel', commit(createBatch(CIRCUIT, 'WRONGKEY', 'Falscher Schlüssel', 'anderer name', intruder, 'intruder@test.de'), intruder.token), false);
 await expect('Versammlung mit fremdem createdBy', commit(createBatch(CIRCUIT, 'FOREIGN', 'Fremd', 'fremd', intruder, 'intruder@test.de', {}, { createdBy: creator.uid }), intruder.token), false);
@@ -510,6 +542,53 @@ await expect('Admin benennt um und führt das Namensdokument mit', commit([
 ], creator.token), true);
 await expect('Der alte Name ist nach dem Umbenennen wieder frei', commit(createBatch(CIRCUIT, 'AGAIN', 'Grafing Süd', 'grafing süd', intruder, 'intruder@test.de'), intruder.token), true);
 await expect('Namensdokumente sind ohne Anmeldung lesbar', api('GET', `${CIRCUIT}/uniqueCongregationNames/${encodeURIComponent('grafing nord')}`), true);
+
+// ---------- Härtung (CP-123): nur existierende Pfade, vollständige Dokumente, Admin bleibt Admin ----------
+const GHOST_CIRCUIT = 'region/R/subregion/S/branch/B/circuit/GHOST';
+await expect('Versammlung in einem nicht existierenden Kreis', commit(createBatch(GHOST_CIRCUIT, 'G1', 'Geist', 'geist', intruder, 'intruder@test.de'), intruder.token), false);
+await expect('Global Admin legt keine Versammlung in einem nicht existierenden Kreis an', commit([
+  setDoc(`${GHOST_CIRCUIT}/congregation/G2`, { name: 'Geist 2', createdBy: admin.uid, ...fullMeeting }),
+  setDoc(`${GHOST_CIRCUIT}/uniqueCongregationNames/geist 2`, { congregationId: 'G2' }),
+], admin.token), false);
+await expect('Versammlung ohne Zeitfelder', commit([
+  setDoc(`${CIRCUIT}/congregation/NOTIMES`, { name: 'Ohne Zeiten', createdBy: intruder.uid }),
+  setDoc(`${CIRCUIT}/uniqueCongregationNames/ohne zeiten`, { congregationId: 'NOTIMES' }),
+  setDoc(`${CIRCUIT}/congregation/NOTIMES/members/${intruder.uid}`, adminMember(intruder, 'intruder@test.de')),
+], intruder.token), false);
+await expect('Versammlung mit ungültiger Uhrzeit', commit(createBatch(CIRCUIT, 'BADTIME', 'Falsche Zeit', 'falsche zeit', intruder, 'intruder@test.de', {}, { weekend_meeting_time: '25:61' }), intruder.token), false);
+await expect('Versammlung mit ungültigem Wochentag', commit(createBatch(CIRCUIT, 'BADDAY', 'Falscher Tag', 'falscher tag', intruder, 'intruder@test.de', {}, { weekend_meeting_weekday: 0 }), intruder.token), false);
+
+const ghostNewcomer = await signUp('ghostnewcomer@test.de');
+await expect('Selbstregistrierung in einer nicht existierenden Versammlung', api('PATCH', `${CIRCUIT}/congregation/NOPE/members/${ghostNewcomer.uid}`, registerBody('ghostnewcomer@test.de'), ghostNewcomer.token), false);
+const incomplete = await signUp('incomplete@test.de');
+await expect('Selbstregistrierung ohne Profilfelder', api('PATCH', registerPath(incomplete), fields({ email: 'incomplete@test.de', displayName: 'n', approved: false, roles: [], hasAccount: true }), incomplete.token), false);
+const noAccountFlag = await signUp('noaccountflag@test.de');
+const { hasAccount: _omitted, ...withoutHasAccount } = registerFields('noaccountflag@test.de');
+await expect('Selbstregistrierung ohne hasAccount', api('PATCH', registerPath(noAccountFlag), fields(withoutHasAccount), noAccountFlag.token), false);
+const noEmails = await signUp('noemails@test.de');
+const { emails: _noEmails, ...withoutEmails } = registerFields('noemails@test.de');
+await expect('Selbstregistrierung ohne emails', api('PATCH', registerPath(noEmails), fields(withoutEmails), noEmails.token), false);
+
+// Personen ohne Konto: nur der Versammlungsadmin, vollständig und ohne Zugang.
+const accountless = { email: null, displayName: null, hasAccount: false, approved: false, roles: [], ...fullProfile, lastName: 'Muster', firstName: 'Lena' };
+await expect('Versammlungsadmin erfasst eine Person ohne Konto', call('POST', `${FS}/${MEMBERS}`, fields(accountless), congAdmin.token), true);
+await expect('Person ohne Konto mit Freigabe', call('POST', `${FS}/${MEMBERS}`, fields({ ...accountless, approved: true }), congAdmin.token), false);
+await expect('Person ohne Konto mit Rolle', call('POST', `${FS}/${MEMBERS}`, fields({ ...accountless, roles: ['TALK_PLANNER'] }), congAdmin.token), false);
+await expect('Person ohne Konto ohne Namen', call('POST', `${FS}/${MEMBERS}`, fields({ ...accountless, lastName: '', firstName: '' }), congAdmin.token), false);
+await expect('Vortragsplaner erfasst keine Person ohne Konto', call('POST', `${FS}/${MEMBERS}`, fields(accountless), planner.token), false);
+
+// Löschen: ein Mitglied darf gehen, ein Admin nicht das eigene Dokument löschen (sonst bleibt die Versammlung ohne Admin).
+const leaver = await signUp('leaver@test.de');
+const spare = await signUp('spare@test.de');
+const lastAdmin = await signUp('lastadmin@test.de');
+await api('PATCH', `${MEMBERS}/${leaver.uid}`, memberDoc('leaver@test.de', []), owner);
+await api('PATCH', `${MEMBERS}/${spare.uid}`, memberDoc('spare@test.de', []), owner);
+await api('PATCH', `${MEMBERS}/${lastAdmin.uid}`, memberDoc('lastadmin@test.de', ['CONGREGATION_ADMIN']), owner);
+await expect('Admin löscht das eigene Mitgliedsdokument nicht', api('DELETE', `${MEMBERS}/${lastAdmin.uid}`, undefined, lastAdmin.token), false);
+await expect('Mitglied verlässt die Versammlung', api('DELETE', `${MEMBERS}/${leaver.uid}`, undefined, leaver.token), true);
+await expect('Mitglied löscht ein fremdes Mitglied nicht', api('DELETE', `${MEMBERS}/${spare.uid}`, undefined, plain.token), false);
+await expect('Admin löscht ein anderes Mitglied', api('DELETE', `${MEMBERS}/${spare.uid}`, undefined, congAdmin.token), true);
+await expect('Admin löscht einen anderen Admin', api('DELETE', `${MEMBERS}/${lastAdmin.uid}`, undefined, congAdmin.token), true);
 
 console.log(`${count} checks, ${failures.length} failures`);
 failures.forEach((failure) => console.log(`FAILURE: ${failure}`));
