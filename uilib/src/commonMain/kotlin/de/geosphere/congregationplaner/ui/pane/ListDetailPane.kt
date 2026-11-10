@@ -1,4 +1,4 @@
-package de.geosphere.congregationplaner.presentation.components
+package de.geosphere.congregationplaner.ui.pane
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.dp
-import de.geosphere.congregationplaner.presentation.navigation.arrowBackIcon
+import de.geosphere.congregationplaner.ui.icon.arrowBackIcon
 import de.geosphere.congregationplaner.theming.AppTheme
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.ui.button.SecondaryButton

@@ -43,14 +43,14 @@ import de.geosphere.congregationplaner.congregation.presentation.CongregationMet
 import de.geosphere.congregationplaner.organization.di.OrganizationManagementGraph
 import de.geosphere.congregationplaner.organization.domain.model.OrgLevel
 import de.geosphere.congregationplaner.organization.domain.model.OrgUnit
-import de.geosphere.congregationplaner.presentation.components.DetailPane
-import de.geosphere.congregationplaner.presentation.components.DetailPlaceholder
-import de.geosphere.congregationplaner.presentation.components.SelectableListCard
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.theming.nightCardColors
+import de.geosphere.congregationplaner.ui.list.SelectableListCard
+import de.geosphere.congregationplaner.ui.pane.DetailPane
+import de.geosphere.congregationplaner.ui.pane.DetailPlaceholder
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import dev.zacsweers.metro.createGraph
 

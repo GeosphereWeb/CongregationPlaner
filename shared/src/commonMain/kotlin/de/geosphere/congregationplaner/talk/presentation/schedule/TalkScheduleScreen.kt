@@ -52,10 +52,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.geosphere.congregationplaner.HostPlatform
 import de.geosphere.congregationplaner.congregation.presentation.MeetingTimeInput
-import de.geosphere.congregationplaner.presentation.components.DetailPane
-import de.geosphere.congregationplaner.presentation.components.DetailPlaceholder
-import de.geosphere.congregationplaner.presentation.components.ListPaneHeader
-import de.geosphere.congregationplaner.presentation.components.SelectableListCard
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.talk.domain.model.Chairman
 import de.geosphere.congregationplaner.talk.domain.model.Talk
@@ -72,7 +68,11 @@ import de.geosphere.congregationplaner.ui.card.DateBadge
 import de.geosphere.congregationplaner.ui.chip.StatusTone
 import de.geosphere.congregationplaner.ui.chip.VerticalStatusTag
 import de.geosphere.congregationplaner.ui.list.CollapsingHeaderColumn
+import de.geosphere.congregationplaner.ui.list.SelectableListCard
 import de.geosphere.congregationplaner.ui.nav.SectionLabel
+import de.geosphere.congregationplaner.ui.pane.DetailPane
+import de.geosphere.congregationplaner.ui.pane.DetailPlaceholder
+import de.geosphere.congregationplaner.ui.pane.ListPaneHeader
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime

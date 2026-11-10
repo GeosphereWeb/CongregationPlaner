@@ -11,10 +11,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
-import de.geosphere.congregationplaner.presentation.components.DetailPlaceholder
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.theming.nightCardColors
+import de.geosphere.congregationplaner.ui.pane.DetailPlaceholder
 
 @Composable
 @Suppress("LongParameterList")
