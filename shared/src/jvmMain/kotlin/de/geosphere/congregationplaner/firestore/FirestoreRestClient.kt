@@ -122,11 +122,24 @@ internal fun encode(value: String): String = URLEncoder.encode(value, StandardCh
 
 private const val DEFAULT_FIRESTORE_EMULATOR_HOST = "127.0.0.1:8080"
 
+private const val FIRESTORE_REMOTE_HOST = "https://firestore.googleapis.com"
+
+/**
+ * Die Dokument-URL der Datenbank: der Emulator, solange `FIREBASE_USE_EMULATOR` nicht `false` ist (ohne den
+ * Schalter bleibt es beim Emulator), sonst die Online-Datenbank. Online gelten die Firestore-Rules mit dem
+ * ID-Token des angemeldeten Nutzers.
+ */
 internal fun firestoreDocumentsUrl(): String {
     val projectId = DesktopEnv.getValue("FIREBASE_PROJECT_ID", "firebase.projectId")
         ?.takeIf(String::isNotBlank)
         ?: throw IllegalStateException("FIREBASE_PROJECT_ID is required to access Firestore.")
-    return "http://${firestoreEmulatorHost()}/v1/projects/$projectId/databases/(default)/documents"
+    val useEmulator = DesktopEnv.useEmulatorSetting() != false
+    return firestoreDocumentsUrl(projectId, useEmulator, if (useEmulator) firestoreEmulatorHost() else "")
+}
+
+internal fun firestoreDocumentsUrl(projectId: String, useEmulator: Boolean, emulatorHost: String): String {
+    val host = if (useEmulator) "http://$emulatorHost" else FIRESTORE_REMOTE_HOST
+    return "$host/v1/projects/$projectId/databases/(default)/documents"
 }
 
 private fun firestoreEmulatorHost(): String {
