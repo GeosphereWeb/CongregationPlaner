@@ -31,7 +31,7 @@ Der Test läuft auf eigenen Ports (Firestore 18080, Auth 19099, Hub 14400, Loggi
 - **Admin-Kontakte** (`adminContacts`): Vor- und Nachname der Admins sind für jedes Mitglied der Versammlung lesbar, auch ohne Freigabe; Mitglieder-Dokumente bleiben gesperrt. Schreiben nur durch Admins, nur für freigegebene Admins, mit passendem Namen und ohne Zusatzfelder; fremde Versammlungen und Nutzer ohne Mitgliedsdokument sind ausgeschlossen.
 - **Vortragsliste und Wochenereignisse** (`talkCatalog`, `weekEvents`): Lesen für angemeldete Nutzer, Schreiben und Löschen nur für globale Admins, Formvalidierung (Nummer 1 bis 9999 ohne führende Null, Titel und Namen).
 
-Nicht abgedeckt sind bisher die Organisationsstruktur und das Anlegen von Personen ohne Konto.
+Außerdem geprüft: der Organisationsbaum, das Anlegen von Versammlungen (nur in einem existierenden Kreis, mit vollständigen Zeitfeldern, Namensdokument und erstem Admin), die Selbstregistrierung (nur in einer existierenden Versammlung, mit vollständigem Profil), Personen ohne Konto, das Löschen von Mitgliedern (ein Admin löscht nicht das eigene Dokument) und die Zeitfelder einer Versammlung. Die Rules akzeptieren keine fehlenden Felder mehr: Mitglieds-, Termin- und Versammlungsdokumente müssen vollständig sein, wie sie die App schreibt.
 
 ## Neue Fälle ergänzen
 
@@ -47,4 +47,4 @@ await expect('Beschreibung des Falls', api('PATCH', 'pfad/dokument', fields({ fe
 
 Firestore erlaubt höchstens 10 `let`-Variablen pro Funktion in den Rules. Größere Validierungen deshalb in kleine Hilfsfunktionen aufteilen.
 
-Der Test läuft bisher nicht in der CI (dafür bräuchte der Workflow Java, Node und die Firebase CLI); vor dem Commit einer Änderung an `firestore.rules` ist er von Hand auszuführen.
+Der Test läuft in der CI (`.github/workflows/firestore-rules.yml`, bei jeder Änderung unter `firebase/`); vor dem Commit einer Änderung an `firestore.rules` lohnt sich trotzdem ein lokaler Lauf.
