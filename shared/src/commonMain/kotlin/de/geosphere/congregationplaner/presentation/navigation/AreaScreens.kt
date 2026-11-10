@@ -30,6 +30,7 @@ import de.geosphere.congregationplaner.ui.appbar.NightTabRow
 import de.geosphere.congregationplaner.ui.appbar.NightTopBar
 import de.geosphere.congregationplaner.ui.header.NightPanel
 import de.geosphere.congregationplaner.ui.header.TeleprompterHeader
+import de.geosphere.congregationplaner.ui.icon.arrowBackIcon
 import de.geosphere.congregationplaner.ui.nav.NavCardRow
 import de.geosphere.congregationplaner.ui.nav.NavColumnItem
 import de.geosphere.congregationplaner.ui.nav.SectionLabel

@@ -39,9 +39,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
-import de.geosphere.congregationplaner.presentation.components.DetailPane
-import de.geosphere.congregationplaner.presentation.components.DetailPlaceholder
-import de.geosphere.congregationplaner.presentation.components.ListPaneHeader
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
@@ -52,6 +49,9 @@ import de.geosphere.congregationplaner.ui.button.SpeedDialItem
 import de.geosphere.congregationplaner.ui.field.AppSwitch
 import de.geosphere.congregationplaner.ui.list.CollapsingHeaderColumn
 import de.geosphere.congregationplaner.ui.nav.NavCardRow
+import de.geosphere.congregationplaner.ui.pane.DetailPane
+import de.geosphere.congregationplaner.ui.pane.DetailPlaceholder
+import de.geosphere.congregationplaner.ui.pane.ListPaneHeader
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
