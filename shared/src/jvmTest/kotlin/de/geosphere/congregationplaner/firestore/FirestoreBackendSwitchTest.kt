@@ -1,7 +1,7 @@
 package de.geosphere.congregationplaner.firestore
 
-import de.geosphere.congregationplaner.auth.DesktopEnv
-import de.geosphere.congregationplaner.auth.authEmulatorEnabled
+import de.geosphere.congregationplaner.auth.data.DesktopEnv
+import de.geosphere.congregationplaner.auth.data.authEmulatorEnabled
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

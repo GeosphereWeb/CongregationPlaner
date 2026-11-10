@@ -4,7 +4,7 @@ import de.geosphere.congregationplaner.talk.data.createTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.data.createTalkHistoryRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkCatalogRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkHistoryRepository
-import de.geosphere.congregationplaner.talk.presentation.TalkHistoryViewModel
+import de.geosphere.congregationplaner.talk.presentation.history.TalkHistoryViewModel
 import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Provides
 

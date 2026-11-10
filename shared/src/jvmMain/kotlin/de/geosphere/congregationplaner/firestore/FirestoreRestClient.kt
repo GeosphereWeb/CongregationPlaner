@@ -4,7 +4,7 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonNull
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
-import de.geosphere.congregationplaner.auth.DesktopEnv
+import de.geosphere.congregationplaner.auth.data.DesktopEnv
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext

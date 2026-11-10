@@ -4,7 +4,7 @@ import de.geosphere.congregationplaner.presentation.navigation.germanDayAndMonth
 import de.geosphere.congregationplaner.presentation.navigation.germanMonthName
 import de.geosphere.congregationplaner.presentation.navigation.germanWeekdayName
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
-import de.geosphere.congregationplaner.talk.presentation.slotSpeakerLine
+import de.geosphere.congregationplaner.talk.presentation.schedule.slotSpeakerLine
 import kotlinx.datetime.LocalDate
 
 private const val WEEKDAY_SHORT_LENGTH = 2

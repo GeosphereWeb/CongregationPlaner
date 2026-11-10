@@ -3,8 +3,8 @@ package de.geosphere.congregationplaner.user.data
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Source
-import de.geosphere.congregationplaner.auth.AndroidFirestoreProvider
-import de.geosphere.congregationplaner.auth.FirebaseUser
+import de.geosphere.congregationplaner.auth.data.AndroidFirestoreProvider
+import de.geosphere.congregationplaner.auth.domain.repository.FirebaseUser
 import de.geosphere.congregationplaner.firestore.awaitResult
 import de.geosphere.congregationplaner.firestore.logFirestoreFailure
 import de.geosphere.congregationplaner.firestore.observeDocuments

@@ -1,6 +1,6 @@
 package de.geosphere.congregationplaner.organization.data
 
-import de.geosphere.congregationplaner.auth.FirebaseAuthManager
+import de.geosphere.congregationplaner.auth.data.FirebaseAuthManager
 import de.geosphere.congregationplaner.firestore.FirestoreRestClient
 import de.geosphere.congregationplaner.firestore.optionalStringField
 import de.geosphere.congregationplaner.firestore.parseDocuments

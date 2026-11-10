@@ -1,6 +1,6 @@
 package de.geosphere.congregationplaner.user.data
 
-import de.geosphere.congregationplaner.auth.FirebaseUser
+import de.geosphere.congregationplaner.auth.domain.repository.FirebaseUser
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.testing.FakeFirestoreRestServer
 import de.geosphere.congregationplaner.testing.FakeFirestoreRestServer.FakeResponse
