@@ -47,7 +47,16 @@ class ObserveExternalSpeakersUseCase(private val observeDirectory: ObserveExtern
     operator fun invoke(user: AppUser): Flow<List<ExternalSpeaker>> = observeDirectory(user).map { directory ->
         val names = directory.congregations.associate { it.id to it.name }
         directory.speakers.mapNotNull { speaker ->
-            names[speaker.congregationId]?.let { ExternalSpeaker(speaker.id, speaker.lastName, speaker.firstName, it) }
+            names[speaker.congregationId]?.let {
+                ExternalSpeaker(
+                    speaker.id,
+                    speaker.lastName,
+                    speaker.firstName,
+                    it,
+                    speaker.mobilePhone,
+                    speaker.landlinePhone,
+                )
+            }
         }
     }
 }

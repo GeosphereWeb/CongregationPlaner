@@ -5,6 +5,9 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
 import de.geosphere.congregationplaner.presentation.components.CardHighlight
 import de.geosphere.congregationplaner.presentation.navigation.germanMonthName
+import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
+import de.geosphere.congregationplaner.talk.domain.model.Speaker
+import de.geosphere.congregationplaner.talk.domain.model.SpeakerContact
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.upcomingTalkSlots
 import de.geosphere.congregationplaner.ui.chip.StatusTone
@@ -124,6 +127,27 @@ internal fun slotListTitle(slot: TalkSlot): AnnotatedString? {
 
 /** Redner in der Liste; an einem entfallenden Termin steht dort nichts (siehe [slotListTitle]). */
 internal fun slotListSpeakerLine(slot: TalkSlot): String? = slotSpeakerLine(slot).takeUnless { slot.talkCancelled }
+
+/**
+ * Wie sich der eingeteilte Redner erreichen lässt; `null` ohne Redner, ohne seine Nummern in [speakers] bzw.
+ * [externalSpeakers] (fehlende Berechtigung) oder ohne wählbare Nummer.
+ */
+internal fun slotContact(
+    slot: TalkSlot,
+    speakers: List<Speaker>,
+    externalSpeakers: List<ExternalSpeaker>,
+): SpeakerContact? {
+    val contact = when {
+        slot.externalSpeakerId != null ->
+            externalSpeakers.firstOrNull { it.id == slot.externalSpeakerId }
+                ?.let { SpeakerContact(it.mobilePhone, it.landlinePhone) }
+        slot.speakerMemberId != null ->
+            speakers.firstOrNull { it.memberId == slot.speakerMemberId }
+                ?.let { SpeakerContact(it.mobilePhone, it.landlinePhone) }
+        else -> null
+    }
+    return contact?.takeIf { it.callUri != null }
+}
 
 /** Redner mit Herkunft: „Muster, Max · eigene Versammlung“, „Extern, Eva · Nord“ oder „Redner noch offen“. */
 internal fun slotSpeakerLine(slot: TalkSlot): String {

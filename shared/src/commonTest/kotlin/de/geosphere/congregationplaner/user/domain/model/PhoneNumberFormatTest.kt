@@ -84,4 +84,21 @@ class PhoneNumberFormatTest {
         assertTrue(listOf("30", "201", "212", "2129", "331", "3381", "39999").all { it in GERMAN_AREA_CODES })
         assertTrue("33052" !in GERMAN_AREA_CODES, "inaktive Kennzahl Leegebruch darf nicht enthalten sein")
     }
+
+    @Test
+    fun `an international number has a plus and no separators`() {
+        assertEquals("+491701234567", internationalNumber("0170 1234567"))
+        assertEquals("+491701234567", internationalNumber("+49 170 1234567"))
+        assertEquals("+491701234567", internationalNumber("0049 170 1234567"))
+        assertEquals("+436601234567", internationalNumber("+43 (660) 1234567"))
+        assertEquals("+4989123456", internationalNumber("089/123456"))
+    }
+
+    @Test
+    fun `a number without a prefix or too short has no international form`() {
+        assertNull(internationalNumber("1234567"))
+        assertNull(internationalNumber("0123"))
+        assertNull(internationalNumber(""))
+        assertNull(internationalNumber("abc"))
+    }
 }

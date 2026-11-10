@@ -2,6 +2,9 @@ package de.geosphere.congregationplaner.talk.presentation
 
 import androidx.compose.ui.text.font.FontWeight
 import de.geosphere.congregationplaner.presentation.components.CardHighlight
+import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
+import de.geosphere.congregationplaner.talk.domain.model.Speaker
+import de.geosphere.congregationplaner.talk.domain.model.SpeakerContact
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.ui.chip.StatusTone
 import kotlinx.datetime.LocalDate
@@ -260,5 +263,41 @@ class TalkSlotPresentationTest {
         assertEquals(time, commonSlotTime(listOf(slot(), slot(), slot { it.copy(time = early) })))
         assertEquals(early, commonSlotTime(listOf(slot(), slot { it.copy(time = early) })))
         assertNull(commonSlotTime(emptyList()))
+    }
+
+    @Test
+    fun `the contact of a member speaker comes from the member list`() {
+        val member = slot { it.copy(speakerMemberId = "m1", speakerLastName = "Muster", speakerFirstName = "Max") }
+        val speakers = listOf(
+            Speaker("m1", "Muster", "Max", mobilePhone = "0170 1234567"),
+            Speaker("m2", "Berg", "Lea"),
+        )
+
+        assertEquals(SpeakerContact(mobilePhone = "0170 1234567"), slotContact(member, speakers, emptyList()))
+        assertNull(slotContact(member, emptyList(), emptyList()))
+        assertNull(slotContact(member, listOf(Speaker("m1", "Muster", "Max")), emptyList()))
+    }
+
+    @Test
+    fun `the contact of an external speaker comes from the directory`() {
+        val external = slot {
+            it.copy(
+                externalSpeakerId = "e1",
+                speakerLastName = "Extern",
+                speakerFirstName = "Eva",
+                speakerCongregation = "Nord",
+            )
+        }
+        val directory = listOf(ExternalSpeaker("e1", "Extern", "Eva", "Nord", landlinePhone = "089 123456"))
+
+        assertEquals(SpeakerContact(landlinePhone = "089 123456"), slotContact(external, emptyList(), directory))
+        assertNull(slotContact(external, emptyList(), emptyList()))
+    }
+
+    @Test
+    fun `a slot without a speaker has no contact`() {
+        val speakers = listOf(Speaker("m1", "Muster", "Max", mobilePhone = "0170 1234567"))
+
+        assertNull(slotContact(slot(), speakers, emptyList()))
     }
 }

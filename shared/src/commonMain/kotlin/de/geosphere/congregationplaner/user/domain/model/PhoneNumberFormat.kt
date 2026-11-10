@@ -46,6 +46,24 @@ private fun areaCodeLength(number: String): Int? {
         ?.plus(1)
 }
 
+/**
+ * Die Nummer international mit „+“ ohne Trennzeichen („0170 1234567“ → „+491701234567“, „0043 660 1“ → „+436601“);
+ * `null`, wenn sie keine Vorwahl hat oder zu kurz ist.
+ */
+fun internationalNumber(raw: String): String? {
+    val compact = raw.filter { it.isDigit() || it == '+' }
+    val digits = compact.filter(Char::isDigit)
+    val number = when {
+        compact.startsWith("00") -> digits.drop(2)
+        compact.startsWith(INTERNATIONAL_PREFIX) || compact.startsWith("+") -> digits
+        compact.startsWith("0") -> "49" + digits.drop(1)
+        else -> return null
+    }
+    return number.takeIf { it.length >= MIN_INTERNATIONAL_DIGITS }?.let { "+$it" }
+}
+
+private const val MIN_INTERNATIONAL_DIGITS = 8
+
 /** Art einer Telefonnummer, erkannt an der Vorwahl. */
 enum class PhoneKind {
     MOBILE,
