@@ -90,11 +90,21 @@ Umgebungsvariablen funktionieren ebenfalls:
 ```dotenv
 FIREBASE_WEB_API_KEY=...
 FIREBASE_PROJECT_ID=...
+# Welche Datenbank? true = lokale Emulatoren, false = Online-Datenbank (Anmeldung und Firestore zugleich)
+FIREBASE_USE_EMULATOR=true
 # Optional: Auth-Emulator
 FIREBASE_AUTH_EMULATOR_ENABLED=true
 FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1
 FIREBASE_AUTH_EMULATOR_PORT=9099
 ```
+
+Der Schalter `FIREBASE_USE_EMULATOR` hat Vorrang vor den einzelnen Emulator-Variablen. Ohne ihn bleibt die Desktop-App
+beim Emulator (Firestore) bzw. bei den Auth-Variablen (ADR-0021).
+
+**Desktop gegen die Online-Datenbank** (z. B. für den Import): `FIREBASE_USE_EMULATOR=false`, dazu `FIREBASE_PROJECT_ID`
+und `FIREBASE_WEB_API_KEY` des Online-Projekts in der `.env`. Die App meldet sich dann online an, und die
+Firestore-Rules gelten mit dem Konto des Nutzers. Die Desktop-App fragt Daten alle 15 Sekunden ab; das verursacht
+online Lesezugriffe, solange ein Bereich offen ist.
 
 In der CI werden die Dateien aus den Secrets `GOOGLE_SERVICES_JSON_BASE64` und `IOS_GOOGLE_SERVICES_BASE64`
 wiederhergestellt (Base64 erzeugen: `base64 -w 0 < datei`).
@@ -263,6 +273,8 @@ python scripts/update_german_area_codes.py
 
 Die Desktop-App übernimmt die Excel-Exporte des alten Tools (Einstellungen → „Import aus dem alten Planungstool“).
 Auf Android und iOS gibt es keinen Import. Die Dateien enthalten personenbezogene Daten und gehören nie ins Repo.
+Für den Import in die Online-Datenbank die Desktop-App mit `FIREBASE_USE_EMULATOR=false` starten (siehe
+[Firebase-Konfiguration](#firebase-konfiguration)).
 
 | Reihenfolge | Datei | Importiert | Wer darf |
 |-------------|-------|------------|----------|

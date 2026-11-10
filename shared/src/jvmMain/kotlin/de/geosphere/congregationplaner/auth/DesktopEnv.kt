@@ -61,6 +61,18 @@ internal object DesktopEnv {
         return key to value
     }
 
+    /**
+     * Der Schalter `FIREBASE_USE_EMULATOR` für Anmeldung und Firestore zugleich: `true` nutzt die lokalen Emulatoren,
+     * `false` die Online-Datenbank, `null` (nicht gesetzt) lässt die einzelnen Emulator-Variablen entscheiden.
+     */
+    fun useEmulatorSetting(): Boolean? = parseUseEmulator(getValue("FIREBASE_USE_EMULATOR", "firebase.useEmulator"))
+
+    internal fun parseUseEmulator(value: String?): Boolean? = when (value?.trim()?.lowercase()) {
+        "true" -> true
+        "false" -> false
+        else -> null
+    }
+
     fun getValue(vararg keys: String): String? {
         val environment = keys.mapNotNull { key -> System.getenv(key)?.let { key to it } }.toMap()
         val properties = keys.mapNotNull { key -> System.getProperty(key)?.let { key to it } }.toMap()
