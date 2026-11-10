@@ -13,6 +13,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import de.geosphere.congregationplaner.auth.data.FirebaseAndroidContextHolder
 import de.geosphere.congregationplaner.auth.data.FirebaseSupport
+import de.geosphere.congregationplaner.auth.presentation.AppPreview
 import de.geosphere.congregationplaner.organization.presentation.selection.InviteLinkInbox
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
