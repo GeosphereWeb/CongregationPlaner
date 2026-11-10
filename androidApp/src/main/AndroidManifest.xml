@@ -10,7 +10,12 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        <!--
+            Drehen und Größenänderungen behandelt Compose selbst. Sonst wird die Activity neu erstellt und der
+            Navigationszustand ist weg, weil die ViewModels in App() nicht an die Activity gebunden sind (ADR-0019).
+        -->
         <activity
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|navigation"
             android:exported="true"
             android:launchMode="singleTask"
             android:name=".MainActivity">
