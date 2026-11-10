@@ -60,6 +60,8 @@ val sonarExclusions = listOf(
     "**/CongregationDetail.kt",
     "**/TalkScheduleScreen.kt",
     "**/TalkSlotEditor.kt",
+    // Compose-Hülle für die Wisch-Aktionen am Termin; Kontakt und Links sind in SpeakerContact und slotContact getestet
+    "**/SwipeableSlotItem.kt",
     // Reines Compose-Formular „Mein Profil“; Eingaben und Speichern sind in OwnProfileViewModel getestet
     "**/OwnProfileSection.kt",
     // Compose-Oberfläche, deren einzige neue Zeilen die @ThemePreviews-Vorschau sind; Logik liegt in ViewModels/Modellen
