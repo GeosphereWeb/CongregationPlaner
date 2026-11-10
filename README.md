@@ -85,7 +85,8 @@ Die Firebase-Konfigurationsdateien sind **nicht** im Repository enthalten und m�
 | Desktop   | `.env` im Projekt-Root                      |
 
 Für Desktop wird die `.env` automatisch im aktuellen Verzeichnis und den übergeordneten Verzeichnissen gesucht;
-Umgebungsvariablen funktionieren ebenfalls:
+Umgebungsvariablen funktionieren ebenfalls. Eine Vorlage mit Platzhaltern liegt als `.env.example` im Projekt-Root: nach
+`.env` kopieren und die Werte eintragen (die `.env` selbst ist von Git ignoriert):
 
 ```dotenv
 FIREBASE_WEB_API_KEY=...
