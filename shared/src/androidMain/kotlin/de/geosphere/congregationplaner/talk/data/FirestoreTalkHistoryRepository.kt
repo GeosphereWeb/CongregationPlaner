@@ -2,7 +2,7 @@ package de.geosphere.congregationplaner.talk.data
 
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
-import de.geosphere.congregationplaner.auth.AndroidFirestoreProvider
+import de.geosphere.congregationplaner.auth.data.AndroidFirestoreProvider
 import de.geosphere.congregationplaner.firestore.awaitResult
 import de.geosphere.congregationplaner.firestore.logFirestoreFailure
 import de.geosphere.congregationplaner.firestore.observeDocuments

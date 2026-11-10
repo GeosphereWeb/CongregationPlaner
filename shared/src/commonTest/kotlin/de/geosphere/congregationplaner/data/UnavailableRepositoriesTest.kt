@@ -1,6 +1,6 @@
 package de.geosphere.congregationplaner.data
 
-import de.geosphere.congregationplaner.auth.FirebaseUser
+import de.geosphere.congregationplaner.auth.domain.repository.FirebaseUser
 import de.geosphere.congregationplaner.congregation.data.unavailableCongregationMetadataRepository
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
 import de.geosphere.congregationplaner.organization.data.unavailableOrgUnitRepository

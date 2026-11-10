@@ -2,8 +2,8 @@ package de.geosphere.congregationplaner.user.data
 
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
-import de.geosphere.congregationplaner.auth.FirebaseAuthManager
-import de.geosphere.congregationplaner.auth.FirebaseUser
+import de.geosphere.congregationplaner.auth.data.FirebaseAuthManager
+import de.geosphere.congregationplaner.auth.domain.repository.FirebaseUser
 import de.geosphere.congregationplaner.firestore.FirestoreRestClient
 import de.geosphere.congregationplaner.firestore.FirestoreRestDocument
 import de.geosphere.congregationplaner.firestore.booleanField

@@ -32,19 +32,19 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import de.geosphere.congregationplaner.auth.FirebaseAuthManager
-import de.geosphere.congregationplaner.auth.FirebaseSupport
+import de.geosphere.congregationplaner.auth.data.FirebaseAuthManager
+import de.geosphere.congregationplaner.auth.data.FirebaseSupport
 import de.geosphere.congregationplaner.home.di.HomeGraph
-import de.geosphere.congregationplaner.organization.InviteLinkInbox
 import de.geosphere.congregationplaner.organization.di.OrganizationGraph
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.organization.domain.model.OrgLevel
 import de.geosphere.congregationplaner.organization.domain.model.OrgUnit
 import de.geosphere.congregationplaner.organization.domain.model.SelectedCongregation
-import de.geosphere.congregationplaner.organization.presentation.CongregationSelectionUiState
-import de.geosphere.congregationplaner.organization.presentation.CongregationSelector
-import de.geosphere.congregationplaner.organization.presentation.NewCongregationScreen
-import de.geosphere.congregationplaner.organization.presentation.OrgLevelSelection
+import de.geosphere.congregationplaner.organization.presentation.selection.CongregationSelectionUiState
+import de.geosphere.congregationplaner.organization.presentation.selection.CongregationSelector
+import de.geosphere.congregationplaner.organization.presentation.selection.InviteLinkInbox
+import de.geosphere.congregationplaner.organization.presentation.selection.NewCongregationScreen
+import de.geosphere.congregationplaner.organization.presentation.selection.OrgLevelSelection
 import de.geosphere.congregationplaner.presentation.navigation.AppNavigationActions
 import de.geosphere.congregationplaner.presentation.navigation.AppNavigationGraph
 import de.geosphere.congregationplaner.presentation.navigation.AppScaffold
@@ -61,7 +61,7 @@ import de.geosphere.congregationplaner.ui.header.NightScreen
 import de.geosphere.congregationplaner.ui.header.PanelTitle
 import de.geosphere.congregationplaner.user.di.UserAccessGraph
 import de.geosphere.congregationplaner.user.domain.model.UserAccessState
-import de.geosphere.congregationplaner.user.presentation.UserAccessGateScreen
+import de.geosphere.congregationplaner.user.presentation.access.UserAccessGateScreen
 import dev.zacsweers.metro.createGraph
 import kotlinx.coroutines.launch
 

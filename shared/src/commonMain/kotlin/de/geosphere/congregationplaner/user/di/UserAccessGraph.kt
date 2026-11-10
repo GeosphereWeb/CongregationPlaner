@@ -4,7 +4,7 @@ import de.geosphere.congregationplaner.user.data.createAdminContactRepository
 import de.geosphere.congregationplaner.user.data.createUserRepository
 import de.geosphere.congregationplaner.user.domain.repository.AdminContactRepository
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
-import de.geosphere.congregationplaner.user.presentation.UserAccessViewModel
+import de.geosphere.congregationplaner.user.presentation.access.UserAccessViewModel
 import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Provides
 

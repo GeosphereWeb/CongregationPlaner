@@ -1,7 +1,7 @@
 package de.geosphere.congregationplaner.congregation.data
 
 import com.google.gson.JsonObject
-import de.geosphere.congregationplaner.auth.FirebaseAuthManager
+import de.geosphere.congregationplaner.auth.data.FirebaseAuthManager
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationName
 import de.geosphere.congregationplaner.congregation.domain.model.NewCongregationAdmin
