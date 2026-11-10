@@ -1,7 +1,7 @@
 package de.geosphere.congregationplaner.talk.presentation
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -20,15 +20,18 @@ import de.geosphere.congregationplaner.ui.chip.StatusTone
 import de.geosphere.congregationplaner.ui.list.SwipeActionButton
 import de.geosphere.congregationplaner.ui.list.SwipeableItemWithActions
 import de.geosphere.congregationplaner.user.presentation.callIcon
-import de.geosphere.congregationplaner.user.presentation.chatIcon
+import de.geosphere.congregationplaner.user.presentation.smartphoneIcon
+import de.geosphere.congregationplaner.user.presentation.whatsAppIcon
 
-private const val CALL_LABEL = "Anrufen"
+private const val MOBILE_LABEL = "Handy anrufen"
+private const val LANDLINE_LABEL = "Festnetz anrufen"
 private const val WHATSAPP_LABEL = "WhatsApp"
 
 /**
- * Ein Termin der Liste, der sich nach links wischen lässt, um den Redner anzurufen oder ihm per WhatsApp zu schreiben.
- * Ohne [contact] (kein Redner, keine Nummer oder keine Berechtigung) ist der Termin nicht wischbar. Für TalkBack
- * stehen dieselben Aktionen als Eintrag der Aktionsliste zur Verfügung.
+ * Ein Termin der Liste, hinter dem Aktionen für den Redner liegen: nach rechts wischen zeigt je ein Icon für Handy und
+ * Festnetz (soweit die Nummer vorhanden ist), nach links wischen WhatsApp (mit Handynummer). Ohne [contact] (kein
+ * Redner, keine Nummer oder keine Berechtigung) und zu einer Seite ohne Aktion lässt sich der Termin nicht wischen.
+ * Für TalkBack stehen dieselben Aktionen als Eintrag der Aktionsliste zur Verfügung.
  */
 @Composable
 internal fun SwipeableSlotItem(
@@ -49,14 +52,16 @@ internal fun SwipeableSlotItem(
         runCatching { uriHandler.openUri(uri) }
     }
     val accessibilityActions = listOfNotNull(
-        accessibilityAction(CALL_LABEL, contact.callUri, open),
+        accessibilityAction(MOBILE_LABEL, contact.mobileCallUri, open),
+        accessibilityAction(LANDLINE_LABEL, contact.landlineCallUri, open),
         accessibilityAction(WHATSAPP_LABEL, contact.whatsAppUri, open),
     )
     SwipeableItemWithActions(
         isRevealed = revealed,
         onRevealedChange = onRevealedChange,
         modifier = modifier.semantics { customActions = accessibilityActions },
-        endActions = { SlotContactActions(contact, open) },
+        startActions = if (contact.isReachable) ({ CallActions(contact, open) }) else null,
+        endActions = contact.whatsAppUri?.let { uri -> { WhatsAppAction(uri, open) } },
         content = content,
     )
 }
@@ -69,27 +74,40 @@ private fun accessibilityAction(label: String, uri: String?, open: (String) -> U
         }
     }
 
-/** Die Icon-Buttons hinter dem Termin: Anrufen und, mit Handynummer, WhatsApp. */
+/** Nach rechts gewischt: Anrufen auf dem Handy und, wenn vorhanden, im Festnetz. */
 @Composable
-private fun RowScope.SlotContactActions(contact: SpeakerContact, onOpen: (String) -> Unit) {
-    contact.callUri?.let { uri ->
-        SwipeActionButton(callIcon, CALL_LABEL, StatusTone.Sky, onClick = { onOpen(uri) })
+private fun RowScope.CallActions(contact: SpeakerContact, onOpen: (String) -> Unit) {
+    contact.mobileCallUri?.let { uri ->
+        SwipeActionButton(smartphoneIcon, MOBILE_LABEL, StatusTone.Sky, onClick = { onOpen(uri) })
     }
-    contact.whatsAppUri?.let { uri ->
-        SwipeActionButton(chatIcon, WHATSAPP_LABEL, StatusTone.Mint, onClick = { onOpen(uri) })
+    contact.landlineCallUri?.let { uri ->
+        SwipeActionButton(callIcon, LANDLINE_LABEL, StatusTone.Sky, onClick = { onOpen(uri) })
     }
+}
+
+/** Nach links gewischt: WhatsApp öffnen. */
+@Composable
+private fun RowScope.WhatsAppAction(uri: String, onOpen: (String) -> Unit) {
+    SwipeActionButton(whatsAppIcon, WHATSAPP_LABEL, StatusTone.Mint, onClick = { onOpen(uri) })
 }
 
 @ThemePreviews
 @Composable
 private fun SwipeableSlotItemPreview() = NightPreviewWrapper {
-    Row {
+    Column {
         SwipeableSlotItem(
-            contact = SpeakerContact(mobilePhone = "0170 1234567"),
+            contact = SpeakerContact(mobilePhone = "0170 1234567", landlinePhone = "089 123456"),
             revealed = false,
             onRevealedChange = {},
         ) {
-            Text("Mit Handynummer: nach links wischen", Modifier.fillMaxWidth().padding(16.dp))
+            Text("Handy und Festnetz: nach rechts, WhatsApp: nach links", Modifier.fillMaxWidth().padding(16.dp))
+        }
+        SwipeableSlotItem(
+            contact = SpeakerContact(landlinePhone = "089 123456"),
+            revealed = false,
+            onRevealedChange = {},
+        ) {
+            Text("Nur Festnetz: nur nach rechts", Modifier.fillMaxWidth().padding(16.dp))
         }
     }
 }
