@@ -106,6 +106,8 @@ enum class Appointment(val label: String) {
 
 /** Fachliche Fehler beim Pflegen der Mitgliedsangaben; die Nachrichten werden direkt in der UI angezeigt. */
 sealed class MemberProfileException(message: String) : Exception(message) {
+    class NotAllowed : MemberProfileException("Dafür fehlt dir die Berechtigung.")
+
     class MissingName : MemberProfileException("Bitte gib Vor- und Familiennamen ein.")
 
     class NameTooLong :

@@ -3,9 +3,9 @@ package de.geosphere.congregationplaner.organization.domain.usecase
 import de.geosphere.congregationplaner.organization.domain.model.OrgLevel
 import de.geosphere.congregationplaner.organization.domain.model.OrgUnit
 import de.geosphere.congregationplaner.organization.domain.model.OrgUnitException
+import de.geosphere.congregationplaner.organization.domain.permission.OrganizationPermissionPolicy
 import de.geosphere.congregationplaner.organization.domain.repository.OrgUnitRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
-import de.geosphere.congregationplaner.user.domain.permission.OrganizationPermissionPolicy
 import dev.zacsweers.metro.Inject
 
 /** Legt eine neue Einheit an (leere ID) oder speichert eine bestehende; nur für globale Admins. */

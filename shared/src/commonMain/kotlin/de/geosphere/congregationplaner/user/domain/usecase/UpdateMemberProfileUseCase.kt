@@ -1,6 +1,5 @@
 package de.geosphere.congregationplaner.user.domain.usecase
 
-import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.EmergencyContact
@@ -8,14 +7,19 @@ import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.MemberProfileException
 import de.geosphere.congregationplaner.user.domain.model.formatPhoneNumber
+import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
 import dev.zacsweers.metro.Inject
 
-/** Der Versammlungsadmin speichert alle persönlichen Angaben eines Mitglieds. */
+/** Der Versammlungsadmin [user] speichert alle persönlichen Angaben von [member]. */
 @Inject
-class UpdateMemberProfileUseCase(private val repository: UserRepository) {
-    suspend operator fun invoke(congregation: CongregationRef, member: AppUser): Result<AppUser> {
+class UpdateMemberProfileUseCase(private val repository: UserRepository, private val policy: UserPermissionPolicy) {
+    suspend operator fun invoke(user: AppUser, member: AppUser): Result<AppUser> {
         if (member.uid.isBlank()) return Result.failure(IllegalArgumentException("Das Mitglied hat keine ID."))
+        val congregation = user.congregation
+        if (congregation == null || !policy.canEditProfile(user, member)) {
+            return Result.failure(MemberProfileException.NotAllowed())
+        }
         // Bei Personen ohne Konto ist der Name die einzige Möglichkeit, sie zu erkennen.
         return member.profile.validated(requireName = !member.hasAccount).fold(
             onSuccess = { profile -> repository.updateMemberProfile(congregation, member.copy(profile = profile)) },

@@ -7,12 +7,14 @@ import de.geosphere.congregationplaner.presentation.components.ListDetailState
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
+import de.geosphere.congregationplaner.user.domain.permission.AdminRoleLock
 import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
 import de.geosphere.congregationplaner.user.domain.usecase.CreateMemberWithoutAccountUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.ObserveMembersUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.RemoveMemberUseCase
+import de.geosphere.congregationplaner.user.domain.usecase.SetMemberApprovalUseCase
+import de.geosphere.congregationplaner.user.domain.usecase.SetMemberRoleUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.UpdateMemberProfileUseCase
-import de.geosphere.congregationplaner.user.domain.usecase.UpdateMemberUseCase
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,6 +33,16 @@ data class MemberEditorState(
     val isDirty: Boolean get() = profile != original
 }
 
+/** Was der angemeldete Nutzer mit einem Mitglied tun darf; standardmäßig nichts. */
+data class MemberPermissions(
+    /** Freigeben und entfernen. */
+    val canEdit: Boolean = false,
+    val canEditProfile: Boolean = false,
+    val toggleableRoles: Set<CongregationRole> = emptySet(),
+    /** Warum die Admin-Rolle bestehen bleibt, sonst `null`. */
+    val adminRoleLockReason: String? = null,
+)
+
 data class UserManagementUiState(
     val members: List<AppUser> = emptyList(),
     val currentUserId: String? = null,
@@ -40,17 +52,22 @@ data class UserManagementUiState(
     val busyMemberIds: Set<String> = emptySet(),
     override val errorMessage: String? = null,
     val canManage: Boolean = false,
+    /** Die aus der [UserPermissionPolicy] abgeleiteten Rechte je Mitglieds-ID. */
+    val memberPermissions: Map<String, MemberPermissions> = emptyMap(),
     val editor: MemberEditorState? = null,
     override val isSaving: Boolean = false,
 ) : ListDetailState {
     override val hasDetail: Boolean get() = editor != null
+
+    fun permissionsOf(member: AppUser): MemberPermissions = memberPermissions[member.uid] ?: MemberPermissions()
 }
 
 /** Verwaltung der Mitglieder der Versammlung des angemeldeten Versammlungsadmins. */
 @Inject
 class UserManagementViewModel(
     private val observeMembers: ObserveMembersUseCase,
-    private val updateMember: UpdateMemberUseCase,
+    private val setMemberApproval: SetMemberApprovalUseCase,
+    private val setMemberRole: SetMemberRoleUseCase,
     private val createMemberWithoutAccount: CreateMemberWithoutAccountUseCase,
     private val updateMemberProfile: UpdateMemberProfileUseCase,
     private val removeMemberUseCase: RemoveMemberUseCase,
@@ -71,7 +88,7 @@ class UserManagementViewModel(
         val canManage = permissionPolicy.canManageUsers(user)
         // Mitglieder werden nur beobachtet, solange der Nutzer sie verwalten darf.
         val congregation = user.congregation?.takeIf { canManage }
-        mutableUiState.update {
+        updateState {
             it.copy(
                 currentUserId = user.uid,
                 inviteLink = inviteLinkFor(congregation),
@@ -85,17 +102,17 @@ class UserManagementViewModel(
         observedCongregation = congregation
         observing = true
         if (congregation == null) {
-            mutableUiState.update { it.copy(members = emptyList(), isLoading = false) }
+            updateState { it.copy(members = emptyList(), isLoading = false) }
             return
         }
-        mutableUiState.update { it.copy(isLoading = true) }
+        updateState { it.copy(isLoading = true) }
         observeJob = viewModelScope.launch {
             observeMembers(congregation)
                 .catch { exception ->
                     val message = exception.message ?: "Mitglieder konnten nicht geladen werden."
-                    mutableUiState.update { it.copy(isLoading = false, errorMessage = message) }
+                    updateState { it.copy(isLoading = false, errorMessage = message) }
                 }.collect { members ->
-                    mutableUiState.update { it.copy(members = members, isLoading = false) }
+                    updateState { it.copy(members = members, isLoading = false) }
                 }
         }
     }
@@ -109,59 +126,33 @@ class UserManagementViewModel(
         return cachedInviteLink
     }
 
-    fun canEdit(member: AppUser): Boolean = currentUser?.let { permissionPolicy.canEditMember(it, member) } ?: false
-
-    fun canEditRoles(member: AppUser): Boolean = currentUser?.let { permissionPolicy.canEditRoles(it, member) } ?: false
-
-    /**
-     * Warum die Admin-Rolle von [member] nicht entfernt werden kann, sonst `null`: Der Admin sperrt sich nicht selbst
-     * aus, und eine Versammlung behält mindestens einen freigegebenen Admin.
-     */
-    fun adminRoleLockReason(member: AppUser): String? {
-        if (CongregationRole.CONGREGATION_ADMIN !in member.roles) return null
-        val approvedAdmins = mutableUiState.value.members.count {
-            it.approved && CongregationRole.CONGREGATION_ADMIN in it.roles
-        }
-        return when {
-            member.uid == currentUser?.uid -> "Die eigene Admin-Rolle bleibt bestehen."
-            member.approved && approvedAdmins <= 1 -> "Eine Versammlung braucht mindestens einen Admin."
-            else -> null
-        }
-    }
-
-    fun canToggleRole(member: AppUser, role: CongregationRole): Boolean = canEditRoles(member) &&
-        (role != CongregationRole.CONGREGATION_ADMIN || adminRoleLockReason(member) == null)
-
-    fun canEditProfile(member: AppUser): Boolean =
-        currentUser?.let { permissionPolicy.canEditProfile(it, member) } ?: false
-
     fun addMemberWithoutAccount() {
         val user = currentUser
         if (user == null || !permissionPolicy.canCreateMemberWithoutAccount(user)) {
-            mutableUiState.update { it.copy(errorMessage = MISSING_PERMISSION_MESSAGE) }
+            updateState { it.copy(errorMessage = MISSING_PERMISSION_MESSAGE) }
             return
         }
-        mutableUiState.update { it.copy(editor = MemberEditorState(), errorMessage = null) }
+        updateState { it.copy(editor = MemberEditorState(), errorMessage = null) }
     }
 
     fun editProfile(member: AppUser) {
-        if (!canEditProfile(member)) {
-            mutableUiState.update { it.copy(errorMessage = MISSING_PERMISSION_MESSAGE) }
+        if (!mutableUiState.value.permissionsOf(member).canEditProfile) {
+            updateState { it.copy(errorMessage = MISSING_PERMISSION_MESSAGE) }
             return
         }
-        mutableUiState.update { it.copy(editor = MemberEditorState(member.profile, member), errorMessage = null) }
+        updateState { it.copy(editor = MemberEditorState(member.profile, member), errorMessage = null) }
     }
 
     /** Hält die Angaben stimmig, z. B. verliert ein Kind die Taufe und ein Nicht-Bruder das Dienstamt. */
     fun updateEditor(profile: MemberProfile) {
-        mutableUiState.update { state ->
+        updateState { state ->
             state.copy(editor = state.editor?.copy(profile = profile.normalized()))
         }
     }
 
     fun cancelEditing() {
         if (mutableUiState.value.isSaving) return
-        mutableUiState.update { it.copy(editor = null, errorMessage = null) }
+        updateState { it.copy(editor = null, errorMessage = null) }
     }
 
     /**
@@ -170,7 +161,7 @@ class UserManagementViewModel(
      */
     fun discardChanges() {
         if (mutableUiState.value.isSaving) return
-        mutableUiState.update { state ->
+        updateState { state ->
             val editor = state.editor?.takeUnless { it.isNew }?.let { it.copy(profile = it.original) }
             state.copy(editor = editor, errorMessage = null)
         }
@@ -181,19 +172,19 @@ class UserManagementViewModel(
         val editor = state.editor ?: return
         val uid = editor.member?.uid
         if (state.isSaving || uid in state.busyMemberIds) return
-        val congregation = profileCongregation(editor) ?: return
+        val user = currentUser ?: return
 
-        mutableUiState.update {
+        updateState {
             it.copy(isSaving = true, busyMemberIds = it.busyMemberIds + setOfNotNull(uid), errorMessage = null)
         }
         viewModelScope.launch {
             val result = if (editor.member == null) {
-                createMemberWithoutAccount(congregation, editor.profile)
+                createMemberWithoutAccount(user, editor.profile)
             } else {
-                updateMemberProfile(congregation, editor.member.copy(profile = editor.profile))
+                updateMemberProfile(user, editor.member.copy(profile = editor.profile))
             }
             result.onSuccess { saved ->
-                mutableUiState.update { current ->
+                updateState { current ->
                     val members = if (current.members.any { it.uid == saved.uid }) {
                         current.members.map { if (it.uid == saved.uid) saved else it }
                     } else {
@@ -207,7 +198,7 @@ class UserManagementViewModel(
                     )
                 }
             }.onFailure { exception ->
-                mutableUiState.update {
+                updateState {
                     it.copy(
                         isSaving = false,
                         busyMemberIds = it.busyMemberIds - setOfNotNull(uid),
@@ -218,24 +209,20 @@ class UserManagementViewModel(
         }
     }
 
-    fun setApproved(member: AppUser, approved: Boolean) = save(member.copy(approved = approved))
+    fun setApproved(member: AppUser, approved: Boolean) = updateMemberWith(member) { user ->
+        setMemberApproval(user, member, approved)
+    }
 
-    fun toggleRole(member: AppUser, role: CongregationRole) {
-        if (!canToggleRole(member, role)) {
-            mutableUiState.update { it.copy(errorMessage = MISSING_PERMISSION_MESSAGE) }
-            return
-        }
-        val roles = if (role in member.roles) member.roles - role else member.roles + role
-        save(member.copy(roles = roles), permissionPolicy::canEditRoles)
+    fun toggleRole(member: AppUser, role: CongregationRole) = updateMemberWith(member) { user ->
+        setMemberRole(user, member, role, granted = role !in member.roles, members = mutableUiState.value.members)
     }
 
     fun removeMember(member: AppUser) {
-        val congregation = checkedCongregation(member) ?: return
-        markBusy(member.uid)
+        val user = startMemberChange(member) ?: return
         viewModelScope.launch {
-            removeMemberUseCase(congregation, member.uid)
+            removeMemberUseCase(user, member)
                 .onSuccess {
-                    mutableUiState.update { state ->
+                    updateState { state ->
                         state.copy(
                             members = state.members.filterNot { it.uid == member.uid },
                             editor = state.editor?.takeUnless { it.member?.uid == member.uid },
@@ -247,16 +234,15 @@ class UserManagementViewModel(
     }
 
     fun dismissError() {
-        mutableUiState.update { it.copy(errorMessage = null) }
+        updateState { it.copy(errorMessage = null) }
     }
 
-    private fun save(member: AppUser, mayEdit: (AppUser, AppUser) -> Boolean = permissionPolicy::canEditMember) {
-        val congregation = checkedCongregation(member, mayEdit) ?: return
-        markBusy(member.uid)
+    private fun updateMemberWith(member: AppUser, change: suspend (AppUser) -> Result<AppUser>) {
+        val user = startMemberChange(member) ?: return
         viewModelScope.launch {
-            updateMember(congregation, member)
+            change(user)
                 .onSuccess { saved ->
-                    mutableUiState.update { state ->
+                    updateState { state ->
                         state.copy(
                             members = state.members.map { if (it.uid == saved.uid) saved else it },
                             busyMemberIds = state.busyMemberIds - saved.uid,
@@ -266,36 +252,47 @@ class UserManagementViewModel(
         }
     }
 
-    /** Liefert die Versammlung, sofern der angemeldete Nutzer [member] ändern darf und für ihn nichts anderes läuft. */
-    private fun checkedCongregation(
-        member: AppUser,
-        mayEdit: (AppUser, AppUser) -> Boolean = permissionPolicy::canEditMember,
-    ): CongregationRef? {
+    /** Markiert [member] als beschäftigt und liefert den angemeldeten Nutzer, sofern für [member] nichts anderes läuft. */
+    private fun startMemberChange(member: AppUser): AppUser? {
         if (member.uid in mutableUiState.value.busyMemberIds) return null
-        val congregation = currentUser?.takeIf { mayEdit(it, member) }?.congregation
-        if (congregation == null) mutableUiState.update { it.copy(errorMessage = MISSING_PERMISSION_MESSAGE) }
-        return congregation
+        val user = currentUser ?: return null
+        markBusy(member.uid)
+        return user
     }
 
-    /** Liefert die Versammlung, sofern der angemeldete Nutzer die Angaben aus [editor] speichern darf. */
-    private fun profileCongregation(editor: MemberEditorState): CongregationRef? {
-        val user = currentUser
-        val allowed = when {
-            user == null -> false
-            editor.member == null -> permissionPolicy.canCreateMemberWithoutAccount(user)
-            else -> permissionPolicy.canEditProfile(user, editor.member)
+    // Die Rechte werden bei jeder Zustandsänderung neu abgeleitet, damit sie zu Nutzer und Mitgliederliste passen.
+    private fun updateState(transform: (UserManagementUiState) -> UserManagementUiState) {
+        mutableUiState.update { state ->
+            val newState = transform(state)
+            newState.copy(memberPermissions = permissionsFor(newState.members))
         }
-        val congregation = user?.congregation?.takeIf { allowed }
-        if (congregation == null) mutableUiState.update { it.copy(errorMessage = MISSING_PERMISSION_MESSAGE) }
-        return congregation
+    }
+
+    private fun permissionsFor(members: List<AppUser>): Map<String, MemberPermissions> {
+        val user = currentUser ?: return emptyMap()
+        return members.associate { member ->
+            member.uid to MemberPermissions(
+                canEdit = permissionPolicy.canEditMember(user, member),
+                canEditProfile = permissionPolicy.canEditProfile(user, member),
+                toggleableRoles = CongregationRole.entries.filterTo(mutableSetOf()) { role ->
+                    permissionPolicy.canToggleRole(user, member, role, members)
+                },
+                adminRoleLockReason = permissionPolicy.adminRoleLock(user, member, members)?.let(::lockReason),
+            )
+        }
+    }
+
+    private fun lockReason(lock: AdminRoleLock): String = when (lock) {
+        AdminRoleLock.OWN_ROLE -> "Die eigene Admin-Rolle bleibt bestehen."
+        AdminRoleLock.LAST_ADMIN -> "Eine Versammlung braucht mindestens einen Admin."
     }
 
     private fun markBusy(uid: String) {
-        mutableUiState.update { it.copy(busyMemberIds = it.busyMemberIds + uid, errorMessage = null) }
+        updateState { it.copy(busyMemberIds = it.busyMemberIds + uid, errorMessage = null) }
     }
 
     private fun fail(uid: String, exception: Throwable, fallback: String) {
-        mutableUiState.update {
+        updateState {
             it.copy(busyMemberIds = it.busyMemberIds - uid, errorMessage = exception.message ?: fallback)
         }
     }

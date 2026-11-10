@@ -1,4 +1,4 @@
-package de.geosphere.congregationplaner.user.domain.permission
+package de.geosphere.congregationplaner.organization.domain.permission
 
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import dev.zacsweers.metro.Inject

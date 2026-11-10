@@ -1,12 +1,15 @@
 package de.geosphere.congregationplaner.user.domain.permission
 
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
+import de.geosphere.congregationplaner.congregation.domain.permission.CongregationPermissionPolicy
+import de.geosphere.congregationplaner.midweek.domain.permission.MidweekPermissionPolicy
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class PermissionPolicyTest {
@@ -178,5 +181,26 @@ class PermissionPolicyTest {
         assertTrue(userPolicy.canViewMembers(helper))
         assertFalse(userPolicy.canManageUsers(helper))
         assertFalse(userPolicy.canViewMembers(helper.copy(approved = false)))
+    }
+
+    @Test
+    fun `the admin role stays for the own member and the last approved admin`() {
+        val admin = AppUser(uid = "1", approved = true, roles = setOf(CongregationRole.CONGREGATION_ADMIN))
+        val other = admin.copy(uid = "2")
+        val unapproved = admin.copy(uid = "3", approved = false)
+
+        assertEquals(AdminRoleLock.OWN_ROLE, userPolicy.adminRoleLock(admin, admin, listOf(admin, other)))
+        assertNull(userPolicy.adminRoleLock(admin, other, listOf(admin, other)))
+        assertEquals(AdminRoleLock.LAST_ADMIN, userPolicy.adminRoleLock(admin, other, listOf(other)))
+        assertNull(userPolicy.adminRoleLock(admin, unapproved, listOf(admin, unapproved)))
+        assertNull(userPolicy.adminRoleLock(admin, AppUser(uid = "4"), listOf(admin)))
+
+        val members = listOf(admin, other)
+        assertFalse(userPolicy.canToggleRole(admin, admin, CongregationRole.CONGREGATION_ADMIN, members))
+        assertTrue(userPolicy.canToggleRole(admin, admin, CongregationRole.TALK_PLANNER, members))
+        assertTrue(userPolicy.canToggleRole(admin, other, CongregationRole.CONGREGATION_ADMIN, members))
+        assertFalse(
+            userPolicy.canToggleRole(other.copy(roles = emptySet()), admin, CongregationRole.TALK_PLANNER, members),
+        )
     }
 }
