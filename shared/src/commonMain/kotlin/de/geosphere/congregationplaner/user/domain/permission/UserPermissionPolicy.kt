@@ -16,7 +16,14 @@ class UserPermissionPolicy {
 
     // Darf der User die Mitglieder seiner Versammlung lesen (nicht ändern)? Das dürfen auch die Planer (ADR-0012).
     fun canViewMembers(user: AppUser): Boolean = canManageUsers(user) ||
-        (user.approved && user.roles.any { it == CongregationRole.TALK_PLANNER || it == CongregationRole.TASK_PLANNER })
+        (user.approved && user.roles.any { it in memberReadingRoles })
+
+    // Die Rollen, die Mitglieder lesen dürfen; der Vortragsplanungs-Helfer braucht die Nummern der Redner.
+    private val memberReadingRoles = setOf(
+        CongregationRole.TALK_PLANNER,
+        CongregationRole.TASK_PLANNER,
+        CongregationRole.TALK_HELPER,
+    )
 
     // Darf der User dieses Mitglied ändern? Das eigene Mitglied ist ausgenommen, damit sich kein Admin aussperrt.
     fun canEditMember(user: AppUser, member: AppUser): Boolean = canManageUsers(user) && member.uid != user.uid

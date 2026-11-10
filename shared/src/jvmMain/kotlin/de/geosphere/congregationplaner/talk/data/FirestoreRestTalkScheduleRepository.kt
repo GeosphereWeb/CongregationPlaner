@@ -66,6 +66,21 @@ internal class FirestoreRestTalkScheduleRepository(
         runCatchingIo { client.request("DELETE", client.documentUrl(congregation.talkSchedulePath, date.toString())) }
             .map {}
 
+    // updateMask begrenzt den PATCH auf dieses Feld, currentDocument.exists verhindert, dass ein fehlender Termin
+    // entsteht; die Rules erlauben dem Helfer genau das.
+    override suspend fun setConfirmed(
+        congregation: CongregationRef,
+        date: LocalDate,
+        confirmed: Boolean,
+    ): Result<Unit> = runCatchingIo {
+        client.request(
+            method = "PATCH",
+            url = "${client.documentUrl(congregation.talkSchedulePath, date.toString())}?" +
+                "${client.updateMask(listOf("confirmed"))}&currentDocument.exists=true",
+            body = firestoreFields(JsonObject().apply { add("confirmed", firestoreBoolean(confirmed)) }),
+        )
+    }
+
     private fun FirestoreRestDocument.toSlot(): TalkSlot = TalkSlot(
         date = LocalDate.parse(id),
         time = LocalTime.parse(fields.optionalStringField("time").orEmpty()),
