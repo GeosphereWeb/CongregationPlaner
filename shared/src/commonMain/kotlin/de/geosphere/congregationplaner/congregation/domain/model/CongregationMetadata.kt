@@ -31,6 +31,9 @@ data class CongregationMetadata(
         get() = MeetingTimes(midweekMeetingWeekday, midweekMeetingTime, weekendMeetingWeekday, weekendMeetingTime)
 
     fun meetingTimesFor(year: Int): MeetingTimes = yearlyMeetingTimes[year] ?: defaultMeetingTimes
+
+    /** Noch nicht gespeichert; die ID vergibt erst das Anlegen. */
+    val isNew: Boolean get() = id.isBlank()
 }
 
 /**

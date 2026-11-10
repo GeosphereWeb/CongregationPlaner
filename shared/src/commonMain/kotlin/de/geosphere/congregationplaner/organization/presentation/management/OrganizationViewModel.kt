@@ -95,8 +95,13 @@ class OrganizationViewModel(
 
     fun updateEditor(unit: OrgUnit) {
         val editor = mutableUiState.value.editor ?: return
-        // Die ID ist Pfadsegment und bleibt unverändert.
-        mutableUiState.update { it.copy(editor = editor.copy(unit = unit.copy(id = editor.original.id))) }
+        // Die ID ist Pfadsegment und bleibt unverändert; die Namen werden auf die erlaubte Länge gekürzt.
+        val limited = unit.copy(
+            id = editor.original.id,
+            name = unit.name.take(OrgUnit.MAX_NAME_LENGTH),
+            overseerName = unit.overseerName.take(OrgUnit.MAX_NAME_LENGTH),
+        )
+        mutableUiState.update { it.copy(editor = editor.copy(unit = limited)) }
     }
 
     fun cancelEditing() {

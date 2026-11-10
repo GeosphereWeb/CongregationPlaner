@@ -21,4 +21,10 @@ class DateTextTest {
     fun pickerMillisAreUtcMidnight() {
         assertEquals(0L, LocalDate(1970, 1, 1).toPickerMillis())
     }
+
+    @Test
+    fun weekdayShortNameIsTheGermanAbbreviation() {
+        assertEquals("So", LocalDate(2026, 10, 25).weekdayShortName())
+        assertEquals("Mo", LocalDate(2026, 1, 5).weekdayShortName())
+    }
 }

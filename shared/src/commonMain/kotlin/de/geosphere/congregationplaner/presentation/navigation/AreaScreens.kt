@@ -188,19 +188,17 @@ internal fun CongregationArea(
         pendingApprovals = pendingApprovals,
         onOpen = actions.onOpenCongregationSection,
     )
-    // Die Vortragsplanung ist auf dem Handy ein Bereich mit Tabs, auf großen Fenstern stehen die Teile in der Spalte.
-    val talkTabs = state.visible.congregationSections.filter { it in CongregationSection.talkPlanning }
-    val inTalkPlanning = !isWide && selected != null && selected in talkTabs
+    val talkTabs = talkPlanningTabs(state.visible.congregationSections, selected, isWide)
     AreaLayout(
         isWide = isWide,
         entries = entries,
         header = congregationHeader(congregation),
         area = TopLevelDestination.CONGREGATION,
         subtitle = congregation?.displayName,
-        selectedTitle = if (inTalkPlanning) TALK_PLANNING_LABEL else selected?.label,
+        selectedTitle = if (talkTabs.isActive) TALK_PLANNING_LABEL else selected?.label,
         onBack = { actions.onOpenCongregationSection(null) },
-        tabs = if (inTalkPlanning) talkTabs.map { it.tabLabel to (it == selected) } else emptyList(),
-        onSelectTab = { index -> actions.onOpenCongregationSection(talkTabs[index]) },
+        tabs = talkTabs.labels,
+        onSelectTab = { index -> actions.onOpenCongregationSection(talkTabs.sections[index]) },
         content = selected?.let { section ->
             { CongregationSectionContent(section, currentUser, state.historyTalkNumber, actions.onOpenTalkHistory) }
         },

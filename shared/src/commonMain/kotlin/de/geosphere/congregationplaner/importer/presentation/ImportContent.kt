@@ -103,7 +103,7 @@ private fun PendingPreview(pending: PendingImport, isBusy: Boolean, actions: Imp
 private fun Problems(title: String, problems: List<ImportError>, color: Color) {
     if (problems.isEmpty()) return
     Text("$title: ${problems.size}", style = MaterialTheme.typography.labelLarge, color = color)
-    problems.take(MAX_SHOWN_PROBLEMS).forEach { Text(it.description, style = MaterialTheme.typography.bodySmall) }
+    problems.shownProblems().forEach { Text(it.description, style = MaterialTheme.typography.bodySmall) }
 }
 
 @Composable
@@ -111,14 +111,12 @@ private fun ReportView(source: ImportSource?, report: ImportReport, onDismiss: (
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text("Ergebnis: ${source?.label.orEmpty()}", style = MaterialTheme.typography.titleSmall)
         Text(report.description, style = MaterialTheme.typography.bodyMedium)
-        report.failures.take(MAX_SHOWN_PROBLEMS).forEach {
+        report.failures.shownProblems().forEach {
             Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
         }
         TextButton(onClick = onDismiss) { Text("Schließen") }
     }
 }
-
-private const val MAX_SHOWN_PROBLEMS = 20
 
 private val previewPending = PendingImport(
     ImportSource.SCHEDULE,

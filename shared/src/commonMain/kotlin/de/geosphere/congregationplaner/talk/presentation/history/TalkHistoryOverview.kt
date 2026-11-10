@@ -2,6 +2,7 @@ package de.geosphere.congregationplaner.talk.presentation.history
 
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkHistoryEntry
+import de.geosphere.congregationplaner.talk.presentation.common.toDisplayText
 import de.geosphere.congregationplaner.talk.presentation.directory.MIN_SEARCH_LENGTH
 import kotlinx.datetime.LocalDate
 
@@ -44,3 +45,6 @@ internal fun searchSpeakerHistory(
     return heldBySpeaker.map { (speaker, held) -> SpeakerHistory(speaker, held.sortedBy { it.talkNumber }) }
         .sortedBy { it.speaker.lowercase() }
 }
+
+/** Die Tage, an denen der Redner den Vortrag gehalten hat, z. B. `So, 25.10.2026, So, 08.11.2026`. */
+internal fun SpeakerTalkDays.daysText(): String = days.joinToString(", ") { it.toDisplayText() }

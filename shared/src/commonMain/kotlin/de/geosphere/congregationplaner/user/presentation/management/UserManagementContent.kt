@@ -188,10 +188,7 @@ internal fun UserManagementContent(
                             backEnabled = !state.isSaving,
                         ) {
                             if (editor != null) {
-                                // Freigabe und Rollen ändern sich sofort; deshalb gilt der aktuelle Stand aus der Liste.
-                                val member = editor.member?.let { selected ->
-                                    state.members.firstOrNull { it.uid == selected.uid } ?: selected
-                                }
+                                val member = state.selectedMember
                                 val isBusy = member?.uid in state.busyMemberIds
                                 if (member != null && member.hasAccount) {
                                     MemberAccessCard(member, state.permissionsOf(member), isBusy, actions)
