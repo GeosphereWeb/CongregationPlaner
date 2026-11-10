@@ -163,6 +163,60 @@ class MemberUseCasesTest {
     }
 
     @Test
+    fun `a global admin without a member document saves the own profile in the admin document`() = runBlocking {
+        val repository = FakeUserRepository()
+        val useCase = UpdateOwnProfileUseCase(repository)
+        // Auch mit einer lokal gemerkten Versammlung: gespeichert wird nie im Mitgliedsdokument.
+        val globalAdmins = listOf(
+            AppUser(uid = "1", approved = true, isGlobalAdmin = true, isMember = false),
+            AppUser(
+                uid = "1",
+                approved = true,
+                congregation = testCongregation,
+                isGlobalAdmin = true,
+                isMember = false,
+            ),
+        )
+
+        globalAdmins.forEach { globalAdmin ->
+            val saved = useCase(globalAdmin, named(mobilePhone = " 0170 123456 ")).getOrThrow()
+            assertEquals("Muster", saved.profile.lastName)
+            assertEquals("0170 123456", saved.profile.mobilePhone)
+        }
+
+        assertEquals(2, repository.updatedGlobalAdminProfiles.size)
+        assertEquals("1", repository.updatedGlobalAdminProfiles.first().first)
+        assertEquals("Muster", repository.updatedGlobalAdminProfiles.first().second.lastName)
+        assertTrue(repository.updatedOwnProfiles.isEmpty())
+    }
+
+    @Test
+    fun `a global admin profile needs both names and reports storage failures`(): Unit = runBlocking {
+        val repository = FakeUserRepository()
+        val useCase = UpdateOwnProfileUseCase(repository)
+        val globalAdmin = AppUser(uid = "1", approved = true, isGlobalAdmin = true, isMember = false)
+
+        assertIs<MemberProfileException.MissingName>(
+            useCase(globalAdmin, MemberProfile(lastName = "Muster")).exceptionOrNull(),
+        )
+        assertTrue(repository.updatedGlobalAdminProfiles.isEmpty())
+
+        repository.updateGlobalAdminProfileResult = Result.failure(IllegalStateException("denied"))
+        assertIs<IllegalStateException>(useCase(globalAdmin, named()).exceptionOrNull())
+    }
+
+    @Test
+    fun `a global admin who is a member saves in the member document`() = runBlocking {
+        val repository = FakeUserRepository()
+        val member = AppUser(uid = "1", approved = true, congregation = testCongregation, isGlobalAdmin = true)
+
+        UpdateOwnProfileUseCase(repository)(member, named()).getOrThrow()
+
+        assertEquals(1, repository.updatedOwnProfiles.size)
+        assertTrue(repository.updatedGlobalAdminProfiles.isEmpty())
+    }
+
+    @Test
     fun `own profile keeps up to three e-mails and drops empty ones`() = runBlocking {
         val repository = FakeUserRepository()
         val useCase = UpdateOwnProfileUseCase(repository)

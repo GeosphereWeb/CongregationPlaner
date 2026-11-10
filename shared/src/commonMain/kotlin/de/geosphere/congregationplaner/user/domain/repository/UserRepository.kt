@@ -20,6 +20,15 @@ interface UserRepository {
     /** Prüft, ob für [uid] ein Dokument in `admins/{uid}` existiert. */
     suspend fun isGlobalAdmin(uid: String): Result<Boolean>
 
+    /**
+     * Beobachtet die Kontaktdaten eines globalen Admins in seinem Dokument `admins/{uid}`; ein leeres Profil, solange
+     * er noch keine gepflegt hat. Globale Admins haben kein Mitgliedsdokument (ADR-0013).
+     */
+    fun observeGlobalAdminProfile(uid: String): Flow<MemberProfile>
+
+    /** Speichert Nachnamen, Vornamen, Handy, Festnetz und E-Mail-Adressen von [profile] im Dokument `admins/{uid}`. */
+    suspend fun updateGlobalAdminProfile(uid: String, profile: MemberProfile): Result<Unit>
+
     fun observeMembers(congregation: CongregationRef): Flow<List<AppUser>>
 
     /** Legt eine Person ohne eigenes Konto mit einer von Firestore vergebenen ID an. */

@@ -71,6 +71,25 @@ internal class FirestoreUserRepository(private val firestore: FirebaseFirestore)
         firestore.collection(ADMINS_COLLECTION_PATH).document(uid).get(Source.SERVER).awaitResult().exists()
     }
 
+    override fun observeGlobalAdminProfile(uid: String): Flow<MemberProfile> = callbackFlow {
+        val registration = firestore.collection(ADMINS_COLLECTION_PATH)
+            .document(uid)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    logFirestoreFailure("observe admin profile", error)
+                    close(error)
+                    return@addSnapshotListener
+                }
+                trySend(snapshot?.takeIf { it.exists() }?.toAdminProfile() ?: MemberProfile())
+            }
+        awaitClose { registration.remove() }
+    }
+
+    override suspend fun updateGlobalAdminProfile(uid: String, profile: MemberProfile): Result<Unit> =
+        runFirestoreCatching("update admin profile") {
+            firestore.collection(ADMINS_COLLECTION_PATH).document(uid).update(profile.toAdminFields()).awaitResult()
+        }
+
     override fun observeMembers(congregation: CongregationRef): Flow<List<AppUser>> =
         observeDocuments(firestore.collection(congregation.membersPath), "member") { toDomain(it, congregation) }
 
@@ -163,6 +182,23 @@ private val OWN_PROFILE_FIELDS = setOf(
     "postalCode",
     "city",
     "emergencyContacts",
+)
+
+/** Die Kontaktdaten im Admin-Dokument (`admins/{uid}`); die Rules erlauben genau diese fünf Felder. */
+private fun MemberProfile.toAdminFields(): Map<String, Any> = mapOf(
+    "lastName" to lastName,
+    "firstName" to firstName,
+    "mobilePhone" to mobilePhone,
+    "landlinePhone" to landlinePhone,
+    "emails" to emails,
+)
+
+private fun DocumentSnapshot.toAdminProfile(): MemberProfile = MemberProfile(
+    lastName = getString("lastName").orEmpty(),
+    firstName = getString("firstName").orEmpty(),
+    mobilePhone = getString("mobilePhone").orEmpty(),
+    landlinePhone = getString("landlinePhone").orEmpty(),
+    emails = stringList("emails").orEmpty().filterNotNull(),
 )
 
 private fun DocumentSnapshot.stringList(field: String): List<String?>? = (get(field) as? List<*>)?.map { it as? String }
