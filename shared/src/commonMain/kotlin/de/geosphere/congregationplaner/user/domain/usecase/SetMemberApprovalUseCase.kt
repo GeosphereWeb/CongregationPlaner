@@ -10,12 +10,12 @@ import dev.zacsweers.metro.Inject
 @Inject
 class SetMemberApprovalUseCase(private val repository: UserRepository, private val policy: UserPermissionPolicy) {
     suspend operator fun invoke(user: AppUser, member: AppUser, approved: Boolean): Result<AppUser> {
-        if (member.uid.isBlank()) return Result.failure(IllegalArgumentException("Das Mitglied hat keine ID."))
-        val congregation = user.congregation
-        if (congregation == null || !policy.canEditMember(user, member)) {
-            return Result.failure(MemberProfileException.NotAllowed())
+        val congregation = user.congregation?.takeIf { policy.canEditMember(user, member) }
+        return when {
+            member.uid.isBlank() -> Result.failure(IllegalArgumentException("Das Mitglied hat keine ID."))
+            congregation == null -> Result.failure(MemberProfileException.NotAllowed())
+            approved && !member.hasAccount -> Result.failure(MemberProfileException.AccessWithoutAccount())
+            else -> repository.updateMember(congregation, member.copy(approved = approved))
         }
-        if (approved && !member.hasAccount) return Result.failure(MemberProfileException.AccessWithoutAccount())
-        return repository.updateMember(congregation, member.copy(approved = approved))
     }
 }

@@ -49,21 +49,21 @@ internal fun ColumnScope.CredentialsForm(state: LoginUiState, canSignIn: Boolean
         if (!isLogin) {
             FieldBox(
                 label = "Vorname",
-                value = state.firstName,
-                onValueChange = actions.onFirstNameChange,
+                value = state.form.firstName,
+                onValueChange = { actions.onFormChange(state.form.copy(firstName = it)) },
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
             )
             FieldBox(
                 label = "Nachname",
-                value = state.lastName,
-                onValueChange = actions.onLastNameChange,
+                value = state.form.lastName,
+                onValueChange = { actions.onFormChange(state.form.copy(lastName = it)) },
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
             )
         }
         FieldBox(
             label = "E-Mail",
-            value = state.email,
-            onValueChange = actions.onEmailChange,
+            value = state.form.email,
+            onValueChange = { actions.onFormChange(state.form.copy(email = it)) },
             placeholder = "name@beispiel.de",
             isError = state.errorMessage != null,
             keyboardOptions = KeyboardOptions(
@@ -74,8 +74,8 @@ internal fun ColumnScope.CredentialsForm(state: LoginUiState, canSignIn: Boolean
         )
         FieldBox(
             label = "Passwort",
-            value = state.password,
-            onValueChange = actions.onPasswordChange,
+            value = state.form.password,
+            onValueChange = { actions.onFormChange(state.form.copy(password = it)) },
             isError = state.errorMessage != null,
             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             trailing = { PasswordVisibilityButton(passwordVisible, onToggle = { passwordVisible = !passwordVisible }) },
@@ -132,8 +132,7 @@ private fun CredentialsFormPreview() = NightPhonePreview {
         CredentialsForm(
             state = LoginUiState(
                 mode = AuthMode.REGISTER,
-                email = "name@beispiel.de",
-                firstName = "Max",
+                form = LoginForm(email = "name@beispiel.de", firstName = "Max"),
                 errorMessage = "Registrierung fehlgeschlagen. Bitte prüfe deine Eingaben.",
             ),
             canSignIn = true,

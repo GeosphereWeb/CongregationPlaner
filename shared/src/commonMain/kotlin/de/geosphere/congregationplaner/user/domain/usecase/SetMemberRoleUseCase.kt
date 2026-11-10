@@ -20,13 +20,13 @@ class SetMemberRoleUseCase(private val repository: UserRepository, private val p
         granted: Boolean,
         members: List<AppUser>,
     ): Result<AppUser> {
-        if (member.uid.isBlank()) return Result.failure(IllegalArgumentException("Das Mitglied hat keine ID."))
-        val congregation = user.congregation
-        if (congregation == null || !policy.canToggleRole(user, member, role, members)) {
-            return Result.failure(MemberProfileException.NotAllowed())
-        }
-        if (granted && !member.hasAccount) return Result.failure(MemberProfileException.AccessWithoutAccount())
+        val congregation = user.congregation?.takeIf { policy.canToggleRole(user, member, role, members) }
         val roles = if (granted) member.roles + role else member.roles - role
-        return repository.updateMember(congregation, member.copy(roles = roles))
+        return when {
+            member.uid.isBlank() -> Result.failure(IllegalArgumentException("Das Mitglied hat keine ID."))
+            congregation == null -> Result.failure(MemberProfileException.NotAllowed())
+            granted && !member.hasAccount -> Result.failure(MemberProfileException.AccessWithoutAccount())
+            else -> repository.updateMember(congregation, member.copy(roles = roles))
+        }
     }
 }
