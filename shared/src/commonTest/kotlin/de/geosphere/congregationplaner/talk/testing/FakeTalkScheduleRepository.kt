@@ -16,6 +16,7 @@ internal class FakeTalkScheduleRepository(slots: List<TalkSlot> = emptyList()) :
     var saveResult: Result<Unit> = Result.success(Unit)
     var createMissingResult: Result<Unit> = Result.success(Unit)
     var deleteResult: Result<Unit> = Result.success(Unit)
+    var confirmResult: Result<Unit> = Result.success(Unit)
 
     /** Lässt [observeYear] mit diesem Fehler enden. */
     var observeError: Throwable? = null
@@ -30,6 +31,7 @@ internal class FakeTalkScheduleRepository(slots: List<TalkSlot> = emptyList()) :
     val savedSlots = mutableListOf<TalkSlot>()
     val createdSlots = mutableListOf<TalkSlot>()
     val deletedDates = mutableListOf<LocalDate>()
+    val confirmedUpdates = mutableListOf<Pair<LocalDate, Boolean>>()
 
     override fun observeYear(congregation: CongregationRef, year: Int): Flow<List<TalkSlot>> {
         requestedCongregation = congregation
@@ -60,5 +62,17 @@ internal class FakeTalkScheduleRepository(slots: List<TalkSlot> = emptyList()) :
     override suspend fun deleteSlot(congregation: CongregationRef, date: LocalDate): Result<Unit> {
         requestedCongregation = congregation
         return deleteResult.onSuccess { deletedDates += date }
+    }
+
+    override suspend fun setConfirmed(
+        congregation: CongregationRef,
+        date: LocalDate,
+        confirmed: Boolean,
+    ): Result<Unit> {
+        requestedCongregation = congregation
+        return confirmResult.onSuccess {
+            confirmedUpdates += date to confirmed
+            slots.value = slots.value.map { slot -> if (slot.date == date) slot.copy(confirmed = confirmed) else slot }
+        }
     }
 }

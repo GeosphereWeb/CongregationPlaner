@@ -88,6 +88,24 @@ class SaveTalkSlotUseCase(
     }
 }
 
+/**
+ * Markiert den Redner des Termins vom [date] als informiert oder nimmt die Markierung zurück. Das dürfen Planer und
+ * Vortragsplanungs-Helfer; geändert wird nur das Feld `confirmed`.
+ */
+@Inject
+class ConfirmSpeakerUseCase(
+    private val repository: TalkScheduleRepository,
+    private val policy: TalkSchedulePermissionPolicy,
+) {
+    suspend operator fun invoke(user: AppUser, date: LocalDate, confirmed: Boolean): Result<Unit> {
+        val congregation = user.congregation
+        if (congregation == null || !policy.canConfirmSpeaker(user)) {
+            return Result.failure(TalkScheduleException.NotAllowed())
+        }
+        return repository.setConfirmed(congregation, date, confirmed)
+    }
+}
+
 /** Wie viele Termine [CreateYearSlotsUseCase] angelegt hat und wie viele es schon gab. */
 data class YearSlotsResult(val created: Int, val alreadyExisting: Int)
 

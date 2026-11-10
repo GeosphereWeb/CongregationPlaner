@@ -11,6 +11,12 @@ enum class CongregationRole(val label: String) {
     /** Plant die Vorträge am Wochenende. */
     TALK_PLANNER("Vortragsplaner"),
 
+    /**
+     * Sieht die Vortragsplanung (Termine, Rednerliste, Vortragshistorie) und markiert Redner als informiert; plant und
+     * ändert sonst nichts.
+     */
+    TALK_HELPER("Vortragsplanungs-Helfer"),
+
     /** Plant die Zusammenkunft unter der Woche. */
     TASK_PLANNER("Aufgabenplaner"),
     ;
