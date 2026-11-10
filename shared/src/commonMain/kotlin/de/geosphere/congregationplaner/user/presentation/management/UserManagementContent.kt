@@ -61,10 +61,6 @@ import kotlinx.coroutines.delay
 
 /** Callbacks der Userverwaltung; gebündelt, damit die Composables überschaubare Signaturen behalten. */
 internal data class UserManagementActions(
-    val canEdit: (AppUser) -> Boolean = { false },
-    val canEditProfile: (AppUser) -> Boolean = { false },
-    val canToggleRole: (AppUser, CongregationRole) -> Boolean = { _, _ -> false },
-    val adminRoleLockReason: (AppUser) -> String? = { null },
     val onApprovedChange: (AppUser, Boolean) -> Unit = { _, _ -> },
     val onToggleRole: (AppUser, CongregationRole) -> Unit = { _, _ -> },
     val onRemove: (AppUser) -> Unit = {},
@@ -84,10 +80,6 @@ fun UserManagementScreen(viewModel: UserManagementViewModel, modifier: Modifier 
         state = state,
         modifier = modifier,
         actions = UserManagementActions(
-            canEdit = viewModel::canEdit,
-            canEditProfile = viewModel::canEditProfile,
-            canToggleRole = viewModel::canToggleRole,
-            adminRoleLockReason = viewModel::adminRoleLockReason,
             onApprovedChange = viewModel::setApproved,
             onToggleRole = viewModel::toggleRole,
             onRemove = viewModel::removeMember,
@@ -164,7 +156,9 @@ internal fun UserManagementContent(
                                     NavCardRow(
                                         title = memberTitle(member, member.uid == state.currentUserId),
                                         onClick = {
-                                            if (actions.canEditProfile(member) && member.uid !in state.busyMemberIds) {
+                                            if (state.permissionsOf(member).canEditProfile &&
+                                                member.uid !in state.busyMemberIds
+                                            ) {
                                                 actions.onEditProfile(member)
                                             }
                                         },
@@ -200,7 +194,7 @@ internal fun UserManagementContent(
                                 }
                                 val isBusy = member?.uid in state.busyMemberIds
                                 if (member != null && member.hasAccount) {
-                                    MemberAccessCard(member, isBusy, actions)
+                                    MemberAccessCard(member, state.permissionsOf(member), isBusy, actions)
                                 }
                                 MemberEditor(
                                     editor = editor,
@@ -210,7 +204,7 @@ internal fun UserManagementContent(
                                     onSave = actions.onSaveProfile,
                                     onCancel = onCancelEditing,
                                 )
-                                if (member != null && actions.canEdit(member)) {
+                                if (member != null && state.permissionsOf(member).canEdit) {
                                     SecondaryButton(
                                         text = "Aus der Versammlung entfernen",
                                         onClick = { actions.onRemove(member) },
@@ -292,7 +286,12 @@ private val FAB_CLEARANCE = 88.dp
 
 /** Freigabe und Rollen im Detail; beides wirkt sofort, ohne „Speichern“. */
 @Composable
-private fun MemberAccessCard(member: AppUser, isBusy: Boolean, actions: UserManagementActions) {
+private fun MemberAccessCard(
+    member: AppUser,
+    permissions: MemberPermissions,
+    isBusy: Boolean,
+    actions: UserManagementActions,
+) {
     DesignCard {
         Text("Zugang", style = MaterialTheme.typography.titleSmall, color = NightColors.OnBackground)
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -304,15 +303,20 @@ private fun MemberAccessCard(member: AppUser, isBusy: Boolean, actions: UserMana
             AppSwitch(
                 checked = member.approved,
                 onCheckedChange = { actions.onApprovedChange(member, it) },
-                enabled = actions.canEdit(member) && !isBusy,
+                enabled = permissions.canEdit && !isBusy,
             )
         }
-        AccessSettings(member, isBusy, actions)
+        AccessSettings(member, permissions, isBusy, actions)
     }
 }
 
 @Composable
-private fun AccessSettings(member: AppUser, isBusy: Boolean, actions: UserManagementActions) {
+private fun AccessSettings(
+    member: AppUser,
+    permissions: MemberPermissions,
+    isBusy: Boolean,
+    actions: UserManagementActions,
+) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             "Rollen:",
@@ -324,11 +328,11 @@ private fun AccessSettings(member: AppUser, isBusy: Boolean, actions: UserManage
                 selected = role in member.roles,
                 onClick = { actions.onToggleRole(member, role) },
                 label = { Text(role.label) },
-                enabled = actions.canToggleRole(member, role) && !isBusy,
+                enabled = role in permissions.toggleableRoles && !isBusy,
             )
         }
     }
-    actions.adminRoleLockReason(member)?.let { reason ->
+    permissions.adminRoleLockReason?.let { reason ->
         Text(reason, style = MaterialTheme.typography.bodySmall)
     }
 }
@@ -365,11 +369,16 @@ private fun UserManagementPreview() = PreviewThemeWrapper {
                 "circuit/609a/congregation/berlin-mitte",
             isLoading = false,
             canManage = true,
+            memberPermissions = mapOf(
+                "1" to MemberPermissions(canEdit = true, canEditProfile = true),
+                "2" to MemberPermissions(
+                    canEditProfile = true,
+                    toggleableRoles = CongregationRole.entries.toSet() - CongregationRole.CONGREGATION_ADMIN,
+                    adminRoleLockReason = "Die eigene Admin-Rolle bleibt bestehen.",
+                ),
+                "3" to MemberPermissions(canEdit = true, canEditProfile = true),
+            ),
         ),
-        actions = UserManagementActions(
-            canEdit = { it.uid != "2" },
-            canEditProfile = { true },
-            canToggleRole = { _, _ -> true },
-        ),
+        actions = UserManagementActions(),
     )
 }

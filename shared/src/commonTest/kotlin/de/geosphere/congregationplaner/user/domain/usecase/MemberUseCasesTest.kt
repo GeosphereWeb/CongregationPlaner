@@ -7,6 +7,7 @@ import de.geosphere.congregationplaner.user.domain.model.EmergencyContact
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.MemberProfileException
+import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
 import de.geosphere.congregationplaner.user.testing.FakeUserRepository
 import de.geosphere.congregationplaner.user.testing.testCongregation
 import kotlinx.coroutines.flow.first
@@ -17,6 +18,14 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class MemberUseCasesTest {
+    private val policy = UserPermissionPolicy()
+    private val admin = AppUser(
+        uid = "admin",
+        approved = true,
+        roles = setOf(CongregationRole.CONGREGATION_ADMIN),
+        congregation = testCongregation,
+    )
+
     @Test
     fun `members are sorted with pending users first and then by name`() = runBlocking {
         val repository = FakeUserRepository(
@@ -50,34 +59,74 @@ class MemberUseCasesTest {
     }
 
     @Test
-    fun `update rejects members without id`() = runBlocking {
+    fun `approval needs an id an editable member and an account`() = runBlocking {
         val repository = FakeUserRepository()
-        val useCase = UpdateMemberUseCase(repository)
+        val useCase = SetMemberApprovalUseCase(repository, policy)
 
-        assertIs<IllegalArgumentException>(useCase(testCongregation, AppUser(uid = " ")).exceptionOrNull())
+        assertIs<IllegalArgumentException>(useCase(admin, AppUser(uid = " "), true).exceptionOrNull())
+        // Der Admin sperrt sich nicht selbst aus.
+        assertIs<MemberProfileException.NotAllowed>(useCase(admin, admin, false).exceptionOrNull())
+        assertIs<MemberProfileException.AccessWithoutAccount>(
+            useCase(admin, AppUser(uid = "1", hasAccount = false), true).exceptionOrNull(),
+        )
         assertTrue(repository.updatedMembers.isEmpty())
 
-        val member = AppUser(uid = "1", approved = true, roles = setOf(CongregationRole.CONGREGATION_ADMIN))
-        assertEquals(member, useCase(testCongregation, member).getOrThrow())
-        assertEquals(listOf(member), repository.updatedMembers)
+        val saved = useCase(admin, AppUser(uid = "1"), true).getOrThrow()
+        assertTrue(saved.approved)
+        assertEquals(listOf(saved), repository.updatedMembers)
     }
 
     @Test
-    fun `update rejects access for members without account`() = runBlocking {
+    fun `roles are granted and removed while the needed admin role stays`() = runBlocking {
         val repository = FakeUserRepository()
-        val useCase = UpdateMemberUseCase(repository)
-        val member = AppUser(uid = "1", hasAccount = false)
+        val useCase = SetMemberRoleUseCase(repository, policy)
+        val otherAdmin = AppUser(uid = "2", approved = true, roles = setOf(CongregationRole.CONGREGATION_ADMIN))
+        val members = listOf(admin, otherAdmin)
+        val adminRole = CongregationRole.CONGREGATION_ADMIN
 
-        listOf(
-            member.copy(approved = true),
-            member.copy(roles = setOf(CongregationRole.CONGREGATION_ADMIN)),
-            member.copy(roles = setOf(CongregationRole.TASK_PLANNER)),
-        ).forEach { invalid ->
-            assertIs<MemberProfileException.AccessWithoutAccount>(useCase(testCongregation, invalid).exceptionOrNull())
+        val planner = useCase(admin, AppUser(uid = "1"), CongregationRole.TALK_PLANNER, true, members).getOrThrow()
+        assertEquals(setOf(CongregationRole.TALK_PLANNER), planner.roles)
+        assertEquals(emptySet(), useCase(admin, otherAdmin, adminRole, false, members).getOrThrow().roles)
+
+        assertIs<MemberProfileException.NotAllowed>(useCase(admin, admin, adminRole, false, members).exceptionOrNull())
+        assertIs<MemberProfileException.NotAllowed>(
+            useCase(admin, otherAdmin, adminRole, false, listOf(otherAdmin)).exceptionOrNull(),
+        )
+        assertIs<MemberProfileException.AccessWithoutAccount>(
+            useCase(admin, AppUser(uid = "3", hasAccount = false), adminRole, true, members).exceptionOrNull(),
+        )
+        assertEquals(2, repository.updatedMembers.size)
+    }
+
+    @Test
+    fun `only an approved congregation admin changes members`() = runBlocking {
+        val repository = FakeUserRepository()
+        val member = AppUser(uid = "1")
+        val notAllowed = listOf(
+            admin.copy(roles = setOf(CongregationRole.TALK_PLANNER)),
+            admin.copy(approved = false),
+            admin.copy(congregation = null),
+        )
+
+        notAllowed.forEach { user ->
+            listOf(
+                SetMemberApprovalUseCase(repository, policy)(user, member, true).exceptionOrNull(),
+                SetMemberRoleUseCase(repository, policy)(
+                    user,
+                    member,
+                    CongregationRole.TALK_PLANNER,
+                    true,
+                    listOf(member),
+                ).exceptionOrNull(),
+                UpdateMemberProfileUseCase(repository, policy)(user, member).exceptionOrNull(),
+                CreateMemberWithoutAccountUseCase(repository, policy)(user, named()).exceptionOrNull(),
+                RemoveMemberUseCase(repository, policy)(user, member).exceptionOrNull(),
+            ).forEach { assertIs<MemberProfileException.NotAllowed>(it) }
         }
         assertTrue(repository.updatedMembers.isEmpty())
-
-        assertEquals(member, useCase(testCongregation, member).getOrThrow())
+        assertTrue(repository.updatedProfiles.isEmpty())
+        assertTrue(repository.createdMembers.isEmpty())
+        assertTrue(repository.removedUids.isEmpty())
     }
 
     @Test
@@ -88,7 +137,7 @@ class MemberUseCasesTest {
             profile = MemberProfile(lastName = " Muster ", firstName = " Max ", mobilePhone = " 0170 123 "),
         )
 
-        val saved = UpdateMemberProfileUseCase(repository)(testCongregation, member).getOrThrow()
+        val saved = UpdateMemberProfileUseCase(repository, policy)(admin, member).getOrThrow()
 
         val expected = member.copy(
             profile = MemberProfile(lastName = "Muster", firstName = "Max", mobilePhone = "0170 123"),
@@ -100,12 +149,12 @@ class MemberUseCasesTest {
     @Test
     fun `profile update rejects invalid profiles`() = runBlocking {
         val repository = FakeUserRepository()
-        val useCase = UpdateMemberProfileUseCase(repository)
+        val useCase = UpdateMemberProfileUseCase(repository, policy)
         val member = AppUser(uid = "1")
 
-        assertIs<IllegalArgumentException>(useCase(testCongregation, AppUser(uid = "")).exceptionOrNull())
+        assertIs<IllegalArgumentException>(useCase(admin, AppUser(uid = "")).exceptionOrNull())
         suspend fun errorFor(profile: MemberProfile, hasAccount: Boolean = true) =
-            useCase(testCongregation, member.copy(hasAccount = hasAccount, profile = profile)).exceptionOrNull()
+            useCase(admin, member.copy(hasAccount = hasAccount, profile = profile)).exceptionOrNull()
 
         assertIs<MemberProfileException.BaptizedChild>(errorFor(profile(MemberCategory.CHILD, baptized = true)))
         assertIs<MemberProfileException.AppointmentNotAllowed>(
@@ -122,26 +171,26 @@ class MemberUseCasesTest {
         assertIs<MemberProfileException.MissingName>(errorFor(MemberProfile(), hasAccount = false))
         assertTrue(repository.updatedProfiles.isEmpty())
 
-        useCase(testCongregation, member).getOrThrow()
+        useCase(admin, member).getOrThrow()
         val elder = member.copy(profile = profile(MemberCategory.BROTHER, baptized = true, elder = true))
-        useCase(testCongregation, elder).getOrThrow()
+        useCase(admin, elder).getOrThrow()
         val speaker = member.copy(profile = MemberProfile(category = MemberCategory.BROTHER, isSpeaker = true))
-        useCase(testCongregation, speaker).getOrThrow()
+        useCase(admin, speaker).getOrThrow()
         assertEquals(listOf(member, elder, speaker), repository.updatedProfiles)
     }
 
     @Test
     fun `members without account need a name and are created through the repository`() = runBlocking {
         val repository = FakeUserRepository()
-        val useCase = CreateMemberWithoutAccountUseCase(repository)
+        val useCase = CreateMemberWithoutAccountUseCase(repository, policy)
 
         assertIs<MemberProfileException.MissingName>(
-            useCase(testCongregation, MemberProfile(lastName = "Muster", firstName = " ")).exceptionOrNull(),
+            useCase(admin, MemberProfile(lastName = "Muster", firstName = " ")).exceptionOrNull(),
         )
         assertTrue(repository.createdMembers.isEmpty())
 
         val created = useCase(
-            testCongregation,
+            admin,
             MemberProfile(lastName = " Muster", firstName = "Lena ", category = MemberCategory.CHILD),
         ).getOrThrow()
 
@@ -155,10 +204,10 @@ class MemberUseCasesTest {
     @Test
     fun `remove rejects blank ids`() = runBlocking {
         val repository = FakeUserRepository()
-        val useCase = RemoveMemberUseCase(repository)
+        val useCase = RemoveMemberUseCase(repository, policy)
 
-        assertIs<IllegalArgumentException>(useCase(testCongregation, "").exceptionOrNull())
-        useCase(testCongregation, "1").getOrThrow()
+        assertIs<IllegalArgumentException>(useCase(admin, AppUser(uid = "")).exceptionOrNull())
+        useCase(admin, AppUser(uid = "1")).getOrThrow()
         assertEquals(listOf("1"), repository.removedUids)
     }
 
@@ -338,7 +387,7 @@ class MemberUseCasesTest {
             ),
         )
 
-        val saved = UpdateMemberProfileUseCase(repository)(testCongregation, member).getOrThrow()
+        val saved = UpdateMemberProfileUseCase(repository, policy)(admin, member).getOrThrow()
 
         assertEquals("Berlin", saved.profile.city)
         assertEquals(listOf(saved), repository.updatedProfiles)

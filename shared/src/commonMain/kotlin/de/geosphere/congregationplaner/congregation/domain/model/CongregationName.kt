@@ -23,6 +23,8 @@ object CongregationName {
 
 /** Fachliche Fehler beim Anlegen und Umbenennen; die Nachrichten werden direkt in der UI angezeigt. */
 sealed class CongregationException(message: String) : Exception(message) {
+    class NotAllowed : CongregationException("Dafür fehlt dir die Berechtigung.")
+
     class MissingName : CongregationException("Bitte gib einen Versammlungsnamen ein.")
 
     class NameTooLong :

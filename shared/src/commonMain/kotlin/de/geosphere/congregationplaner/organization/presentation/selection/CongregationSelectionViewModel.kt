@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import de.geosphere.congregationplaner.auth.domain.repository.FirebaseUser
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationName
 import de.geosphere.congregationplaner.congregation.domain.model.NewCongregationAdmin
-import de.geosphere.congregationplaner.congregation.domain.usecase.CreateCongregationUseCase
+import de.geosphere.congregationplaner.congregation.domain.usecase.CreateOwnCongregationUseCase
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.organization.domain.model.OrgLevel
 import de.geosphere.congregationplaner.organization.domain.model.OrgUnit
@@ -77,7 +77,7 @@ data class CongregationSelectionUiState(
 class CongregationSelectionViewModel(
     private val loadUnits: LoadOrganizationUnitsUseCase,
     private val store: CongregationSelectionStore,
-    private val createCongregation: CreateCongregationUseCase,
+    private val createOwnCongregation: CreateOwnCongregationUseCase,
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(CongregationSelectionUiState(selected = store.load()))
     val uiState = mutableUiState.asStateFlow()
@@ -177,7 +177,7 @@ class CongregationSelectionViewModel(
             emailVerified = user.emailVerified,
         )
         viewModelScope.launch {
-            createCongregation(draft.circuitIds, draft.name, user.uid, admin)
+            createOwnCongregation(draft.circuitIds, draft.name, admin)
                 .onSuccess { created ->
                     val ref = CongregationRef.fromIds(draft.circuitIds + created.id)
                     if (ref == null) {
