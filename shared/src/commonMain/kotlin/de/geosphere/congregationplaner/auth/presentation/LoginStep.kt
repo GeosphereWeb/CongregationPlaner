@@ -16,41 +16,44 @@ data class LoginStep(
 
 /** Leitet den Schritt der Anmeldung aus der Versammlungsauswahl ab; [globalLogin] überspringt die Auswahl. */
 fun loginStep(selection: CongregationSelectionUiState, globalLogin: Boolean): LoginStep {
-    val newCongregation = selection.newCongregation.takeUnless { globalLogin }
-    val isNewFlow = newCongregation != null
-    val selected = selection.activeSelection
-    val showCredentials = globalLogin ||
-        selection.isNewCongregationConfirmed ||
-        (selected != null && !selection.isPicking)
-    val congregationName = if (globalLogin) {
-        "Globale Verwaltung"
-    } else {
-        newCongregation?.name ?: selection.selected?.displayName
-    }
-    val circuitName = newCongregation?.circuitName ?: selection.selected?.circuitDisplayName
+    val isNewFlow = !globalLogin && selection.newCongregation != null
+    val showCredentials = showsCredentials(selection, globalLogin)
+    return LoginStep(
+        stepLabel = stepLabel(showCredentials, isNewFlow),
+        title = when {
+            showCredentials -> congregationName(selection, globalLogin) ?: "Anmelden"
+            isNewFlow -> "Neue Versammlung"
+            else -> "Welche Versammlung?"
+        },
+        previousSteps = if (!globalLogin && (showCredentials || isNewFlow)) circuitStep(selection) else emptyList(),
+        showCredentials = showCredentials,
+        canSignIn = globalLogin || selection.activeSelection != null || selection.isNewCongregationReady,
+        isNewCongregationFlow = isNewFlow,
+    )
+}
+
+/** Die Versammlung steht fest (oder entfällt für globale Admins); jetzt folgen die Zugangsdaten. */
+private fun showsCredentials(selection: CongregationSelectionUiState, globalLogin: Boolean): Boolean = globalLogin ||
+    selection.isNewCongregationConfirmed ||
+    (selection.activeSelection != null && !selection.isPicking)
+
+private fun stepLabel(showCredentials: Boolean, isNewFlow: Boolean): String {
     val totalSteps = if (isNewFlow) NEW_CONGREGATION_STEPS else SELECTION_STEPS
     val step = when {
         showCredentials -> totalSteps
         isNewFlow -> NEW_CONGREGATION_NAME_STEP
         else -> 1
     }
-    return LoginStep(
-        stepLabel = "SCHRITT $step / $totalSteps",
-        title = when {
-            showCredentials -> congregationName ?: "Anmelden"
-            isNewFlow -> "Neue Versammlung"
-            else -> "Welche Versammlung?"
-        },
-        previousSteps = if (!globalLogin && (showCredentials || isNewFlow)) {
-            circuitName?.let { listOf("Kreis $it") }.orEmpty()
-        } else {
-            emptyList()
-        },
-        showCredentials = showCredentials,
-        canSignIn = selected != null || globalLogin || selection.isNewCongregationReady,
-        isNewCongregationFlow = isNewFlow,
-    )
+    return "SCHRITT $step / $totalSteps"
 }
+
+private fun congregationName(selection: CongregationSelectionUiState, globalLogin: Boolean): String? =
+    if (globalLogin) "Globale Verwaltung" else selection.newCongregation?.name ?: selection.selected?.displayName
+
+private fun circuitStep(selection: CongregationSelectionUiState): List<String> =
+    (selection.newCongregation?.circuitName ?: selection.selected?.circuitDisplayName)
+        ?.let { listOf("Kreis $it") }
+        .orEmpty()
 
 private const val SELECTION_STEPS = 2
 private const val NEW_CONGREGATION_STEPS = 3
