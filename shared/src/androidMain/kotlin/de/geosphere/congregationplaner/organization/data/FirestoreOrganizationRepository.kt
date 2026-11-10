@@ -2,8 +2,8 @@ package de.geosphere.congregationplaner.organization.data
 
 import android.content.Context
 import com.google.firebase.firestore.FirebaseFirestore
-import de.geosphere.congregationplaner.auth.AndroidFirestoreProvider
-import de.geosphere.congregationplaner.auth.FirebaseAndroidContextHolder
+import de.geosphere.congregationplaner.auth.data.AndroidFirestoreProvider
+import de.geosphere.congregationplaner.auth.data.FirebaseAndroidContextHolder
 import de.geosphere.congregationplaner.firestore.awaitResult
 import de.geosphere.congregationplaner.firestore.runFirestoreCatching
 import de.geosphere.congregationplaner.organization.domain.model.OrgLevel

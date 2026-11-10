@@ -36,7 +36,7 @@ import androidx.navigationevent.compose.rememberNavigationEventState
 import androidx.window.core.layout.WindowSizeClass
 import de.geosphere.congregationplaner.home.presentation.HomeContent
 import de.geosphere.congregationplaner.home.presentation.HomeUiState
-import de.geosphere.congregationplaner.importer.ImportSection
+import de.geosphere.congregationplaner.importer.presentation.ImportSection
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.organization.domain.model.SelectedCongregation
 import de.geosphere.congregationplaner.theming.AppTheme
@@ -45,8 +45,7 @@ import de.geosphere.congregationplaner.ui.common.topCutoutInset
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.GERMAN_AREA_CODES_STAND
-import de.geosphere.congregationplaner.user.presentation.OwnProfileSection
-
+import de.geosphere.congregationplaner.user.presentation.profile.OwnProfileSection
 /**
  * Der Rahmen der angemeldeten App mit den vier Hauptbereichen. Die Leiste liegt auf schmalen Fenstern unten und auf
  * breiten seitlich; das entscheidet [NavigationSuiteScaffold] aus der Fenstergröße, nicht aus der Plattform.

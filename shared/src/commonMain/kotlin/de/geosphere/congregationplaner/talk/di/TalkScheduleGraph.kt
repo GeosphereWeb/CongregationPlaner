@@ -12,7 +12,7 @@ import de.geosphere.congregationplaner.talk.domain.repository.TalkCatalogReposit
 import de.geosphere.congregationplaner.talk.domain.repository.TalkHistoryRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkScheduleRepository
 import de.geosphere.congregationplaner.talk.domain.repository.WeekEventRepository
-import de.geosphere.congregationplaner.talk.presentation.TalkScheduleViewModel
+import de.geosphere.congregationplaner.talk.presentation.schedule.TalkScheduleViewModel
 import de.geosphere.congregationplaner.user.data.createUserRepository
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
 import dev.zacsweers.metro.DependencyGraph

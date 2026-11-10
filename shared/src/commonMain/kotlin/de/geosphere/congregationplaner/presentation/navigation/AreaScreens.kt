@@ -20,11 +20,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.congregation.presentation.CongregationMetadataRoute
 import de.geosphere.congregationplaner.organization.domain.model.SelectedCongregation
-import de.geosphere.congregationplaner.organization.presentation.OrganizationRoute
-import de.geosphere.congregationplaner.talk.presentation.ExternalDirectoryRoute
-import de.geosphere.congregationplaner.talk.presentation.TalkHistoryRoute
-import de.geosphere.congregationplaner.talk.presentation.TalkReferenceRoute
-import de.geosphere.congregationplaner.talk.presentation.TalkScheduleRoute
+import de.geosphere.congregationplaner.organization.presentation.management.OrganizationRoute
+import de.geosphere.congregationplaner.talk.presentation.directory.ExternalDirectoryRoute
+import de.geosphere.congregationplaner.talk.presentation.history.TalkHistoryRoute
+import de.geosphere.congregationplaner.talk.presentation.reference.TalkReferenceRoute
+import de.geosphere.congregationplaner.talk.presentation.schedule.TalkScheduleRoute
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.ui.appbar.NightTabRow
 import de.geosphere.congregationplaner.ui.appbar.NightTopBar
@@ -34,8 +34,7 @@ import de.geosphere.congregationplaner.ui.nav.NavCardRow
 import de.geosphere.congregationplaner.ui.nav.NavColumnItem
 import de.geosphere.congregationplaner.ui.nav.SectionLabel
 import de.geosphere.congregationplaner.user.domain.model.AppUser
-import de.geosphere.congregationplaner.user.presentation.UserManagementRoute
-
+import de.geosphere.congregationplaner.user.presentation.management.UserManagementRoute
 private val secondColumnWidth = 280.dp
 
 /**

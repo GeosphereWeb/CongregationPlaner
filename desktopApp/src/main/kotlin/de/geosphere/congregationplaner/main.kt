@@ -10,8 +10,8 @@ import congregationplaner.shared.generated.resources.Res
 import congregationplaner.shared.generated.resources.dummy
 import de.geosphere.congregationplaner.AuthMode
 import de.geosphere.congregationplaner.LoginScreen
-import de.geosphere.congregationplaner.auth.FirebaseSupport
-import de.geosphere.congregationplaner.organization.InviteLinkInbox
+import de.geosphere.congregationplaner.auth.data.FirebaseSupport
+import de.geosphere.congregationplaner.organization.presentation.selection.InviteLinkInbox
 import de.geosphere.congregationplaner.theming.AppTheme
 import org.jetbrains.compose.resources.painterResource
 

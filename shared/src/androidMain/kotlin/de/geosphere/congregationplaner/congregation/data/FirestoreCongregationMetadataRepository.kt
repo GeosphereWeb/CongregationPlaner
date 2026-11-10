@@ -3,7 +3,7 @@ package de.geosphere.congregationplaner.congregation.data
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Source
-import de.geosphere.congregationplaner.auth.AndroidFirestoreProvider
+import de.geosphere.congregationplaner.auth.data.AndroidFirestoreProvider
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationName
 import de.geosphere.congregationplaner.congregation.domain.model.NewCongregationAdmin
