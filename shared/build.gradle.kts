@@ -127,6 +127,15 @@ ktlint {
 detekt {
     toolVersion = "1.23.6"
     config.setFrom("${rootProject.projectDir}/config/detekt/detekt.yml")
+    // The KMP plugin has no src/main; analyze the shared and platform sources explicitly.
+    source.setFrom(
+        "src/commonMain/kotlin",
+        "src/androidMain/kotlin",
+        "src/jvmMain/kotlin",
+        "src/iosMain/kotlin",
+    )
+    // Findings from before detekt analyzed these sources (CP-134); new code must not add entries.
+    baseline = file("detekt-baseline.xml")
     buildUponDefaultConfig = true
 //    allRules = false
     ignoreFailures = false

@@ -11,12 +11,13 @@ Nach jeder Phase hier abhaken und Ticket und PR eintragen.
 | 0 | Package-Struktur | CP-130 | #148 | in Review |
 | 1 | Policies vereinheitlichen | CP-131 | #149 | in Review |
 | 2 | Login entkoppeln | CP-132 | #150 | in Review |
-| 3 | Logik aus Composables holen | CP-133 | – | in Review |
-| 4 | Große Klassen aufteilen | – | – | offen |
+| 3 | Logik aus Composables holen | CP-133 | #151 | in Review |
+| 4a | detekt aktivieren, Login-ViewModel teilen | CP-134 | – | in Review |
+| 4b | Große ViewModels und UI-Dateien teilen | – | – | offen |
 | 5 | `uilib` auffüllen | – | – | offen |
 | 6 | UiState-Feinschliff | – | – | offen |
 
-Nächster Schritt: Phase 4 (Große Klassen aufteilen). Die Branches sind gestapelt: jede Phase baut auf dem Branch der vorigen auf, bis deren PR gemergt ist.
+Nächster Schritt: Phase 4b (große ViewModels teilen), Reihenfolge und Muster siehe Phase 4. Die Branches sind gestapelt: jede Phase baut auf dem Branch der vorigen auf, bis deren PR gemergt ist.
 
 ## Ziele
 
@@ -213,6 +214,32 @@ Ein PR pro Fachbereich. Reihenfolge: Wochenplan, Rednerverzeichnis, Versammlungs
 7. Tests für jede herausgelöste Klasse und Funktion.
 
 Die genauen Schnittlinien werden beim Lesen der Klassen festgelegt.
+
+Umgesetzt in CP-134 (Phase 4a):
+
+- **detekt lief nie.** `./gradlew detekt` hatte im KMP-Modul keine Quellen (Standard ist `src/main/kotlin`) und meldete deshalb nichts. Die Quellen von `commonMain`, `androidMain`, `jvmMain` und `iosMain` sind jetzt konfiguriert.
+- **Baseline:** Die 92 Altfunde stehen in `shared/detekt-baseline.xml`; neuer Code darf keine Einträge hinzufügen. Jeder abgebaute Fund wird aus der Baseline gelöscht (`./gradlew :shared:detektBaseline` neu erzeugen und das Diff prüfen).
+- `AuthViewModel` (17 Funktionen) ist in `SessionViewModel` (Sitzung) und `LoginViewModel` (Formular) geteilt; die Anmeldung meldet den Nutzer über `LoginUiState.signedInUser`, `App` übergibt ihn an die Sitzung.
+- `loginStep` ist in kleinere Funktionen zerlegt; neue Hilfsfunktionen liegen in eigenen Dateien (`SlotListing.kt`, `MemberProfileLimits.kt`, `LoginActions.kt`).
+
+### Phase 4b: Muster für die großen ViewModels
+
+Alle vier ViewModels haben mehr als zehn öffentliche Aktionen; kleine Helfer herauszuziehen reicht nicht. Muster (ADR-0025 im selben PR schreiben):
+
+- **Zustandshalter statt Monster-ViewModel:** Pro Teilaufgabe eine einfache Klasse ohne `ViewModel`-Basis (z. B. `MemberEditorHolder`, `YearSlotsHolder`), die ihren Teil des Zustands als `StateFlow` hält und ihre Aktionen anbietet. Das ViewModel erzeugt die Halter mit `viewModelScope`, kombiniert ihre Zustände zum `UiState` und gibt sie der Route weiter.
+- **Liste und Editor bleiben ein Bildschirmzustand** (ADR-0006): Der Editor-Halter meldet Gespeichertes über einen Callback an den Listen-Halter, statt dass zwei ViewModels sich abstimmen.
+- **Rechte** berechnet eine reine Funktion je Bildschirm (z. B. `memberPermissions(policy, user, members)`).
+
+Reihenfolge und Schnitt:
+
+1. `UserManagementViewModel` (19 Funktionen): Mitgliederliste und Rechte, Zugang (Freigabe, Rollen, Entfernen), Profil-Editor, Einladungslink-Cache.
+2. `TalkScheduleViewModel` (34 Funktionen, 13 Abhängigkeiten): Terminliste und Filter, Termin-Editor, Jahresverwaltung (anlegen, Uhrzeit ändern), Stammdaten über einen kombinierten UseCase `ObserveTalkReferenceDataUseCase`.
+3. `ExternalDirectoryViewModel` (25 Funktionen): Filter und Suche, Editor für Kreis, Versammlung und Redner.
+4. `CongregationSelectionViewModel` (16 Funktionen): Auswahl im Organisationsbaum, neue Versammlung, Einladungslink.
+5. Danach die knapp darüberliegenden: `CongregationMetadataViewModel`, `OrganizationViewModel` (je 14), `TalkCatalogManagementViewModel`, `WeekEventManagementViewModel` (je 11).
+6. UI-Dateien: `ExternalDirectoryContent.kt` (15 Funktionen), `TalkSlotEditor.kt` (11) und `TalkSlotPresentation.kt` (22) in einen Baustein bzw. ein Thema pro Datei teilen.
+
+Die Daten- und Plattformklassen in der Baseline (z. B. `FirestoreRestClient`, `FirestoreRestUserRepository`) sind nicht Teil dieses Plans; sie werden abgebaut, wenn sie ohnehin angefasst werden.
 
 ### Phase 5: `uilib` auffüllen
 
