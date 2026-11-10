@@ -67,7 +67,9 @@ class CongregationMetadataViewModel(
         ownCongregationOnly = ownOnly
         val circuit = if (ownOnly) user?.congregation?.circuitIds else circuitIds
         if (!observing || circuit != this.circuitIds) observe(circuit)
-        updateState { it.copy(congregations = visibleCongregations()) }
+        updateState {
+            it.copy(congregations = visibleCongregations(allCongregations, ownCongregationOnly, currentUser))
+        }
     }
 
     private fun observe(circuit: List<String>?) {
@@ -93,16 +95,14 @@ class CongregationMetadataViewModel(
                 }.collect { congregations ->
                     allCongregations = congregations
                     updateState {
-                        it.copy(congregations = visibleCongregations(), isLoading = false, errorMessage = null)
+                        it.copy(
+                            congregations = visibleCongregations(allCongregations, ownCongregationOnly, currentUser),
+                            isLoading = false,
+                            errorMessage = null,
+                        )
                     }
                 }
         }
-    }
-
-    private fun visibleCongregations(): List<CongregationMetadata> {
-        if (!ownCongregationOnly) return allCongregations
-        val ownId = currentUser?.congregation?.congregationId
-        return allCongregations.filter { it.id == ownId }
     }
 
     fun createCongregation() {
@@ -223,32 +223,8 @@ class CongregationMetadataViewModel(
     private fun updateState(transform: (CongregationMetadataUiState) -> CongregationMetadataUiState) {
         mutableUiState.update { state ->
             val newState = transform(state)
-            newState.copy(permissions = permissionsFor(newState.editor))
+            newState.copy(permissions = congregationPermissions(permissionPolicy, currentUser, newState.editor))
         }
-    }
-
-    private fun permissionsFor(editor: CongregationMetadata?): CongregationPermissions {
-        val user = currentUser ?: return CongregationPermissions()
-        return CongregationPermissions(
-            canCreate = permissionPolicy.canCreate(user),
-            canManage = permissionPolicy.canManageGeneral(user),
-            canEditSelection = editor?.let { canModify(user, it) } ?: false,
-            canEditMeetingTimes = editor?.let { canModifyMeetingTimes(user, it) } ?: false,
-        )
-    }
-
-    // Eine neue Versammlung legt der globale Admin samt Zeiten an; danach ändert nur der Versammlungsadmin die Zeiten.
-    private fun canModifyMeetingTimes(user: AppUser, congregation: CongregationMetadata): Boolean =
-        if (congregation.id.isBlank()) {
-            permissionPolicy.canCreate(user)
-        } else {
-            permissionPolicy.canEditMeetingTimes(user, congregation)
-        }
-
-    private fun canModify(user: AppUser, congregation: CongregationMetadata): Boolean = if (congregation.id.isBlank()) {
-        permissionPolicy.canCreate(user)
-    } else {
-        permissionPolicy.canEdit(user, congregation)
     }
 
     private companion object {

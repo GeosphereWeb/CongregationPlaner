@@ -123,7 +123,7 @@ class TalkCatalogManagementViewModel(
                         it.copy(talks = talks, editor = next, isSaving = false)
                     }
                 }.onFailure { exception ->
-                    fail(exception, "Vortrag konnte nicht gespeichert werden.")
+                    mutableUiState.update { it.failed(exception, "Vortrag konnte nicht gespeichert werden.") }
                 }
         }
     }
@@ -142,7 +142,9 @@ class TalkCatalogManagementViewModel(
                             isSaving = false,
                         )
                     }
-                }.onFailure { exception -> fail(exception, "Vortrag konnte nicht gelöscht werden.") }
+                }.onFailure { exception ->
+                    mutableUiState.update { it.failed(exception, "Vortrag konnte nicht gelöscht werden.") }
+                }
         }
     }
 
@@ -172,12 +174,11 @@ class TalkCatalogManagementViewModel(
         return allowed
     }
 
-    private fun fail(exception: Throwable, fallback: String) {
-        mutableUiState.update { it.copy(isSaving = false, errorMessage = exception.message ?: fallback) }
-    }
-
     private companion object {
         const val NUMBER_DIGITS = 4
         const val MISSING_PERMISSION_MESSAGE = "Dafür fehlt dir die Berechtigung."
     }
 }
+
+private fun TalkCatalogUiState.failed(exception: Throwable, fallback: String) =
+    copy(isSaving = false, errorMessage = exception.message ?: fallback)

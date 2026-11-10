@@ -99,7 +99,7 @@ class WeekEventManagementViewModel(
                         it.copy(events = events, editor = next, isSaving = false)
                     }
                 }.onFailure { exception ->
-                    fail(exception, "Wochenereignis konnte nicht gespeichert werden.")
+                    mutableUiState.update { it.failed(exception, "Wochenereignis konnte nicht gespeichert werden.") }
                 }
         }
     }
@@ -118,7 +118,9 @@ class WeekEventManagementViewModel(
                             isSaving = false,
                         )
                     }
-                }.onFailure { exception -> fail(exception, "Wochenereignis konnte nicht gelöscht werden.") }
+                }.onFailure { exception ->
+                    mutableUiState.update { it.failed(exception, "Wochenereignis konnte nicht gelöscht werden.") }
+                }
         }
     }
 
@@ -148,11 +150,10 @@ class WeekEventManagementViewModel(
         return allowed
     }
 
-    private fun fail(exception: Throwable, fallback: String) {
-        mutableUiState.update { it.copy(isSaving = false, errorMessage = exception.message ?: fallback) }
-    }
-
     private companion object {
         const val MISSING_PERMISSION_MESSAGE = "Dafür fehlt dir die Berechtigung."
     }
 }
+
+private fun WeekEventUiState.failed(exception: Throwable, fallback: String) =
+    copy(isSaving = false, errorMessage = exception.message ?: fallback)

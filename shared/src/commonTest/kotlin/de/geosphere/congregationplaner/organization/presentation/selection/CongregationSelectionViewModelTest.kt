@@ -84,19 +84,19 @@ class CongregationSelectionViewModelTest {
     @Test
     fun `a new congregation can only be started once the circuit is chosen`() {
         val viewModel = createViewModel()
-        viewModel.startNewCongregation()
+        viewModel.newCongregation.start()
         assertNull(viewModel.uiState.value.newCongregation)
         assertFalse(viewModel.uiState.value.canStartNewCongregation)
 
         viewModel.selectUnit(OrgLevel.REGION, "EMEA")
-        viewModel.startNewCongregation()
+        viewModel.newCongregation.start()
         assertNull(viewModel.uiState.value.newCongregation)
 
         viewModel.selectUnit(OrgLevel.SUBREGION, "europe")
         viewModel.selectUnit(OrgLevel.BRANCH, "central-europe")
         viewModel.selectUnit(OrgLevel.CIRCUIT, "609a")
         assertTrue(viewModel.uiState.value.canStartNewCongregation)
-        viewModel.startNewCongregation()
+        viewModel.newCongregation.start()
 
         assertEquals(
             NewCongregationDraft(listOf("EMEA", "europe", "central-europe", "609a"), "Kreis Nord"),
@@ -108,19 +108,19 @@ class CongregationSelectionViewModelTest {
     fun `the draft is ready with a valid name and can be cancelled`() {
         val viewModel = createViewModel()
         viewModel.selectCircuit()
-        viewModel.startNewCongregation()
+        viewModel.newCongregation.start()
         assertFalse(viewModel.uiState.value.isNewCongregationReady)
 
-        viewModel.onNewCongregationNameChanged("Nord/Süd")
+        viewModel.newCongregation.changeName("Nord/Süd")
         assertFalse(viewModel.uiState.value.isNewCongregationReady)
 
-        viewModel.onNewCongregationNameChanged("Grafing Süd")
+        viewModel.newCongregation.changeName("Grafing Süd")
         assertTrue(viewModel.uiState.value.isNewCongregationReady)
 
-        viewModel.onNewCongregationNameChanged("x".repeat(500))
+        viewModel.newCongregation.changeName("x".repeat(500))
         assertEquals(CongregationName.MAX_LENGTH, viewModel.uiState.value.newCongregation?.name?.length)
 
-        viewModel.cancelNewCongregation()
+        viewModel.newCongregation.cancel()
         assertNull(viewModel.uiState.value.newCongregation)
         assertFalse(viewModel.uiState.value.isNewCongregationReady)
     }
@@ -129,23 +129,23 @@ class CongregationSelectionViewModelTest {
     fun `a valid name only leads to sign in after confirming`() {
         val viewModel = createViewModel()
         viewModel.selectCircuit()
-        viewModel.startNewCongregation()
+        viewModel.newCongregation.start()
 
-        viewModel.confirmNewCongregation()
+        viewModel.newCongregation.confirm()
         assertFalse(viewModel.uiState.value.isNewCongregationConfirmed)
 
-        viewModel.onNewCongregationNameChanged("Grafing Süd")
+        viewModel.newCongregation.changeName("Grafing Süd")
         assertFalse(viewModel.uiState.value.isNewCongregationConfirmed)
 
-        viewModel.confirmNewCongregation()
+        viewModel.newCongregation.confirm()
         assertTrue(viewModel.uiState.value.isNewCongregationConfirmed)
 
-        viewModel.onNewCongregationNameChanged("Nord/Süd")
+        viewModel.newCongregation.changeName("Nord/Süd")
         assertFalse(viewModel.uiState.value.isNewCongregationConfirmed)
 
-        viewModel.onNewCongregationNameChanged("Grafing Süd")
-        viewModel.confirmNewCongregation()
-        viewModel.editNewCongregation()
+        viewModel.newCongregation.changeName("Grafing Süd")
+        viewModel.newCongregation.confirm()
+        viewModel.newCongregation.edit()
         assertFalse(viewModel.uiState.value.isNewCongregationConfirmed)
         assertEquals("Grafing Süd", viewModel.uiState.value.newCongregation?.name)
     }
@@ -154,10 +154,10 @@ class CongregationSelectionViewModelTest {
     fun `creating selects the new congregation and makes the user its first admin`() {
         val viewModel = createViewModel()
         viewModel.selectCircuit()
-        viewModel.startNewCongregation()
-        viewModel.onNewCongregationNameChanged("  Grafing Süd ")
+        viewModel.newCongregation.start()
+        viewModel.newCongregation.changeName("  Grafing Süd ")
 
-        viewModel.createNewCongregation(authUser)
+        viewModel.newCongregation.create(authUser)
 
         val state = viewModel.uiState.value
         val expectedRef = CongregationRef("EMEA", "europe", "central-europe", "609a", "new-congregation")
@@ -179,10 +179,10 @@ class CongregationSelectionViewModelTest {
     fun `creating reports an unconfirmed e-mail address and a taken name and keeps the draft`() {
         val viewModel = createViewModel()
         viewModel.selectCircuit()
-        viewModel.startNewCongregation()
-        viewModel.onNewCongregationNameChanged("Grafing Süd")
+        viewModel.newCongregation.start()
+        viewModel.newCongregation.changeName("Grafing Süd")
 
-        viewModel.createNewCongregation(
+        viewModel.newCongregation.create(
             object : FirebaseUser by authUser {
                 override val emailVerified = false
             },
@@ -191,13 +191,13 @@ class CongregationSelectionViewModelTest {
         assertFalse(viewModel.uiState.value.isCreating)
 
         congregations.nameOwner = "other"
-        viewModel.createNewCongregation(authUser)
+        viewModel.newCongregation.create(authUser)
         assertEquals(CongregationException.NameTaken().message, viewModel.uiState.value.errorMessage)
         assertNull(viewModel.uiState.value.selected)
         assertEquals("Grafing Süd", viewModel.uiState.value.newCongregation?.name)
         assertNull(congregations.createdBy)
 
-        viewModel.onNewCongregationNameChanged("Grafing Nord")
+        viewModel.newCongregation.changeName("Grafing Nord")
         assertNull(viewModel.uiState.value.errorMessage)
     }
 
@@ -212,17 +212,17 @@ class CongregationSelectionViewModelTest {
         viewModel.selectCircuit()
         assertEquals(berlinSelection, viewModel.uiState.value.activeSelection)
 
-        viewModel.startNewCongregation()
-        viewModel.onNewCongregationNameChanged("Grafing Süd")
+        viewModel.newCongregation.start()
+        viewModel.newCongregation.changeName("Grafing Süd")
         assertEquals(berlinSelection, viewModel.uiState.value.selected)
         assertNull(viewModel.uiState.value.activeSelection)
 
-        viewModel.cancelNewCongregation()
+        viewModel.newCongregation.cancel()
         assertEquals(berlinSelection, viewModel.uiState.value.activeSelection)
 
-        viewModel.startNewCongregation()
-        viewModel.onNewCongregationNameChanged("Grafing Süd")
-        viewModel.createNewCongregation(authUser)
+        viewModel.newCongregation.start()
+        viewModel.newCongregation.changeName("Grafing Süd")
+        viewModel.newCongregation.create(authUser)
         assertEquals("Grafing Süd", viewModel.uiState.value.activeSelection?.name)
         assertEquals("Grafing Süd", store.load()?.name)
     }
@@ -231,7 +231,7 @@ class CongregationSelectionViewModelTest {
     fun `creating without a draft or while another run is active does nothing`() {
         val viewModel = createViewModel()
 
-        viewModel.createNewCongregation(authUser)
+        viewModel.newCongregation.create(authUser)
 
         assertNull(viewModel.uiState.value.selected)
         assertNull(congregations.createdBy)
@@ -319,7 +319,7 @@ class CongregationSelectionViewModelTest {
         assertEquals("Kreis Nord", viewModel.uiState.value.selected?.circuitName)
 
         viewModel.clearSelection()
-        viewModel.applyInviteLink(ref.toInviteLink())
+        viewModel.inviteLink.applyLink(ref.toInviteLink())
         assertEquals("Kreis Nord", viewModel.uiState.value.selected?.circuitName)
         assertEquals("Kreis Nord", store.load()?.circuitName)
     }
@@ -329,7 +329,7 @@ class CongregationSelectionViewModelTest {
         repository.units = repository.units - "region/EMEA/subregion/europe/branch/central-europe/circuit"
         val viewModel = createViewModel()
 
-        viewModel.applyInviteLink(ref.toInviteLink())
+        viewModel.inviteLink.applyLink(ref.toInviteLink())
 
         assertEquals(SelectedCongregation(ref, "Berlin", ""), viewModel.uiState.value.selected)
         assertEquals("609a", viewModel.uiState.value.selected?.circuitDisplayName)
@@ -378,8 +378,8 @@ class CongregationSelectionViewModelTest {
     fun `valid invite link selects the existing congregation`() {
         val viewModel = createViewModel()
 
-        viewModel.onInviteLinkChanged(ref.toInviteLink())
-        viewModel.applyInviteLink()
+        viewModel.inviteLink.change(ref.toInviteLink())
+        viewModel.inviteLink.applyLink()
 
         assertEquals(berlinSelection, viewModel.uiState.value.selected)
         assertEquals("", viewModel.uiState.value.inviteLinkInput)
@@ -390,7 +390,7 @@ class CongregationSelectionViewModelTest {
     fun `invite link from the clipboard selects the congregation`() {
         val viewModel = createViewModel()
 
-        viewModel.pasteInviteLink(ref.toInviteLink())
+        viewModel.inviteLink.paste(ref.toInviteLink())
 
         assertEquals(berlinSelection, viewModel.uiState.value.selected)
         assertEquals("", viewModel.uiState.value.inviteLinkInput)
@@ -400,10 +400,10 @@ class CongregationSelectionViewModelTest {
     fun `empty or foreign clipboard content is reported`() {
         val viewModel = createViewModel()
 
-        viewModel.pasteInviteLink(null)
+        viewModel.inviteLink.paste(null)
         assertEquals("Die Zwischenablage enthält keinen Text.", viewModel.uiState.value.errorMessage)
 
-        viewModel.pasteInviteLink("Hallo Welt")
+        viewModel.inviteLink.paste("Hallo Welt")
         assertEquals("Der Einladungslink ist ungültig.", viewModel.uiState.value.errorMessage)
         assertEquals("Hallo Welt", viewModel.uiState.value.inviteLinkInput)
         assertNull(viewModel.uiState.value.selected)
@@ -413,10 +413,10 @@ class CongregationSelectionViewModelTest {
     fun `invalid or unknown invite links are rejected`() {
         val viewModel = createViewModel()
 
-        viewModel.applyInviteLink("https://example.com")
+        viewModel.inviteLink.applyLink("https://example.com")
         assertEquals("Der Einladungslink ist ungültig.", viewModel.uiState.value.errorMessage)
 
-        viewModel.applyInviteLink(ref.copy(congregationId = "muenchen").toInviteLink())
+        viewModel.inviteLink.applyLink(ref.copy(congregationId = "muenchen").toInviteLink())
         assertEquals(
             "Die Versammlung aus dem Einladungslink wurde nicht gefunden.",
             viewModel.uiState.value.errorMessage,
@@ -424,7 +424,7 @@ class CongregationSelectionViewModelTest {
         assertNull(viewModel.uiState.value.selected)
 
         repository.failure = IllegalStateException("offline")
-        viewModel.applyInviteLink(ref.toInviteLink())
+        viewModel.inviteLink.applyLink(ref.toInviteLink())
         assertEquals("offline", viewModel.uiState.value.errorMessage)
         assertFalse(viewModel.uiState.value.isResolvingLink)
     }
@@ -435,7 +435,7 @@ class CongregationSelectionViewModelTest {
         viewModel.cancelPicking()
         assertTrue(viewModel.uiState.value.isPicking)
 
-        viewModel.applyInviteLink(ref.toInviteLink())
+        viewModel.inviteLink.applyLink(ref.toInviteLink())
         viewModel.startPicking()
         viewModel.cancelPicking()
         assertFalse(viewModel.uiState.value.isPicking)

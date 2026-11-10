@@ -58,7 +58,7 @@ fun App() {
         // Ein Einladungslink, mit dem die App gestartet wurde, wählt die Versammlung vor.
         LaunchedEffect(pendingInviteLink) {
             val link = pendingInviteLink ?: return@LaunchedEffect
-            selectionViewModel.applyInviteLink(link)
+            selectionViewModel.inviteLink.applyLink(link)
             InviteLinkInbox.consume()
         }
 
@@ -100,10 +100,10 @@ fun App() {
                     emailVerified = authState.emailVerified,
                     isCreating = selectionState.isCreating,
                     errorMessage = selectionState.errorMessage,
-                    onCreate = { selectionViewModel.createNewCongregation(authUser) },
+                    onCreate = { selectionViewModel.newCongregation.create(authUser) },
                     onRefresh = sessionViewModel::refreshEmailVerification,
                     onResend = sessionViewModel::resendVerificationEmail,
-                    onChangeName = selectionViewModel::cancelNewCongregation,
+                    onChangeName = selectionViewModel.newCongregation::cancel,
                     onSignOut = signOut,
                 )
                 return@AppTheme
