@@ -79,7 +79,13 @@ data class Talk(val number: Int, val title: String, val active: Boolean = true) 
 }
 
 /** Ein Mitglied der Versammlung, wie es als Redner oder Vorsitzender im Termin ausgewählt wird. */
-data class MemberRef(val memberId: String, val lastName: String, val firstName: String) {
+data class MemberRef(
+    val memberId: String,
+    val lastName: String,
+    val firstName: String,
+    val mobilePhone: String = "",
+    val landlinePhone: String = "",
+) {
     val displayName: String get() = listOf(lastName, firstName).filter(String::isNotBlank).joinToString(", ")
 }
 
@@ -88,7 +94,14 @@ data class MemberRef(val memberId: String, val lastName: String, val firstName: 
  * pflegt.
  * [id] ist leer, solange er noch nicht gespeichert ist.
  */
-data class ExternalSpeaker(val id: String, val lastName: String, val firstName: String, val congregationName: String) {
+data class ExternalSpeaker(
+    val id: String,
+    val lastName: String,
+    val firstName: String,
+    val congregationName: String,
+    val mobilePhone: String = "",
+    val landlinePhone: String = "",
+) {
     val displayName: String
         get() = listOf(lastName, firstName).filter(String::isNotBlank).joinToString(", ") + " ($congregationName)"
 }
