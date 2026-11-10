@@ -32,11 +32,18 @@ import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 
+/** Farbliche Hervorhebung eines Listeneintrags: Info (blau) oder Warnung (rötlich). */
+internal enum class CardHighlight(val container: Color?, val border: Color?) {
+    None(null, null),
+    Info(NightColors.SkyContainer, NightColors.Sky),
+    Warning(NightColors.CoralContainer, NightColors.Coral),
+}
+
 /**
  * Listeneintrag einer Listen-/Detailansicht: hervorgehoben, wenn [selected], und mit Löschen-Icon rechts,
  * sofern [canDelete]; mit [onEdit] steht davor ein Bearbeiten-Icon (wenn ein Tipp auf den Eintrag etwas anderes
  * tut). [accent] färbt einen Streifen links, z. B. je Ebene einer Hierarchie. Die Aktionen stehen neben dem Inhalt,
- * damit die Einträge niedrig bleiben. [highlighted] hebt den Eintrag farblich mit einem leichten Schein ab. Der fachliche Inhalt kommt aus
+ * damit die Einträge niedrig bleiben. [highlight] hebt den Eintrag farblich mit einem leichten Schein ab. Der fachliche Inhalt kommt aus
  * [content].
  */
 @Composable
@@ -49,30 +56,17 @@ internal fun SelectableListCard(
     canDelete: Boolean,
     onEdit: (() -> Unit)? = null,
     accent: Color? = null,
-    highlighted: Boolean = false,
+    highlight: CardHighlight = CardHighlight.None,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val shape = RoundedCornerShape(8.dp)
-    val background = when {
-        selected -> NightColors.SurfaceActive
-        highlighted -> NightColors.SkyContainer
-        else -> NightColors.Surface
-    }
-    val borderColor = when {
-        selected -> NightColors.Lavender
-        highlighted -> NightColors.Sky
-        else -> NightColors.Border
-    }
+    val background = if (selected) NightColors.SurfaceActive else highlight.container ?: NightColors.Surface
+    val borderColor = if (selected) NightColors.Lavender else highlight.border ?: NightColors.Border
     Row(
         modifier = Modifier.fillMaxWidth()
             .then(
-                if (highlighted) {
-                    Modifier.shadow(
-                        8.dp,
-                        shape,
-                        ambientColor = NightColors.Sky,
-                        spotColor = NightColors.Sky,
-                    )
+                if (highlight.border != null) {
+                    Modifier.shadow(8.dp, shape, ambientColor = highlight.border, spotColor = highlight.border)
                 } else {
                     Modifier
                 },
@@ -118,9 +112,19 @@ private fun SelectableListCardPreview() = PreviewThemeWrapper {
             onDelete = {},
             actionsEnabled = true,
             canDelete = true,
-            highlighted = true,
+            highlight = CardHighlight.Info,
         ) {
             Text("Diese Woche", style = MaterialTheme.typography.titleMedium)
+        }
+        SelectableListCard(
+            selected = false,
+            onSelect = {},
+            onDelete = {},
+            actionsEnabled = true,
+            canDelete = true,
+            highlight = CardHighlight.Warning,
+        ) {
+            Text("Nicht geplant", style = MaterialTheme.typography.titleMedium)
         }
     }
 }
