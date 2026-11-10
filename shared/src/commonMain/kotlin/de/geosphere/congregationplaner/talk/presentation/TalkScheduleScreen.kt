@@ -35,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -49,6 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.geosphere.congregationplaner.HostPlatform
 import de.geosphere.congregationplaner.congregation.presentation.MeetingTimeInput
 import de.geosphere.congregationplaner.presentation.components.DetailPane
 import de.geosphere.congregationplaner.presentation.components.DetailPlaceholder
@@ -164,6 +166,8 @@ internal fun TalkScheduleContent(
     val nextDate = nextSlotDate(state.slots, today)
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    // Der Termin, hinter dem gerade Aktionen aufgedeckt sind; es ist immer höchstens einer.
+    var revealedSlotId by remember { mutableStateOf<String?>(null) }
     val visibleSlots = filterSlots(state.slots, state.statusFilter)
     val todayIndex = slotListIndex(visibleSlots, today)
     // The sticky month header covers the top of the list, so the target sits just below it.
@@ -252,15 +256,29 @@ internal fun TalkScheduleContent(
                                         )
                                     }
                                     items(monthSlots, key = { it.id }) { slot ->
-                                        SelectableListCard(
-                                            selected = editor?.original?.date == slot.date,
-                                            onSelect = { actions.onEditSlot(slot) },
-                                            onDelete = {},
-                                            actionsEnabled = !state.isSaving,
-                                            canDelete = false,
-                                            highlight = slotHighlight(slot, today),
+                                        SwipeableSlotItem(
+                                            // Telefon und WhatsApp gibt es nur auf dem Handy.
+                                            contact = slotContact(slot, state.speakers, state.externalSpeakers)
+                                                .takeUnless { HostPlatform.isDesktop },
+                                            revealed = revealedSlotId == slot.id,
+                                            onRevealedChange = { open ->
+                                                revealedSlotId = when {
+                                                    open -> slot.id
+                                                    revealedSlotId == slot.id -> null
+                                                    else -> revealedSlotId
+                                                }
+                                            },
                                         ) {
-                                            SlotSummary(slot, listSlotChip(slot, slotStatus(slot, nextDate)))
+                                            SelectableListCard(
+                                                selected = editor?.original?.date == slot.date,
+                                                onSelect = { actions.onEditSlot(slot) },
+                                                onDelete = {},
+                                                actionsEnabled = !state.isSaving,
+                                                canDelete = false,
+                                                highlight = slotHighlight(slot, today),
+                                            ) {
+                                                SlotSummary(slot, listSlotChip(slot, slotStatus(slot, nextDate)))
+                                            }
                                         }
                                     }
                                 }

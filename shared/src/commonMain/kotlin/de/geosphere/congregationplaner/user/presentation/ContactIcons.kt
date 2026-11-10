@@ -40,6 +40,12 @@ internal val dialpadIcon = vectorIcon(
         "2,-0.9 2,-2 -0.9,-2 -2,-2zM12,1c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2z",
 )
 
+// Sprechblase aus den Material Icons (Apache 2.0), für Nachrichten per WhatsApp.
+internal val chatIcon = vectorIcon(
+    "chat",
+    "M20,2H4c-1.1,0 -2,0.9 -2,2v18l4,-4h14c1.1,0 2,-0.9 2,-2V4c0,-1.1 -0.9,-2 -2,-2z",
+)
+
 // Briefumschlag aus den Material Icons (Apache 2.0).
 internal val mailIcon = vectorIcon(
     "mail",
