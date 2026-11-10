@@ -38,6 +38,7 @@ class ExternalDirectoryViewModelTest {
         roles = setOf(CongregationRole.TALK_PLANNER),
         congregation = testCongregation,
     )
+    private val helper = planner.copy(uid = "helper", roles = setOf(CongregationRole.TALK_HELPER))
     private val member = AppUser(uid = "member", approved = true, congregation = testCongregation)
 
     private val north = ExternalCircuit("c1", "Nord")
@@ -118,10 +119,47 @@ class ExternalDirectoryViewModelTest {
     }
 
     @Test
+    fun `a talk helper sees and opens entries but cannot create or change them`() {
+        viewModel.onCurrentUserChanged(helper)
+
+        assertTrue(state.canView)
+        assertFalse(state.canPlan)
+        assertEquals(listOf(berg), state.directory.speakers)
+
+        viewModel.newCircuit()
+        viewModel.newSpeaker("g1")
+        assertNull(state.editor)
+
+        viewModel.select(berg)
+        val opened = state.editor
+        assertEquals("s1", opened?.id)
+
+        viewModel.updateEditor(ExternalDirectoryEditor.Speaker(berg.copy(lastName = "Neu"), "12", berg))
+        assertEquals(opened, state.editor)
+    }
+
+    @Test
+    fun `switching to the helper role keeps a saved entry but drops a new one`() {
+        viewModel.onCurrentUserChanged(planner)
+        viewModel.select(berg)
+        viewModel.onCurrentUserChanged(helper)
+        assertEquals("s1", state.editor?.id)
+
+        viewModel.onCurrentUserChanged(planner)
+        viewModel.newCircuit()
+        viewModel.onCurrentUserChanged(helper)
+        assertNull(state.editor)
+
+        viewModel.dismissError()
+        assertEquals(listOf(berg), state.directory.speakers)
+    }
+
+    @Test
     fun `member without permission sees nothing and cannot open an editor`() {
         viewModel.onCurrentUserChanged(member)
         viewModel.newCircuit()
 
+        assertFalse(state.canView)
         assertFalse(state.canPlan)
         assertFalse(state.isLoading)
         assertTrue(state.directory.circuits.isEmpty())

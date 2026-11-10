@@ -33,6 +33,7 @@ class TalkHistoryViewModelTest {
         roles = setOf(CongregationRole.CONGREGATION_ADMIN, CongregationRole.TALK_PLANNER),
         congregation = testCongregation,
     )
+    private val helper = planner.copy(uid = "helper", roles = setOf(CongregationRole.TALK_HELPER))
     private val member = AppUser(uid = "member", approved = true, congregation = testCongregation)
 
     private val first = Talk(1, "Erster Vortrag")
@@ -68,7 +69,7 @@ class TalkHistoryViewModelTest {
     fun `planner sees every talk with its last held day or none`() {
         viewModel.onCurrentUserChanged(planner)
 
-        assertTrue(state.canPlan)
+        assertTrue(state.canView)
         assertFalse(state.isLoading)
         assertEquals(listOf(first, second), state.rows.map { it.talk })
         assertEquals(autumn, state.rows[0].entry?.lastHeldOn)
@@ -89,11 +90,29 @@ class TalkHistoryViewModelTest {
     }
 
     @Test
+    fun `a talk helper sees the history`() {
+        viewModel.onCurrentUserChanged(helper)
+        viewModel.selectTalk(first)
+
+        assertTrue(state.canView)
+        assertEquals(2, state.rows.size)
+        assertNotNull(state.selected)
+    }
+
+    @Test
+    fun `dismissing an error keeps the helper's history`() {
+        viewModel.onCurrentUserChanged(helper)
+        viewModel.dismissError()
+
+        assertEquals(2, state.rows.size)
+    }
+
+    @Test
     fun `other users do not load anything`() {
         viewModel.onCurrentUserChanged(member)
         viewModel.selectTalk(first)
 
-        assertFalse(state.canPlan)
+        assertFalse(state.canView)
         assertTrue(state.rows.isEmpty())
         assertFalse(state.isLoading)
         assertNull(state.selected)

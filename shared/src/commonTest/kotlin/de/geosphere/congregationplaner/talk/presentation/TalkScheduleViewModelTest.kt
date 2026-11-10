@@ -467,6 +467,40 @@ class TalkScheduleViewModelTest {
     }
 
     @Test
+    fun `talk helper sees the slots and speakers but cannot open or create an editor`() {
+        val helper = planner.copy(uid = "helper", roles = setOf(CongregationRole.TALK_HELPER))
+        repository.slots.value = listOf(october25)
+
+        viewModel.onCurrentUserChanged(helper)
+        viewModel.editSlot(october25)
+        viewModel.newSlot()
+
+        assertTrue(state.canView)
+        assertFalse(state.canPlan)
+        assertEquals(listOf(october25), state.slots)
+        assertTrue(state.canViewMembers)
+        assertTrue(state.speakers.isNotEmpty())
+        assertTrue(state.talks.isEmpty())
+        assertTrue(state.weekEvents.isEmpty())
+        assertNull(state.editor)
+        assertNotNull(state.errorMessage)
+    }
+
+    @Test
+    fun `switching from planner to helper closes the editor and stops the catalog`() {
+        val helper = planner.copy(uid = "helper", roles = setOf(CongregationRole.TALK_HELPER))
+        viewModel.onCurrentUserChanged(planner)
+        viewModel.newSlot()
+        assertNotNull(state.editor)
+
+        viewModel.onCurrentUserChanged(helper)
+        viewModel.editSlot(october25)
+
+        assertNull(state.editor)
+        assertTrue(state.canView)
+    }
+
+    @Test
     fun `member without permission does not load the catalog`() {
         viewModel.onCurrentUserChanged(member)
 
