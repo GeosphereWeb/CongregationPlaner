@@ -3,13 +3,13 @@ package de.geosphere.congregationplaner.congregation.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
+import de.geosphere.congregationplaner.congregation.domain.permission.CongregationPermissionPolicy
 import de.geosphere.congregationplaner.congregation.domain.usecase.CreateCongregationUseCase
 import de.geosphere.congregationplaner.congregation.domain.usecase.DeleteCongregationUseCase
 import de.geosphere.congregationplaner.congregation.domain.usecase.ObserveCongregationsUseCase
 import de.geosphere.congregationplaner.congregation.domain.usecase.SaveCongregationUseCase
 import de.geosphere.congregationplaner.presentation.components.ListDetailState
 import de.geosphere.congregationplaner.user.domain.model.AppUser
-import de.geosphere.congregationplaner.user.domain.permission.CongregationPermissionPolicy
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -106,8 +106,7 @@ class CongregationMetadataViewModel(
     }
 
     fun createCongregation() {
-        val user = currentUser
-        if (user == null || !permissionPolicy.canCreate(user)) {
+        if (!mutableUiState.value.permissions.canCreate) {
             updateState { it.copy(errorMessage = MISSING_PERMISSION_MESSAGE) }
             return
         }
@@ -144,22 +143,17 @@ class CongregationMetadataViewModel(
         val congregation = mutableUiState.value.editor ?: return
         val user = currentUser
         val circuit = circuitIds
-        if (user == null || circuit == null || !canModify(user, congregation)) {
+        if (user == null || circuit == null) {
             updateState { it.copy(errorMessage = MISSING_PERMISSION_MESSAGE) }
-            return
-        }
-        if (congregation.name.isBlank()) {
-            updateState { it.copy(errorMessage = "Bitte gib einen Versammlungsnamen ein.") }
             return
         }
 
         updateState { it.copy(isSaving = true, errorMessage = null) }
         viewModelScope.launch {
             val result = if (congregation.id.isBlank()) {
-                // Globale Admins legen an und werden nicht Mitglied; den Namen prüft der Use Case.
-                createCongregation(circuit, congregation.name, user.uid)
+                createCongregation(user, circuit, congregation.name)
             } else {
-                saveCongregation(circuit, congregation.copy(name = congregation.name.trim()))
+                saveCongregation(user, circuit, congregation)
             }
             result
                 .onSuccess { savedCongregation ->
@@ -195,14 +189,14 @@ class CongregationMetadataViewModel(
         if (congregation.id.isBlank() || mutableUiState.value.isDeleting || mutableUiState.value.isSaving) return
         val user = currentUser
         val circuit = circuitIds
-        if (user == null || circuit == null || !permissionPolicy.canDelete(user, congregation)) {
+        if (user == null || circuit == null) {
             updateState { it.copy(errorMessage = MISSING_PERMISSION_MESSAGE) }
             return
         }
 
         updateState { it.copy(isDeleting = true, errorMessage = null) }
         viewModelScope.launch {
-            deleteCongregationUseCase(circuit, congregation.id)
+            deleteCongregationUseCase(user, circuit, congregation)
                 .onSuccess {
                     updateState {
                         val editor = it.editor?.takeUnless { editor -> editor.id == congregation.id }

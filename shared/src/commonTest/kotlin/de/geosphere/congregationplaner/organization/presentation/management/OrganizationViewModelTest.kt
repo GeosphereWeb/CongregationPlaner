@@ -2,12 +2,12 @@ package de.geosphere.congregationplaner.organization.presentation.management
 
 import de.geosphere.congregationplaner.organization.domain.model.OrgLevel
 import de.geosphere.congregationplaner.organization.domain.model.OrgUnit
+import de.geosphere.congregationplaner.organization.domain.permission.OrganizationPermissionPolicy
 import de.geosphere.congregationplaner.organization.domain.usecase.DeleteOrgUnitUseCase
 import de.geosphere.congregationplaner.organization.domain.usecase.ObserveOrgUnitsUseCase
 import de.geosphere.congregationplaner.organization.domain.usecase.SaveOrgUnitUseCase
 import de.geosphere.congregationplaner.organization.testing.FakeOrgUnitRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
-import de.geosphere.congregationplaner.user.domain.permission.OrganizationPermissionPolicy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher

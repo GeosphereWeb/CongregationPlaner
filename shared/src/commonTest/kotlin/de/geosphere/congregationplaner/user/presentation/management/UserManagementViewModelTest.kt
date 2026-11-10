@@ -10,8 +10,9 @@ import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPoli
 import de.geosphere.congregationplaner.user.domain.usecase.CreateMemberWithoutAccountUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.ObserveMembersUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.RemoveMemberUseCase
+import de.geosphere.congregationplaner.user.domain.usecase.SetMemberApprovalUseCase
+import de.geosphere.congregationplaner.user.domain.usecase.SetMemberRoleUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.UpdateMemberProfileUseCase
-import de.geosphere.congregationplaner.user.domain.usecase.UpdateMemberUseCase
 import de.geosphere.congregationplaner.user.testing.FakeUserRepository
 import de.geosphere.congregationplaner.user.testing.testCongregation
 import kotlinx.coroutines.Dispatchers
@@ -52,14 +53,19 @@ class UserManagementViewModelTest {
         viewModel = createViewModel()
     }
 
+    private val policy = UserPermissionPolicy()
+
     private fun createViewModel() = UserManagementViewModel(
         ObserveMembersUseCase(repository),
-        UpdateMemberUseCase(repository),
-        CreateMemberWithoutAccountUseCase(repository),
-        UpdateMemberProfileUseCase(repository),
-        RemoveMemberUseCase(repository),
-        UserPermissionPolicy(),
+        SetMemberApprovalUseCase(repository, policy),
+        SetMemberRoleUseCase(repository, policy),
+        CreateMemberWithoutAccountUseCase(repository, policy),
+        UpdateMemberProfileUseCase(repository, policy),
+        RemoveMemberUseCase(repository, policy),
+        policy,
     )
+
+    private fun permissionsOf(member: AppUser) = viewModel.uiState.value.permissionsOf(member)
 
     @AfterTest
     fun tearDown() {
@@ -76,8 +82,8 @@ class UserManagementViewModelTest {
         assertEquals(listOf("neu", "admin"), state.members.map { it.uid })
         assertEquals(testCongregation, CongregationRef.parse(state.inviteLink.orEmpty()))
         assertEquals(testCongregation, repository.requestedCongregation)
-        assertTrue(viewModel.canEdit(pending))
-        assertFalse(viewModel.canEdit(admin))
+        assertTrue(permissionsOf(pending).canEdit)
+        assertFalse(permissionsOf(admin).canEdit)
     }
 
     @Test
@@ -144,11 +150,10 @@ class UserManagementViewModelTest {
 
         val expected = admin.copy(roles = admin.roles + CongregationRole.TALK_PLANNER)
         assertEquals(listOf(expected), repository.updatedMembers)
-        assertTrue(viewModel.canEditRoles(admin))
-        assertFalse(viewModel.canEdit(admin))
-        assertFalse(viewModel.canToggleRole(admin, CongregationRole.CONGREGATION_ADMIN))
-        assertTrue(viewModel.canToggleRole(admin, CongregationRole.TASK_PLANNER))
-        assertEquals("Die eigene Admin-Rolle bleibt bestehen.", viewModel.adminRoleLockReason(admin))
+        assertFalse(permissionsOf(admin).canEdit)
+        assertFalse(CongregationRole.CONGREGATION_ADMIN in permissionsOf(admin).toggleableRoles)
+        assertTrue(CongregationRole.TASK_PLANNER in permissionsOf(admin).toggleableRoles)
+        assertEquals("Die eigene Admin-Rolle bleibt bestehen.", permissionsOf(admin).adminRoleLockReason)
     }
 
     @Test
@@ -337,7 +342,7 @@ class UserManagementViewModelTest {
         val member = pending.copy(approved = true)
         viewModel.onCurrentUserChanged(member)
 
-        assertFalse(viewModel.canEditProfile(member))
+        assertFalse(permissionsOf(member).canEditProfile)
         viewModel.editProfile(member)
         viewModel.addMemberWithoutAccount()
 
@@ -358,18 +363,13 @@ class UserManagementViewModelTest {
     }
 
     @Test
-    fun `the last approved admin keeps the admin role`() {
-        repository = FakeUserRepository(members = listOf(admin))
-        viewModel = createViewModel()
-        val globalAdmin = AppUser(uid = "global", isGlobalAdmin = true, congregation = testCongregation)
-        viewModel.onCurrentUserChanged(globalAdmin)
+    fun `members are only listed with permissions while the user may manage them`() {
+        viewModel.onCurrentUserChanged(admin)
+        assertEquals(setOf("admin", "neu"), viewModel.uiState.value.memberPermissions.keys)
 
-        assertFalse(viewModel.canToggleRole(admin, CongregationRole.CONGREGATION_ADMIN))
-        assertEquals("Eine Versammlung braucht mindestens einen Admin.", viewModel.adminRoleLockReason(admin))
-        viewModel.toggleRole(admin, CongregationRole.CONGREGATION_ADMIN)
+        viewModel.onCurrentUserChanged(admin.copy(roles = emptySet()))
 
-        assertTrue(repository.updatedMembers.isEmpty())
-        assertEquals("Dafür fehlt dir die Berechtigung.", viewModel.uiState.value.errorMessage)
+        assertTrue(viewModel.uiState.value.memberPermissions.isEmpty())
     }
 
     @Test
@@ -379,7 +379,7 @@ class UserManagementViewModelTest {
         viewModel = createViewModel()
         viewModel.onCurrentUserChanged(admin)
 
-        assertTrue(viewModel.canToggleRole(other, CongregationRole.CONGREGATION_ADMIN))
+        assertTrue(CongregationRole.CONGREGATION_ADMIN in permissionsOf(other).toggleableRoles)
         viewModel.toggleRole(other, CongregationRole.CONGREGATION_ADMIN)
 
         assertEquals(listOf(other.copy(roles = emptySet())), repository.updatedMembers)
@@ -392,7 +392,7 @@ class UserManagementViewModelTest {
         viewModel = createViewModel()
         viewModel.onCurrentUserChanged(admin)
 
-        assertTrue(viewModel.canToggleRole(unapproved, CongregationRole.CONGREGATION_ADMIN))
-        assertNull(viewModel.adminRoleLockReason(pending))
+        assertTrue(CongregationRole.CONGREGATION_ADMIN in permissionsOf(unapproved).toggleableRoles)
+        assertNull(permissionsOf(pending).adminRoleLockReason)
     }
 }

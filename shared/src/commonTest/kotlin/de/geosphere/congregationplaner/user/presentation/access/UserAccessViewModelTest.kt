@@ -4,7 +4,6 @@ import de.geosphere.congregationplaner.user.domain.model.AdminContact
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.UserAccessState
-import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
 import de.geosphere.congregationplaner.user.domain.usecase.GetAdminContactsUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.ObserveUserAccessUseCase
 import de.geosphere.congregationplaner.user.testing.FakeAdminContactRepository
@@ -20,7 +19,6 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -39,7 +37,6 @@ class UserAccessViewModelTest {
         viewModel =
             UserAccessViewModel(
                 ObserveUserAccessUseCase(repository),
-                UserPermissionPolicy(),
                 GetAdminContactsUseCase(contacts),
             )
     }
@@ -95,14 +92,6 @@ class UserAccessViewModelTest {
         viewModel.onSignedOut()
         viewModel.refresh()
         assertEquals(2, repository.loadCount)
-    }
-
-    @Test
-    fun `user management permission is delegated to policy`() {
-        assertTrue(
-            viewModel.canManageUsers(AppUser(approved = true, roles = setOf(CongregationRole.CONGREGATION_ADMIN))),
-        )
-        assertFalse(viewModel.canManageUsers(AppUser(approved = true)))
     }
 
     @Test

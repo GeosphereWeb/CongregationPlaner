@@ -35,4 +35,7 @@ data class AppUser(
             ?: displayName?.takeIf(String::isNotBlank)
             ?: email?.takeIf(String::isNotBlank)
             ?: uid
+
+    /** `true`, wenn der Nutzer freigegeben ist und [role] hat; ohne Freigabe berechtigt keine Rolle. */
+    fun hasRole(role: CongregationRole): Boolean = approved && role in roles
 }

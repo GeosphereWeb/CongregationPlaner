@@ -12,11 +12,10 @@ import dev.zacsweers.metro.Inject
 @Inject
 class TalkSchedulePermissionPolicy {
     // Auch Versammlungsadmins brauchen die Rolle TALK_PLANNER; die Admin-Rolle allein berechtigt nicht zum Planen.
-    fun canPlanTalks(user: AppUser): Boolean = user.approved && CongregationRole.TALK_PLANNER in user.roles
+    fun canPlanTalks(user: AppUser): Boolean = user.hasRole(CongregationRole.TALK_PLANNER)
 
     /** Termine, Rednerliste und Vortragshistorie sehen: Planer und Helfer. */
-    fun canViewTalkPlanning(user: AppUser): Boolean =
-        canPlanTalks(user) || (user.approved && CongregationRole.TALK_HELPER in user.roles)
+    fun canViewTalkPlanning(user: AppUser): Boolean = canPlanTalks(user) || user.hasRole(CongregationRole.TALK_HELPER)
 
     /** Einen Redner als informiert markieren (nur das Feld `confirmed` eines Termins): Planer und Helfer. */
     fun canConfirmSpeaker(user: AppUser): Boolean = canViewTalkPlanning(user)

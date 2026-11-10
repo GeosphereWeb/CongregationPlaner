@@ -1,4 +1,4 @@
-package de.geosphere.congregationplaner.user.domain.permission
+package de.geosphere.congregationplaner.midweek.domain.permission
 
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
@@ -10,5 +10,5 @@ import dev.zacsweers.metro.Inject
  */
 @Inject
 class MidweekPermissionPolicy {
-    fun canPlanMidweek(user: AppUser): Boolean = user.approved && CongregationRole.TASK_PLANNER in user.roles
+    fun canPlanMidweek(user: AppUser): Boolean = user.hasRole(CongregationRole.TASK_PLANNER)
 }
