@@ -363,6 +363,71 @@ class FirestoreRestUserRepositoryTest {
     }
 
     @Test
+    fun `observeGlobalAdminProfile maps the admin document and is empty without one`() {
+        val adminDocument = """
+            {"name":"x/admins/uid-1","fields":{
+              "lastName":{"stringValue":"Admin"},"firstName":{"stringValue":"Anna"},
+              "mobilePhone":{"stringValue":"0170"},"landlinePhone":{"stringValue":"030 1"},
+              "emails":{"arrayValue":{"values":[{"stringValue":"a@b.de"}]}}}}
+        """.trimIndent()
+        runWithServer({ FakeResponse(200, adminDocument) }) { server, repository ->
+            assertEquals(
+                MemberProfile(
+                    lastName = "Admin",
+                    firstName = "Anna",
+                    mobilePhone = "0170",
+                    landlinePhone = "030 1",
+                    emails = listOf("a@b.de"),
+                ),
+                repository.observeGlobalAdminProfile("uid-1").first(),
+            )
+            assertEquals("${FakeFirestoreRestServer.DOCUMENTS_PATH}/admins/uid-1", server.requests.first().path)
+        }
+        runWithServer({ FakeResponse(200, """{"name":"x/admins/uid-1"}""") }) { _, repository ->
+            assertEquals(MemberProfile(), repository.observeGlobalAdminProfile("uid-1").first())
+        }
+        runWithServer({ FakeResponse(404) }) { _, repository ->
+            assertEquals(MemberProfile(), repository.observeGlobalAdminProfile("uid-1").first())
+        }
+    }
+
+    @Test
+    fun `updateGlobalAdminProfile patches only the five contact fields of an existing admin document`() =
+        runWithServer({ FakeResponse(200, "{}") }) { server, repository ->
+            val profile = MemberProfile(
+                lastName = "Admin",
+                firstName = "Anna",
+                mobilePhone = "0170",
+                emails = listOf("a@b.de"),
+                street = "Hauptstr. 1",
+                isSpeaker = true,
+            )
+
+            repository.updateGlobalAdminProfile("uid-1", profile).getOrThrow()
+
+            val request = server.requests.single()
+            assertEquals("PATCH", request.method)
+            assertEquals("${FakeFirestoreRestServer.DOCUMENTS_PATH}/admins/uid-1", request.path)
+            assertEquals(
+                listOf("lastName", "firstName", "mobilePhone", "landlinePhone", "emails")
+                    .joinToString("&") { "updateMask.fieldPaths=$it" } + "&currentDocument.exists=true",
+                request.query,
+            )
+            assertTrue(request.body.contains(""""lastName":{"stringValue":"Admin"}"""))
+            assertTrue(request.body.contains(""""landlinePhone":{"stringValue":""}"""))
+            assertTrue(request.body.contains(""""emails":{"arrayValue":{"values":[{"stringValue":"a@b.de"}]}}"""))
+            assertFalse(request.body.contains("street"))
+            assertFalse(request.body.contains("isSpeaker"))
+        }
+
+    @Test
+    fun `updateGlobalAdminProfile reports a rejected write`() {
+        runWithServer({ FakeResponse(403) }) { _, repository ->
+            assertIs<IOException>(repository.updateGlobalAdminProfile("uid-1", MemberProfile()).exceptionOrNull())
+        }
+    }
+
+    @Test
     fun `removeMember deletes the member document and reports failures`() {
         runWithServer({ FakeResponse(200, "{}") }) { server, repository ->
             repository.removeMember(congregation, "uid-1").getOrThrow()

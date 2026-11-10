@@ -590,6 +590,31 @@ await expect('Mitglied löscht ein fremdes Mitglied nicht', api('DELETE', `${MEM
 await expect('Admin löscht ein anderes Mitglied', api('DELETE', `${MEMBERS}/${spare.uid}`, undefined, congAdmin.token), true);
 await expect('Admin löscht einen anderen Admin', api('DELETE', `${MEMBERS}/${lastAdmin.uid}`, undefined, congAdmin.token), true);
 
+// ---------- Globaler Admin pflegt die eigenen Kontaktdaten im Admin-Dokument (CP-125) ----------
+const ADMIN_DOC = `admins/${admin.uid}`;
+const adminProfile = { lastName: 'Admin', firstName: 'Anna', mobilePhone: '0170 123456', landlinePhone: '', emails: ['a@b.de'] };
+const putAdminProfile = (uid, data, token) => api('PATCH', `admins/${uid}`, fields(data), token);
+const withoutKey = (data, key) => Object.fromEntries(Object.entries(data).filter(([name]) => name !== key));
+await expect('Global Admin pflegt die eigenen Kontaktdaten', putAdminProfile(admin.uid, adminProfile, admin.token), true);
+await expect('Global Admin ändert die Kontaktdaten erneut', putAdminProfile(admin.uid, { ...adminProfile, lastName: 'Neu', emails: [] }, admin.token), true);
+await expect('Kontaktdaten ohne E-Mail-Liste', putAdminProfile(admin.uid, withoutKey(adminProfile, 'emails'), admin.token), false);
+await expect('Kontaktdaten ohne Namen', putAdminProfile(admin.uid, withoutKey(adminProfile, 'lastName'), admin.token), false);
+await expect('Kontaktdaten mit Zusatzfeld', putAdminProfile(admin.uid, { ...adminProfile, role: 'x' }, admin.token), false);
+await expect('Kontaktdaten mit Adresse', putAdminProfile(admin.uid, { ...adminProfile, street: 'Hauptstr. 1' }, admin.token), false);
+await expect('Kontaktdaten mit ungültiger Telefonnummer', putAdminProfile(admin.uid, { ...adminProfile, mobilePhone: '0170-abc' }, admin.token), false);
+await expect('Kontaktdaten mit zu langem Namen', putAdminProfile(admin.uid, { ...adminProfile, firstName: 'x'.repeat(101) }, admin.token), false);
+await expect('Kontaktdaten mit ungültiger E-Mail-Adresse', putAdminProfile(admin.uid, { ...adminProfile, emails: ['keine-adresse'] }, admin.token), false);
+await expect('Kontaktdaten mit vier E-Mail-Adressen', putAdminProfile(admin.uid, { ...adminProfile, emails: ['a@b.de', 'c@d.de', 'e@f.de', 'g@h.de'] }, admin.token), false);
+await expect('Kontaktdaten mit Name als Zahl', putAdminProfile(admin.uid, { ...adminProfile, lastName: 5 }, admin.token), false);
+await expect('Anderer Nutzer ändert die Kontaktdaten eines globalen Admins', putAdminProfile(admin.uid, adminProfile, plain.token), false);
+await expect('Vortragsplaner ändert die Kontaktdaten eines globalen Admins', putAdminProfile(admin.uid, adminProfile, planner.token), false);
+await expect('Global Admin ändert die Kontaktdaten eines anderen globalen Admins', putAdminProfile(dualAdmin.uid, adminProfile, admin.token), false);
+await expect('Nutzer legt kein Admin-Dokument für sich an', putAdminProfile(plain.uid, adminProfile, plain.token), false);
+await expect('Global Admin löscht das eigene Admin-Dokument nicht', api('DELETE', ADMIN_DOC, undefined, admin.token), false);
+await expect('Global Admin liest das eigene Admin-Dokument', api('GET', ADMIN_DOC, undefined, admin.token), true);
+await expect('Anderer Nutzer liest ein Admin-Dokument nicht', api('GET', ADMIN_DOC, undefined, plain.token), false);
+await expect('Admin-Dokumente lassen sich nicht auflisten', api('GET', 'admins', undefined, admin.token), false);
+
 console.log(`${count} checks, ${failures.length} failures`);
 failures.forEach((failure) => console.log(`FAILURE: ${failure}`));
 process.exitCode = failures.length === 0 ? 0 : 1;

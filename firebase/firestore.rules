@@ -6,8 +6,12 @@ rules_version = '2';
 //
 // Collection: admins
 // Document ID: Firebase Auth UID
-// Fields: none required. The existence of the document marks a global
-//   administrator. Documents are created manually (Firebase console / Admin SDK).
+// The existence of the document marks a global administrator. Documents are created and deleted manually (Firebase
+//   console / Admin SDK), never by the client. A global admin has no member document (ADR-0013) and keeps the own
+//   contact data in this document instead (ADR-0022). Fields (all five or none, as the document starts empty):
+//   - lastName, firstName: string (<= 100 chars)
+//   - mobilePhone, landlinePhone: string (<= 30 chars, digits and + ( ) / - space)
+//   - emails: list (<= 3) of string (an e-mail address, <= 254 chars)
 //
 // Organization hierarchy (readable WITHOUT sign-in so that a user can pick the
 // congregation on the login screen; only the documents of the hierarchy are
@@ -380,6 +384,18 @@ service cloud.firestore {
       return isGlobalAdmin() || (isAuthenticated() && exists(memberPath));
     }
 
+    // Contact data a global admin keeps in the own admin document: exactly the own contact fields of a member
+    // without address and emergency contacts.
+    function isValidAdminProfile(data) {
+      return data.keys().hasOnly(['lastName', 'firstName', 'mobilePhone', 'landlinePhone', 'emails']) &&
+        data.keys().hasAll(['lastName', 'firstName', 'mobilePhone', 'landlinePhone', 'emails']) &&
+        isShortString(data.lastName, 100) &&
+        isShortString(data.firstName, 100) &&
+        isValidPhone(data.mobilePhone) &&
+        isValidPhone(data.landlinePhone) &&
+        isValidEmails(data.emails);
+    }
+
     // Admin contacts only carry the name; nothing else of the member is exposed.
     function isValidAdminContact(data) {
       return data.keys().hasOnly(['firstName', 'lastName']) &&
@@ -559,9 +575,11 @@ service cloud.firestore {
     // ===============================================================
 
     match /admins/{uid} {
-      // Each user may check whether they are a global admin; nobody may write via the client.
+      // Each user may check whether they are a global admin. The document itself is created and deleted manually; a
+      // global admin may only change the own contact data in it (update needs an existing document).
       allow get: if isAuthenticated() && request.auth.uid == uid;
-      allow list, write: if false;
+      allow list, create, delete: if false;
+      allow update: if isAuthenticated() && request.auth.uid == uid && isValidAdminProfile(request.resource.data);
     }
 
     // ===============================================================

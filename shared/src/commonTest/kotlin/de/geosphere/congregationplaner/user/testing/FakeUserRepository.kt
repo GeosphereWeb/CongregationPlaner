@@ -30,6 +30,8 @@ internal class FakeUserRepository(user: AppUser? = null, members: List<AppUser> 
     var updateProfileResult: Result<Unit> = Result.success(Unit)
     var updateOwnProfileResult: Result<Unit> = Result.success(Unit)
     var removeResult: Result<Unit> = Result.success(Unit)
+    val adminProfile = MutableStateFlow(MemberProfile())
+    var updateGlobalAdminProfileResult: Result<Unit> = Result.success(Unit)
 
     var loadCount = 0
         private set
@@ -40,6 +42,7 @@ internal class FakeUserRepository(user: AppUser? = null, members: List<AppUser> 
     val updatedProfiles = mutableListOf<AppUser>()
     val updatedOwnProfiles = mutableListOf<AppUser>()
     val removedUids = mutableListOf<String>()
+    val updatedGlobalAdminProfiles = mutableListOf<Pair<String, MemberProfile>>()
 
     override suspend fun getOrCreateUser(authUser: FirebaseUser, congregation: CongregationRef): Result<AppUser> {
         loadCount++
@@ -50,6 +53,14 @@ internal class FakeUserRepository(user: AppUser? = null, members: List<AppUser> 
     override fun observeUser(congregation: CongregationRef, uid: String): Flow<AppUser?> = user
 
     override suspend fun isGlobalAdmin(uid: String): Result<Boolean> = globalAdminResult
+
+    override fun observeGlobalAdminProfile(uid: String): Flow<MemberProfile> = adminProfile
+
+    override suspend fun updateGlobalAdminProfile(uid: String, profile: MemberProfile): Result<Unit> =
+        updateGlobalAdminProfileResult.onSuccess {
+            updatedGlobalAdminProfiles += uid to profile
+            adminProfile.value = profile
+        }
 
     override fun observeMembers(congregation: CongregationRef): Flow<List<AppUser>> {
         requestedCongregation = congregation
