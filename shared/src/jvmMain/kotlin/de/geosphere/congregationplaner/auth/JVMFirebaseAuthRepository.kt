@@ -182,17 +182,25 @@ private fun buildDesktopAuthUrl(endpoint: String, apiKey: String): String {
     return buildDesktopAuthUrl(endpoint, apiKey, configuredHost, configuredPort)
 }
 
-private fun isFirebaseAuthEmulatorEnabled(): Boolean {
-    val explicitEnabled = DesktopEnv.getValue(
-        "FIREBASE_AUTH_EMULATOR_ENABLED",
-        "firebase.authEmulatorEnabled",
-    )
-    if (explicitEnabled != null) {
-        return explicitEnabled.equals("true", ignoreCase = true)
-    }
+private fun isFirebaseAuthEmulatorEnabled(): Boolean = authEmulatorEnabled(
+    useEmulator = DesktopEnv.useEmulatorSetting(),
+    explicitEnabled = DesktopEnv.getValue("FIREBASE_AUTH_EMULATOR_ENABLED", "firebase.authEmulatorEnabled"),
+    host = DesktopEnv.getValue("FIREBASE_AUTH_EMULATOR_HOST", "firebase.authEmulatorHost"),
+    port = DesktopEnv.getValue("FIREBASE_AUTH_EMULATOR_PORT", "firebase.authEmulatorPort"),
+)
 
-    val host = DesktopEnv.getValue("FIREBASE_AUTH_EMULATOR_HOST", "firebase.authEmulatorHost")
-    val port = DesktopEnv.getValue("FIREBASE_AUTH_EMULATOR_PORT", "firebase.authEmulatorPort")
+/**
+ * Der Schalter `FIREBASE_USE_EMULATOR` hat Vorrang; fehlt er, entscheidet `FIREBASE_AUTH_EMULATOR_ENABLED`, und
+ * ohne beides gilt der Emulator, sobald ein Host oder Port gesetzt ist.
+ */
+internal fun authEmulatorEnabled(
+    useEmulator: Boolean?,
+    explicitEnabled: String?,
+    host: String?,
+    port: String?,
+): Boolean {
+    if (useEmulator != null) return useEmulator
+    if (explicitEnabled != null) return explicitEnabled.equals("true", ignoreCase = true)
     return !host.isNullOrBlank() || !port.isNullOrBlank()
 }
 
