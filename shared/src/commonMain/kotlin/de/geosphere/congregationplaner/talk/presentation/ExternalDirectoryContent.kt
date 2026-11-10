@@ -11,7 +11,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -160,7 +159,7 @@ internal fun ExternalDirectoryContent(
                             header = { DirectoryFilterBar(state, actions) },
                             spacing = 8.dp,
                         ) {
-                            ExternalDirectoryTree(state, actions, isBusy, listState) { deleteRequest = it }
+                            ExternalDirectoryTree(state, actions, isBusy, listState)
                         }
                     }
                 },
@@ -178,6 +177,7 @@ internal fun ExternalDirectoryContent(
                                     onDiscard = if (singlePane) actions.onClose else actions.onDiscard,
                                 ),
                                 isBusy = isBusy,
+                                onRequestDelete = { deleteRequest = it },
                             )
                         }
                     }
@@ -221,7 +221,6 @@ private fun ExternalDirectoryTree(
     actions: ExternalDirectoryActions,
     isBusy: Boolean,
     listState: LazyListState,
-    onRequestDelete: (DeleteRequest) -> Unit,
 ) {
     val directory = state.visibleDirectory
     val editor = state.editor
@@ -240,15 +239,9 @@ private fun ExternalDirectoryTree(
                 SelectableListCard(
                     selected = editor is ExternalDirectoryEditor.Circuit && editor.id == circuit.id,
                     onSelect = { actions.onSelectCircuit(circuit) },
-                    onDelete = {
-                        onRequestDelete(
-                            DeleteRequest("Kreis „${circuit.name}“ wird gelöscht.") {
-                                actions.onDeleteCircuit(circuit)
-                            },
-                        )
-                    },
+                    onDelete = {},
                     actionsEnabled = !isBusy,
-                    canDelete = true,
+                    canDelete = false,
                     accent = NightColors.Lavender,
                 ) {
                     Text("Kreis ${circuit.name}", style = MaterialTheme.typography.titleMedium)
@@ -260,15 +253,9 @@ private fun ExternalDirectoryTree(
                     SelectableListCard(
                         selected = editor is ExternalDirectoryEditor.Congregation && editor.id == congregation.id,
                         onSelect = { actions.onSelectCongregation(congregation) },
-                        onDelete = {
-                            onRequestDelete(
-                                DeleteRequest("Versammlung „${congregation.name}“ wird gelöscht.") {
-                                    actions.onDeleteCongregation(congregation)
-                                },
-                            )
-                        },
+                        onDelete = {},
                         actionsEnabled = !isBusy,
-                        canDelete = true,
+                        canDelete = false,
                         accent = NightColors.Sky,
                     ) {
                         Text("Versammlung ${congregation.name}", style = MaterialTheme.typography.titleSmall)
@@ -280,15 +267,9 @@ private fun ExternalDirectoryTree(
                         SelectableListCard(
                             selected = editor is ExternalDirectoryEditor.Speaker && editor.id == speaker.id,
                             onSelect = { actions.onSelectSpeaker(speaker) },
-                            onDelete = {
-                                onRequestDelete(
-                                    DeleteRequest("Redner „${speaker.displayName()}“ wird gelöscht.") {
-                                        actions.onDeleteSpeaker(speaker)
-                                    },
-                                )
-                            },
+                            onDelete = {},
                             actionsEnabled = !isBusy,
-                            canDelete = true,
+                            canDelete = false,
                             accent = NightColors.Mint,
                         ) {
                             Text(speaker.displayName())
@@ -386,6 +367,7 @@ private fun ExternalDirectoryDetail(
     state: ExternalDirectoryUiState,
     actions: ExternalDirectoryActions,
     isBusy: Boolean,
+    onRequestDelete: (DeleteRequest) -> Unit,
 ) {
     val directory = state.directory
     when (val editor = state.editor) {
@@ -397,6 +379,13 @@ private fun ExternalDirectoryDetail(
             state = state,
             actions = actions,
             isBusy = isBusy,
+            onDelete = editor.original?.let { circuit ->
+                {
+                    onRequestDelete(
+                        DeleteRequest("Kreis „${circuit.name}“ wird gelöscht.") { actions.onDeleteCircuit(circuit) },
+                    )
+                }
+            },
         ) {
             NameField("Name des Kreises", editor.circuit.name) {
                 actions.onEditorChange(editor.copy(circuit = editor.circuit.copy(name = it)))
@@ -409,6 +398,15 @@ private fun ExternalDirectoryDetail(
             state = state,
             actions = actions,
             isBusy = isBusy,
+            onDelete = editor.original?.let { congregation ->
+                {
+                    onRequestDelete(
+                        DeleteRequest("Versammlung „${congregation.name}“ wird gelöscht.") {
+                            actions.onDeleteCongregation(congregation)
+                        },
+                    )
+                }
+            },
         ) {
             Text("Kreis: ${directory.circuitName(editor.congregation.circuitId)}")
             NameField("Name der Versammlung", editor.congregation.name) {
@@ -422,6 +420,15 @@ private fun ExternalDirectoryDetail(
             state = state,
             actions = actions,
             isBusy = isBusy,
+            onDelete = editor.original?.let { speaker ->
+                {
+                    onRequestDelete(
+                        DeleteRequest("Redner „${speaker.displayName()}“ wird gelöscht.") {
+                            actions.onDeleteSpeaker(speaker)
+                        },
+                    )
+                }
+            },
         ) {
             SpeakerFields(editor, directory) { actions.onEditorChange(it) }
         }
@@ -518,18 +525,23 @@ private fun EditorCard(
     state: ExternalDirectoryUiState,
     actions: ExternalDirectoryActions,
     isBusy: Boolean,
+    onDelete: (() -> Unit)?,
     fields: @Composable () -> Unit,
 ) {
     Card(modifier = Modifier.fillMaxWidth(), colors = nightCardColors()) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium)
             fields()
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = actions.onSave, enabled = !isBusy && editor.isDirty) {
-                    Text(if (state.isSaving) "Speichert …" else "Speichern")
-                }
-                TextButton(onClick = actions.onDiscard, enabled = !isBusy) { Text("Abbrechen") }
-            }
+            EditorActions(
+                saveText = if (state.isSaving) "Speichert …" else "Speichern",
+                saveEnabled = !isBusy && editor.isDirty,
+                discardEnabled = !isBusy,
+                onSave = actions.onSave,
+                onDiscard = actions.onDiscard,
+                // Nur ein gespeicherter Eintrag lässt sich löschen; ein neuer ist noch nicht angelegt.
+                onDelete = onDelete,
+                deleteEnabled = !isBusy,
+            )
         }
     }
 }
