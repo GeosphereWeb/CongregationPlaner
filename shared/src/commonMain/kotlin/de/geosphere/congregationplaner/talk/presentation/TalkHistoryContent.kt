@@ -81,7 +81,7 @@ internal fun TalkHistoryContent(state: TalkHistoryUiState, actions: TalkHistoryA
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         ListPaneHeader("Vortragshistorie")
-        if (!state.canPlan) {
+        if (!state.canView) {
             Text("Dafür fehlt dir die Berechtigung.")
             return@Column
         }
@@ -252,7 +252,7 @@ private fun TalkHistoryContentPreview() = PreviewThemeWrapper {
                 ),
             ),
             isLoading = false,
-            canPlan = true,
+            canView = true,
             selectedNumber = 1,
         ),
         actions = TalkHistoryActions(),
@@ -284,7 +284,7 @@ private fun TalkHistorySearchPreview() = PreviewThemeWrapper {
                 ),
             ),
             isLoading = false,
-            canPlan = true,
+            canView = true,
             query = "mus",
         ),
         actions = TalkHistoryActions(),
@@ -300,7 +300,7 @@ private fun TalkHistoryGroupedPreview() = PreviewThemeWrapper {
             talks = talks,
             history = listOf(TalkHistoryEntry(2, listOf(LocalDate(2026, 5, 3)))),
             isLoading = false,
-            canPlan = true,
+            canView = true,
             groupByFrequency = true,
         ),
         actions = TalkHistoryActions(),

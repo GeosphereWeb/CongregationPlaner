@@ -39,3 +39,6 @@ internal fun approvalsTitle(count: Int): String = when (count) {
 
 /** Marke an der Userverwaltung; ohne offene Freigaben gibt es keine. */
 internal fun approvalsBadge(count: Int?): String? = count?.takeIf { it > 0 }?.let { "$it offen" }
+
+internal fun talkSectionLabel(asHelper: Boolean): String =
+    if (asHelper) "Als Vortragsplanungs-Helfer" else "Als Vortragsplaner"

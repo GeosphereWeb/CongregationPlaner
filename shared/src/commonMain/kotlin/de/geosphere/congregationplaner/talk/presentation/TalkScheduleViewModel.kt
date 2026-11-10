@@ -56,6 +56,7 @@ data class TalkScheduleUiState(
     val chairmen: List<Chairman> = emptyList(),
     val externalSpeakers: List<ExternalSpeaker> = emptyList(),
     val isLoading: Boolean = true,
+    val canView: Boolean = false,
     val canPlan: Boolean = false,
     /** Ohne diese Berechtigung können die Redner nicht geladen werden. */
     val canViewMembers: Boolean = false,
@@ -103,10 +104,16 @@ class TalkScheduleViewModel(
 
     fun onCurrentUserChanged(user: AppUser) {
         currentUser = user
+        val canView = permissionPolicy.canViewTalkPlanning(user)
         val canPlan = permissionPolicy.canPlanTalks(user)
-        val canViewMembers = canPlan && userPolicy.canViewMembers(user)
+        val canViewMembers = canView && userPolicy.canViewMembers(user)
         mutableUiState.update {
-            it.copy(canPlan = canPlan, canViewMembers = canViewMembers, editor = it.editor?.takeIf { canPlan })
+            it.copy(
+                canView = canView,
+                canPlan = canPlan,
+                canViewMembers = canViewMembers,
+                editor = it.editor?.takeIf { canPlan },
+            )
         }
         observeReferenceData(user)
         observeSlots()
@@ -135,6 +142,8 @@ class TalkScheduleViewModel(
     }
 
     fun editSlot(slot: TalkSlot) {
+        // Wer nur sehen darf, öffnet keinen Editor und bekommt auch keine Fehlermeldung.
+        if (!mutableUiState.value.canPlan && mutableUiState.value.canView) return
         if (mutableUiState.value.isSaving || !checkAllowed()) return
         mutableUiState.update { it.copy(editor = TalkSlotEditorState(slot, slot), errorMessage = null) }
     }
@@ -345,7 +354,7 @@ class TalkScheduleViewModel(
 
     private fun observeSlots() {
         val user = currentUser ?: return
-        val congregation = user.congregation?.takeIf { permissionPolicy.canPlanTalks(user) }
+        val congregation = user.congregation?.takeIf { permissionPolicy.canViewTalkPlanning(user) }
         val year = mutableUiState.value.year
         if (observing && congregation == observedCongregation && year == observedYear) return
 
@@ -375,14 +384,13 @@ class TalkScheduleViewModel(
     // Sie werden nur beobachtet, solange der Nutzer planen (bzw. Mitglieder einsehen) darf.
     private fun observeReferenceData(user: AppUser) {
         val canPlan = permissionPolicy.canPlanTalks(user)
+        val canView = permissionPolicy.canViewTalkPlanning(user)
+        // Wochenereignisse und Vortragsliste braucht nur der Editor des Planers.
         if (!canPlan) {
             weekEventsJob?.cancel()
             weekEventsJob = null
             talksJob?.cancel()
             talksJob = null
-            externalSpeakersJob?.cancel()
-            externalSpeakersJob = null
-            mutableUiState.update { it.copy(externalSpeakers = emptyList()) }
         } else {
             if (weekEventsJob == null) {
                 weekEventsJob = launchReference("Wochenereignisse", observeWeekEvents()) { events ->
@@ -394,13 +402,19 @@ class TalkScheduleViewModel(
                     mutableUiState.update { it.copy(talks = talks) }
                 }
             }
+        }
+        if (!canView) {
+            externalSpeakersJob?.cancel()
+            externalSpeakersJob = null
+            mutableUiState.update { it.copy(externalSpeakers = emptyList()) }
+        } else {
             if (externalSpeakersJob == null) {
                 externalSpeakersJob = launchReference("Externe Redner", loadExternalSpeakers(user)) { speakers ->
                     mutableUiState.update { it.copy(externalSpeakers = speakers) }
                 }
             }
         }
-        if (canPlan && userPolicy.canViewMembers(user)) {
+        if (canView && userPolicy.canViewMembers(user)) {
             if (membersJob == null) {
                 membersJob = launchReference(MEMBERS_NAME, observeTalkMembers(user)) { members ->
                     mutableUiState.update { it.copy(speakers = members.speakers, chairmen = members.chairmen) }
