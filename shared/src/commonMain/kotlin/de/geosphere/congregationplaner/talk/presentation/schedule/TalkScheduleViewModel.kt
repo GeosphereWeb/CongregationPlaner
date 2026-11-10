@@ -150,7 +150,9 @@ class TalkScheduleViewModel(
 
     /** Während des Speicherns bleibt der Editor unverändert, sonst würde das Ergebnis die Eingaben überschreiben. */
     fun updateEditor(slot: TalkSlot) {
-        mutableUiState.update { if (it.isSaving) it else it.copy(editor = it.editor?.copy(slot = slot)) }
+        mutableUiState.update {
+            if (it.isSaving) it else it.copy(editor = it.editor?.copy(slot = slot.withLimitedNote()))
+        }
     }
 
     /** Übernimmt das Ereignis samt der Vorbelegung „Vortrag entfällt“; `null` entfernt das Ereignis. */

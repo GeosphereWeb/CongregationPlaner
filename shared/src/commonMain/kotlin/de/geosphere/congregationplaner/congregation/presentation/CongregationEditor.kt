@@ -37,7 +37,7 @@ internal fun CongregationEditor(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                if (congregation.id.isBlank()) "Neue Versammlung" else "Versammlung bearbeiten",
+                if (congregation.isNew) "Neue Versammlung" else "Versammlung bearbeiten",
                 style = MaterialTheme.typography.titleMedium,
             )
             OutlinedTextField(

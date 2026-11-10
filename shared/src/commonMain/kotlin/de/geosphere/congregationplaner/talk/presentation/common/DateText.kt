@@ -22,3 +22,6 @@ internal fun LocalDate.toPickerMillis(): Long = atStartOfDayIn(TimeZone.UTC).toE
 
 internal fun dateFromPickerMillis(millis: Long): LocalDate =
     Instant.fromEpochMilliseconds(millis).toLocalDateTime(TimeZone.UTC).date
+
+/** Kurzer Wochentag, z. B. `So`. */
+internal fun LocalDate.weekdayShortName(): String = WEEKDAY_SHORT_NAMES[dayOfWeek.isoDayNumber - 1]

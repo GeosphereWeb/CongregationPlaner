@@ -50,6 +50,8 @@ data class CongregationSelectionUiState(
 ) {
     val isPicking: Boolean get() = levels.isNotEmpty()
 
+    val canApplyInviteLink: Boolean get() = inviteLinkInput.isNotBlank() && !isResolvingLink
+
     /**
      * Die Versammlung, mit der die Anmeldung läuft: solange eine neue vorgemerkt ist, zählt die gespeicherte Auswahl
      * nicht, sonst würde der Nutzer deren Mitglied statt Admin der neuen.

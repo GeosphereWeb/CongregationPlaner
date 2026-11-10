@@ -96,17 +96,6 @@ private fun SectionTitle(text: String) {
     Text(text, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 8.dp))
 }
 
-/** Die Eingabe passt auf Familien-, Vornamen oder die Versammlung, ohne Rücksicht auf Groß- und Kleinschreibung. */
-internal fun List<ExternalSpeaker>.matchingExternal(query: String): List<ExternalSpeaker> {
-    val text = query.trim().lowercase()
-    return filter { speaker ->
-        text.isEmpty() ||
-            speaker.lastName.lowercase().contains(text) ||
-            speaker.firstName.lowercase().contains(text) ||
-            speaker.congregationName.lowercase().contains(text)
-    }
-}
-
 @ThemePreviews
 @Composable
 private fun SpeakerPickerDialogPreview() = PreviewThemeWrapper {

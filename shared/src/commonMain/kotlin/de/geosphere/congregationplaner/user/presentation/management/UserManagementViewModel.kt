@@ -15,6 +15,7 @@ import de.geosphere.congregationplaner.user.domain.usecase.RemoveMemberUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.SetMemberApprovalUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.SetMemberRoleUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.UpdateMemberProfileUseCase
+import de.geosphere.congregationplaner.user.presentation.contact.withinInputLimits
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -58,6 +59,10 @@ data class UserManagementUiState(
     override val isSaving: Boolean = false,
 ) : ListDetailState {
     override val hasDetail: Boolean get() = editor != null
+
+    /** Freigabe und Rollen ändern sich sofort; deshalb gilt für das gewählte Mitglied der Stand aus der Liste. */
+    val selectedMember: AppUser?
+        get() = editor?.member?.let { selected -> members.firstOrNull { it.uid == selected.uid } ?: selected }
 
     fun permissionsOf(member: AppUser): MemberPermissions = memberPermissions[member.uid] ?: MemberPermissions()
 }
@@ -146,7 +151,7 @@ class UserManagementViewModel(
     /** Hält die Angaben stimmig, z. B. verliert ein Kind die Taufe und ein Nicht-Bruder das Dienstamt. */
     fun updateEditor(profile: MemberProfile) {
         updateState { state ->
-            state.copy(editor = state.editor?.copy(profile = profile.normalized()))
+            state.copy(editor = state.editor?.copy(profile = profile.normalized().withinInputLimits()))
         }
     }
 

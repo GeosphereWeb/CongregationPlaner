@@ -247,10 +247,10 @@ private fun ExternalDirectoryTree(
                     accent = NightColors.Lavender,
                 ) {
                     Text("Kreis ${circuit.name}", style = MaterialTheme.typography.titleMedium)
-                    Text(congregationCountLabel(directory.congregations.count { it.circuitId == circuit.id }))
+                    Text(congregationCountLabel(directory.congregationsIn(circuit.id).size))
                 }
             }
-            directory.congregations.filter { it.circuitId == circuit.id }.forEach { congregation ->
+            directory.congregationsIn(circuit.id).forEach { congregation ->
                 stickyHeader(key = "congregation-${congregation.id}") {
                     SelectableListCard(
                         selected = editor is ExternalDirectoryEditor.Congregation && editor.id == congregation.id,
@@ -261,10 +261,10 @@ private fun ExternalDirectoryTree(
                         accent = NightColors.Sky,
                     ) {
                         Text("Versammlung ${congregation.name}", style = MaterialTheme.typography.titleSmall)
-                        Text("${directory.speakers.count { it.congregationId == congregation.id }} Redner")
+                        Text(speakerCountLabel(directory.speakersIn(congregation.id).size))
                     }
                 }
-                directory.speakers.filter { it.congregationId == congregation.id }.forEach { speaker ->
+                directory.speakersIn(congregation.id).forEach { speaker ->
                     item(key = "speaker-${speaker.id}") {
                         SelectableListCard(
                             selected = editor is ExternalDirectoryEditor.Speaker && editor.id == speaker.id,
@@ -293,18 +293,17 @@ private fun DirectoryFilterBar(state: ExternalDirectoryUiState, actions: Externa
     if (directory.circuits.isEmpty()) return
     val circuits = directory.circuitOptions(state.filter)
     val congregations = directory.congregationOptions(state.filter, state.congregationQuery)
-    val chosenCongregations = directory.congregationOptions(state.filter, "").filter { it.selected }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
         FilterMenu(
             title = "Kreis",
-            summary = filterSummary(circuits.filter { it.selected }.map { it.label }, "Alle Kreise", "Kreise"),
+            summary = directory.circuitFilterSummary(state.filter),
             options = circuits,
             actions = FilterMenuActions(actions.onToggleCircuit, actions.onClearCircuits, "Alle Kreise"),
             modifier = Modifier.weight(1f),
         )
         FilterMenu(
             title = "Versammlung",
-            summary = filterSummary(chosenCongregations.map { it.label }, "Alle Versammlungen", "Versammlungen"),
+            summary = directory.congregationFilterSummary(state.filter),
             options = congregations,
             actions = FilterMenuActions(
                 actions.onToggleCongregation,
@@ -358,11 +357,6 @@ private fun FilterMenu(
         }
     }
 }
-
-internal fun congregationCountLabel(count: Int): String = if (count == 1) "1 Versammlung" else "$count Versammlungen"
-
-private fun VisitingSpeaker.displayName(): String =
-    listOf(lastName, firstName).filter(String::isNotBlank).joinToString(", ")
 
 @Composable
 private fun ExternalDirectoryDetail(
@@ -442,9 +436,6 @@ private fun ExternalDirectoryDetail(
     }
 }
 
-private fun ExternalDirectory.circuitName(circuitId: String): String =
-    circuits.firstOrNull { it.id == circuitId }?.name.orEmpty()
-
 @Composable
 private fun SpeakerFields(
     editor: ExternalDirectoryEditor.Speaker,
@@ -492,17 +483,15 @@ private fun RankingBar(ranking: Int, onTap: (Int) -> Unit) {
 @Composable
 private fun CongregationSelector(directory: ExternalDirectory, selectedId: String, onSelect: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-    fun label(congregation: ExternalCongregation) =
-        "${congregation.name} (${directory.circuitName(congregation.circuitId)})"
     Column {
         Text("Versammlung", style = MaterialTheme.typography.labelMedium)
         OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
-            Text(directory.congregations.firstOrNull { it.id == selectedId }?.let(::label).orEmpty())
+            Text(directory.congregationLabel(selectedId))
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             directory.congregations.forEach { congregation ->
                 DropdownMenuItem(
-                    text = { Text(label(congregation)) },
+                    text = { Text(directory.congregationLabel(congregation)) },
                     onClick = {
                         onSelect(congregation.id)
                         expanded = false

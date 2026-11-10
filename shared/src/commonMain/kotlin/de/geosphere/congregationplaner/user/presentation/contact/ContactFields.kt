@@ -80,7 +80,7 @@ internal fun ContactFields(
 
         if (showAddressAndEmergencyContacts) {
             SectionTitle("Adresse", "Sehen die Admins und Planer der Versammlung.")
-            ProfileField(profile.street, "Straße und Hausnummer", enabled, MemberProfile.MAX_STREET_LENGTH, {
+            ProfileField(profile.street, "Straße und Hausnummer", enabled, {
                 onChange(profile.copy(street = it))
             })
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -88,7 +88,6 @@ internal fun ContactFields(
                     profile.postalCode,
                     "PLZ",
                     enabled,
-                    MemberProfile.MAX_POSTAL_CODE_LENGTH,
                     { onChange(profile.copy(postalCode = it)) },
                     KeyboardType.Number,
                     Modifier.weight(1f),
@@ -97,7 +96,6 @@ internal fun ContactFields(
                     profile.city,
                     "Ort",
                     enabled,
-                    MemberProfile.MAX_CITY_LENGTH,
                     { onChange(profile.copy(city = it)) },
                     modifier = Modifier.weight(2f),
                 )
@@ -164,10 +162,10 @@ private fun EmergencyContactCard(
                 contentColor = NightColors.Coral,
             )
         }
-        ProfileField(contact.name, "Name", enabled, MemberProfile.MAX_CONTACT_NAME_LENGTH, {
+        ProfileField(contact.name, "Name", enabled, {
             onChange(contact.copy(name = it))
         })
-        ProfileField(contact.relation, "Beziehung (optional)", enabled, MemberProfile.MAX_RELATION_LENGTH, {
+        ProfileField(contact.relation, "Beziehung (optional)", enabled, {
             onChange(contact.copy(relation = it))
         })
         contact.phones.forEachIndexed { index, phone ->
@@ -221,7 +219,7 @@ private fun PhoneField(
 ) {
     OutlinedTextField(
         value = value,
-        onValueChange = { onValueChange(it.take(MemberProfile.MAX_PHONE_LENGTH)) },
+        onValueChange = onValueChange,
         label = { Text(label) },
         leadingIcon = { Icon(icon, contentDescription = null, tint = NightColors.OnBackgroundMuted) },
         trailingIcon = onRemove?.let { remove ->
@@ -245,14 +243,13 @@ internal fun ProfileField(
     value: String,
     label: String,
     enabled: Boolean,
-    maxLength: Int,
     onValueChange: (String) -> Unit,
     keyboardType: KeyboardType = KeyboardType.Text,
     modifier: Modifier = Modifier.fillMaxWidth(),
 ) {
     OutlinedTextField(
         value = value,
-        onValueChange = { onValueChange(it.take(maxLength)) },
+        onValueChange = onValueChange,
         label = { Text(label) },
         singleLine = true,
         enabled = enabled,
