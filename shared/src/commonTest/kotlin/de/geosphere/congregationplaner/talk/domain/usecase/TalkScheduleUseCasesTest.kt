@@ -168,6 +168,29 @@ class TalkScheduleUseCasesTest {
     }
 
     @Test
+    fun `speakers carry the phone numbers of their member profile`() = runBlocking {
+        val users = FakeUserRepository(
+            members = listOf(
+                AppUser(
+                    uid = "1",
+                    profile = MemberProfile(
+                        lastName = "Berg",
+                        firstName = "Lea",
+                        isSpeaker = true,
+                        mobilePhone = "0170 1234567",
+                        landlinePhone = "089 123456",
+                    ),
+                ),
+            ),
+        )
+
+        val speaker = ObserveTalkMembersUseCase(ObserveMembersUseCase(users))(admin).first().speakers.single()
+
+        assertEquals("0170 1234567", speaker.mobilePhone)
+        assertEquals("089 123456", speaker.landlinePhone)
+    }
+
+    @Test
     fun `save accepts an external speaker with congregation and trims the fields`() = runBlocking {
         val external = slot().copy(
             externalSpeakerId = "e1",
