@@ -21,12 +21,12 @@ import dev.zacsweers.metro.createGraph
 
 /**
  * „Mein Profil“ unter „Einstellungen“: Namen, Telefon, E-Mail, Adresse und Notfallkontakte selbst pflegen. Nur für
- * Mitglieder mit eigenem Mitgliedsdokument; globale Admins ohne Versammlung haben keines. Globale Admins pflegen
- * weder Adresse noch Notfallkontakte.
+ * Mitglieder mit eigenem Mitgliedsdokument und globale Admins, die ihre Angaben in ihrem Admin-Dokument pflegen
+ * (ohne Versammlung, auch wenn lokal eine gemerkt ist). Globale Admins pflegen weder Adresse noch Notfallkontakte.
  */
 @Composable
 internal fun OwnProfileSection(user: AppUser, modifier: Modifier = Modifier) {
-    if (user.congregation == null || !user.hasAccount) return
+    if (!user.hasAccount || (user.congregation == null && !user.isGlobalAdmin)) return
     val viewModel = remember { createGraph<OwnProfileGraph>().ownProfileViewModel }
     LaunchedEffect(viewModel, user) { viewModel.onUserChanged(user) }
     val state by viewModel.uiState.collectAsState()

@@ -294,6 +294,71 @@ class FirestoreUserRepositoryTest {
     }
 
     @Test
+    fun `observeGlobalAdminProfile maps the admin document and emits an empty profile without one`() = runBlocking {
+        emitAdminSnapshot(
+            mockk {
+                every { exists() } returns true
+                every { getString("lastName") } returns "Admin"
+                every { getString("firstName") } returns "Anna"
+                every { getString("mobilePhone") } returns "0170"
+                every { getString("landlinePhone") } returns null
+                every { this@mockk.get("emails") } returns listOf("a@b.de", 5)
+            },
+            null,
+        )
+        assertEquals(
+            MemberProfile(lastName = "Admin", firstName = "Anna", mobilePhone = "0170", emails = listOf("a@b.de")),
+            repository.observeGlobalAdminProfile("uid-1").first(),
+        )
+        verify { registration.remove() }
+
+        emitAdminSnapshot(mockk { every { exists() } returns false }, null)
+        assertEquals(MemberProfile(), repository.observeGlobalAdminProfile("uid-1").first())
+
+        emitAdminSnapshot(null, null)
+        assertEquals(MemberProfile(), repository.observeGlobalAdminProfile("uid-1").first())
+    }
+
+    @Test
+    fun `observeGlobalAdminProfile fails for listener errors`(): Unit = withMockedLog {
+        emitAdminSnapshot(null, mockk<FirebaseFirestoreException>(relaxed = true))
+
+        runBlocking {
+            assertFailsWith<FirebaseFirestoreException> { repository.observeGlobalAdminProfile("uid-1").first() }
+        }
+    }
+
+    @Test
+    fun `updateGlobalAdminProfile writes names phones and e-mails into the admin document`() = withMockedLog {
+        val fields = slot<Map<String, Any>>()
+        every { adminDocument.update(capture(fields)) } returns successTask<Void?>(null)
+        val profile = MemberProfile(
+            lastName = "Admin",
+            firstName = "Anna",
+            mobilePhone = "0170",
+            emails = listOf("a@b.de"),
+            street = "Hauptstr. 1",
+            isSpeaker = true,
+        )
+
+        runBlocking { repository.updateGlobalAdminProfile("uid-1", profile).getOrThrow() }
+        assertEquals(
+            mapOf(
+                "lastName" to "Admin",
+                "firstName" to "Anna",
+                "mobilePhone" to "0170",
+                "landlinePhone" to "",
+                "emails" to listOf("a@b.de"),
+            ),
+            fields.captured,
+        )
+
+        val error = IllegalStateException("denied")
+        every { adminDocument.update(any<Map<String, Any>>()) } returns failedTask(error)
+        runBlocking { assertFailure(error, repository.updateGlobalAdminProfile("uid-1", profile)) }
+    }
+
+    @Test
     fun `observeUser emits mapped member and removes listener`() = runBlocking {
         emitSnapshot(memberSnapshot(approved = null, role = null, permissions = null), null)
 
@@ -397,6 +462,14 @@ class FirestoreUserRepositoryTest {
             assertIs<AdminContactSyncingUserRepository>(createUserRepository())
         } finally {
             unmockkStatic(FirebaseFirestore::class)
+        }
+    }
+
+    private fun emitAdminSnapshot(snapshot: DocumentSnapshot?, error: FirebaseFirestoreException?) {
+        val listener = slot<EventListener<DocumentSnapshot>>()
+        every { adminDocument.addSnapshotListener(capture(listener)) } answers {
+            listener.captured.onEvent(snapshot, error)
+            registration
         }
     }
 
