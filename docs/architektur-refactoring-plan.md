@@ -9,14 +9,14 @@ Nach jeder Phase hier abhaken und Ticket und PR eintragen.
 | Phase | Inhalt | Ticket | PR | Status |
 |---|---|---|---|---|
 | 0 | Package-Struktur | CP-130 | #148 | in Review |
-| 1 | Policies vereinheitlichen | CP-131 | – | in Review |
-| 2 | Login entkoppeln | – | – | offen |
+| 1 | Policies vereinheitlichen | CP-131 | #149 | in Review |
+| 2 | Login entkoppeln | CP-132 | – | in Review |
 | 3 | Logik aus Composables holen | – | – | offen |
 | 4 | Große Klassen aufteilen | – | – | offen |
 | 5 | `uilib` auffüllen | – | – | offen |
 | 6 | UiState-Feinschliff | – | – | offen |
 
-Nächster Schritt: Phase 2 (Login entkoppeln). Die Branches sind gestapelt: jede Phase baut auf dem Branch der vorigen auf, bis deren PR gemergt ist.
+Nächster Schritt: Phase 3 (Logik aus Composables holen). Die Branches sind gestapelt: jede Phase baut auf dem Branch der vorigen auf, bis deren PR gemergt ist.
 
 ## Ziele
 
@@ -175,6 +175,13 @@ Umgesetzt in CP-131:
 4. Previews für alle Zustände (Login, Registrierung, Fehler, Versammlung gewählt).
 5. Tests für UseCases und `AuthViewModel`.
 6. ADR nur, falls sich der Datenfluss des Logins ändert.
+
+Umgesetzt in CP-132:
+
+- `FirebaseAuthManager` implementiert `FirebaseAuthRepository` und wird über `AuthGraph` injiziert; die UseCases liegen in `auth/domain/usecase`, die Fehlertexte in `AuthException`.
+- `AuthViewModel` hält Sitzung, Eingaben und Meldungen (`LoginUiState`); die Schrittlogik der Anmeldung ist die getestete Funktion `loginStep`.
+- `App.kt` enthält nur noch die App-Wurzel; die Login-Bausteine liegen in `auth/presentation`, `CongregationRequiredScreen` in `organization/presentation/selection`.
+- Kein ADR: Der Login folgt dem bestehenden Muster UI → ViewModel → UseCase → Repository.
 
 ### Phase 3: Logik aus Composables holen
 

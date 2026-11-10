@@ -9,41 +9,44 @@ expect fun createFirebaseAuthPlatformService(): FirebaseAuthRepository
 
 internal var firebaseAuthPlatformServiceFactory: () -> FirebaseAuthRepository = { createFirebaseAuthPlatformService() }
 
-object FirebaseAuthManager {
+/** Führt die Aufrufe der Plattform-Implementierung außerhalb des Main-Threads aus. */
+object FirebaseAuthManager : FirebaseAuthRepository {
     private val service: FirebaseAuthRepository by lazy { firebaseAuthPlatformServiceFactory() }
 
-    suspend fun signInWithEmailAndPassword(email: String, password: String): FirebaseUser? =
+    override suspend fun signInWithEmailAndPassword(email: String, password: String): FirebaseUser? =
         withContext(Dispatchers.Default) {
             service.signInWithEmailAndPassword(email, password)
         }
 
-    suspend fun createUserWithEmailAndPassword(
+    override suspend fun createUserWithEmailAndPassword(
         email: String,
         password: String,
-        displayName: String? = null,
+        displayName: String?,
     ): FirebaseUser? = withContext(Dispatchers.Default) {
         service.createUserWithEmailAndPassword(email, password, displayName)
     }
 
-    suspend fun signInWithGoogle(): FirebaseUser? = withContext(Dispatchers.Default) {
+    override suspend fun signInWithGoogle(): FirebaseUser? = withContext(Dispatchers.Default) {
         service.signInWithGoogle()
     }
 
-    fun isGoogleSignInAvailable(): Boolean = service.isGoogleSignInAvailable()
+    override fun isGoogleSignInAvailable(): Boolean = service.isGoogleSignInAvailable()
 
-    suspend fun signOut() = withContext(Dispatchers.Default) { service.signOut() }
+    override suspend fun signOut() = withContext(Dispatchers.Default) { service.signOut() }
 
-    fun currentUserId(): String? = service.currentUserId()
+    override fun currentUserId(): String? = service.currentUserId()
 
-    fun currentUser(): FirebaseUser? = service.currentUser()
+    override fun currentUser(): FirebaseUser? = service.currentUser()
 
-    fun currentUserIdToken(): String? = service.currentUserIdToken()
+    override fun currentUserIdToken(): String? = service.currentUserIdToken()
 
-    suspend fun refreshCurrentUser(): FirebaseUser? = withContext(Dispatchers.Default) { service.refreshCurrentUser() }
+    override suspend fun refreshCurrentUser(): FirebaseUser? = withContext(Dispatchers.Default) {
+        service.refreshCurrentUser()
+    }
 
-    suspend fun resendVerificationEmail(): Boolean = withContext(Dispatchers.Default) {
+    override suspend fun resendVerificationEmail(): Boolean = withContext(Dispatchers.Default) {
         service.resendVerificationEmail()
     }
 
-    fun isSignedIn(): Boolean = service.isSignedIn()
+    override fun isSignedIn(): Boolean = service.isSignedIn()
 }

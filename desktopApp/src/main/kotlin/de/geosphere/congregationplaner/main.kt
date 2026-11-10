@@ -8,9 +8,11 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import congregationplaner.shared.generated.resources.Res
 import congregationplaner.shared.generated.resources.dummy
-import de.geosphere.congregationplaner.AuthMode
-import de.geosphere.congregationplaner.LoginScreen
 import de.geosphere.congregationplaner.auth.data.FirebaseSupport
+import de.geosphere.congregationplaner.auth.presentation.LoginActions
+import de.geosphere.congregationplaner.auth.presentation.LoginContent
+import de.geosphere.congregationplaner.auth.presentation.LoginStep
+import de.geosphere.congregationplaner.auth.presentation.LoginUiState
 import de.geosphere.congregationplaner.organization.presentation.selection.InviteLinkInbox
 import de.geosphere.congregationplaner.theming.AppTheme
 import org.jetbrains.compose.resources.painterResource
@@ -56,18 +58,14 @@ fun main(args: Array<String>) {
 @Preview(name = "Login Screen (Desktop)", device = Devices.DESKTOP)
 fun LoginScreenDesktopPreview() {
     AppTheme {
-        LoginScreen(
-            email = "demo@congregationplaner.de",
-            password = "Passwort123",
-            firebaseStatus = "Firebase verfügbar",
-            authMode = AuthMode.LOGIN,
-            loginError = null,
-            infoMessage = null,
-            onEmailChange = {},
-            onPasswordChange = {},
-            onToggleMode = {},
-            onLoginClick = {},
-            onGoogleClick = {},
+        LoginContent(
+            state = LoginUiState(
+                email = "demo@congregationplaner.de",
+                password = "Passwort123",
+                firebaseStatus = "Firebase verfügbar",
+            ),
+            step = LoginStep(stepLabel = "SCHRITT 2 / 2", title = "Anmelden", showCredentials = true, canSignIn = true),
+            actions = LoginActions(),
         )
     }
 }

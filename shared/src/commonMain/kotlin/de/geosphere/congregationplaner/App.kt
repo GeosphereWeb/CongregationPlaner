@@ -1,108 +1,48 @@
-@file:Suppress("MatchingDeclarationName")
-
 package de.geosphere.congregationplaner
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import de.geosphere.congregationplaner.auth.data.FirebaseAuthManager
 import de.geosphere.congregationplaner.auth.data.FirebaseSupport
+import de.geosphere.congregationplaner.auth.di.AuthGraph
+import de.geosphere.congregationplaner.auth.presentation.LoginRoute
 import de.geosphere.congregationplaner.home.di.HomeGraph
 import de.geosphere.congregationplaner.organization.di.OrganizationGraph
-import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
-import de.geosphere.congregationplaner.organization.domain.model.OrgLevel
-import de.geosphere.congregationplaner.organization.domain.model.OrgUnit
-import de.geosphere.congregationplaner.organization.domain.model.SelectedCongregation
-import de.geosphere.congregationplaner.organization.presentation.selection.CongregationSelectionUiState
+import de.geosphere.congregationplaner.organization.presentation.selection.CongregationRequiredScreen
 import de.geosphere.congregationplaner.organization.presentation.selection.CongregationSelector
 import de.geosphere.congregationplaner.organization.presentation.selection.InviteLinkInbox
 import de.geosphere.congregationplaner.organization.presentation.selection.NewCongregationScreen
-import de.geosphere.congregationplaner.organization.presentation.selection.OrgLevelSelection
 import de.geosphere.congregationplaner.presentation.navigation.AppNavigationActions
 import de.geosphere.congregationplaner.presentation.navigation.AppNavigationGraph
 import de.geosphere.congregationplaner.presentation.navigation.AppScaffold
 import de.geosphere.congregationplaner.theming.AppTheme
-import de.geosphere.congregationplaner.theming.NightColors
-import de.geosphere.congregationplaner.theming.NightPhonePreview
-import de.geosphere.congregationplaner.theming.ThemePreviews
-import de.geosphere.congregationplaner.theming.nightTextStyle
-import de.geosphere.congregationplaner.ui.button.PrimaryButton
-import de.geosphere.congregationplaner.ui.button.SecondaryButton
-import de.geosphere.congregationplaner.ui.field.FieldBox
-import de.geosphere.congregationplaner.ui.field.PasswordVisibilityButton
-import de.geosphere.congregationplaner.ui.header.NightScreen
-import de.geosphere.congregationplaner.ui.header.PanelTitle
 import de.geosphere.congregationplaner.user.di.UserAccessGraph
 import de.geosphere.congregationplaner.user.domain.model.UserAccessState
 import de.geosphere.congregationplaner.user.presentation.access.UserAccessGateScreen
 import dev.zacsweers.metro.createGraph
-import kotlinx.coroutines.launch
 
-enum class AuthMode {
-    LOGIN,
-    REGISTER,
-}
-
+/** Wurzel der App: Anmeldung, Freigabe und danach die Bereiche, je nach Sitzung und Nutzerstatus. */
 @Suppress("LongMethod")
 @Composable
 fun App() {
     AppTheme {
-        var firebaseStatus by remember { mutableStateOf("Firebase wird initialisiert...") }
-        var isAuthenticated by remember { mutableStateOf(FirebaseAuthManager.isSignedIn()) }
-        var authMode by remember { mutableStateOf(AuthMode.LOGIN) }
-        var globalLogin by remember { mutableStateOf(false) }
-        var loginError by remember { mutableStateOf<String?>(null) }
-        var infoMessage by remember { mutableStateOf<String?>(null) }
-        var email by remember { mutableStateOf("") }
-        var password by remember { mutableStateOf("") }
-        var firstName by remember { mutableStateOf("") }
-        var lastName by remember { mutableStateOf("") }
-        val scope = rememberCoroutineScope()
+        val authViewModel = remember { createGraph<AuthGraph>().authViewModel }
         val userAccessViewModel = remember { createGraph<UserAccessGraph>().userAccessViewModel }
         val selectionViewModel = remember { createGraph<OrganizationGraph>().congregationSelectionViewModel }
         val navigationViewModel = remember { createGraph<AppNavigationGraph>().appNavigationViewModel }
         val homeViewModel = remember { createGraph<HomeGraph>().homeViewModel }
+        val authState by authViewModel.uiState.collectAsState()
         val selectionState by selectionViewModel.uiState.collectAsState()
         val selectedCongregation = selectionState.activeSelection?.ref
         val newCongregation = selectionState.newCongregation
-        var emailVerified by remember { mutableStateOf(FirebaseAuthManager.currentUser()?.emailVerified == true) }
         val pendingInviteLink by InviteLinkInbox.pendingLink.collectAsState()
+        val authUser = authState.user
 
         LaunchedEffect(Unit) {
             FirebaseSupport.initialize()
-            isAuthenticated = FirebaseAuthManager.isSignedIn()
-            firebaseStatus = if (FirebaseSupport.isReady()) {
-                "Firebase verfügbar"
-            } else {
-                "Firebase nicht konfiguriert"
-            }
+            authViewModel.onFirebaseInitialized(FirebaseSupport.isReady())
         }
 
         // Ein Einladungslink, mit dem die App gestartet wurde, wählt die Versammlung vor.
@@ -114,130 +54,23 @@ fun App() {
 
         // Die Nutzerdaten liegen unterhalb der Versammlung; ohne gewählte Versammlung gibt es keinen Zugriff, außer für
         // globale Admins (ADR-0013).
-        LaunchedEffect(isAuthenticated, selectedCongregation) {
-            if (!isAuthenticated) {
+        LaunchedEffect(authUser, selectedCongregation) {
+            if (authUser == null) {
                 userAccessViewModel.onSignedOut()
-                return@LaunchedEffect
-            }
-            val authUser = FirebaseAuthManager.currentUser()
-            emailVerified = authUser?.emailVerified == true
-            if (authUser != null) {
-                userAccessViewModel.onSignedIn(authUser, selectedCongregation)
             } else {
-                FirebaseAuthManager.signOut()
-                isAuthenticated = false
+                userAccessViewModel.onSignedIn(authUser, selectedCongregation)
             }
         }
 
-        if (!isAuthenticated) {
-            LoginScreen(
-                email = email,
-                password = password,
-                firstName = firstName,
-                lastName = lastName,
-                firebaseStatus = firebaseStatus,
-                authMode = authMode,
-                loginError = loginError,
-                infoMessage = infoMessage,
-                canSignIn = selectedCongregation != null || globalLogin || selectionState.isNewCongregationReady,
-                showCredentials = globalLogin ||
-                    selectionState.isNewCongregationConfirmed ||
-                    (selectedCongregation != null && !selectionState.isPicking),
-                congregationName = if (globalLogin) {
-                    "Globale Verwaltung"
-                } else {
-                    newCongregation?.name ?: selectionState.selected?.displayName
-                },
-                isNewCongregationFlow = !globalLogin && newCongregation != null,
-                previousSteps = if (globalLogin) {
-                    emptyList()
-                } else {
-                    val circuitName = newCongregation?.circuitName ?: selectionState.selected?.circuitDisplayName
-                    circuitName?.let { listOf("Kreis $it") }.orEmpty()
-                },
-                congregationSelector = {
-                    if (globalLogin) {
-                        GlobalLoginHint(onChooseCongregation = { globalLogin = false })
-                    } else {
-                        CongregationSelector(selectionViewModel, selectionState)
-                    }
-                },
-                onGlobalAdminLogin = { globalLogin = true },
-                onEmailChange = { email = it },
-                onPasswordChange = { password = it },
-                onFirstNameChange = { firstName = it },
-                onLastNameChange = { lastName = it },
-                onToggleMode = {
-                    authMode = if (authMode == AuthMode.LOGIN) AuthMode.REGISTER else AuthMode.LOGIN
-                    loginError = null
-                    infoMessage = null
-                },
-                onLoginClick = {
-                    scope.launch {
-                        loginError = null
-                        val user = if (authMode == AuthMode.REGISTER) {
-                            FirebaseAuthManager.createUserWithEmailAndPassword(
-                                email.trim(),
-                                password,
-                                "${firstName.trim()} ${lastName.trim()}",
-                            )
-                        } else {
-                            FirebaseAuthManager.signInWithEmailAndPassword(email.trim(), password)
-                        }
-
-                        if (user != null) {
-                            if (authMode == AuthMode.REGISTER) {
-                                infoMessage =
-                                    "Registrierung erfolgreich. Bitte prüfe dein E-Mail-Postfach und bestätige " +
-                                    "deine E-Mail-Adresse."
-                                authMode = AuthMode.LOGIN
-                                email = ""
-                                password = ""
-                                firstName = ""
-                                lastName = ""
-                            } else {
-                                isAuthenticated = true
-                                email = ""
-                                password = ""
-                            }
-                        } else {
-                            val failureMessage = if (authMode == AuthMode.REGISTER) {
-                                "Registrierung fehlgeschlagen. Bitte prüfe deine Eingaben."
-                            } else {
-                                "Login fehlgeschlagen. Bitte E-Mail und Passwort prüfen."
-                            }
-                            loginError = failureMessage
-                        }
-                    }
-                },
-                onGoogleClick = {
-                    scope.launch {
-                        loginError = null
-                        val user = FirebaseAuthManager.signInWithGoogle()
-                        if (user != null) {
-                            isAuthenticated = true
-                            email = ""
-                            password = ""
-                        } else {
-                            loginError = "Google-Anmeldung fehlgeschlagen oder wurde abgebrochen."
-                        }
-                    }
-                },
-            )
+        if (authUser == null) {
+            LoginRoute(authViewModel, selectionViewModel)
             return@AppTheme
         }
 
         val signOut: () -> Unit = {
-            scope.launch {
-                FirebaseAuthManager.signOut()
-                // The effect below does not run on the login screen, so reset here: the next sign-in starts at home.
-                navigationViewModel.onUserChanged(null)
-                isAuthenticated = false
-                authMode = AuthMode.LOGIN
-                globalLogin = false
-                loginError = null
-                infoMessage = null
-            }
+            authViewModel.signOut()
+            // The effects below do not run on the login screen, so reset here: the next sign-in starts at home.
+            navigationViewModel.onUserChanged(null)
         }
 
         // Erst nach erteilter Freigabe ist die App nutzbar; Rollen steuern die sichtbaren Bereiche.
@@ -254,14 +87,12 @@ fun App() {
             ) {
                 NewCongregationScreen(
                     draft = newCongregation,
-                    emailVerified = emailVerified,
+                    emailVerified = authState.emailVerified,
                     isCreating = selectionState.isCreating,
                     errorMessage = selectionState.errorMessage,
-                    onCreate = { FirebaseAuthManager.currentUser()?.let(selectionViewModel::createNewCongregation) },
-                    onRefresh = {
-                        scope.launch { emailVerified = FirebaseAuthManager.refreshCurrentUser()?.emailVerified == true }
-                    },
-                    onResend = { scope.launch { FirebaseAuthManager.resendVerificationEmail() } },
+                    onCreate = { selectionViewModel.createNewCongregation(authUser) },
+                    onRefresh = authViewModel::refreshEmailVerification,
+                    onResend = authViewModel::resendVerificationEmail,
                     onChangeName = selectionViewModel::cancelNewCongregation,
                     onSignOut = signOut,
                 )
@@ -288,7 +119,7 @@ fun App() {
         val homeState by homeViewModel.uiState.collectAsState()
         AppScaffold(
             state = navigationState,
-            firebaseStatus = firebaseStatus,
+            firebaseStatus = authState.firebaseStatus,
             currentUser = currentUser,
             congregation = selectionState.selected,
             home = homeState,
@@ -303,312 +134,3 @@ fun App() {
         )
     }
 }
-
-/**
- * Zweistufige Anmeldung im Nachtblau-Design: erst die Versammlung (über [congregationSelector]),
- * danach Zugangsdaten. [congregationName] und [previousSteps] füllen den Kopfbereich in Schritt 2.
- */
-@Suppress("LongMethod", "LongParameterList", "MagicNumber")
-@Composable
-fun LoginScreen(
-    email: String,
-    password: String,
-    firebaseStatus: String,
-    authMode: AuthMode,
-    loginError: String?,
-    infoMessage: String?,
-    onEmailChange: (String) -> Unit,
-    onPasswordChange: (String) -> Unit,
-    onToggleMode: () -> Unit,
-    onLoginClick: () -> Unit,
-    onGoogleClick: () -> Unit,
-    firstName: String = "",
-    lastName: String = "",
-    onFirstNameChange: (String) -> Unit = {},
-    onLastNameChange: (String) -> Unit = {},
-    canSignIn: Boolean = true,
-    showCredentials: Boolean = true,
-    congregationName: String? = null,
-    previousSteps: List<String> = emptyList(),
-    congregationSelector: @Composable () -> Unit = {},
-    onGlobalAdminLogin: (() -> Unit)? = null,
-    isNewCongregationFlow: Boolean = false,
-) {
-    // A new congregation adds the name step between choosing the circuit and the credentials.
-    val totalSteps = if (isNewCongregationFlow) 3 else 2
-    val step = when {
-        showCredentials -> totalSteps
-        isNewCongregationFlow -> 2
-        else -> 1
-    }
-    NightScreen(
-        stepLabel = "SCHRITT $step / $totalSteps",
-        current = when {
-            showCredentials -> congregationName ?: "Anmelden"
-            isNewCongregationFlow -> "Neue Versammlung"
-            else -> "Welche Versammlung?"
-        },
-        previous = if (showCredentials || isNewCongregationFlow) previousSteps else emptyList(),
-    ) {
-        if (showCredentials) {
-            congregationSelector()
-            CredentialsForm(
-                email = email,
-                password = password,
-                firstName = firstName,
-                lastName = lastName,
-                onFirstNameChange = onFirstNameChange,
-                onLastNameChange = onLastNameChange,
-                authMode = authMode,
-                loginError = loginError,
-                infoMessage = infoMessage,
-                canSignIn = canSignIn,
-                onEmailChange = onEmailChange,
-                onPasswordChange = onPasswordChange,
-                onToggleMode = onToggleMode,
-                onLoginClick = onLoginClick,
-                onGoogleClick = onGoogleClick,
-            )
-        } else {
-            if (!isNewCongregationFlow) {
-                PanelTitle("Versammlung wählen", "Wähle deine Versammlung, bevor du dich anmeldest.")
-                Spacer(Modifier.height(14.dp))
-            }
-            congregationSelector()
-            Spacer(Modifier.weight(1f))
-            onGlobalAdminLogin?.takeUnless { isNewCongregationFlow }?.let { onClick ->
-                SecondaryButton(
-                    text = "Als globaler Admin anmelden",
-                    onClick = onClick,
-                    modifier = Modifier.fillMaxWidth(),
-                    outlined = false,
-                )
-            }
-            if (!isNewCongregationFlow) {
-                Text(
-                    text = "Anmeldung folgt, sobald die Versammlung feststeht.",
-                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                    textAlign = TextAlign.Center,
-                    style = nightTextStyle(13.sp, color = NightColors.OnBackgroundMuted),
-                )
-            }
-        }
-        Text(
-            text = firebaseStatus,
-            modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-            textAlign = TextAlign.Center,
-            style = nightTextStyle(11.sp, color = NightColors.OnBackgroundMuted, monospace = true),
-        )
-    }
-}
-
-/** Zweiter Schritt der Anmeldung: Zugangsdaten, sobald die Versammlung feststeht. */
-@Suppress("LongMethod", "LongParameterList", "MagicNumber")
-@Composable
-private fun ColumnScope.CredentialsForm(
-    email: String,
-    password: String,
-    firstName: String,
-    lastName: String,
-    onFirstNameChange: (String) -> Unit,
-    onLastNameChange: (String) -> Unit,
-    authMode: AuthMode,
-    loginError: String?,
-    infoMessage: String?,
-    canSignIn: Boolean,
-    onEmailChange: (String) -> Unit,
-    onPasswordChange: (String) -> Unit,
-    onToggleMode: () -> Unit,
-    onLoginClick: () -> Unit,
-    onGoogleClick: () -> Unit,
-) {
-    val isLogin = authMode == AuthMode.LOGIN
-    var passwordVisible by remember { mutableStateOf(false) }
-    Column(modifier = Modifier.padding(top = 18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        PanelTitle(
-            title = if (isLogin) "Anmelden" else "Konto erstellen",
-            subtitle = if (isLogin) "Weiter zu deiner Versammlung." else "Lege dein Konto für diese Versammlung an.",
-        )
-        if (!isLogin) {
-            FieldBox(
-                label = "Vorname",
-                value = firstName,
-                onValueChange = onFirstNameChange,
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
-            )
-            FieldBox(
-                label = "Nachname",
-                value = lastName,
-                onValueChange = onLastNameChange,
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
-            )
-        }
-        FieldBox(
-            label = "E-Mail",
-            value = email,
-            onValueChange = onEmailChange,
-            placeholder = "name@beispiel.de",
-            isError = loginError != null,
-            keyboardOptions = KeyboardOptions(
-                capitalization = KeyboardCapitalization.None,
-                autoCorrectEnabled = false,
-                keyboardType = KeyboardType.Email,
-            ),
-        )
-        FieldBox(
-            label = "Passwort",
-            value = password,
-            onValueChange = onPasswordChange,
-            isError = loginError != null,
-            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-            trailing = { PasswordVisibilityButton(passwordVisible, onToggle = { passwordVisible = !passwordVisible }) },
-            keyboardOptions = KeyboardOptions(
-                capitalization = KeyboardCapitalization.None,
-                autoCorrectEnabled = false,
-                keyboardType = KeyboardType.Password,
-            ),
-        )
-        if (loginError != null) {
-            Text(loginError, style = nightTextStyle(14.sp, color = NightColors.Coral))
-        }
-        if (infoMessage != null) {
-            Text(infoMessage, style = nightTextStyle(14.sp, color = NightColors.Sky))
-        }
-        PrimaryButton(
-            text = if (isLogin) "Anmelden" else "Konto erstellen",
-            onClick = onLoginClick,
-            modifier = Modifier.fillMaxWidth(),
-            enabled = canSignIn && (isLogin || (firstName.isNotBlank() && lastName.isNotBlank())),
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            HorizontalDivider(modifier = Modifier.weight(1f), color = NightColors.Border)
-            Text("oder", style = nightTextStyle(13.sp, FontWeight.Medium, NightColors.OnBackgroundMuted))
-            HorizontalDivider(modifier = Modifier.weight(1f), color = NightColors.Border)
-        }
-        SecondaryButton(
-            text = "Mit Google fortfahren",
-            onClick = onGoogleClick,
-            modifier = Modifier.fillMaxWidth(),
-            enabled = canSignIn,
-            height = 56.dp,
-        )
-    }
-    Spacer(Modifier.weight(1f))
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = if (isLogin) "Noch kein Konto?" else "Bereits registriert?",
-            style = nightTextStyle(14.sp, color = NightColors.OnBackgroundMuted),
-        )
-        SecondaryButton(
-            text = if (isLogin) "Neues Konto erstellen" else "Anmelden",
-            onClick = onToggleMode,
-            outlined = false,
-            contentColor = NightColors.OnBackground,
-        )
-    }
-}
-
-/** Schritt 2 für globale Admins: Anmeldung ohne Versammlung, mit dem Weg zurück zur Auswahl. */
-@Composable
-private fun GlobalLoginHint(onChooseCongregation: () -> Unit) {
-    Text(
-        text = "Globale Admins melden sich ohne Versammlung an.",
-        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-        style = nightTextStyle(13.sp, color = NightColors.OnBackgroundMuted),
-    )
-    SecondaryButton(
-        text = "Doch eine Versammlung wählen",
-        onClick = onChooseCongregation,
-        modifier = Modifier.fillMaxWidth(),
-        outlined = false,
-    )
-    Spacer(Modifier.height(14.dp))
-}
-
-/** Für bereits angemeldete Nutzer, deren Versammlung noch nicht feststeht (z. B. nach einem Update). */
-@Composable
-private fun CongregationRequiredScreen(onSignOut: () -> Unit, selector: @Composable () -> Unit) {
-    NightScreen(stepLabel = "ZUGANG", current = "Versammlung wählen") {
-        PanelTitle("Versammlung wählen", "Wähle deine Versammlung, um die App zu nutzen.")
-        Spacer(Modifier.height(14.dp))
-        selector()
-        Spacer(Modifier.weight(1f))
-        SecondaryButton(text = "Abmelden", onClick = onSignOut, modifier = Modifier.fillMaxWidth(), outlined = false)
-    }
-}
-
-private val previewRef = CongregationRef("EMEA", "europe", "central-europe", "609a", "berlin-mitte")
-
-private val pickingState = CongregationSelectionUiState(
-    levels = listOf(
-        OrgLevelSelection(OrgLevel.REGION, listOf(OrgUnit("EMEA")), selectedId = "EMEA"),
-        OrgLevelSelection(OrgLevel.SUBREGION, listOf(OrgUnit("europe", "Europa")), selectedId = "europe"),
-        OrgLevelSelection(OrgLevel.BRANCH, isLoading = true),
-    ),
-)
-
-private val selectedState = CongregationSelectionUiState(
-    selected = SelectedCongregation(previewRef, "Berlin-Mitte"),
-)
-
-@Composable
-private fun LoginPreviewContent(
-    selection: CongregationSelectionUiState,
-    authMode: AuthMode = AuthMode.LOGIN,
-    loginError: String? = null,
-) = NightPhonePreview {
-    LoginScreen(
-        email = "name@beispiel.de",
-        password = "geheimeswort",
-        firebaseStatus = "Firebase verfügbar",
-        authMode = authMode,
-        loginError = loginError,
-        infoMessage = null,
-        onEmailChange = {},
-        onPasswordChange = {},
-        onToggleMode = {},
-        onLoginClick = {},
-        onGoogleClick = {},
-        showCredentials = selection.selected != null,
-        congregationName = selection.selected?.displayName,
-        previousSteps = listOf("Kreis 609a"),
-        congregationSelector = {
-            CongregationSelector(
-                state = selection,
-                onStartPicking = {},
-                onCancelPicking = {},
-                onSelectUnit = { _, _ -> },
-                onInviteLinkChange = {},
-                onApplyInviteLink = {},
-                onPasteInviteLink = {},
-                onRetry = {},
-            )
-        },
-    )
-}
-
-@Preview(name = "Congregation Planer Login")
-@Composable
-fun AppPreview() = LoginPreviewContent(selectedState)
-
-/** Schritt 1: Auswahl läuft. */
-@ThemePreviews
-@Composable
-private fun LoginSelectionPreview() = LoginPreviewContent(pickingState)
-
-/** Schritt 2: Versammlung gewählt, Anmeldung. */
-@ThemePreviews
-@Composable
-private fun LoginCongregationSelectedPreview() = LoginPreviewContent(selectedState)
-
-@ThemePreviews
-@Composable
-private fun LoginRegisterPreview() = LoginPreviewContent(selectedState, AuthMode.REGISTER)
-
-@ThemePreviews
-@Composable
-private fun LoginErrorPreview() = LoginPreviewContent(selectedState, loginError = "E-Mail oder Passwort ist falsch.")
