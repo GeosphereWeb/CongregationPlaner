@@ -14,5 +14,5 @@ Die Vortragsplanung hängt an der Rolle Vortragsplaner (`TALK_PLANNER`): Wer sie
 
 ## Consequences
 - Der Helfer sieht mehr personenbezogene Angaben, als er zum Anrufen braucht. Das ist dieselbe Abwägung wie beim Aufgabenplaner; eine Trennung bräuchte ein eigenes Dokument mit den Kontaktnummern.
-- Home, Navigation und die Nur-Lesen-Ansichten (Wochenplan, Rednerliste, Vortragshistorie) gelten für den Helfer seit CP-128: Die UI-Zustände unterscheiden `canView` (sehen) von `canPlan` (ändern). Der Editor mit nur „Informiert“ folgt in einer eigenen Änderung.
+- Home, Navigation und die Nur-Lesen-Ansichten (Wochenplan, Rednerliste, Vortragshistorie) gelten für den Helfer seit CP-128: Die UI-Zustände unterscheiden `canView` (sehen) von `canPlan` (ändern). Den Termin öffnet der Helfer seit CP-129 in einem Editor, der alles nur anzeigt und allein „Informiert“ ändern lässt; das Speichern läuft über `ConfirmSpeakerUseCase`.
 - Die Rules müssen nach dem Merge veröffentlicht werden, sonst lehnt die Online-Datenbank die neue Rolle ab.
