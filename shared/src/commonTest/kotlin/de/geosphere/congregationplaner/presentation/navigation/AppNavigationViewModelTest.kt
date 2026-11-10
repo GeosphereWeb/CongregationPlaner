@@ -90,7 +90,7 @@ class AppNavigationViewModelTest {
 
         viewModel.onUserChanged(null)
 
-        assertEquals(AppNavigationState(), state)
+        assertEquals(AppNavigationUiState(), state)
     }
 
     @Test
@@ -100,7 +100,7 @@ class AppNavigationViewModelTest {
 
         viewModel.onUserChanged(null)
 
-        assertEquals(AppNavigationState(), state)
+        assertEquals(AppNavigationUiState(), state)
     }
 
     @Test

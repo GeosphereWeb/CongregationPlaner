@@ -12,12 +12,14 @@ fun CongregationMetadataScreen(viewModel: CongregationMetadataViewModel, modifie
     CongregationMetadataContent(
         state = state,
         modifier = modifier,
-        onCreate = viewModel::createCongregation,
-        onSelect = viewModel::editCongregation,
-        onUpdate = viewModel::updateEditor,
-        onSave = viewModel::saveCongregation,
-        onCancel = viewModel::cancelEditing,
-        onDiscard = viewModel::discardChanges,
-        onDelete = viewModel::deleteCongregation,
+        actions = CongregationMetadataActions(
+            onCreate = viewModel::createCongregation,
+            onSelect = viewModel::editCongregation,
+            onUpdate = viewModel::updateEditor,
+            onSave = viewModel::saveCongregation,
+            onCancel = viewModel::cancelEditing,
+            onDiscard = viewModel::discardChanges,
+            onDelete = viewModel::deleteCongregation,
+        ),
     )
 }

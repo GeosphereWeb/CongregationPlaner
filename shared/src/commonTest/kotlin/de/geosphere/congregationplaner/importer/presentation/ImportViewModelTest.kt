@@ -141,6 +141,23 @@ class ImportViewModelTest {
     }
 
     @Test
+    fun `cancel and dismiss only close their own step`() {
+        val model = viewModel(FakeFileSource(Result.success(talkTable)))
+        model.onCurrentUserChanged(globalAdmin)
+        model.choose(ImportSource.TALK_CATALOG)
+
+        model.dismissReport() // no report yet: the preview stays
+        assertNotNull(model.uiState.value.pending)
+
+        model.confirm()
+        model.cancel() // no preview any more: the report stays
+        assertEquals(ImportSource.TALK_CATALOG, model.uiState.value.reportSource)
+
+        model.dismissReport()
+        assertEquals(ImportStep.Idle, model.uiState.value.step)
+    }
+
+    @Test
     fun `cancelling a choice or a preview writes nothing`() {
         val source = FakeFileSource(Result.success(null))
         val model = viewModel(source)

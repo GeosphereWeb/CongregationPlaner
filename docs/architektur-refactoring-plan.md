@@ -14,10 +14,10 @@ Nach jeder Phase hier abhaken und Ticket und PR eintragen.
 | 3 | Logik aus Composables holen | CP-133 | #151 | in Review |
 | 4a | detekt aktivieren, Login-ViewModel teilen | CP-134 | – | in Review |
 | 4b | Große ViewModels und UI-Dateien teilen | CP-134 | #153 | in Review |
-| 5 | `uilib` auffüllen | CP-135 | – | in Review |
-| 6 | UiState-Feinschliff | – | – | offen |
+| 5 | `uilib` auffüllen | CP-135 | #154 | in Review |
+| 6 | UiState-Feinschliff | CP-136 | – | in Review |
 
-Nächster Schritt: Phase 6 (UiState-Feinschliff). Die Branches sind gestapelt: jede Phase baut auf dem Branch der vorigen auf, bis deren PR gemergt ist.
+Alle Phasen sind umgesetzt. Offen bleibt nur die detekt-Baseline der Daten- und Plattformklassen. Die Branches sind gestapelt: jede Phase baut auf dem Branch der vorigen auf, bis deren PR gemergt ist.
 
 ## Ziele
 
@@ -259,6 +259,13 @@ Umgesetzt in CP-135:
 1. Verbliebene Composables mit direktem ViewModel-Zugriff in Route und zustandslosen Content teilen, zum Beispiel `OwnProfileSection`.
 2. States prüfen: Sealed States dort einführen, wo sich Zustände ausschließen.
 3. Einheitliche Benennung von State, Aktionen und Ereignissen über alle Screens.
+
+Umgesetzt in CP-136:
+
+- Import: Vorschau und Bericht schließen sich aus und sind der versiegelte Schritt `ImportStep` (`Idle`, `Preview`, `Done`). Weitere versiegelte Zustände drängen sich nicht auf: Liste, Editor, Laden und Fehler bestehen auf den anderen Screens gleichzeitig (ADR-0006).
+- `OwnProfileForm` bekommt Zustand und `OwnProfileActions` statt des ViewModels und hat eine Preview.
+- Versammlungsdaten: sieben Callbacks werden `CongregationMetadataActions`; der Lösch-Dialog ist ein eigenes Composable, `isBusy` steht im Zustand.
+- Benennung: `AppNavigationState` heißt `AppNavigationUiState`; alle Bildschirmzustände enden auf `UiState`, Callback-Bündel auf `Actions`, Editor-Zustände auf `EditorState`.
 
 ## Regeln für jede Phase
 

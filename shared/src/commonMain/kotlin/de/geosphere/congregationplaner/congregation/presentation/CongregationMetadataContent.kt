@@ -6,12 +6,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.layout.AnimatedPane
 import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffold
@@ -38,24 +36,18 @@ import de.geosphere.congregationplaner.ui.pane.ListPaneHeader
 
 @Composable
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
-@Suppress("LongParameterList", "LongMethod")
+@Suppress("LongMethod")
 internal fun CongregationMetadataContent(
     state: CongregationMetadataUiState,
+    actions: CongregationMetadataActions,
     modifier: Modifier = Modifier,
-    onCreate: () -> Unit,
-    onSelect: (CongregationMetadata) -> Unit,
-    onUpdate: (CongregationMetadata) -> Unit,
-    onSave: () -> Unit,
-    onCancel: () -> Unit,
-    onDiscard: () -> Unit,
-    onDelete: (CongregationMetadata) -> Unit,
 ) {
     var congregationToDelete by remember { mutableStateOf<CongregationMetadata?>(null) }
 
-    val isBusy = state.isSaving || state.isDeleting
-    val navigator = rememberListDetailNavigation(state, onClose = onCancel)
+    val isBusy = state.isBusy
+    val navigator = rememberListDetailNavigation(state, onClose = actions.onCancel)
     val singlePane = navigator.scaffoldDirective.maxHorizontalPartitions == 1
-    val onCancelEditing = if (singlePane) onCancel else onDiscard
+    val onCancelEditing = if (singlePane) actions.onCancel else actions.onDiscard
 
     Box(modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -78,7 +70,7 @@ internal fun CongregationMetadataContent(
                                 congregations = state.congregations,
                                 selectedId = state.editor?.id,
                                 modifier = Modifier.fillMaxSize(),
-                                onSelect = onSelect,
+                                onSelect = actions.onSelect,
                                 onDelete = { congregationToDelete = it },
                                 actionsEnabled = !isBusy,
                                 canDelete = state.permissions.canManage,
@@ -90,7 +82,7 @@ internal fun CongregationMetadataContent(
                             DetailPane(
                                 showBack = navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] ==
                                     PaneAdaptedValue.Hidden,
-                                onBack = onCancel,
+                                onBack = actions.onCancel,
                                 backEnabled = !isBusy,
                             ) {
                                 CongregationDetail(
@@ -100,8 +92,8 @@ internal fun CongregationMetadataContent(
                                     isSaving = state.isSaving,
                                     isBusy = isBusy,
                                     isDirty = state.isEditorDirty,
-                                    onChange = onUpdate,
-                                    onSave = onSave,
+                                    onChange = actions.onUpdate,
+                                    onSave = actions.onSave,
                                     onCancel = onCancelEditing,
                                 )
                             }
@@ -113,7 +105,7 @@ internal fun CongregationMetadataContent(
         // On a phone the editor covers the list; the FAB would overlay it there.
         if (state.permissions.canCreate && (!singlePane || state.editor == null)) {
             FloatingActionButton(
-                onClick = { if (!state.isLoading && !isBusy) onCreate() },
+                onClick = { if (!state.isLoading && !isBusy) actions.onCreate() },
                 modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
                     .semantics { contentDescription = "Versammlung hinzufügen" },
             ) { Text("+", style = MaterialTheme.typography.headlineMedium) }
@@ -121,31 +113,15 @@ internal fun CongregationMetadataContent(
     }
 
     congregationToDelete?.let { congregation ->
-        AlertDialog(
-            onDismissRequest = {
-                if (!state.isDeleting && !state.isSaving) congregationToDelete = null
+        DeleteCongregationDialog(
+            congregation = congregation,
+            isDeleting = state.isDeleting,
+            enabled = !state.isBusy,
+            onConfirm = {
+                actions.onDelete(congregation)
+                congregationToDelete = null
             },
-            title = { Text("Versammlung löschen?") },
-            text = { Text("„${congregation.name}“ wird dauerhaft gelöscht.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onDelete(congregation)
-                        congregationToDelete = null
-                    },
-                    enabled = !state.isDeleting && !state.isSaving,
-                ) {
-                    Text(if (state.isDeleting) "Löscht …" else "Löschen")
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { congregationToDelete = null },
-                    enabled = !state.isDeleting && !state.isSaving,
-                ) {
-                    Text("Abbrechen")
-                }
-            },
+            onDismiss = { congregationToDelete = null },
         )
     }
 }
@@ -165,13 +141,7 @@ private fun CongregationMetadataScreenPreview() = PreviewThemeWrapper {
                 canEditMeetingTimes = true,
             ),
         ),
-        onCreate = {},
-        onSelect = {},
-        onUpdate = {},
-        onSave = {},
-        onCancel = {},
-        onDiscard = {},
-        onDelete = {},
+        actions = CongregationMetadataActions(),
     )
 }
 
@@ -190,12 +160,6 @@ private fun CongregationMetadataDesktopPreview() = AppTheme {
                 canEditMeetingTimes = true,
             ),
         ),
-        onCreate = {},
-        onSelect = {},
-        onUpdate = {},
-        onSave = {},
-        onCancel = {},
-        onDiscard = {},
-        onDelete = {},
+        actions = CongregationMetadataActions(),
     )
 }

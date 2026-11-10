@@ -38,6 +38,7 @@ data class CongregationMetadataUiState(
 ) : ListDetailState {
     override val hasDetail: Boolean get() = editor != null
     val isEditorDirty: Boolean get() = editor != editorOriginal
+    val isBusy: Boolean get() = isSaving || isDeleting
 }
 
 @Inject
