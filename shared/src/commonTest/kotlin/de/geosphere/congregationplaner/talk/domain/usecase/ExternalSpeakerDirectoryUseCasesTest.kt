@@ -65,6 +65,19 @@ class ExternalSpeakerDirectoryUseCasesTest {
     }
 
     @Test
+    fun `picker speakers carry their phone numbers`() = runBlocking {
+        repository.speakers.value = listOf(
+            VisitingSpeaker("s1", "g1", "Berg", "Lea", mobilePhone = "0170 1234567", landlinePhone = "089 123456"),
+        )
+
+        val speaker = ObserveExternalSpeakersUseCase(ObserveExternalDirectoryUseCase(repository))(admin)
+            .first().single()
+
+        assertEquals("0170 1234567", speaker.mobilePhone)
+        assertEquals("089 123456", speaker.landlinePhone)
+    }
+
+    @Test
     fun `circuit is saved trimmed and validated`() = runBlocking {
         val save = SaveExternalCircuitUseCase(repository, policy)
 
