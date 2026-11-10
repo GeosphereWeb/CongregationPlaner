@@ -32,8 +32,10 @@ class ObserveHomeSummaryUseCase(
 ) {
     operator fun invoke(user: AppUser, today: LocalDate): Flow<HomeSummary> {
         val congregation = user.congregation
-        val talk: Flow<TalkSummary?> = if (talkPolicy.canPlanTalks(user) && congregation != null) {
-            observeSlots(user, today).map { slots -> summarizeTalks(slots, today) }
+        val talk: Flow<TalkSummary?> = if (talkPolicy.canViewTalkPlanning(user) && congregation != null) {
+            observeSlots(user, today).map { slots ->
+                summarizeTalks(slots, today).copy(asHelper = !talkPolicy.canPlanTalks(user))
+            }
         } else {
             flowOf(null)
         }

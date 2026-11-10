@@ -82,7 +82,7 @@ internal fun HomeContent(
 @Composable
 private fun TalkBlock(talk: TalkSummary, actions: AppNavigationActions) {
     val open = { actions.onOpenCongregationSection(CongregationSection.WEEKEND_TALKS) }
-    SectionLabel("Als Vortragsplaner", Modifier.padding(top = 8.dp), StatusTone.Mint)
+    SectionLabel(talkSectionLabel(talk.asHelper), Modifier.padding(top = 8.dp), StatusTone.Mint)
     val next = talk.nextSlot
     if (next != null) {
         NavCardRow(

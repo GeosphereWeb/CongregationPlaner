@@ -53,6 +53,14 @@ class ObserveHomeSummaryUseCaseTest {
     }
 
     @Test
+    fun `a talk helper gets the talk block marked as helper`() = runTest {
+        val result = summary(user(CongregationRole.TALK_HELPER))
+
+        assertEquals(TalkSummary(asHelper = true), result.talk)
+        assertNull(result.pendingApprovals)
+    }
+
+    @Test
     fun `a talk planner gets the talk block only`() = runTest {
         val result = summary(user(CongregationRole.TALK_PLANNER))
 

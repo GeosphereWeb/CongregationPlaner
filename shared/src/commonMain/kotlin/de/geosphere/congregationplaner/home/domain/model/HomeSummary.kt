@@ -16,8 +16,13 @@ data class HomeSummary(val talk: TalkSummary? = null, val pendingApprovals: Int?
  * @param nextSlot Der erste Termin ab heute, an dem ein Vortrag stattfindet; `null`, wenn es keinen gibt.
  * @param openDates Die Termine in den nächsten [HORIZON_DAYS] Tagen, denen ein Vortrag oder ein Redner fehlt,
  *   aufsteigend nach Datum. Abgesagte Termine zählen nicht.
+ * @param asHelper `true`, wenn der Nutzer nur als Vortragsplanungs-Helfer sieht und nicht selbst plant.
  */
-data class TalkSummary(val nextSlot: TalkSlot? = null, val openDates: List<LocalDate> = emptyList()) {
+data class TalkSummary(
+    val nextSlot: TalkSlot? = null,
+    val openDates: List<LocalDate> = emptyList(),
+    val asHelper: Boolean = false,
+) {
     companion object {
         /** Vier Wochen. */
         const val HORIZON_DAYS = 28

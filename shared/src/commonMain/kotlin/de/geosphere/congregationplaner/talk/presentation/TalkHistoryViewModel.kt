@@ -25,7 +25,7 @@ data class TalkHistoryUiState(
     val talks: List<Talk> = emptyList(),
     val history: List<TalkHistoryEntry> = emptyList(),
     val isLoading: Boolean = true,
-    val canPlan: Boolean = false,
+    val canView: Boolean = false,
     val selectedNumber: Int? = null,
     val query: String = "",
     val groupByFrequency: Boolean = false,
@@ -68,9 +68,9 @@ class TalkHistoryViewModel(
 
     fun onCurrentUserChanged(user: AppUser) {
         currentUser = user
-        val canPlan = policy.canPlanTalks(user)
-        mutableUiState.update { it.copy(canPlan = canPlan, selectedNumber = it.selectedNumber.takeIf { canPlan }) }
-        if (canPlan) {
+        val canView = policy.canViewTalkPlanning(user)
+        mutableUiState.update { it.copy(canView = canView, selectedNumber = it.selectedNumber.takeIf { canView }) }
+        if (canView) {
             observe(user)
         } else {
             observeJob?.cancel()
@@ -105,7 +105,7 @@ class TalkHistoryViewModel(
     /** Schließt die Fehlermeldung; war es ein Ladefehler, wird dabei erneut geladen. */
     fun dismissError() {
         mutableUiState.update { it.copy(errorMessage = null) }
-        currentUser?.takeIf(policy::canPlanTalks)?.let(::observe)
+        currentUser?.takeIf(policy::canViewTalkPlanning)?.let(::observe)
     }
 
     private fun observe(user: AppUser) {

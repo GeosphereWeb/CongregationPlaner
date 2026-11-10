@@ -86,6 +86,7 @@ data class ExternalDirectoryUiState(
     val directory: ExternalDirectory = ExternalDirectory(),
     val editor: ExternalDirectoryEditor? = null,
     val isLoading: Boolean = true,
+    val canView: Boolean = false,
     val canPlan: Boolean = false,
     override val isSaving: Boolean = false,
     val isDeleting: Boolean = false,
@@ -119,9 +120,16 @@ class ExternalDirectoryViewModel(
 
     fun onCurrentUserChanged(user: AppUser) {
         currentUser = user
+        val canView = policy.canViewTalkPlanning(user)
         val canPlan = policy.canPlanTalks(user)
-        mutableUiState.update { it.copy(canPlan = canPlan, editor = it.editor.takeIf { canPlan }) }
-        if (canPlan) {
+        mutableUiState.update {
+            it.copy(
+                canView = canView,
+                canPlan = canPlan,
+                editor = it.editor.takeIf { canView && (canPlan || it?.id != null) },
+            )
+        }
+        if (canView) {
             observe(user)
         } else {
             observeJob?.cancel()
@@ -148,7 +156,7 @@ class ExternalDirectoryViewModel(
 
     /** Während des Speicherns bleibt der Editor unverändert, sonst würde das Ergebnis die Eingaben überschreiben. */
     fun updateEditor(editor: ExternalDirectoryEditor) {
-        mutableUiState.update { if (it.isSaving || it.editor == null) it else it.copy(editor = editor) }
+        mutableUiState.update { if (it.isSaving || it.editor == null || !it.canPlan) it else it.copy(editor = editor) }
     }
 
     fun closeDetail() {
@@ -195,7 +203,7 @@ class ExternalDirectoryViewModel(
     fun dismissError() {
         mutableUiState.update { it.copy(errorMessage = null) }
         // Nach einem Ladefehler erneut laden.
-        currentUser?.takeIf(policy::canPlanTalks)?.let(::observe)
+        currentUser?.takeIf(policy::canViewTalkPlanning)?.let(::observe)
     }
 
     fun save() {
@@ -284,7 +292,9 @@ class ExternalDirectoryViewModel(
 
     private fun open(editor: ExternalDirectoryEditor) {
         val state = mutableUiState.value
-        if (state.isSaving || state.isDeleting || !state.canPlan) return
+        // Wer nur sehen darf, öffnet vorhandene Einträge; neue (ohne ID) legt nur der Planer an.
+        val allowed = if (editor.id == null) state.canPlan else state.canView
+        if (state.isSaving || state.isDeleting || !allowed) return
         mutableUiState.update { it.copy(editor = editor, errorMessage = null) }
     }
 

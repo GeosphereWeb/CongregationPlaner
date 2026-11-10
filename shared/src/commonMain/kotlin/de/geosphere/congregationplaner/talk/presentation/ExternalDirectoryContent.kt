@@ -134,7 +134,7 @@ internal fun ExternalDirectoryContent(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             ListPaneHeader("Externe Redner")
-            if (!state.canPlan) {
+            if (!state.canView) {
                 Text("Dafür fehlt dir die Berechtigung.")
                 return@Column
             }
@@ -370,7 +370,12 @@ private fun ExternalDirectoryDetail(
     onRequestDelete: (DeleteRequest) -> Unit,
 ) {
     val directory = state.directory
-    when (val editor = state.editor) {
+    val editor = state.editor
+    if (editor != null && !state.canPlan) {
+        ReadOnlyCard(readOnlyView(editor, directory))
+        return
+    }
+    when (editor) {
         null -> DetailPlaceholder("Wähle einen Kreis, eine Versammlung oder einen Redner aus.")
 
         is ExternalDirectoryEditor.Circuit -> EditorCard(
@@ -517,6 +522,17 @@ private fun NameField(label: String, value: String, onChange: (String) -> Unit) 
     )
 }
 
+/** Nur-Lesen-Ansicht für den Helfer: dieselben Angaben wie im Editor, aber ohne Felder und Aktionen. */
+@Composable
+private fun ReadOnlyCard(view: ReadOnlyView) {
+    Card(modifier = Modifier.fillMaxWidth(), colors = nightCardColors()) {
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(view.title, style = MaterialTheme.typography.titleMedium)
+            view.lines.forEach { Text(it) }
+        }
+    }
+}
+
 @Composable
 @Suppress("LongParameterList")
 private fun EditorCard(
@@ -567,6 +583,7 @@ private fun ExternalDirectoryContentPreview() = PreviewThemeWrapper {
             directory = ExternalDirectory(listOf(circuit), listOf(congregation), listOf(speaker)),
             editor = ExternalDirectoryEditor.Speaker(speaker, "12, 45", speaker),
             isLoading = false,
+            canView = true,
             canPlan = true,
         ),
         actions = ExternalDirectoryActions(),
@@ -591,6 +608,7 @@ private fun ExternalDirectoryFilteredPreview() = PreviewThemeWrapper {
                 filter = DirectoryFilter(congregationIds = setOf("g2")),
                 congregationQuery = "ze",
                 isLoading = false,
+                canView = true,
                 canPlan = true,
             ),
             actions = ExternalDirectoryActions(),
