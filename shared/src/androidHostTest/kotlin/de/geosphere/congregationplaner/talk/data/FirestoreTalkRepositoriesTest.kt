@@ -349,4 +349,18 @@ class FirestoreTalkRepositoriesTest {
         every { getString("externalSpeakerId") } returns null
         every { getString("speakerCongregation") } returns null
     }
+
+    @Test
+    fun `setConfirmed updates only the confirmed field of the day`(): Unit = withMockedLog {
+        val fields = slot<Map<String, Any>>()
+        every { reference.update(capture(fields)) } returns successTask<Void?>(null)
+        val repository = FirestoreTalkScheduleRepository(firestore)
+
+        runBlocking { repository.setConfirmed(congregation, slot.date, true).getOrThrow() }
+        assertEquals(mapOf("confirmed" to true), fields.captured)
+
+        val error = IllegalStateException("denied")
+        every { reference.update(any<Map<String, Any>>()) } returns failedTask(error)
+        runBlocking { assertFailure(error, repository.setConfirmed(congregation, slot.date, false)) }
+    }
 }

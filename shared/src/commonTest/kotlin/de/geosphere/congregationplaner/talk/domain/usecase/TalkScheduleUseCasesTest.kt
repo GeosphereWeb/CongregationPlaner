@@ -395,4 +395,45 @@ class TalkScheduleUseCasesTest {
         assertEquals(2026, repository.requestedYear)
         assertEquals(testCongregation, repository.requestedCongregation)
     }
+
+    @Test
+    fun `planner and talk helper confirm the speaker of a slot`() = runBlocking {
+        val confirm = ConfirmSpeakerUseCase(repository, policy)
+        val helper = member.copy(uid = "3", roles = setOf(CongregationRole.TALK_HELPER))
+
+        assertTrue(confirm(admin, sunday, true).isSuccess)
+        assertTrue(confirm(helper, sunday, false).isSuccess)
+
+        assertEquals(listOf(sunday to true, sunday to false), repository.confirmedUpdates)
+        assertEquals(testCongregation, repository.requestedCongregation)
+        // Es wird nur `confirmed` geschrieben, nie ein ganzer Termin.
+        assertTrue(repository.savedSlots.isEmpty())
+    }
+
+    @Test
+    fun `confirming is denied without the role or approval or congregation`(): Unit = runBlocking {
+        val confirm = ConfirmSpeakerUseCase(repository, policy)
+        val helper = member.copy(uid = "3", roles = setOf(CongregationRole.TALK_HELPER))
+        val denied = listOf(
+            member,
+            helper.copy(approved = false),
+            helper.copy(congregation = null),
+            admin.copy(roles = setOf(CongregationRole.CONGREGATION_ADMIN)),
+        )
+
+        denied.forEach { user ->
+            assertIs<TalkScheduleException.NotAllowed>(confirm(user, sunday, true).exceptionOrNull(), "for $user")
+        }
+        assertTrue(repository.confirmedUpdates.isEmpty())
+    }
+
+    @Test
+    fun `confirming reports a storage failure`(): Unit = runBlocking {
+        repository.confirmResult = Result.failure(IllegalStateException("denied"))
+
+        val result = ConfirmSpeakerUseCase(repository, policy)(admin, sunday, true)
+
+        assertIs<IllegalStateException>(result.exceptionOrNull())
+        assertTrue(repository.confirmedUpdates.isEmpty())
+    }
 }

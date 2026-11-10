@@ -615,6 +615,56 @@ await expect('Global Admin liest das eigene Admin-Dokument', api('GET', ADMIN_DO
 await expect('Anderer Nutzer liest ein Admin-Dokument nicht', api('GET', ADMIN_DOC, undefined, plain.token), false);
 await expect('Admin-Dokumente lassen sich nicht auflisten', api('GET', 'admins', undefined, admin.token), false);
 
+// ---------- Vortragsplanungs-Helfer (CP-127, ADR-0023) ----------
+const helper = await signUp('helper@test.de');
+const pendingHelper = await signUp('pendinghelper@test.de');
+const roleTarget = await signUp('roletarget@test.de');
+const helperNewcomer = await signUp('helpernewcomer@test.de');
+await api('PATCH', `${MEMBERS}/${helper.uid}`, memberDoc('helper@test.de', ['TALK_HELPER']), owner);
+await api('PATCH', `${MEMBERS}/${pendingHelper.uid}`, memberDoc('pendinghelper@test.de', ['TALK_HELPER'], { approved: false }), owner);
+await api('PATCH', `${MEMBERS}/${roleTarget.uid}`, memberDoc('roletarget@test.de', []), owner);
+const HELPER_SLOT = '2027-01-03';
+await putSlot(HELPER_SLOT, { ...base, ...speaker });
+const confirmedMask = `${SLOT}/${HELPER_SLOT}?updateMask.fieldPaths=confirmed`;
+const confirmedBody = (value) => ({ fields: { confirmed: { booleanValue: value } } });
+const slotMask = (...names) => `${SLOT}/${HELPER_SLOT}?${names.map((n) => `updateMask.fieldPaths=${n}`).join('&')}`;
+
+await expect('Helfer liest einen Termin', api('GET', `${SLOT}/${HELPER_SLOT}`, undefined, helper.token), true);
+await expect('Helfer listet die Termine', api('GET', SLOT, undefined, helper.token), true);
+await expect('Helfer liest die externen Kreise', api('GET', EXT_CIRCUITS, undefined, helper.token), true);
+await expect('Helfer liest die externen Versammlungen', api('GET', EXT_CONGREGATIONS, undefined, helper.token), true);
+await expect('Helfer liest die externen Redner', api('GET', EXT_SPEAKERS, undefined, helper.token), true);
+await expect('Helfer liest die Vortragshistorie', api('GET', HIST, undefined, helper.token), true);
+await expect('Helfer listet die Mitglieder', api('GET', MEMBERS, undefined, helper.token), true);
+await expect('Helfer liest ein fremdes Mitglied', api('GET', `${MEMBERS}/${planner.uid}`, undefined, helper.token), true);
+
+await expect('Helfer markiert den Redner als informiert', api('PATCH', confirmedMask, confirmedBody(true), helper.token), true);
+await expect('Helfer nimmt die Markierung zurück', api('PATCH', confirmedMask, confirmedBody(false), helper.token), true);
+await expect('Markierung ohne Bool', api('PATCH', confirmedMask, { fields: { confirmed: { stringValue: 'ja' } } }, helper.token), false);
+await expect('Helfer ändert die Notiz', api('PATCH', slotMask('note'), { fields: { note: { stringValue: 'x' } } }, helper.token), false);
+await expect('Helfer sagt den Vortrag ab', api('PATCH', slotMask('talkCancelled'), { fields: { talkCancelled: { booleanValue: true } } }, helper.token), false);
+await expect('Helfer ändert Markierung und Notiz zusammen', api('PATCH', slotMask('confirmed', 'note'), { fields: { confirmed: { booleanValue: true }, note: { stringValue: 'x' } } }, helper.token), false);
+await expect('Helfer ersetzt den ganzen Termin', putSlot(HELPER_SLOT, { ...base, ...speaker, note: 'x' }, helper.token), false);
+await expect('Helfer legt einen Termin an', putSlot('2027-01-10', base, helper.token), false);
+await expect('Helfer löscht einen Termin', api('DELETE', `${SLOT}/${HELPER_SLOT}`, undefined, helper.token), false);
+await expect('Helfer legt einen externen Redner an', post(EXT_SPEAKERS, validSpeaker, helper.token), false);
+await expect('Helfer ändert die Vortragshistorie', putHistory('9', { heldOn: ['2026-03-01'] }, helper.token), false);
+await expect('Helfer ändert ein Mitglied', api('PATCH', `${MEMBERS}/${plain.uid}${approvedMask}`, falseApproved, helper.token), false);
+await expect('Helfer vergibt sich eine Rolle', api('PATCH', rolesMask(helper.uid), rolesBody('TALK_HELPER', 'CONGREGATION_ADMIN'), helper.token), false);
+
+await expect('Nicht freigegebener Helfer liest keine Termine', api('GET', SLOT, undefined, pendingHelper.token), false);
+await expect('Nicht freigegebener Helfer markiert nicht', api('PATCH', confirmedMask, confirmedBody(true), pendingHelper.token), false);
+await expect('Helfer liest die Termine einer anderen Versammlung nicht', api('GET', `${OTHER_CONG}/talkSchedule`, undefined, helper.token), false);
+await expect('Mitglied ohne Rolle markiert nicht', api('PATCH', confirmedMask, confirmedBody(true), plain.token), false);
+await expect('Aufgabenplaner markiert nicht', api('PATCH', confirmedMask, confirmedBody(true), taskPlanner.token), false);
+
+await expect('Planer markiert den Redner als informiert', api('PATCH', confirmedMask, confirmedBody(true), planner.token), true);
+await expect('Planer ersetzt weiter den ganzen Termin', putSlot(HELPER_SLOT, { ...base, ...speaker, note: 'Planer' }), true);
+
+await expect('Admin vergibt die Helfer-Rolle', api('PATCH', rolesMask(roleTarget.uid), rolesBody('TALK_HELPER'), congAdmin.token), true);
+await expect('Helfer-Rolle zusammen mit der Planerrolle', api('PATCH', rolesMask(roleTarget.uid), rolesBody('TALK_HELPER', 'TALK_PLANNER'), congAdmin.token), true);
+await expect('Selbstregistrierung mit Helfer-Rolle', api('PATCH', registerPath(helperNewcomer), registerBody('helpernewcomer@test.de', { roles: ['TALK_HELPER'] }), helperNewcomer.token), false);
+
 console.log(`${count} checks, ${failures.length} failures`);
 failures.forEach((failure) => console.log(`FAILURE: ${failure}`));
 process.exitCode = failures.length === 0 ? 0 : 1;
