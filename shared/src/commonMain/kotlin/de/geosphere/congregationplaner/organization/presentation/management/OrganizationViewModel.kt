@@ -9,13 +9,12 @@ import de.geosphere.congregationplaner.organization.domain.usecase.DeleteOrgUnit
 import de.geosphere.congregationplaner.organization.domain.usecase.ObserveOrgUnitsUseCase
 import de.geosphere.congregationplaner.organization.domain.usecase.SaveOrgUnitUseCase
 import de.geosphere.congregationplaner.presentation.components.ListDetailState
+import de.geosphere.congregationplaner.presentation.state.UiStateStore
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** Die gerade bearbeitete Einheit; eine neue hat noch keine ID. */
@@ -51,8 +50,11 @@ class OrganizationViewModel(
     private val deleteUnit: DeleteOrgUnitUseCase,
     private val policy: OrganizationPermissionPolicy,
 ) : ViewModel() {
-    private val mutableUiState = MutableStateFlow(OrganizationUiState())
-    val uiState = mutableUiState.asStateFlow()
+    private val store = UiStateStore(OrganizationUiState())
+    val uiState: StateFlow<OrganizationUiState> = store.state
+
+    /** Anlegen und Bearbeiten einer Einheit (ADR-0025). */
+    val editor = OrgUnitEditorHolder(store)
 
     private var currentUser: AppUser? = null
     private var observeJob: Job? = null
@@ -60,72 +62,40 @@ class OrganizationViewModel(
     fun onCurrentUserChanged(user: AppUser) {
         val first = currentUser == null
         currentUser = user
-        mutableUiState.update { it.copy(canManage = policy.canManage(user)) }
+        store.update { it.copy(canManage = policy.canManage(user)) }
         if (first) observe()
     }
 
     /** Klappt [unit] der aktuellen Ebene auf und zeigt die Ebene darunter. */
     fun open(unit: OrgUnit) {
-        if (unit.id.isBlank() || !mutableUiState.value.level.isOrgUnit) return
-        navigate(mutableUiState.value.path + unit)
+        if (unit.id.isBlank() || !store.value.level.isOrgUnit) return
+        navigate(store.value.path + unit)
     }
 
     /** Springt zurück auf die Ebene mit [depth] aufgeklappten Einheiten (0 = Regionen). */
     fun goTo(depth: Int) {
-        val path = mutableUiState.value.path
+        val path = store.value.path
         if (depth in 0 until path.size) navigate(path.take(depth))
     }
 
     /** Eine Ebene nach oben; `false`, wenn schon die Regionen zu sehen sind. */
     fun back(): Boolean {
-        val depth = mutableUiState.value.path.size
+        val depth = store.value.path.size
         if (depth == 0) return false
         goTo(depth - 1)
         return true
     }
 
-    fun create() {
-        if (!mutableUiState.value.canManage) return
-        mutableUiState.update { it.copy(editor = OrgUnitEditorState(OrgUnit()), errorMessage = null) }
-    }
-
-    fun edit(unit: OrgUnit) {
-        mutableUiState.update { it.copy(editor = OrgUnitEditorState(unit), errorMessage = null) }
-    }
-
-    fun updateEditor(unit: OrgUnit) {
-        val editor = mutableUiState.value.editor ?: return
-        // Die ID ist Pfadsegment und bleibt unverändert; die Namen werden auf die erlaubte Länge gekürzt.
-        val limited = unit.copy(
-            id = editor.original.id,
-            name = unit.name.take(OrgUnit.MAX_NAME_LENGTH),
-            overseerName = unit.overseerName.take(OrgUnit.MAX_NAME_LENGTH),
-        )
-        mutableUiState.update { it.copy(editor = editor.copy(unit = limited)) }
-    }
-
-    fun cancelEditing() {
-        mutableUiState.update { it.copy(editor = null, errorMessage = null) }
-    }
-
-    /** Verwirft Änderungen, lässt aber die ausgewählte Einheit geöffnet; eine neue wird geschlossen. */
-    fun discardChanges() {
-        mutableUiState.update { state ->
-            val editor = state.editor?.takeUnless { it.isNew }?.let { it.copy(unit = it.original) }
-            state.copy(editor = editor, errorMessage = null)
-        }
-    }
-
     fun save() {
-        val state = mutableUiState.value
+        val state = store.value
         val editor = state.editor ?: return
         val user = currentUser ?: return
         if (state.isSaving || state.isDeleting) return
-        mutableUiState.update { it.copy(isSaving = true, errorMessage = null) }
+        store.update { it.copy(isSaving = true, errorMessage = null) }
         viewModelScope.launch {
             saveUnit(user, state.level, state.parentIds, editor.unit)
                 .onSuccess { saved ->
-                    mutableUiState.update {
+                    store.update {
                         it.copy(
                             units = (it.units.filterNot { unit -> unit.id == saved.id } + saved).sortedForList(),
                             editor = OrgUnitEditorState(saved),
@@ -133,7 +103,7 @@ class OrganizationViewModel(
                         )
                     }
                 }.onFailure { error ->
-                    mutableUiState.update {
+                    store.update {
                         it.copy(isSaving = false, errorMessage = error.message ?: "Speichern fehlgeschlagen.")
                     }
                 }
@@ -141,14 +111,14 @@ class OrganizationViewModel(
     }
 
     fun delete(unit: OrgUnit) {
-        val state = mutableUiState.value
+        val state = store.value
         val user = currentUser ?: return
         if (state.isSaving || state.isDeleting) return
-        mutableUiState.update { it.copy(isDeleting = true, errorMessage = null) }
+        store.update { it.copy(isDeleting = true, errorMessage = null) }
         viewModelScope.launch {
             deleteUnit(user, state.level, state.parentIds, unit)
                 .onSuccess {
-                    mutableUiState.update {
+                    store.update {
                         it.copy(
                             units = it.units.filterNot { item -> item.id == unit.id },
                             editor = it.editor?.takeUnless { editor -> editor.original.id == unit.id },
@@ -156,7 +126,7 @@ class OrganizationViewModel(
                         )
                     }
                 }.onFailure { error ->
-                    mutableUiState.update {
+                    store.update {
                         it.copy(isDeleting = false, errorMessage = error.message ?: "Löschen fehlgeschlagen.")
                     }
                 }
@@ -164,27 +134,27 @@ class OrganizationViewModel(
     }
 
     private fun navigate(path: List<OrgUnit>) {
-        mutableUiState.update { it.copy(path = path, units = emptyList(), editor = null, errorMessage = null) }
+        store.update { it.copy(path = path, units = emptyList(), editor = null, errorMessage = null) }
         observe()
     }
 
     private fun observe() {
         observeJob?.cancel()
-        val state = mutableUiState.value
+        val state = store.value
         if (!state.level.isOrgUnit) {
-            mutableUiState.update { it.copy(isLoading = false) }
+            store.update { it.copy(isLoading = false) }
             return
         }
-        mutableUiState.update { it.copy(isLoading = true) }
+        store.update { it.copy(isLoading = true) }
         observeJob = viewModelScope.launch {
             observeUnits(state.level, state.parentIds)
                 .catch { error ->
-                    mutableUiState.update {
+                    store.update {
                         it.copy(isLoading = false, errorMessage = error.message ?: "Laden fehlgeschlagen.")
                     }
-                }.collect { units -> mutableUiState.update { it.copy(units = units, isLoading = false) } }
+                }.collect { units -> store.update { it.copy(units = units, isLoading = false) } }
         }
     }
-
-    private fun List<OrgUnit>.sortedForList(): List<OrgUnit> = sortedBy { it.displayName.lowercase() }
 }
+
+internal fun List<OrgUnit>.sortedForList(): List<OrgUnit> = sortedBy { it.displayName.lowercase() }

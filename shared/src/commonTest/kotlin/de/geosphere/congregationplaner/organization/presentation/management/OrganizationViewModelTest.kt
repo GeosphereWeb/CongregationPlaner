@@ -101,10 +101,10 @@ class OrganizationViewModelTest {
     @Test
     fun `a new unit is created on the current level and stays open`() {
         viewModel.open(emea)
-        viewModel.create()
+        viewModel.editor.create()
         assertTrue(checkNotNull(state.editor).isNew)
 
-        viewModel.updateEditor(OrgUnit(name = "Afrika"))
+        viewModel.editor.update(OrgUnit(name = "Afrika"))
         viewModel.save()
 
         assertEquals(OrgUnitEditorState(OrgUnit("new-1", "Afrika")), state.editor)
@@ -114,21 +114,21 @@ class OrganizationViewModelTest {
 
     @Test
     fun `editing keeps the id and discarding restores the unit`() {
-        viewModel.edit(emea)
-        viewModel.updateEditor(OrgUnit("other", "Neu"))
+        viewModel.editor.edit(emea)
+        viewModel.editor.update(OrgUnit("other", "Neu"))
         assertEquals(OrgUnit("r1", "Neu"), state.editor?.unit)
         assertTrue(checkNotNull(state.editor).isDirty)
 
-        viewModel.discardChanges()
+        viewModel.editor.discard()
         assertEquals(OrgUnitEditorState(emea), state.editor)
 
-        viewModel.cancelEditing()
+        viewModel.editor.cancel()
         assertNull(state.editor)
     }
 
     @Test
     fun `units with entries below cannot be deleted`() {
-        viewModel.edit(emea)
+        viewModel.editor.edit(emea)
         viewModel.delete(emea)
 
         assertTrue(state.errorMessage.orEmpty().contains("EMEA"))
@@ -141,7 +141,7 @@ class OrganizationViewModelTest {
         viewModel.open(emea)
         viewModel.open(europe)
         viewModel.open(central)
-        viewModel.edit(north)
+        viewModel.editor.edit(north)
 
         viewModel.delete(north)
 
@@ -151,7 +151,7 @@ class OrganizationViewModelTest {
 
     @Test
     fun `failed saves show the error and keep the input`() {
-        viewModel.create()
+        viewModel.editor.create()
         viewModel.save()
 
         assertEquals("Bitte gib einen Namen ein.", state.errorMessage)
@@ -163,7 +163,7 @@ class OrganizationViewModelTest {
     fun `members cannot create units`() {
         viewModel.onCurrentUserChanged(AppUser(uid = "m", approved = true))
 
-        viewModel.create()
+        viewModel.editor.create()
 
         assertFalse(state.canManage)
         assertNull(state.editor)
@@ -171,10 +171,10 @@ class OrganizationViewModelTest {
 
     @Test
     fun `names in the editor are cut to the allowed length`() {
-        viewModel.edit(emea)
+        viewModel.editor.edit(emea)
         val tooLong = "x".repeat(OrgUnit.MAX_NAME_LENGTH + 4)
 
-        viewModel.updateEditor(OrgUnit("r1", tooLong, tooLong))
+        viewModel.editor.update(OrgUnit("r1", tooLong, tooLong))
 
         assertEquals(OrgUnit.MAX_NAME_LENGTH, state.editor?.unit?.name?.length)
         assertEquals(OrgUnit.MAX_NAME_LENGTH, state.editor?.unit?.overseerName?.length)

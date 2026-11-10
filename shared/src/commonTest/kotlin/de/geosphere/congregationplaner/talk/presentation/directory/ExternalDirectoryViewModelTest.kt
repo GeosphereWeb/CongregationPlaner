@@ -55,12 +55,14 @@ class ExternalDirectoryViewModelTest {
         val policy = TalkSchedulePermissionPolicy()
         viewModel = ExternalDirectoryViewModel(
             ObserveExternalDirectoryUseCase(repository),
-            SaveExternalCircuitUseCase(repository, policy),
-            SaveExternalCongregationUseCase(repository, policy),
-            SaveVisitingSpeakerUseCase(repository, policy),
-            DeleteExternalCircuitUseCase(repository, policy),
-            DeleteExternalCongregationUseCase(repository, policy),
-            DeleteVisitingSpeakerUseCase(repository, policy),
+            DirectoryChangeUseCases(
+                SaveExternalCircuitUseCase(repository, policy),
+                SaveExternalCongregationUseCase(repository, policy),
+                SaveVisitingSpeakerUseCase(repository, policy),
+                DeleteExternalCircuitUseCase(repository, policy),
+                DeleteExternalCongregationUseCase(repository, policy),
+                DeleteVisitingSpeakerUseCase(repository, policy),
+            ),
             policy,
         )
     }
@@ -91,19 +93,19 @@ class ExternalDirectoryViewModelTest {
         repository.congregations.value += zell
         viewModel.onCurrentUserChanged(planner)
 
-        viewModel.toggleCongregationFilter("g2")
+        viewModel.filter.toggleCongregation("g2")
         assertEquals(listOf(zell), state.visibleDirectory.congregations)
         assertTrue(state.filter.circuitIds.isEmpty())
 
-        viewModel.toggleCircuitFilter("c1") // g2 belongs to the other circuit, so it is dropped
+        viewModel.filter.toggleCircuit("c1") // g2 belongs to the other circuit, so it is dropped
         assertEquals(DirectoryFilter(setOf("c1"), emptySet()), state.filter)
         assertEquals(listOf(altdorf), state.visibleDirectory.congregations)
 
-        viewModel.toggleCircuitFilter("c2")
+        viewModel.filter.toggleCircuit("c2")
         assertEquals(2, state.visibleDirectory.congregations.size)
 
-        viewModel.clearCircuitFilter()
-        viewModel.searchCongregations("ze")
+        viewModel.filter.clearCircuits()
+        viewModel.filter.searchCongregations("ze")
         assertEquals("ze", state.congregationQuery)
         assertEquals(
             listOf("g2"),
@@ -112,8 +114,8 @@ class ExternalDirectoryViewModelTest {
             },
         )
 
-        viewModel.toggleCongregationFilter("g1")
-        viewModel.clearCongregationFilter()
+        viewModel.filter.toggleCongregation("g1")
+        viewModel.filter.clearCongregations()
         assertFalse(state.filter.isActive)
         assertEquals("", state.congregationQuery)
     }
@@ -126,27 +128,27 @@ class ExternalDirectoryViewModelTest {
         assertFalse(state.canPlan)
         assertEquals(listOf(berg), state.directory.speakers)
 
-        viewModel.newCircuit()
-        viewModel.newSpeaker("g1")
+        viewModel.editor.newCircuit()
+        viewModel.editor.newSpeaker("g1")
         assertNull(state.editor)
 
-        viewModel.select(berg)
+        viewModel.editor.select(berg)
         val opened = state.editor
         assertEquals("s1", opened?.id)
 
-        viewModel.updateEditor(ExternalDirectoryEditor.Speaker(berg.copy(lastName = "Neu"), "12", berg))
+        viewModel.editor.update(ExternalDirectoryEditor.Speaker(berg.copy(lastName = "Neu"), "12", berg))
         assertEquals(opened, state.editor)
     }
 
     @Test
     fun `switching to the helper role keeps a saved entry but drops a new one`() {
         viewModel.onCurrentUserChanged(planner)
-        viewModel.select(berg)
+        viewModel.editor.select(berg)
         viewModel.onCurrentUserChanged(helper)
         assertEquals("s1", state.editor?.id)
 
         viewModel.onCurrentUserChanged(planner)
-        viewModel.newCircuit()
+        viewModel.editor.newCircuit()
         viewModel.onCurrentUserChanged(helper)
         assertNull(state.editor)
 
@@ -157,7 +159,7 @@ class ExternalDirectoryViewModelTest {
     @Test
     fun `member without permission sees nothing and cannot open an editor`() {
         viewModel.onCurrentUserChanged(member)
-        viewModel.newCircuit()
+        viewModel.editor.newCircuit()
 
         assertFalse(state.canView)
         assertFalse(state.canPlan)
@@ -169,11 +171,11 @@ class ExternalDirectoryViewModelTest {
     @Test
     fun `a new circuit is saved and stays open`() {
         viewModel.onCurrentUserChanged(planner)
-        viewModel.newCircuit()
+        viewModel.editor.newCircuit()
         assertTrue(state.editor!!.isDirty)
 
-        viewModel.updateEditor(ExternalDirectoryEditor.Circuit(ExternalCircuit(name = " Süd ")))
-        viewModel.save()
+        viewModel.editor.update(ExternalDirectoryEditor.Circuit(ExternalCircuit(name = " Süd ")))
+        viewModel.changes.save()
 
         val editor = assertIs<ExternalDirectoryEditor.Circuit>(state.editor)
         assertEquals(ExternalCircuit("c-1", "Süd"), editor.circuit)
@@ -187,16 +189,16 @@ class ExternalDirectoryViewModelTest {
     fun `a new congregation and speaker are created below their parent`() {
         viewModel.onCurrentUserChanged(planner)
 
-        viewModel.newCongregation("c1")
+        viewModel.editor.newCongregation("c1")
         val congregation = assertIs<ExternalDirectoryEditor.Congregation>(state.editor)
-        viewModel.updateEditor(congregation.copy(congregation = congregation.congregation.copy(name = "Neustadt")))
-        viewModel.save()
+        viewModel.editor.update(congregation.copy(congregation = congregation.congregation.copy(name = "Neustadt")))
+        viewModel.changes.save()
         assertEquals(ExternalCongregation("g-1", "c1", "Neustadt"), repository.savedCongregations.single())
 
-        viewModel.newSpeaker("g-1")
+        viewModel.editor.newSpeaker("g-1")
         val speaker = assertIs<ExternalDirectoryEditor.Speaker>(state.editor)
-        viewModel.updateEditor(speaker.copy(speaker = speaker.speaker.copy(lastName = "Neu"), talksText = "45, 12 45"))
-        viewModel.save()
+        viewModel.editor.update(speaker.copy(speaker = speaker.speaker.copy(lastName = "Neu"), talksText = "45, 12 45"))
+        viewModel.changes.save()
 
         val saved = repository.savedSpeakers.single()
         assertEquals("g-1", saved.congregationId)
@@ -208,11 +210,11 @@ class ExternalDirectoryViewModelTest {
     @Test
     fun `invalid talk numbers are not saved`() {
         viewModel.onCurrentUserChanged(planner)
-        viewModel.select(berg)
+        viewModel.editor.select(berg)
         val editor = assertIs<ExternalDirectoryEditor.Speaker>(state.editor)
 
-        viewModel.updateEditor(editor.copy(talksText = "12, abc"))
-        viewModel.save()
+        viewModel.editor.update(editor.copy(talksText = "12, abc"))
+        viewModel.changes.save()
 
         assertNotNull(state.errorMessage)
         assertTrue(repository.savedSpeakers.isEmpty())
@@ -221,11 +223,11 @@ class ExternalDirectoryViewModelTest {
     @Test
     fun `a rejected save shows the error and keeps the editor`() {
         viewModel.onCurrentUserChanged(planner)
-        viewModel.newCircuit()
-        viewModel.updateEditor(ExternalDirectoryEditor.Circuit(ExternalCircuit(name = "Süd")))
+        viewModel.editor.newCircuit()
+        viewModel.editor.update(ExternalDirectoryEditor.Circuit(ExternalCircuit(name = "Süd")))
         repository.saveResult = Result.failure(IllegalStateException("offline"))
 
-        viewModel.save()
+        viewModel.changes.save()
 
         assertEquals("offline", state.errorMessage)
         assertNotNull(state.editor)
@@ -235,9 +237,9 @@ class ExternalDirectoryViewModelTest {
     @Test
     fun `an invalid name shows the validation error`() {
         viewModel.onCurrentUserChanged(planner)
-        viewModel.newCircuit()
+        viewModel.editor.newCircuit()
 
-        viewModel.save()
+        viewModel.changes.save()
 
         assertNotNull(state.errorMessage)
         assertTrue(repository.savedCircuits.isEmpty())
@@ -246,24 +248,24 @@ class ExternalDirectoryViewModelTest {
     @Test
     fun `discard resets a saved entry and closes a new one`() {
         viewModel.onCurrentUserChanged(planner)
-        viewModel.select(north)
-        viewModel.updateEditor(ExternalDirectoryEditor.Circuit(north.copy(name = "Geändert"), north))
+        viewModel.editor.select(north)
+        viewModel.editor.update(ExternalDirectoryEditor.Circuit(north.copy(name = "Geändert"), north))
         assertTrue(state.editor!!.isDirty)
 
-        viewModel.discardChanges()
+        viewModel.editor.discard()
         assertEquals(ExternalDirectoryEditor.Circuit(north, north), state.editor)
 
-        viewModel.newCircuit()
-        viewModel.discardChanges()
+        viewModel.editor.newCircuit()
+        viewModel.editor.discard()
         assertNull(state.editor)
     }
 
     @Test
     fun `deleting removes the entry at once and closes its editor`() {
         viewModel.onCurrentUserChanged(planner)
-        viewModel.select(berg)
+        viewModel.editor.select(berg)
 
-        viewModel.delete(berg)
+        viewModel.changes.delete(berg)
 
         assertEquals(listOf("s1"), repository.deletedIds)
         assertTrue(state.directory.speakers.isEmpty())
@@ -274,7 +276,7 @@ class ExternalDirectoryViewModelTest {
     fun `a circuit with congregations cannot be deleted`() {
         viewModel.onCurrentUserChanged(planner)
 
-        viewModel.delete(north)
+        viewModel.changes.delete(north)
 
         assertNotNull(state.errorMessage)
         assertEquals(listOf(north), state.directory.circuits)
@@ -286,7 +288,7 @@ class ExternalDirectoryViewModelTest {
         viewModel.onCurrentUserChanged(planner)
         repository.deleteResult = Result.failure(IllegalStateException("denied"))
 
-        viewModel.delete(berg)
+        viewModel.changes.delete(berg)
 
         assertEquals("denied", state.errorMessage)
         assertEquals(listOf(berg), state.directory.speakers)

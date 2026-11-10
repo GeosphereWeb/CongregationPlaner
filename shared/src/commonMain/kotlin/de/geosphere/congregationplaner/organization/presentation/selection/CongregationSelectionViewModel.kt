@@ -2,9 +2,7 @@ package de.geosphere.congregationplaner.organization.presentation.selection
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import de.geosphere.congregationplaner.auth.domain.repository.FirebaseUser
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationName
-import de.geosphere.congregationplaner.congregation.domain.model.NewCongregationAdmin
 import de.geosphere.congregationplaner.congregation.domain.usecase.CreateOwnCongregationUseCase
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.organization.domain.model.OrgLevel
@@ -12,12 +10,10 @@ import de.geosphere.congregationplaner.organization.domain.model.OrgUnit
 import de.geosphere.congregationplaner.organization.domain.model.SelectedCongregation
 import de.geosphere.congregationplaner.organization.domain.repository.CongregationSelectionStore
 import de.geosphere.congregationplaner.organization.domain.usecase.LoadOrganizationUnitsUseCase
-import de.geosphere.congregationplaner.user.data.toNameProfile
+import de.geosphere.congregationplaner.presentation.state.UiStateStore
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 /** Auswahl auf einer Ebene der Organisationsstruktur. */
@@ -72,26 +68,30 @@ data class CongregationSelectionUiState(
 }
 
 /**
- * Lässt den Nutzer vor der Anmeldung seine Versammlung wählen: Ebene für Ebene von der Region bis zur
- * Versammlung oder über einen Einladungslink. Die Auswahl wird lokal gespeichert.
+ * Lässt den Nutzer vor der Anmeldung seine Versammlung wählen: Ebene für Ebene von der Region bis zur Versammlung
+ * oder über einen Einladungslink. Die Auswahl wird lokal gespeichert. Neue Versammlung und Einladungslink übernehmen
+ * die Zustandshalter (ADR-0025).
  */
 @Inject
 class CongregationSelectionViewModel(
     private val loadUnits: LoadOrganizationUnitsUseCase,
     private val store: CongregationSelectionStore,
-    private val createOwnCongregation: CreateOwnCongregationUseCase,
+    createOwnCongregation: CreateOwnCongregationUseCase,
 ) : ViewModel() {
-    private val mutableUiState = MutableStateFlow(CongregationSelectionUiState(selected = store.load()))
-    val uiState = mutableUiState.asStateFlow()
+    private val uiStore = UiStateStore(CongregationSelectionUiState(selected = store.load()))
+    val uiState: StateFlow<CongregationSelectionUiState> = uiStore.state
 
     private var loadJob: Job? = null
 
+    val newCongregation = NewCongregationHolder(uiStore, viewModelScope, createOwnCongregation, ::select)
+    val inviteLink = InviteLinkHolder(uiStore, loadUnits, ::launchLoad, ::select)
+
     init {
-        if (mutableUiState.value.selected == null) startPicking()
+        if (uiStore.value.selected == null) startPicking()
     }
 
     fun startPicking() {
-        mutableUiState.update {
+        uiStore.update {
             it.copy(levels = listOf(OrgLevelSelection(OrgLevel.REGION, isLoading = true)), errorMessage = null)
         }
         loadLevel(OrgLevel.REGION, emptyList())
@@ -99,169 +99,48 @@ class CongregationSelectionViewModel(
 
     /** Bricht die Auswahl ab; nur möglich, wenn bereits eine Versammlung gewählt ist. */
     fun cancelPicking() {
-        if (mutableUiState.value.selected == null) return
+        if (uiStore.value.selected == null) return
         loadJob?.cancel()
-        mutableUiState.update { it.copy(levels = emptyList(), errorMessage = null) }
+        uiStore.update { it.copy(levels = emptyList(), errorMessage = null) }
     }
 
     fun selectUnit(level: OrgLevel, unitId: String) {
-        val levels = mutableUiState.value.levels
+        val levels = uiStore.value.levels
         val current = levels.getOrNull(level.ordinal)?.takeIf { it.level == level } ?: return
         val unit = current.options.firstOrNull { it.id == unitId } ?: return
         // Tiefere Ebenen hängen von dieser Auswahl ab und werden verworfen.
         val updatedLevels = levels.take(level.ordinal) + current.copy(selectedId = unit.id)
         val ids = updatedLevels.mapNotNull { it.selectedId }
-
         val child = level.child
         if (child == null) {
-            val ref = CongregationRef.fromIds(ids) ?: return
             val circuitName = updatedLevels.firstOrNull { it.level == OrgLevel.CIRCUIT }?.selectedUnit?.name.orEmpty()
-            select(SelectedCongregation(ref, unit.name, circuitName))
-            return
-        }
-        mutableUiState.update {
-            it.copy(levels = updatedLevels + OrgLevelSelection(child, isLoading = true), errorMessage = null)
-        }
-        loadLevel(child, ids)
-    }
-
-    /** Beginnt eine neue Versammlung im gewählten Kreis; den Namen gibt der Nutzer danach ein. */
-    fun startNewCongregation() {
-        val levels = mutableUiState.value.levels
-        val circuit = levels.getOrNull(OrgLevel.CIRCUIT.ordinal)?.takeIf { it.selectedId != null } ?: return
-        val circuitIds = levels.take(OrgLevel.CIRCUIT.ordinal + 1).mapNotNull { it.selectedId }
-        mutableUiState.update {
-            it.copy(
-                newCongregation = NewCongregationDraft(circuitIds, circuit.selectedUnit?.name.orEmpty()),
-                errorMessage = null,
-            )
-        }
-    }
-
-    fun onNewCongregationNameChanged(name: String) {
-        mutableUiState.update { state ->
-            state.copy(
-                newCongregation = state.newCongregation?.copy(name = name.take(CongregationName.MAX_LENGTH)),
-                errorMessage = null,
-            )
-        }
-    }
-
-    fun confirmNewCongregation() {
-        if (!mutableUiState.value.isNewCongregationReady) return
-        mutableUiState.update { state -> state.copy(newCongregation = state.newCongregation?.copy(confirmed = true)) }
-    }
-
-    /** Zurück zur Namenseingabe, z. B. um den vorgemerkten Namen zu ändern. */
-    fun editNewCongregation() {
-        mutableUiState.update { state -> state.copy(newCongregation = state.newCongregation?.copy(confirmed = false)) }
-    }
-
-    fun cancelNewCongregation() {
-        mutableUiState.update { it.copy(newCongregation = null, isCreating = false, errorMessage = null) }
-    }
-
-    /**
-     * Legt die vorgemerkte Versammlung an und wählt sie; [user] wird ihr erster Admin. Das geht erst nach der
-     * Anmeldung mit bestätigter E-Mail-Adresse.
-     */
-    fun createNewCongregation(user: FirebaseUser) {
-        val draft = mutableUiState.value.newCongregation ?: return
-        if (mutableUiState.value.isCreating) return
-        mutableUiState.update { it.copy(isCreating = true, errorMessage = null) }
-        val names = user.displayName.toNameProfile()
-        val admin = NewCongregationAdmin(
-            uid = user.uid,
-            email = user.email,
-            displayName = user.displayName,
-            firstName = names.firstName,
-            lastName = names.lastName,
-            emailVerified = user.emailVerified,
-        )
-        viewModelScope.launch {
-            createOwnCongregation(draft.circuitIds, draft.name, admin)
-                .onSuccess { created ->
-                    val ref = CongregationRef.fromIds(draft.circuitIds + created.id)
-                    if (ref == null) {
-                        mutableUiState.update {
-                            it.copy(isCreating = false, errorMessage = CREATED_WITHOUT_PATH_MESSAGE)
-                        }
-                    } else {
-                        select(SelectedCongregation(ref, created.name, draft.circuitName))
-                    }
-                }.onFailure { exception ->
-                    mutableUiState.update {
-                        it.copy(
-                            isCreating = false,
-                            errorMessage = exception.message ?: "Die Versammlung konnte nicht angelegt werden.",
-                        )
-                    }
-                }
-        }
-    }
-
-    fun onInviteLinkChanged(input: String) {
-        mutableUiState.update { it.copy(inviteLinkInput = input, errorMessage = null) }
-    }
-
-    /** Übernimmt einen Einladungslink aus der Zwischenablage; ohne Text gibt es eine Fehlermeldung. */
-    fun pasteInviteLink(clipboardText: String?) {
-        if (clipboardText.isNullOrBlank()) {
-            mutableUiState.update { it.copy(errorMessage = EMPTY_CLIPBOARD_MESSAGE) }
-            return
-        }
-        onInviteLinkChanged(clipboardText)
-        applyInviteLink(clipboardText)
-    }
-
-    /** Übernimmt die Versammlung aus einem Einladungslink, nachdem geprüft wurde, dass es sie gibt. */
-    fun applyInviteLink(link: String = mutableUiState.value.inviteLinkInput) {
-        val ref = CongregationRef.parse(link)
-        if (ref == null) {
-            mutableUiState.update { it.copy(errorMessage = INVALID_LINK_MESSAGE) }
-            return
-        }
-        loadJob?.cancel()
-        mutableUiState.update { it.copy(isResolvingLink = true, errorMessage = null) }
-        loadJob = viewModelScope.launch {
-            loadUnits(OrgLevel.CONGREGATION, ref.ids.dropLast(1))
-                .onSuccess { congregations ->
-                    val congregation = congregations.firstOrNull { it.id == ref.congregationId }
-                    if (congregation == null) {
-                        mutableUiState.update { it.copy(isResolvingLink = false, errorMessage = UNKNOWN_LINK_MESSAGE) }
-                    } else {
-                        val circuitName = loadUnits(OrgLevel.CIRCUIT, ref.ids.dropLast(2)).getOrNull()
-                            ?.firstOrNull { it.id == ref.circuitId }?.name.orEmpty()
-                        select(SelectedCongregation(ref, congregation.name, circuitName))
-                    }
-                }.onFailure { exception ->
-                    mutableUiState.update {
-                        it.copy(isResolvingLink = false, errorMessage = exception.message ?: UNKNOWN_LINK_MESSAGE)
-                    }
-                }
+            CongregationRef.fromIds(ids)?.let { select(SelectedCongregation(it, unit.name, circuitName)) }
+        } else {
+            uiStore.update {
+                it.copy(levels = updatedLevels + OrgLevelSelection(child, isLoading = true), errorMessage = null)
+            }
+            loadLevel(child, ids)
         }
     }
 
     /** Lädt die zuletzt gewählte Ebene erneut, z. B. nachdem das Netzwerk wieder verfügbar ist. */
     fun retry() {
-        val levels = mutableUiState.value.levels
+        val levels = uiStore.value.levels
         val last = levels.lastOrNull() ?: return startPicking()
-        mutableUiState.update {
-            it.copy(levels = levels.dropLast(1) + last.copy(isLoading = true), errorMessage = null)
-        }
+        uiStore.update { it.copy(levels = levels.dropLast(1) + last.copy(isLoading = true), errorMessage = null) }
         loadLevel(last.level, levels.dropLast(1).mapNotNull { it.selectedId })
     }
 
     /** Verwirft die gespeicherte Versammlung, z. B. um eine andere zu wählen. */
     fun clearSelection() {
         store.clear()
-        mutableUiState.update { it.copy(selected = null) }
+        uiStore.update { it.copy(selected = null) }
         startPicking()
     }
 
     private fun select(selection: SelectedCongregation) {
         store.save(selection)
-        mutableUiState.update {
+        uiStore.update {
             it.copy(
                 selected = selection,
                 levels = emptyList(),
@@ -274,40 +153,38 @@ class CongregationSelectionViewModel(
         }
     }
 
-    private fun loadLevel(level: OrgLevel, parentIds: List<String>) {
+    private fun launchLoad(block: suspend () -> Unit) {
         loadJob?.cancel()
-        loadJob = viewModelScope.launch {
-            val result = loadUnits(level, parentIds)
-            mutableUiState.update { state ->
-                val index = level.ordinal
-                val entry = state.levels.getOrNull(index)
-                // Ergebnisse einer inzwischen geänderten Auswahl werden verworfen.
-                if (entry?.level != level || state.levels.take(index).mapNotNull { it.selectedId } != parentIds) {
-                    return@update state
-                }
-                result.fold(
-                    onSuccess = { units ->
-                        val message = if (units.isEmpty()) "Keine Einträge für ${level.label} gefunden." else null
-                        state.copy(
-                            levels = state.levels.take(index) + entry.copy(options = units, isLoading = false),
-                            errorMessage = message,
-                        )
-                    },
-                    onFailure = { exception ->
-                        state.copy(
-                            levels = state.levels.take(index) + entry.copy(isLoading = false),
-                            errorMessage = exception.message ?: "${level.label} konnte nicht geladen werden.",
-                        )
-                    },
-                )
-            }
-        }
+        loadJob = viewModelScope.launch { block() }
     }
 
-    private companion object {
-        const val INVALID_LINK_MESSAGE = "Der Einladungslink ist ungültig."
-        const val EMPTY_CLIPBOARD_MESSAGE = "Die Zwischenablage enthält keinen Text."
-        const val UNKNOWN_LINK_MESSAGE = "Die Versammlung aus dem Einladungslink wurde nicht gefunden."
-        const val CREATED_WITHOUT_PATH_MESSAGE = "Die Versammlung wurde angelegt, konnte aber nicht gewählt werden."
+    private fun loadLevel(level: OrgLevel, parentIds: List<String>) = launchLoad {
+        val result = loadUnits(level, parentIds)
+        uiStore.update { state -> state.withLoadedLevel(level, parentIds, result) }
     }
+}
+
+/** Übernimmt das Laden einer Ebene; Ergebnisse einer inzwischen geänderten Auswahl werden verworfen. */
+internal fun CongregationSelectionUiState.withLoadedLevel(
+    level: OrgLevel,
+    parentIds: List<String>,
+    result: Result<List<OrgUnit>>,
+): CongregationSelectionUiState {
+    val index = level.ordinal
+    val entry = levels.getOrNull(index)
+    if (entry?.level != level || levels.take(index).mapNotNull { it.selectedId } != parentIds) return this
+    return result.fold(
+        onSuccess = { units ->
+            copy(
+                levels = levels.take(index) + entry.copy(options = units, isLoading = false),
+                errorMessage = if (units.isEmpty()) "Keine Einträge für ${level.label} gefunden." else null,
+            )
+        },
+        onFailure = { exception ->
+            copy(
+                levels = levels.take(index) + entry.copy(isLoading = false),
+                errorMessage = exception.message ?: "${level.label} konnte nicht geladen werden.",
+            )
+        },
+    )
 }
