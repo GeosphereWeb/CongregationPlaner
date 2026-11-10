@@ -14,6 +14,7 @@ import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.talk.domain.usecase.ChangeYearSlotTimesUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.ConfirmSpeakerUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.CreateYearSlotsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.MoveTalkSlotUseCase
@@ -85,6 +86,7 @@ class TalkScheduleViewModel(
     private val changeYearTimes: ChangeYearSlotTimesUseCase,
     private val deleteSlot: DeleteTalkSlotUseCase,
     private val syncHistory: SyncTalkHistoryWithSlotUseCase,
+    private val confirmSpeaker: ConfirmSpeakerUseCase,
     private val permissionPolicy: TalkSchedulePermissionPolicy,
     private val userPolicy: UserPermissionPolicy,
 ) : ViewModel() {
@@ -112,7 +114,7 @@ class TalkScheduleViewModel(
                 canView = canView,
                 canPlan = canPlan,
                 canViewMembers = canViewMembers,
-                editor = it.editor?.takeIf { canPlan },
+                editor = it.editor?.takeIf { canView && (canPlan || !it.isNew) },
             )
         }
         observeReferenceData(user)
@@ -142,9 +144,7 @@ class TalkScheduleViewModel(
     }
 
     fun editSlot(slot: TalkSlot) {
-        // Wer nur sehen darf, öffnet keinen Editor und bekommt auch keine Fehlermeldung.
-        if (!mutableUiState.value.canPlan && mutableUiState.value.canView) return
-        if (mutableUiState.value.isSaving || !checkAllowed()) return
+        if (mutableUiState.value.isSaving || !checkAllowed(confirmOnly = true)) return
         mutableUiState.update { it.copy(editor = TalkSlotEditorState(slot, slot), errorMessage = null) }
     }
 
@@ -228,10 +228,27 @@ class TalkScheduleViewModel(
         }
     }
 
+    /** Der Helfer ändert im Editor nur „Informiert“; beim Planer geht das über [updateEditor]. */
+    fun setSpeakerInformed(confirmed: Boolean) {
+        mutableUiState.update { state ->
+            val editor = state.editor
+            if (state.isSaving || editor == null || !editor.slot.canBeInformed) {
+                state
+            } else {
+                state.copy(editor = editor.copy(slot = editor.slot.copy(confirmed = confirmed)))
+            }
+        }
+    }
+
     fun save() {
         val state = mutableUiState.value
         val editor = state.editor ?: return
-        if (state.isSaving || !checkAllowed()) return
+        if (state.isSaving) return
+        if (!state.canPlan) {
+            saveInformed(editor)
+            return
+        }
+        if (!checkAllowed()) return
         val user = currentUser ?: return
         val slot = editor.slot
         // shortcut: geprüft wird nur gegen das geladene Jahr; beim Verschieben über den Jahreswechsel kann ein
@@ -258,6 +275,23 @@ class TalkScheduleViewModel(
                 }.onFailure { exception ->
                     fail(exception, "Termin konnte nicht gespeichert werden.")
                 }
+        }
+    }
+
+    // Der Helfer schreibt nur das Feld `confirmed`; der Rest des Termins bleibt, wie er in der Datenbank steht.
+    private fun saveInformed(editor: TalkSlotEditorState) {
+        val original = editor.original
+        val user = currentUser
+        if (original == null || user == null || !checkAllowed(confirmOnly = true)) return
+        mutableUiState.update { it.copy(isSaving = true, errorMessage = null) }
+        viewModelScope.launch {
+            confirmSpeaker(user, original.date, editor.slot.confirmed)
+                .onSuccess {
+                    val saved = original.copy(confirmed = editor.slot.confirmed)
+                    mutableUiState.update {
+                        it.copy(editor = TalkSlotEditorState(saved, saved), isSaving = false)
+                    }
+                }.onFailure { exception -> fail(exception, "Der Termin konnte nicht gespeichert werden.") }
         }
     }
 
@@ -446,8 +480,10 @@ class TalkScheduleViewModel(
         }
     }
 
-    private fun checkAllowed(): Boolean {
-        val allowed = currentUser?.let(permissionPolicy::canPlanTalks) == true && currentUser?.congregation != null
+    // `confirmOnly` gilt für Aktionen, die auch der Helfer ausführen darf (Termin öffnen, „Informiert“ speichern).
+    private fun checkAllowed(confirmOnly: Boolean = false): Boolean {
+        val permitted = if (confirmOnly) permissionPolicy::canConfirmSpeaker else permissionPolicy::canPlanTalks
+        val allowed = currentUser?.let(permitted) == true && currentUser?.congregation != null
         if (!allowed) mutableUiState.update { it.copy(errorMessage = MISSING_PERMISSION_MESSAGE) }
         return allowed
     }

@@ -76,7 +76,6 @@ internal fun TalkSlotEditor(
     val selectableSpeakers = speakers.filterNot { it.memberId == slot.chairmanMemberId }
     val selectableChairmen = chairmen.filterNot { it.memberId == slot.speakerMemberId }
     val speakerText = slot.externalSpeaker?.displayName ?: slot.speaker?.displayName
-    val complete = slot.talkNumber != null && speakerText != null
 
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SlotHeader(slot, chip)
@@ -182,7 +181,7 @@ internal fun TalkSlotEditor(
         SwitchRow(
             label = "Informiert",
             checked = slot.confirmed,
-            enabled = complete && !slot.talkCancelled,
+            enabled = slot.canBeInformed,
         ) { onChange(slot.copy(confirmed = it)) }
 
         OutlinedTextField(
@@ -255,6 +254,33 @@ internal fun TalkSlotEditor(
                 showTalkPicker = false
             },
             onDismiss = { showTalkPicker = false },
+        )
+    }
+}
+
+/**
+ * Editor für den Vortragsplanungs-Helfer: Der Termin steht nur zum Lesen da, geändert wird allein „Informiert“.
+ */
+@Composable
+internal fun TalkSlotConfirmEditor(
+    editor: TalkSlotEditorState,
+    chip: SlotChip,
+    isSaving: Boolean,
+    onInformedChange: (Boolean) -> Unit,
+    onSave: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val slot = editor.slot
+    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SlotHeader(slot, chip)
+        slotReadOnlyLines(slot).forEach { Text(it) }
+        SwitchRow("Informiert", slot.confirmed, enabled = slot.canBeInformed && !isSaving, onInformedChange)
+        EditorActions(
+            saveText = if (isSaving) "Speichert …" else "Speichern",
+            saveEnabled = !isSaving && editor.isDirty,
+            discardEnabled = !isSaving,
+            onSave = onSave,
+            onDiscard = onCancel,
         )
     }
 }
@@ -393,6 +419,33 @@ private fun EditorPreview(slot: TalkSlot, original: TalkSlot?, chip: SlotChip) =
 private fun TalkSlotEditorMissingSpeakerPreview() {
     val slot = TalkSlot(LocalDate(2026, 11, 1), LocalTime(17, 30), talkNumber = 12, talkTitle = "Der Weg zum Glück")
     EditorPreview(slot, slot, SlotChip("Nicht geplant", StatusTone.Coral))
+}
+
+@ThemePreviews
+@Composable
+private fun TalkSlotConfirmEditorPreview() = PreviewThemeWrapper {
+    val slot = TalkSlot(
+        LocalDate(2026, 11, 8),
+        LocalTime(17, 30),
+        talkNumber = 12,
+        talkTitle = "Der Weg zum Glück",
+        speakerMemberId = "1",
+        speakerLastName = "Muster",
+        speakerFirstName = "Max",
+        note = "Bringt Unterlagen mit",
+    )
+    val chip = SlotChip("Geplant", StatusTone.Gold)
+    Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
+        TalkSlotConfirmEditor(TalkSlotEditorState(slot, slot), chip, false, {}, {}, {})
+        TalkSlotConfirmEditor(
+            TalkSlotEditorState(slot.copy(confirmed = true), slot),
+            SlotChip("Informiert", StatusTone.Mint),
+            false,
+            {},
+            {},
+            {},
+        )
+    }
 }
 
 @ThemePreviews
