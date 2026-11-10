@@ -146,7 +146,7 @@ internal fun slotContact(
                 ?.let { SpeakerContact(it.mobilePhone, it.landlinePhone) }
         else -> null
     }
-    return contact?.takeIf { it.callUri != null }
+    return contact?.takeIf { it.isReachable }
 }
 
 /** Redner mit Herkunft: „Muster, Max · eigene Versammlung“, „Extern, Eva · Nord“ oder „Redner noch offen“. */
