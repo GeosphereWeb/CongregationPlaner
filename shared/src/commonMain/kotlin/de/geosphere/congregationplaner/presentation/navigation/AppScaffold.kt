@@ -54,7 +54,7 @@ import de.geosphere.congregationplaner.user.presentation.profile.OwnProfileSecti
  */
 @Composable
 fun AppScaffold(
-    state: AppNavigationState,
+    state: AppNavigationUiState,
     firebaseStatus: String,
     currentUser: AppUser,
     congregation: SelectedCongregation?,
@@ -203,7 +203,7 @@ private val previewCongregation = SelectedCongregation(
 
 private val previewVisible = VisibleNavigation(CongregationSection.entries, GlobalSection.entries)
 
-private val previewOverview = AppNavigationState(
+private val previewOverview = AppNavigationUiState(
     visible = previewVisible,
     destination = TopLevelDestination.CONGREGATION,
 )
@@ -211,7 +211,7 @@ private val previewOverview = AppNavigationState(
 private val previewTalkTab = previewOverview.copy(congregationSection = CongregationSection.EXTERNAL_SPEAKERS)
 
 @Composable
-private fun ScaffoldPreview(state: AppNavigationState) = AppTheme {
+private fun ScaffoldPreview(state: AppNavigationUiState) = AppTheme {
     AppScaffold(
         state,
         "Firebase verfügbar",

@@ -1,6 +1,7 @@
 package de.geosphere.congregationplaner.presentation
 
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
+import de.geosphere.congregationplaner.congregation.presentation.CongregationMetadataUiState
 import de.geosphere.congregationplaner.organization.presentation.selection.CongregationSelectionUiState
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.presentation.management.MemberEditorState
@@ -25,6 +26,13 @@ class DerivedUiStateTest {
     fun `a congregation without id is new`() {
         assertTrue(CongregationMetadata(name = "Nord").isNew)
         assertFalse(CongregationMetadata(id = "k1", name = "Nord").isNew)
+    }
+
+    @Test
+    fun `the congregation screen is busy while saving or deleting`() {
+        assertFalse(CongregationMetadataUiState().isBusy)
+        assertTrue(CongregationMetadataUiState(isSaving = true).isBusy)
+        assertTrue(CongregationMetadataUiState(isDeleting = true).isBusy)
     }
 
     @Test
