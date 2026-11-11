@@ -145,16 +145,24 @@ class TalkScheduleViewModelTest {
         val delete = DeleteTalkSlotUseCase(repository, policy)
         viewModel = TalkScheduleViewModel(
             ObserveTalkYearUseCase(repository),
-            ObserveWeekEventsUseCase(weekEvents),
-            ObserveTalkCatalogUseCase(catalog),
-            ObserveTalkMembersUseCase(ObserveMembersUseCase(users)),
-            ObserveExternalSpeakersUseCase(ObserveExternalDirectoryUseCase(externals)),
-            MoveTalkSlotUseCase(save, delete),
-            CreateYearSlotsUseCase(repository, congregations, policy),
-            ChangeYearSlotTimesUseCase(repository, policy),
-            delete,
-            SyncTalkHistoryWithSlotUseCase(history, policy),
-            ConfirmSpeakerUseCase(repository, policy),
+            SlotChangeUseCases(
+                MoveTalkSlotUseCase(save, delete),
+                delete,
+                SyncTalkHistoryWithSlotUseCase(history, policy),
+                ConfirmSpeakerUseCase(repository, policy),
+            ),
+            YearSetupUseCases(
+                CreateYearSlotsUseCase(repository, congregations, policy),
+                ChangeYearSlotTimesUseCase(repository, policy),
+            ),
+            ScheduleReferenceUseCases(
+                ObserveWeekEventsUseCase(weekEvents),
+                ObserveTalkCatalogUseCase(catalog),
+                ObserveTalkMembersUseCase(ObserveMembersUseCase(users)),
+                ObserveExternalSpeakersUseCase(ObserveExternalDirectoryUseCase(externals)),
+                policy,
+                UserPermissionPolicy(),
+            ),
             policy,
             UserPermissionPolicy(),
         )
@@ -172,12 +180,12 @@ class TalkScheduleViewModelTest {
     fun `create year asks first and creates the missing slots after the confirmation`() {
         viewModel.onCurrentUserChanged(planner)
 
-        viewModel.askCreateYear()
+        viewModel.yearSetup.askCreate()
 
         assertTrue(state.confirmCreateYear)
         assertTrue(repository.createdSlots.isEmpty())
 
-        viewModel.createYear()
+        viewModel.yearSetup.create()
 
         assertFalse(state.confirmCreateYear)
         assertFalse(state.isSaving)
@@ -192,15 +200,15 @@ class TalkScheduleViewModelTest {
     @Test
     fun `dismissing the question or the info message changes nothing else`() {
         viewModel.onCurrentUserChanged(planner)
-        viewModel.askCreateYear()
+        viewModel.yearSetup.askCreate()
 
-        viewModel.dismissCreateYear()
+        viewModel.yearSetup.dismissCreate()
 
         assertFalse(state.confirmCreateYear)
         assertTrue(repository.createdSlots.isEmpty())
 
-        viewModel.askCreateYear()
-        viewModel.createYear()
+        viewModel.yearSetup.askCreate()
+        viewModel.yearSetup.create()
         viewModel.dismissInfo()
         assertNull(state.infoMessage)
     }
@@ -210,8 +218,8 @@ class TalkScheduleViewModelTest {
         viewModel.onCurrentUserChanged(planner)
         repository.createMissingResult = Result.failure(IllegalStateException("denied"))
 
-        viewModel.askCreateYear()
-        viewModel.createYear()
+        viewModel.yearSetup.askCreate()
+        viewModel.yearSetup.create()
 
         assertEquals("denied", state.errorMessage)
         assertNull(state.infoMessage)
@@ -223,8 +231,8 @@ class TalkScheduleViewModelTest {
     fun `create year is not possible without the permission to plan`() {
         viewModel.onCurrentUserChanged(member)
 
-        viewModel.askCreateYear()
-        viewModel.createYear()
+        viewModel.yearSetup.askCreate()
+        viewModel.yearSetup.create()
 
         assertFalse(state.confirmCreateYear)
         assertTrue(repository.createdSlots.isEmpty())
@@ -235,14 +243,14 @@ class TalkScheduleViewModelTest {
     fun `changing the year time asks first and then sets the time on all slots`() {
         viewModel.onCurrentUserChanged(planner)
 
-        viewModel.askChangeYearTime()
+        viewModel.yearSetup.askChangeTime()
 
         // The dialog starts with the most common time of the year.
         assertEquals(LocalTime(17, 30), state.yearTimeDialog)
         assertTrue(repository.savedSlots.isEmpty())
 
-        viewModel.selectYearTime(LocalTime(9, 30))
-        viewModel.changeYearTime()
+        viewModel.yearSetup.selectTime(LocalTime(9, 30))
+        viewModel.yearSetup.changeTime()
 
         assertNull(state.yearTimeDialog)
         assertFalse(state.isSaving)
@@ -253,10 +261,10 @@ class TalkScheduleViewModelTest {
     @Test
     fun `dismissing the year time dialog changes nothing`() {
         viewModel.onCurrentUserChanged(planner)
-        viewModel.askChangeYearTime()
+        viewModel.yearSetup.askChangeTime()
 
-        viewModel.dismissYearTime()
-        viewModel.changeYearTime()
+        viewModel.yearSetup.dismissTime()
+        viewModel.yearSetup.changeTime()
 
         assertNull(state.yearTimeDialog)
         assertTrue(repository.savedSlots.isEmpty())
@@ -267,9 +275,9 @@ class TalkScheduleViewModelTest {
         viewModel.onCurrentUserChanged(planner)
         repository.saveResult = Result.failure(IllegalStateException("denied"))
 
-        viewModel.askChangeYearTime()
-        viewModel.selectYearTime(LocalTime(9, 30))
-        viewModel.changeYearTime()
+        viewModel.yearSetup.askChangeTime()
+        viewModel.yearSetup.selectTime(LocalTime(9, 30))
+        viewModel.yearSetup.changeTime()
 
         assertEquals("denied", state.errorMessage)
         assertNull(state.infoMessage)
@@ -280,7 +288,7 @@ class TalkScheduleViewModelTest {
     fun `changing the year time is not possible without the permission to plan`() {
         viewModel.onCurrentUserChanged(member)
 
-        viewModel.askChangeYearTime()
+        viewModel.yearSetup.askChangeTime()
 
         assertNull(state.yearTimeDialog)
         assertEquals("Dafür fehlt dir die Berechtigung.", state.errorMessage)
@@ -317,12 +325,12 @@ class TalkScheduleViewModelTest {
         viewModel.onCurrentUserChanged(planner)
         assertEquals(listOf(activeTalk, pausedTalk), state.talks)
 
-        viewModel.newSlot()
-        viewModel.selectTalk(activeTalk)
+        viewModel.editor.newSlot()
+        viewModel.picker.selectTalk(activeTalk)
         assertEquals(12, state.editor!!.slot.talkNumber)
         assertEquals("Der Weg zum Glück", state.editor!!.slot.talkTitle)
 
-        viewModel.selectTalk(null)
+        viewModel.picker.selectTalk(null)
         assertNull(state.editor!!.slot.talkNumber)
         assertNull(state.editor!!.slot.talkTitle)
     }
@@ -334,13 +342,13 @@ class TalkScheduleViewModelTest {
         assertTrue(state.canViewMembers)
         assertEquals(listOf(maxMuster), state.speakers)
 
-        viewModel.newSlot()
-        viewModel.selectSpeaker(maxMuster)
+        viewModel.editor.newSlot()
+        viewModel.picker.selectSpeaker(maxMuster)
         assertEquals("m1", state.editor!!.slot.speakerMemberId)
         assertEquals("Muster", state.editor!!.slot.speakerLastName)
         assertEquals("Max", state.editor!!.slot.speakerFirstName)
 
-        viewModel.selectSpeaker(null)
+        viewModel.picker.selectSpeaker(null)
         assertNull(state.editor!!.slot.speakerMemberId)
         assertNull(state.editor!!.slot.speakerLastName)
         assertNull(state.editor!!.slot.speakerFirstName)
@@ -352,14 +360,14 @@ class TalkScheduleViewModelTest {
 
         assertEquals(listOf(antonAlt), state.chairmen)
 
-        viewModel.newSlot()
-        viewModel.selectChairman(antonAlt)
+        viewModel.editor.newSlot()
+        viewModel.picker.selectChairman(antonAlt)
         assertEquals("m4", state.editor!!.slot.chairmanMemberId)
         assertEquals("Alt", state.editor!!.slot.chairmanLastName)
         assertEquals("Anton", state.editor!!.slot.chairmanFirstName)
         assertEquals(antonAlt, state.editor!!.slot.chairman)
 
-        viewModel.selectChairman(null)
+        viewModel.picker.selectChairman(null)
         assertNull(state.editor!!.slot.chairmanMemberId)
         assertNull(state.editor!!.slot.chairmanLastName)
         assertNull(state.editor!!.slot.chairmanFirstName)
@@ -368,37 +376,37 @@ class TalkScheduleViewModelTest {
     @Test
     fun `speaker and chairman cannot be the same member`() {
         viewModel.onCurrentUserChanged(viewer)
-        viewModel.newSlot()
-        viewModel.selectChairman(antonAlt)
+        viewModel.editor.newSlot()
+        viewModel.picker.selectChairman(antonAlt)
 
-        viewModel.selectSpeaker(Speaker("m4", "Alt", "Anton"))
+        viewModel.picker.selectSpeaker(Speaker("m4", "Alt", "Anton"))
 
         assertNull(state.editor!!.slot.speakerMemberId)
         assertEquals(antonAlt, state.editor!!.slot.chairman)
         assertEquals("Redner und Vorsitzender dürfen nicht dieselbe Person sein.", state.errorMessage)
 
         viewModel.dismissError()
-        viewModel.selectChairman(null)
-        viewModel.selectSpeaker(Speaker("m4", "Alt", "Anton"))
+        viewModel.picker.selectChairman(null)
+        viewModel.picker.selectSpeaker(Speaker("m4", "Alt", "Anton"))
         assertEquals("m4", state.editor!!.slot.speakerMemberId)
 
-        viewModel.selectChairman(antonAlt)
+        viewModel.picker.selectChairman(antonAlt)
         assertNull(state.editor!!.slot.chairmanMemberId)
         assertNotNull(state.errorMessage)
 
         viewModel.dismissError()
-        viewModel.selectExternalSpeaker(externalSpeaker)
-        viewModel.selectChairman(antonAlt)
+        viewModel.picker.selectExternalSpeaker(externalSpeaker)
+        viewModel.picker.selectChairman(antonAlt)
         assertEquals(antonAlt, state.editor!!.slot.chairman)
     }
 
     @Test
     fun `chairman can still be selected when the talk is cancelled`() {
         viewModel.onCurrentUserChanged(viewer)
-        viewModel.newSlot()
-        viewModel.updateEditor(state.editor!!.slot.copy(talkCancelled = true))
+        viewModel.editor.newSlot()
+        viewModel.editor.update(state.editor!!.slot.copy(talkCancelled = true))
 
-        viewModel.selectChairman(antonAlt)
+        viewModel.picker.selectChairman(antonAlt)
 
         assertEquals(antonAlt, state.editor!!.slot.chairman)
     }
@@ -416,22 +424,22 @@ class TalkScheduleViewModelTest {
     @Test
     fun `an external speaker replaces a member as speaker and vice versa`() {
         viewModel.onCurrentUserChanged(viewer)
-        viewModel.newSlot()
-        viewModel.selectSpeaker(maxMuster)
+        viewModel.editor.newSlot()
+        viewModel.picker.selectSpeaker(maxMuster)
 
-        viewModel.selectExternalSpeaker(externalSpeaker)
+        viewModel.picker.selectExternalSpeaker(externalSpeaker)
         val external = state.editor!!.slot
         assertNull(external.speakerMemberId)
         assertEquals(externalSpeaker, external.externalSpeaker)
         assertEquals("Nord", external.speakerCongregation)
 
-        viewModel.selectSpeaker(maxMuster)
+        viewModel.picker.selectSpeaker(maxMuster)
         val member = state.editor!!.slot
         assertNull(member.externalSpeakerId)
         assertNull(member.speakerCongregation)
         assertEquals(maxMuster, member.speaker)
 
-        viewModel.selectExternalSpeaker(null)
+        viewModel.picker.selectExternalSpeaker(null)
         assertNull(state.editor!!.slot.speaker)
         assertNull(state.editor!!.slot.externalSpeaker)
     }
@@ -461,9 +469,9 @@ class TalkScheduleViewModelTest {
     @Test
     fun `an inactive talk cannot be selected`() {
         viewModel.onCurrentUserChanged(planner)
-        viewModel.newSlot()
+        viewModel.editor.newSlot()
 
-        viewModel.selectTalk(pausedTalk)
+        viewModel.picker.selectTalk(pausedTalk)
 
         assertNull(state.editor!!.slot.talkNumber)
     }
@@ -474,7 +482,7 @@ class TalkScheduleViewModelTest {
         repository.slots.value = listOf(october25)
 
         viewModel.onCurrentUserChanged(helper)
-        viewModel.newSlot()
+        viewModel.editor.newSlot()
 
         assertTrue(state.canView)
         assertFalse(state.canPlan)
@@ -491,13 +499,13 @@ class TalkScheduleViewModelTest {
     fun `switching from planner to helper closes a new slot but keeps a saved one`() {
         val helper = planner.copy(uid = "helper", roles = setOf(CongregationRole.TALK_HELPER))
         viewModel.onCurrentUserChanged(planner)
-        viewModel.newSlot()
+        viewModel.editor.newSlot()
         assertNotNull(state.editor)
 
         viewModel.onCurrentUserChanged(helper)
         assertNull(state.editor)
 
-        viewModel.editSlot(october25)
+        viewModel.editor.edit(october25)
         assertNotNull(state.editor)
         viewModel.onCurrentUserChanged(planner)
         viewModel.onCurrentUserChanged(helper)
@@ -519,10 +527,10 @@ class TalkScheduleViewModelTest {
         repository.slots.value = listOf(plannedSlot)
         viewModel.onCurrentUserChanged(helper)
 
-        viewModel.editSlot(plannedSlot)
-        viewModel.setSpeakerInformed(true)
+        viewModel.editor.edit(plannedSlot)
+        viewModel.editor.setSpeakerInformed(true)
         assertTrue(state.editor!!.isDirty)
-        viewModel.save()
+        viewModel.changes.save()
 
         assertEquals(listOf(plannedSlot.date to true), repository.confirmedUpdates)
         assertTrue(repository.savedSlots.isEmpty())
@@ -538,8 +546,8 @@ class TalkScheduleViewModelTest {
         repository.slots.value = listOf(october25)
         viewModel.onCurrentUserChanged(helper)
 
-        viewModel.editSlot(october25)
-        viewModel.setSpeakerInformed(true)
+        viewModel.editor.edit(october25)
+        viewModel.editor.setSpeakerInformed(true)
 
         assertFalse(state.editor!!.slot.confirmed)
     }
@@ -551,9 +559,9 @@ class TalkScheduleViewModelTest {
         repository.confirmResult = Result.failure(IllegalStateException("offline"))
         viewModel.onCurrentUserChanged(helper)
 
-        viewModel.editSlot(plannedSlot)
-        viewModel.setSpeakerInformed(true)
-        viewModel.save()
+        viewModel.editor.edit(plannedSlot)
+        viewModel.editor.setSpeakerInformed(true)
+        viewModel.changes.save()
 
         assertEquals("offline", state.errorMessage)
         assertTrue(state.editor!!.isDirty)
@@ -566,9 +574,9 @@ class TalkScheduleViewModelTest {
         repository.slots.value = listOf(plannedSlot)
         viewModel.onCurrentUserChanged(helper)
 
-        viewModel.editSlot(plannedSlot)
-        viewModel.setSpeakerInformed(true)
-        viewModel.discardChanges()
+        viewModel.editor.edit(plannedSlot)
+        viewModel.editor.setSpeakerInformed(true)
+        viewModel.editor.discard()
 
         assertFalse(state.editor!!.slot.confirmed)
     }
@@ -577,9 +585,9 @@ class TalkScheduleViewModelTest {
     fun `a member without roles cannot open an editor or mark informed`() {
         viewModel.onCurrentUserChanged(member)
 
-        viewModel.editSlot(plannedSlot)
-        viewModel.setSpeakerInformed(true)
-        viewModel.save()
+        viewModel.editor.edit(plannedSlot)
+        viewModel.editor.setSpeakerInformed(true)
+        viewModel.changes.save()
 
         assertNull(state.editor)
         assertTrue(repository.confirmedUpdates.isEmpty())
@@ -595,7 +603,7 @@ class TalkScheduleViewModelTest {
     @Test
     fun `member without permission neither loads nor edits`() {
         viewModel.onCurrentUserChanged(member)
-        viewModel.newSlot()
+        viewModel.editor.newSlot()
 
         assertFalse(state.canPlan)
         assertTrue(state.slots.isEmpty())
@@ -607,7 +615,7 @@ class TalkScheduleViewModelTest {
     @Test
     fun `congregation admin may not plan without the talk planner role`() {
         viewModel.onCurrentUserChanged(admin)
-        viewModel.newSlot()
+        viewModel.editor.newSlot()
 
         assertFalse(state.canPlan)
         assertNull(state.editor)
@@ -616,7 +624,7 @@ class TalkScheduleViewModelTest {
     @Test
     fun `congregation admin with the talk planner role may plan`() {
         viewModel.onCurrentUserChanged(admin.copy(roles = setOf(CongregationRole.TALK_PLANNER)))
-        viewModel.newSlot()
+        viewModel.editor.newSlot()
 
         assertTrue(state.canPlan)
         assertNotNull(state.editor)
@@ -625,16 +633,16 @@ class TalkScheduleViewModelTest {
     @Test
     fun `new slot starts in the selected year and week event presets cancelled flag`() {
         viewModel.onCurrentUserChanged(planner)
-        viewModel.newSlot()
+        viewModel.editor.newSlot()
         assertTrue(state.editor!!.isNew)
         assertEquals(2026, state.editor!!.slot.date.year)
 
-        viewModel.selectWeekEvent(kongress)
+        viewModel.picker.selectWeekEvent(kongress)
         assertEquals("kongress", state.editor!!.slot.weekEventId)
         assertEquals("Kongress", state.editor!!.slot.weekEventName)
         assertTrue(state.editor!!.slot.talkCancelled)
 
-        viewModel.selectWeekEvent(null)
+        viewModel.picker.selectWeekEvent(null)
         assertNull(state.editor!!.slot.weekEventId)
         assertNull(state.editor!!.slot.weekEventName)
     }
@@ -642,11 +650,11 @@ class TalkScheduleViewModelTest {
     @Test
     fun `saving a new slot stores it and keeps the editor open`() {
         viewModel.onCurrentUserChanged(planner)
-        viewModel.newSlot()
+        viewModel.editor.newSlot()
         val slot = TalkSlot(LocalDate(2026, 11, 8), LocalTime(10, 0))
-        viewModel.updateEditor(slot)
+        viewModel.editor.update(slot)
 
-        viewModel.save()
+        viewModel.changes.save()
 
         assertEquals(listOf(slot), repository.savedSlots)
         assertEquals(slot, state.editor?.original)
@@ -656,15 +664,15 @@ class TalkScheduleViewModelTest {
     @Test
     fun `saving a slot with a talk records the day in the talk history and deleting it removes it`() {
         viewModel.onCurrentUserChanged(planner)
-        viewModel.newSlot()
+        viewModel.editor.newSlot()
         val slot = TalkSlot(LocalDate(2026, 11, 8), LocalTime(10, 0), talkNumber = 12, talkTitle = "Der Weg zum Glück")
-        viewModel.updateEditor(slot)
+        viewModel.editor.update(slot)
 
-        viewModel.save()
+        viewModel.changes.save()
 
         assertEquals(listOf(TalkHistoryEntry(12, listOf(slot.date), listOf(slot.date))), history.entries.value)
 
-        viewModel.delete(slot)
+        viewModel.changes.delete(slot)
 
         assertTrue(history.entries.value.isEmpty())
     }
@@ -673,11 +681,11 @@ class TalkScheduleViewModelTest {
     fun `a history failure keeps the saved slot and reports the history error`() {
         history.saveResult = Result.failure(IllegalStateException("denied"))
         viewModel.onCurrentUserChanged(planner)
-        viewModel.newSlot()
+        viewModel.editor.newSlot()
         val slot = TalkSlot(LocalDate(2026, 11, 8), LocalTime(10, 0), talkNumber = 12, talkTitle = "Der Weg zum Glück")
-        viewModel.updateEditor(slot)
+        viewModel.editor.update(slot)
 
-        viewModel.save()
+        viewModel.changes.save()
 
         assertEquals(listOf(slot), repository.savedSlots)
         assertEquals(slot, state.editor?.original)
@@ -688,10 +696,10 @@ class TalkScheduleViewModelTest {
     @Test
     fun `saving on a day that already has a slot is refused`() {
         viewModel.onCurrentUserChanged(planner)
-        viewModel.newSlot()
-        viewModel.updateEditor(october25.copy(time = LocalTime(9, 0)))
+        viewModel.editor.newSlot()
+        viewModel.editor.update(october25.copy(time = LocalTime(9, 0)))
 
-        viewModel.save()
+        viewModel.changes.save()
 
         assertTrue(repository.savedSlots.isEmpty())
         assertNotNull(state.errorMessage)
@@ -700,11 +708,11 @@ class TalkScheduleViewModelTest {
     @Test
     fun `changing the date of an existing slot moves it`() {
         viewModel.onCurrentUserChanged(planner)
-        viewModel.editSlot(october25)
+        viewModel.editor.edit(october25)
         val moved = october25.copy(date = LocalDate(2026, 10, 24))
-        viewModel.updateEditor(moved)
+        viewModel.editor.update(moved)
 
-        viewModel.save()
+        viewModel.changes.save()
 
         assertEquals(listOf(moved), repository.savedSlots)
         assertEquals(listOf(october25.date), repository.deletedDates)
@@ -713,10 +721,10 @@ class TalkScheduleViewModelTest {
     @Test
     fun `saving in another year switches the list to that year`() {
         viewModel.onCurrentUserChanged(planner)
-        viewModel.newSlot()
-        viewModel.updateEditor(TalkSlot(LocalDate(2027, 1, 3), LocalTime(17, 30)))
+        viewModel.editor.newSlot()
+        viewModel.editor.update(TalkSlot(LocalDate(2027, 1, 3), LocalTime(17, 30)))
 
-        viewModel.save()
+        viewModel.changes.save()
 
         assertEquals(2027, state.year)
         assertEquals(2027, repository.requestedYear)
@@ -726,10 +734,10 @@ class TalkScheduleViewModelTest {
     fun `failed save keeps the editor and shows the error`() {
         repository.saveResult = Result.failure(IllegalStateException("offline"))
         viewModel.onCurrentUserChanged(planner)
-        viewModel.newSlot()
-        viewModel.updateEditor(TalkSlot(LocalDate(2026, 11, 8), LocalTime(10, 0)))
+        viewModel.editor.newSlot()
+        viewModel.editor.update(TalkSlot(LocalDate(2026, 11, 8), LocalTime(10, 0)))
 
-        viewModel.save()
+        viewModel.changes.save()
 
         assertEquals("offline", state.errorMessage)
         assertTrue(state.editor!!.isNew)
@@ -753,18 +761,18 @@ class TalkScheduleViewModelTest {
     @Test
     fun `editor is locked while saving so the result cannot overwrite edits`() {
         viewModel.onCurrentUserChanged(planner)
-        viewModel.newSlot()
+        viewModel.editor.newSlot()
         val slot = TalkSlot(LocalDate(2026, 11, 8), LocalTime(10, 0))
-        viewModel.updateEditor(slot)
+        viewModel.editor.update(slot)
         val gate = CompletableDeferred<Unit>()
         repository.saveGate = gate
 
-        viewModel.save()
+        viewModel.changes.save()
         assertTrue(state.isSaving)
-        viewModel.updateEditor(slot.copy(talkCancelled = true))
-        viewModel.selectWeekEvent(kongress)
-        viewModel.editSlot(october25)
-        viewModel.newSlot()
+        viewModel.editor.update(slot.copy(talkCancelled = true))
+        viewModel.picker.selectWeekEvent(kongress)
+        viewModel.editor.edit(october25)
+        viewModel.editor.newSlot()
         assertEquals(slot, state.editor?.slot)
 
         gate.complete(Unit)
@@ -775,9 +783,9 @@ class TalkScheduleViewModelTest {
     @Test
     fun `deleting the open slot closes the editor`() {
         viewModel.onCurrentUserChanged(planner)
-        viewModel.editSlot(october25)
+        viewModel.editor.edit(october25)
 
-        viewModel.delete(october25)
+        viewModel.changes.delete(october25)
 
         assertEquals(listOf(october25.date), repository.deletedDates)
         assertNull(state.editor)
@@ -786,13 +794,13 @@ class TalkScheduleViewModelTest {
     @Test
     fun `discard restores an existing slot and closes a new one`() {
         viewModel.onCurrentUserChanged(planner)
-        viewModel.editSlot(october25)
-        viewModel.updateEditor(october25.copy(talkCancelled = true))
-        viewModel.discardChanges()
+        viewModel.editor.edit(october25)
+        viewModel.editor.update(october25.copy(talkCancelled = true))
+        viewModel.editor.discard()
         assertEquals(october25, state.editor?.slot)
 
-        viewModel.newSlot()
-        viewModel.discardChanges()
+        viewModel.editor.newSlot()
+        viewModel.editor.discard()
         assertNull(state.editor)
     }
 }

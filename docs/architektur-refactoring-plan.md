@@ -13,11 +13,11 @@ Nach jeder Phase hier abhaken und Ticket und PR eintragen.
 | 2 | Login entkoppeln | CP-132 | #150 | in Review |
 | 3 | Logik aus Composables holen | CP-133 | #151 | in Review |
 | 4a | detekt aktivieren, Login-ViewModel teilen | CP-134 | – | in Review |
-| 4b | Große ViewModels und UI-Dateien teilen | – | – | offen |
+| 4b | Große ViewModels und UI-Dateien teilen | CP-134 | – | in Review |
 | 5 | `uilib` auffüllen | – | – | offen |
 | 6 | UiState-Feinschliff | – | – | offen |
 
-Nächster Schritt: Phase 4b (große ViewModels teilen), Reihenfolge und Muster siehe Phase 4. Die Branches sind gestapelt: jede Phase baut auf dem Branch der vorigen auf, bis deren PR gemergt ist.
+Nächster Schritt: Phase 5 (`uilib` auffüllen). Die Branches sind gestapelt: jede Phase baut auf dem Branch der vorigen auf, bis deren PR gemergt ist.
 
 ## Ziele
 

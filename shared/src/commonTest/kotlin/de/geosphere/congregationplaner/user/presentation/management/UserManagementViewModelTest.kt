@@ -57,11 +57,15 @@ class UserManagementViewModelTest {
 
     private fun createViewModel() = UserManagementViewModel(
         ObserveMembersUseCase(repository),
-        SetMemberApprovalUseCase(repository, policy),
-        SetMemberRoleUseCase(repository, policy),
-        CreateMemberWithoutAccountUseCase(repository, policy),
-        UpdateMemberProfileUseCase(repository, policy),
-        RemoveMemberUseCase(repository, policy),
+        MemberAccessUseCases(
+            SetMemberApprovalUseCase(repository, policy),
+            SetMemberRoleUseCase(repository, policy),
+            RemoveMemberUseCase(repository, policy),
+        ),
+        MemberEditorUseCases(
+            CreateMemberWithoutAccountUseCase(repository, policy),
+            UpdateMemberProfileUseCase(repository, policy),
+        ),
         policy,
     )
 
@@ -111,9 +115,12 @@ class UserManagementViewModelTest {
     fun `admin approves members and changes roles`() {
         viewModel.onCurrentUserChanged(admin)
 
-        viewModel.setApproved(pending, true)
-        viewModel.toggleRole(pending, CongregationRole.TALK_PLANNER)
-        viewModel.toggleRole(pending.copy(roles = setOf(CongregationRole.TALK_PLANNER)), CongregationRole.TALK_PLANNER)
+        viewModel.access.setApproved(pending, true)
+        viewModel.access.toggleRole(pending, CongregationRole.TALK_PLANNER)
+        viewModel.access.toggleRole(
+            pending.copy(roles = setOf(CongregationRole.TALK_PLANNER)),
+            CongregationRole.TALK_PLANNER,
+        )
 
         assertEquals(
             listOf(
@@ -131,8 +138,8 @@ class UserManagementViewModelTest {
     fun `admin cannot modify the own membership`() {
         viewModel.onCurrentUserChanged(admin)
 
-        viewModel.toggleRole(admin, CongregationRole.CONGREGATION_ADMIN)
-        viewModel.removeMember(admin)
+        viewModel.access.toggleRole(admin, CongregationRole.CONGREGATION_ADMIN)
+        viewModel.access.remove(admin)
 
         assertTrue(repository.updatedMembers.isEmpty())
         assertTrue(repository.removedUids.isEmpty())
@@ -146,7 +153,7 @@ class UserManagementViewModelTest {
     fun `admin may change the own roles but keeps the admin role`() {
         viewModel.onCurrentUserChanged(admin)
 
-        viewModel.toggleRole(admin, CongregationRole.TALK_PLANNER)
+        viewModel.access.toggleRole(admin, CongregationRole.TALK_PLANNER)
 
         val expected = admin.copy(roles = admin.roles + CongregationRole.TALK_PLANNER)
         assertEquals(listOf(expected), repository.updatedMembers)
@@ -160,7 +167,7 @@ class UserManagementViewModelTest {
     fun `removing a member drops it from the list`() {
         viewModel.onCurrentUserChanged(admin)
 
-        viewModel.removeMember(pending)
+        viewModel.access.remove(pending)
 
         assertEquals(listOf("neu"), repository.removedUids)
         assertEquals(listOf("admin"), viewModel.uiState.value.members.map { it.uid })
@@ -169,9 +176,9 @@ class UserManagementViewModelTest {
     @Test
     fun `removing the selected member closes its details`() {
         viewModel.onCurrentUserChanged(admin)
-        viewModel.editProfile(pending)
+        viewModel.editor.edit(pending)
 
-        viewModel.removeMember(pending)
+        viewModel.access.remove(pending)
 
         assertNull(viewModel.uiState.value.editor)
         assertFalse(viewModel.uiState.value.hasDetail)
@@ -183,9 +190,9 @@ class UserManagementViewModelTest {
         repository = FakeUserRepository(members = listOf(admin, pending, other))
         viewModel = createViewModel()
         viewModel.onCurrentUserChanged(admin)
-        viewModel.editProfile(other)
+        viewModel.editor.edit(other)
 
-        viewModel.removeMember(pending)
+        viewModel.access.remove(pending)
 
         assertEquals(other, viewModel.uiState.value.editor?.member)
         assertTrue(viewModel.uiState.value.hasDetail)
@@ -197,11 +204,11 @@ class UserManagementViewModelTest {
         repository.updateResult = Result.failure(IllegalStateException("permission-denied"))
         repository.removeResult = Result.failure(IllegalStateException("offline"))
 
-        viewModel.setApproved(pending, true)
+        viewModel.access.setApproved(pending, true)
         assertEquals("permission-denied", viewModel.uiState.value.errorMessage)
         assertTrue(viewModel.uiState.value.busyMemberIds.isEmpty())
 
-        viewModel.removeMember(pending)
+        viewModel.access.remove(pending)
         assertEquals("offline", viewModel.uiState.value.errorMessage)
         assertEquals(2, viewModel.uiState.value.members.size)
     }
@@ -214,7 +221,7 @@ class UserManagementViewModelTest {
         val state = viewModel.uiState.value
         assertFalse(state.canManage)
         assertTrue(state.members.isEmpty())
-        viewModel.setApproved(pending, true)
+        viewModel.access.setApproved(pending, true)
         assertTrue(repository.updatedMembers.isEmpty())
     }
 
@@ -222,9 +229,9 @@ class UserManagementViewModelTest {
     fun `admin records a member without account`() {
         viewModel.onCurrentUserChanged(admin)
 
-        viewModel.addMemberWithoutAccount()
-        viewModel.updateEditor(MemberProfile(lastName = "Muster", firstName = "Lena", category = MemberCategory.CHILD))
-        viewModel.saveProfile()
+        viewModel.editor.add()
+        viewModel.editor.update(MemberProfile(lastName = "Muster", firstName = "Lena", category = MemberCategory.CHILD))
+        viewModel.editor.save()
 
         val created = repository.createdMembers.single()
         assertFalse(created.hasAccount)
@@ -239,25 +246,25 @@ class UserManagementViewModelTest {
     @Test
     fun `editor keeps the profile consistent`() {
         viewModel.onCurrentUserChanged(admin)
-        viewModel.editProfile(pending)
+        viewModel.editor.edit(pending)
 
-        viewModel.updateEditor(
+        viewModel.editor.update(
             MemberProfile(category = MemberCategory.BROTHER, baptized = true, appointment = Appointment.ELDER),
         )
         assertEquals(Appointment.ELDER, viewModel.uiState.value.editor?.profile?.appointment)
 
-        viewModel.updateEditor(viewModel.uiState.value.editor!!.profile.copy(category = MemberCategory.CHILD))
+        viewModel.editor.update(viewModel.uiState.value.editor!!.profile.copy(category = MemberCategory.CHILD))
         assertEquals(
             MemberProfile(category = MemberCategory.CHILD, baptized = false, appointment = Appointment.NONE),
             viewModel.uiState.value.editor?.profile,
         )
 
-        viewModel.updateEditor(MemberProfile(category = MemberCategory.BROTHER, isSpeaker = true))
+        viewModel.editor.update(MemberProfile(category = MemberCategory.BROTHER, isSpeaker = true))
         assertTrue(viewModel.uiState.value.editor!!.profile.isSpeaker)
-        viewModel.updateEditor(viewModel.uiState.value.editor!!.profile.copy(category = MemberCategory.SISTER))
+        viewModel.editor.update(viewModel.uiState.value.editor!!.profile.copy(category = MemberCategory.SISTER))
         assertFalse(viewModel.uiState.value.editor!!.profile.isSpeaker)
 
-        viewModel.cancelEditing()
+        viewModel.editor.cancel()
         assertNull(viewModel.uiState.value.editor)
         assertTrue(repository.updatedProfiles.isEmpty())
     }
@@ -265,13 +272,13 @@ class UserManagementViewModelTest {
     @Test
     fun `editor is dirty only after a change and discard keeps the member selected`() {
         viewModel.onCurrentUserChanged(admin)
-        viewModel.editProfile(pending)
+        viewModel.editor.edit(pending)
         assertFalse(viewModel.uiState.value.editor!!.isDirty)
 
-        viewModel.updateEditor(MemberProfile(mobilePhone = "0170"))
+        viewModel.editor.update(MemberProfile(mobilePhone = "0170"))
         assertTrue(viewModel.uiState.value.editor!!.isDirty)
 
-        viewModel.discardChanges()
+        viewModel.editor.discard()
         val editor = viewModel.uiState.value.editor!!
         assertEquals(pending, editor.member)
         assertEquals(pending.profile, editor.profile)
@@ -282,7 +289,7 @@ class UserManagementViewModelTest {
     fun `discard changes without editor does nothing`() {
         viewModel.onCurrentUserChanged(admin)
 
-        viewModel.discardChanges()
+        viewModel.editor.discard()
 
         assertNull(viewModel.uiState.value.editor)
     }
@@ -290,9 +297,9 @@ class UserManagementViewModelTest {
     @Test
     fun `discard changes closes a new person`() {
         viewModel.onCurrentUserChanged(admin)
-        viewModel.addMemberWithoutAccount()
+        viewModel.editor.add()
 
-        viewModel.discardChanges()
+        viewModel.editor.discard()
 
         assertNull(viewModel.uiState.value.editor)
     }
@@ -302,9 +309,9 @@ class UserManagementViewModelTest {
         viewModel.onCurrentUserChanged(admin)
         val profile = MemberProfile(lastName = "Admin", firstName = "Anna", category = MemberCategory.SISTER)
 
-        viewModel.editProfile(admin)
-        viewModel.updateEditor(profile)
-        viewModel.saveProfile()
+        viewModel.editor.edit(admin)
+        viewModel.editor.update(profile)
+        viewModel.editor.save()
 
         assertEquals(listOf(admin.copy(profile = profile)), repository.updatedProfiles)
         val state = viewModel.uiState.value
@@ -319,9 +326,9 @@ class UserManagementViewModelTest {
         viewModel.onCurrentUserChanged(admin)
         repository.updateProfileResult = Result.failure(IllegalStateException("permission-denied"))
 
-        viewModel.editProfile(pending)
-        viewModel.updateEditor(MemberProfile(mobilePhone = "0170"))
-        viewModel.saveProfile()
+        viewModel.editor.edit(pending)
+        viewModel.editor.update(MemberProfile(mobilePhone = "0170"))
+        viewModel.editor.save()
 
         val state = viewModel.uiState.value
         assertEquals("permission-denied", state.errorMessage)
@@ -329,8 +336,8 @@ class UserManagementViewModelTest {
         assertFalse(state.isSaving)
         assertTrue(state.busyMemberIds.isEmpty())
 
-        viewModel.updateEditor(MemberProfile(mobilePhone = "abc"))
-        viewModel.saveProfile()
+        viewModel.editor.update(MemberProfile(mobilePhone = "abc"))
+        viewModel.editor.save()
         assertEquals(
             "Telefonnummern dürfen nur Ziffern, Leerzeichen und + ( ) / - enthalten (max. 30 Zeichen).",
             viewModel.uiState.value.errorMessage,
@@ -343,8 +350,8 @@ class UserManagementViewModelTest {
         viewModel.onCurrentUserChanged(member)
 
         assertFalse(permissionsOf(member).canEditProfile)
-        viewModel.editProfile(member)
-        viewModel.addMemberWithoutAccount()
+        viewModel.editor.edit(member)
+        viewModel.editor.add()
 
         assertNull(viewModel.uiState.value.editor)
         assertEquals("Dafür fehlt dir die Berechtigung.", viewModel.uiState.value.errorMessage)
@@ -353,10 +360,10 @@ class UserManagementViewModelTest {
     @Test
     fun `losing the admin role closes the editor`() {
         viewModel.onCurrentUserChanged(admin)
-        viewModel.addMemberWithoutAccount()
+        viewModel.editor.add()
 
         viewModel.onCurrentUserChanged(admin.copy(roles = emptySet()))
-        viewModel.saveProfile()
+        viewModel.editor.save()
 
         assertNull(viewModel.uiState.value.editor)
         assertTrue(repository.createdMembers.isEmpty())
@@ -380,7 +387,7 @@ class UserManagementViewModelTest {
         viewModel.onCurrentUserChanged(admin)
 
         assertTrue(CongregationRole.CONGREGATION_ADMIN in permissionsOf(other).toggleableRoles)
-        viewModel.toggleRole(other, CongregationRole.CONGREGATION_ADMIN)
+        viewModel.access.toggleRole(other, CongregationRole.CONGREGATION_ADMIN)
 
         assertEquals(listOf(other.copy(roles = emptySet())), repository.updatedMembers)
     }
