@@ -134,17 +134,17 @@ private fun ImportContentPreview() = PreviewThemeWrapper {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(16.dp)) {
         val sources = ImportSource.entries
         ImportContent(ImportUiState(allowedSources = sources), ImportActions())
-        ImportContent(ImportUiState(allowedSources = sources, pending = previewPending), ImportActions())
+        ImportContent(
+            ImportUiState(allowedSources = sources, step = ImportStep.Preview(previewPending)),
+            ImportActions(),
+        )
         ImportContent(
             ImportUiState(
                 allowedSources = sources,
-                report = ImportReport(
-                    created = 199,
-                    updated = 12,
-                    skipped = 50,
-                    failures = listOf("Termin 2023-05-07: …"),
+                step = ImportStep.Done(
+                    ImportSource.SCHEDULE,
+                    ImportReport(created = 199, updated = 12, skipped = 50, failures = listOf("Termin 2023-05-07: …")),
                 ),
-                reportSource = ImportSource.SCHEDULE,
                 errorMessage = "Die Datei konnte nicht gelesen werden: keine gültige .xlsx-Datei",
                 isBusy = true,
             ),

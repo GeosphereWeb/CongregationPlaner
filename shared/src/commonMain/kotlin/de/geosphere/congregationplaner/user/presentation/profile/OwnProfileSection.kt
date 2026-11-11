@@ -13,9 +13,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.theming.NightColors
+import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
+import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.ui.button.PrimaryButton
 import de.geosphere.congregationplaner.user.di.OwnProfileGraph
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.presentation.contact.ContactFields
 import de.geosphere.congregationplaner.user.presentation.contact.ProfileField
 import dev.zacsweers.metro.createGraph
@@ -31,13 +34,21 @@ internal fun OwnProfileSection(user: AppUser, modifier: Modifier = Modifier) {
     val viewModel = remember { createGraph<OwnProfileGraph>().ownProfileViewModel }
     LaunchedEffect(viewModel, user) { viewModel.onUserChanged(user) }
     val state by viewModel.uiState.collectAsState()
-    OwnProfileForm(state, viewModel, showAddressAndEmergencyContacts = !user.isGlobalAdmin, modifier)
+    OwnProfileForm(
+        state = state,
+        actions = OwnProfileActions(onFormChange = viewModel::onFormChange, onSave = viewModel::save),
+        showAddressAndEmergencyContacts = !user.isGlobalAdmin,
+        modifier = modifier,
+    )
 }
+
+/** Callbacks des eigenen Profils. */
+internal data class OwnProfileActions(val onFormChange: (MemberProfile) -> Unit = {}, val onSave: () -> Unit = {})
 
 @Composable
 private fun OwnProfileForm(
     state: OwnProfileUiState,
-    viewModel: OwnProfileViewModel,
+    actions: OwnProfileActions,
     showAddressAndEmergencyContacts: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -46,12 +57,12 @@ private fun OwnProfileForm(
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Mein Profil", style = MaterialTheme.typography.titleMedium)
         ProfileField(form.firstName, "Vorname", enabled, {
-            viewModel.onFormChange(form.copy(firstName = it))
+            actions.onFormChange(form.copy(firstName = it))
         })
         ProfileField(form.lastName, "Nachname", enabled, {
-            viewModel.onFormChange(form.copy(lastName = it))
+            actions.onFormChange(form.copy(lastName = it))
         })
-        ContactFields(form, enabled, viewModel::onFormChange, showAddressAndEmergencyContacts)
+        ContactFields(form, enabled, actions.onFormChange, showAddressAndEmergencyContacts)
 
         state.message?.let { message ->
             Text(
@@ -62,9 +73,27 @@ private fun OwnProfileForm(
         }
         PrimaryButton(
             text = if (state.isSaving) "Speichert …" else "Speichern",
-            onClick = viewModel::save,
+            onClick = actions.onSave,
             enabled = state.canSave,
             modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun OwnProfileFormPreview() = PreviewThemeWrapper {
+    val saved = MemberProfile(lastName = "Muster", firstName = "Max", mobilePhone = "0170 1234567")
+    Column {
+        OwnProfileForm(
+            state = OwnProfileUiState(form = saved.copy(city = "Berlin"), saved = saved),
+            actions = OwnProfileActions(),
+            showAddressAndEmergencyContacts = true,
+        )
+        OwnProfileForm(
+            state = OwnProfileUiState(form = saved, saved = saved, message = "Gespeichert."),
+            actions = OwnProfileActions(),
+            showAddressAndEmergencyContacts = false,
         )
     }
 }
