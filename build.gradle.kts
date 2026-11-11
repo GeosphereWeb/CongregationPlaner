@@ -64,6 +64,8 @@ val sonarExclusions = listOf(
     "**/SwipeableSlotItem.kt",
     // Reines Compose-Formular „Mein Profil“; Eingaben und Speichern sind in OwnProfileViewModel getestet
     "**/OwnProfileSection.kt",
+    // Reines Compose-Formular der Anmeldung; der Vergleich von E-Mail und Passwort ist in RegisterUseCase getestet
+    "**/CredentialsForm.kt",
     // Compose-Oberfläche, deren einzige neue Zeilen die @ThemePreviews-Vorschau sind; Logik liegt in ViewModels/Modellen
     "**/ContactFields.kt",
     "**/TalkDateInput.kt",

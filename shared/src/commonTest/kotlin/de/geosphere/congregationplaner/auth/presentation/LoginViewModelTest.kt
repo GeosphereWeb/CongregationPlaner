@@ -21,6 +21,15 @@ import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class LoginViewModelTest {
+    private val registrationForm = LoginForm(
+        email = "max@example.com",
+        emailConfirmation = "max@example.com",
+        password = "geheim",
+        passwordConfirmation = "geheim",
+        firstName = "Max",
+        lastName = "Muster",
+    )
+
     private val repository = FakeAuthRepository()
     private lateinit var viewModel: LoginViewModel
 
@@ -79,7 +88,7 @@ class LoginViewModelTest {
         assertEquals(AuthMode.REGISTER, state.mode)
         assertFalse(state.hasRequiredNames)
 
-        viewModel.onFormChange(LoginForm(firstName = "Max", lastName = "Muster"))
+        viewModel.onFormChange(registrationForm)
         assertTrue(state.hasRequiredNames)
         viewModel.submit()
 
@@ -88,6 +97,20 @@ class LoginViewModelTest {
         assertEquals(LoginForm(), state.form)
         assertNotNull(state.infoMessage)
         assertEquals("Max Muster", repository.registrations.single().third)
+    }
+
+    @Test
+    fun `registration with a differing password repetition keeps the form and shows the message`() {
+        viewModel.toggleMode()
+        val form = registrationForm.copy(passwordConfirmation = "geheim2")
+        viewModel.onFormChange(form)
+
+        viewModel.submit()
+
+        assertEquals(AuthMode.REGISTER, state.mode)
+        assertEquals(form, state.form)
+        assertEquals("Die Passwörter stimmen nicht überein.", state.errorMessage)
+        assertTrue(repository.registrations.isEmpty())
     }
 
     @Test

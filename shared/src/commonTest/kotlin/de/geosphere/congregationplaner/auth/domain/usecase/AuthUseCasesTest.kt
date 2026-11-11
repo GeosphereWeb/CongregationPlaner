@@ -1,6 +1,7 @@
 package de.geosphere.congregationplaner.auth.domain.usecase
 
 import de.geosphere.congregationplaner.auth.domain.model.AuthException
+import de.geosphere.congregationplaner.auth.domain.model.Registration
 import de.geosphere.congregationplaner.auth.testing.FakeAuthRepository
 import de.geosphere.congregationplaner.auth.testing.FakeAuthUser
 import kotlinx.coroutines.runBlocking
@@ -26,16 +27,42 @@ class AuthUseCasesTest {
     fun `registration needs both names and stores them as display name`() = runBlocking<Unit> {
         val register = RegisterUseCase(repository)
 
-        assertIs<AuthException.MissingName>(register("a@b.de", "pw", " ", "Muster").exceptionOrNull())
-        assertIs<AuthException.MissingName>(register("a@b.de", "pw", "Max", "").exceptionOrNull())
+        assertIs<AuthException.MissingName>(register(registration(firstName = " ")).exceptionOrNull())
+        assertIs<AuthException.MissingName>(register(registration(lastName = "")).exceptionOrNull())
         assertTrue(repository.registrations.isEmpty())
 
-        register(" a@b.de ", "pw", " Max ", " Muster ").getOrThrow()
+        register(registration(email = " a@b.de ", firstName = " Max ", lastName = " Muster ")).getOrThrow()
         assertEquals(listOf(Triple<String, String, String?>("a@b.de", "pw", "Max Muster")), repository.registrations)
 
         repository.registerResult = null
-        assertIs<AuthException.RegistrationFailed>(register("a@b.de", "pw", "Max", "Muster").exceptionOrNull())
+        assertIs<AuthException.RegistrationFailed>(register(registration()).exceptionOrNull())
     }
+
+    @Test
+    fun `registration needs the same e-mail address and password twice`() = runBlocking<Unit> {
+        val register = RegisterUseCase(repository)
+
+        assertIs<AuthException.EmailMismatch>(register(registration(emailConfirmation = "a@c.de")).exceptionOrNull())
+        assertIs<AuthException.PasswordMismatch>(
+            register(registration(passwordConfirmation = "pW")).exceptionOrNull(),
+        )
+        assertIs<AuthException.PasswordMismatch>(
+            register(registration(passwordConfirmation = "pw ")).exceptionOrNull(),
+        )
+        assertTrue(repository.registrations.isEmpty())
+
+        // Blanks around and the case of the e-mail address do not matter.
+        register(registration(email = "A@b.de", emailConfirmation = " a@B.de ")).getOrThrow()
+        assertEquals("A@b.de", repository.registrations.single().first)
+    }
+
+    private fun registration(
+        email: String = "a@b.de",
+        emailConfirmation: String = email.trim(),
+        passwordConfirmation: String = "pw",
+        firstName: String = "Max",
+        lastName: String = "Muster",
+    ) = Registration(email, emailConfirmation, "pw", passwordConfirmation, firstName, lastName)
 
     @Test
     fun `google sign in reports a cancelled login`() = runBlocking<Unit> {
