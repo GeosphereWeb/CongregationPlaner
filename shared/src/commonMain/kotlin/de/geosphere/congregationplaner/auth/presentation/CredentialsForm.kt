@@ -40,51 +40,12 @@ import de.geosphere.congregationplaner.ui.header.PanelTitle
 @Composable
 internal fun ColumnScope.CredentialsForm(state: LoginUiState, canSignIn: Boolean, actions: LoginActions) {
     val isLogin = state.isLogin
-    var passwordVisible by remember { mutableStateOf(false) }
     Column(modifier = Modifier.padding(top = 18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         PanelTitle(
             title = if (isLogin) "Anmelden" else "Konto erstellen",
             subtitle = if (isLogin) "Weiter zu deiner Versammlung." else "Lege dein Konto für diese Versammlung an.",
         )
-        if (!isLogin) {
-            FieldBox(
-                label = "Vorname",
-                value = state.form.firstName,
-                onValueChange = { actions.onFormChange(state.form.copy(firstName = it)) },
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
-            )
-            FieldBox(
-                label = "Nachname",
-                value = state.form.lastName,
-                onValueChange = { actions.onFormChange(state.form.copy(lastName = it)) },
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
-            )
-        }
-        FieldBox(
-            label = "E-Mail",
-            value = state.form.email,
-            onValueChange = { actions.onFormChange(state.form.copy(email = it)) },
-            placeholder = "name@beispiel.de",
-            isError = state.errorMessage != null,
-            keyboardOptions = KeyboardOptions(
-                capitalization = KeyboardCapitalization.None,
-                autoCorrectEnabled = false,
-                keyboardType = KeyboardType.Email,
-            ),
-        )
-        FieldBox(
-            label = "Passwort",
-            value = state.form.password,
-            onValueChange = { actions.onFormChange(state.form.copy(password = it)) },
-            isError = state.errorMessage != null,
-            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-            trailing = { PasswordVisibilityButton(passwordVisible, onToggle = { passwordVisible = !passwordVisible }) },
-            keyboardOptions = KeyboardOptions(
-                capitalization = KeyboardCapitalization.None,
-                autoCorrectEnabled = false,
-                keyboardType = KeyboardType.Password,
-            ),
-        )
+        CredentialFields(state, actions.onFormChange)
         state.errorMessage?.let { Text(it, style = nightTextStyle(14.sp, color = NightColors.Coral)) }
         state.infoMessage?.let { Text(it, style = nightTextStyle(14.sp, color = NightColors.Sky)) }
         PrimaryButton(
@@ -125,6 +86,78 @@ internal fun ColumnScope.CredentialsForm(state: LoginUiState, canSignIn: Boolean
     }
 }
 
+/** Eingabefelder der Anmeldung; beim Registrieren kommen Name und die Wiederholung von E-Mail und Passwort dazu. */
+@Composable
+private fun CredentialFields(state: LoginUiState, onFormChange: (LoginForm) -> Unit) {
+    val form = state.form
+    val isRegister = !state.isLogin
+    var passwordVisible by remember { mutableStateOf(false) }
+    if (isRegister) NameFields(form, onFormChange)
+    val isError = state.errorMessage != null
+    val emailKeyboard = KeyboardOptions(
+        capitalization = KeyboardCapitalization.None,
+        autoCorrectEnabled = false,
+        keyboardType = KeyboardType.Email,
+    )
+    val passwordKeyboard = emailKeyboard.copy(keyboardType = KeyboardType.Password)
+    val passwordTransformation =
+        if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation()
+    FieldBox(
+        label = "E-Mail",
+        value = form.email,
+        onValueChange = { onFormChange(form.copy(email = it)) },
+        placeholder = "name@beispiel.de",
+        isError = isError,
+        keyboardOptions = emailKeyboard,
+    )
+    if (isRegister) {
+        FieldBox(
+            label = "E-Mail wiederholen",
+            value = form.emailConfirmation,
+            onValueChange = { onFormChange(form.copy(emailConfirmation = it)) },
+            placeholder = "name@beispiel.de",
+            isError = isError,
+            keyboardOptions = emailKeyboard,
+        )
+    }
+    FieldBox(
+        label = "Passwort",
+        value = form.password,
+        onValueChange = { onFormChange(form.copy(password = it)) },
+        isError = isError,
+        visualTransformation = passwordTransformation,
+        trailing = { PasswordVisibilityButton(passwordVisible, onToggle = { passwordVisible = !passwordVisible }) },
+        keyboardOptions = passwordKeyboard,
+    )
+    if (isRegister) {
+        FieldBox(
+            label = "Passwort wiederholen",
+            value = form.passwordConfirmation,
+            onValueChange = { onFormChange(form.copy(passwordConfirmation = it)) },
+            isError = isError,
+            visualTransformation = passwordTransformation,
+            keyboardOptions = passwordKeyboard,
+        )
+    }
+}
+
+/** Vor- und Nachname, nur beim Registrieren. */
+@Composable
+private fun NameFields(form: LoginForm, onFormChange: (LoginForm) -> Unit) {
+    FieldBox(
+        label = "Vorname",
+        value = form.firstName,
+        onValueChange = { onFormChange(form.copy(firstName = it)) },
+        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+    )
+    FieldBox(
+        label = "Nachname",
+        value = form.lastName,
+        onValueChange = { onFormChange(form.copy(lastName = it)) },
+        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+    )
+}
+
 @ThemePreviews
 @Composable
 private fun CredentialsFormPreview() = NightPhonePreview {
@@ -132,11 +165,42 @@ private fun CredentialsFormPreview() = NightPhonePreview {
         CredentialsForm(
             state = LoginUiState(
                 mode = AuthMode.REGISTER,
-                form = LoginForm(email = "name@beispiel.de", firstName = "Max"),
-                errorMessage = "Registrierung fehlgeschlagen. Bitte prüfe deine Eingaben.",
+                form = LoginForm(
+                    email = "name@beispiel.de",
+                    emailConfirmation = "name@beispiel.de",
+                    password = "geheim",
+                    passwordConfirmation = "geheimm",
+                    firstName = "Max",
+                ),
+                errorMessage = "Die Passwörter stimmen nicht überein.",
             ),
             canSignIn = true,
             actions = LoginActions(),
         )
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun CredentialFieldsPreview() = NightPhonePreview {
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        CredentialFields(LoginUiState(form = LoginForm(email = "name@beispiel.de")), onFormChange = {})
+        CredentialFields(
+            LoginUiState(
+                mode = AuthMode.REGISTER,
+                form = LoginForm(email = "name@beispiel.de", emailConfirmation = "name@beispeil.de"),
+                errorMessage = "Die E-Mail-Adressen stimmen nicht überein.",
+            ),
+            onFormChange = {},
+        )
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun NameFieldsPreview() = NightPhonePreview {
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        NameFields(LoginForm(firstName = "Max", lastName = "Muster"), onFormChange = {})
+        NameFields(LoginForm(), onFormChange = {})
     }
 }
