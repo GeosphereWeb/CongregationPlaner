@@ -26,18 +26,6 @@ import de.geosphere.congregationplaner.ui.button.SecondaryButton
 import de.geosphere.congregationplaner.ui.header.NightScreen
 import de.geosphere.congregationplaner.ui.header.PanelTitle
 
-/** Callbacks der Anmeldung; gebündelt, damit die Composables überschaubare Signaturen behalten. */
-data class LoginActions(
-    val onEmailChange: (String) -> Unit = {},
-    val onPasswordChange: (String) -> Unit = {},
-    val onFirstNameChange: (String) -> Unit = {},
-    val onLastNameChange: (String) -> Unit = {},
-    val onToggleMode: () -> Unit = {},
-    val onSubmit: () -> Unit = {},
-    val onGoogleClick: () -> Unit = {},
-    val onGlobalAdminLogin: () -> Unit = {},
-)
-
 /**
  * Zweistufige Anmeldung im Nachtblau-Design: erst die Versammlung (über [congregationSelector]), danach die
  * Zugangsdaten. [step] legt fest, welcher Schritt gerade gilt.
@@ -46,6 +34,7 @@ data class LoginActions(
 fun LoginContent(
     state: LoginUiState,
     step: LoginStep,
+    firebaseStatus: String,
     actions: LoginActions,
     congregationSelector: @Composable () -> Unit = {},
 ) {
@@ -76,7 +65,7 @@ fun LoginContent(
             }
         }
         Text(
-            text = state.firebaseStatus,
+            text = firebaseStatus,
             modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
             textAlign = TextAlign.Center,
             style = nightTextStyle(11.sp, color = NightColors.OnBackgroundMuted, monospace = true),
@@ -102,12 +91,9 @@ private val selectedState = CongregationSelectionUiState(
 private fun LoginPreviewContent(selection: CongregationSelectionUiState, state: LoginUiState = LoginUiState()) =
     NightPhonePreview {
         LoginContent(
-            state = state.copy(
-                email = "name@beispiel.de",
-                password = "geheimeswort",
-                firebaseStatus = "Firebase verfügbar",
-            ),
+            state = state.copy(form = LoginForm(email = "name@beispiel.de", password = "geheimeswort")),
             step = loginStep(selection, globalLogin = false),
+            firebaseStatus = "Firebase verfügbar",
             actions = LoginActions(),
             congregationSelector = {
                 CongregationSelector(
