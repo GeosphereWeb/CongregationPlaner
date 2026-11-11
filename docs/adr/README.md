@@ -75,3 +75,4 @@ Numbers are sequential and permanent. Never reuse or renumber an existing ADR, e
 - [ADR-0016: Adresse und Notfallkontakte im Mitgliedsdokument](0016-contact-details-in-member-document.md) — Accepted
 - [ADR-0017: Organisationsbaum in der App pflegen](0017-organization-tree-maintained-in-app.md) — Accepted
 - [ADR-0024: Policies setzt der UseCase durch, die UI liest Rechte aus dem Zustand](0024-policy-enforcement-in-use-cases.md) — Accepted
+- [ADR-0025: Zustandshalter je Teilaufgabe statt großer Bildschirm-ViewModels](0025-state-holders-for-screen-view-models.md) — Accepted

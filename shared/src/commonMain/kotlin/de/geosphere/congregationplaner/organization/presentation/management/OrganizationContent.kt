@@ -87,13 +87,13 @@ internal fun OrganizationRoute(currentUser: AppUser) {
             OrganizationContent(
                 state = state,
                 actions = OrganizationActions(
-                    onCreate = viewModel::create,
-                    onSelect = viewModel::edit,
+                    onCreate = viewModel.editor::create,
+                    onSelect = viewModel.editor::edit,
                     onOpen = viewModel::open,
-                    onUpdate = viewModel::updateEditor,
+                    onUpdate = viewModel.editor::update,
                     onSave = viewModel::save,
-                    onCancel = viewModel::cancelEditing,
-                    onDiscard = viewModel::discardChanges,
+                    onCancel = viewModel.editor::cancel,
+                    onDiscard = viewModel.editor::discard,
                     onDelete = viewModel::delete,
                 ),
             )

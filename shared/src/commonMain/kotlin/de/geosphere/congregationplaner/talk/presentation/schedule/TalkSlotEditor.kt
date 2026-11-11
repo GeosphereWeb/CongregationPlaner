@@ -1,7 +1,6 @@
 package de.geosphere.congregationplaner.talk.presentation.schedule
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -41,13 +40,12 @@ import de.geosphere.congregationplaner.ui.button.SecondaryButton
 import de.geosphere.congregationplaner.ui.card.FieldCard
 import de.geosphere.congregationplaner.ui.chip.StatusChip
 import de.geosphere.congregationplaner.ui.chip.StatusTone
-import de.geosphere.congregationplaner.ui.field.AppSwitch
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 
-private val COMPACT_WIDTH = 600.dp
-private val ACTION_HEIGHT = 44.dp
-private val BUTTON_HEIGHT = 48.dp
+internal val COMPACT_WIDTH = 600.dp
+internal val ACTION_HEIGHT = 44.dp
+internal val BUTTON_HEIGHT = 48.dp
 
 @Composable
 @Suppress("LongParameterList", "LongMethod")
@@ -307,73 +305,6 @@ private fun SlotHeader(slot: TalkSlot, chip: SlotChip) {
         }
         slot.weekEventName?.takeIf { it != chip.text }?.let { StatusChip(it, StatusTone.Sky) }
         StatusChip(chip.text, chip.tone)
-    }
-}
-
-@Composable
-private fun SwitchRow(label: String, checked: Boolean, enabled: Boolean = true, onCheckedChange: (Boolean) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(label, modifier = Modifier.weight(1f))
-        AppSwitch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
-    }
-}
-
-/** „Ändern“/„Wählen“ und, falls etwas gewählt ist, „Entfernen“ rechts in einer [FieldCard]. */
-@Composable
-private fun FieldActions(changeLabel: String, enabled: Boolean, onChange: () -> Unit, onRemove: (() -> Unit)?) {
-    Column(horizontalAlignment = Alignment.End) {
-        SecondaryButton(changeLabel, onChange, enabled = enabled, outlined = false)
-        if (onRemove != null) TextButton(onClick = onRemove) { Text("Entfernen") }
-    }
-}
-
-/**
- * Speichern, Verwerfen und (mit [onDelete]) Löschen eines Eintrags in der Detailansicht: auf dem Handy volle Breite
- * untereinander, sonst nebeneinander rechts; „Löschen“ steht als roter Textbutton darunter.
- */
-@Composable
-@Suppress("LongParameterList")
-internal fun EditorActions(
-    saveText: String,
-    saveEnabled: Boolean,
-    discardEnabled: Boolean,
-    onSave: () -> Unit,
-    onDiscard: () -> Unit,
-    onDelete: (() -> Unit)? = null,
-    deleteText: String = "Löschen",
-    deleteEnabled: Boolean = true,
-) {
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        BoxWithConstraints(Modifier.fillMaxWidth()) {
-            if (maxWidth < COMPACT_WIDTH) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    PrimaryButton(saveText, onSave, Modifier.fillMaxWidth(), saveEnabled, BUTTON_HEIGHT)
-                    SecondaryButton(
-                        "Verwerfen",
-                        onDiscard,
-                        Modifier.fillMaxWidth(),
-                        discardEnabled,
-                        height = BUTTON_HEIGHT,
-                    )
-                }
-            } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                ) {
-                    SecondaryButton("Verwerfen", onDiscard, enabled = discardEnabled, height = BUTTON_HEIGHT)
-                    PrimaryButton(saveText, onSave, enabled = saveEnabled, height = BUTTON_HEIGHT)
-                }
-            }
-        }
-        if (onDelete != null) {
-            TextButton(
-                onClick = onDelete,
-                enabled = deleteEnabled,
-                modifier = Modifier.align(Alignment.End),
-                colors = ButtonDefaults.textButtonColors(contentColor = NightColors.Coral),
-            ) { Text(deleteText) }
-        }
     }
 }
 
