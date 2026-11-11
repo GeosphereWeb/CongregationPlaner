@@ -1,0 +1,98 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues></ManuallySuppressedIssues>
+  <CurrentIssues>
+    <ID>ComplexCondition:SpeakerDirectoryImport.kt$circuitId == null || circuitName == null || congregationId == null || congregationName == null</ID>
+    <ID>CyclomaticComplexMethod:CongregationMetadataContent.kt$@Composable @OptIn(ExperimentalMaterial3AdaptiveApi::class) @Suppress("LongParameterList", "LongMethod") internal fun CongregationMetadataContent( state: CongregationMetadataUiState, modifier: Modifier = Modifier, onCreate: () -&gt; Unit, onSelect: (CongregationMetadata) -&gt; Unit, onUpdate: (CongregationMetadata) -&gt; Unit, onSave: () -&gt; Unit, onCancel: () -&gt; Unit, onDiscard: () -&gt; Unit, onDelete: (CongregationMetadata) -&gt; Unit, )</ID>
+    <ID>CyclomaticComplexMethod:ReferenceDataImport.kt$fun planTalkCatalog(table: ImportTable, existing: List&lt;Talk&gt;): ImportPlan&lt;Talk&gt;</ID>
+    <ID>CyclomaticComplexMethod:TalkScheduleScreen.kt$@Composable @OptIn(ExperimentalMaterial3AdaptiveApi::class) @Suppress("LongMethod") internal fun TalkScheduleContent( state: TalkScheduleUiState, actions: TalkScheduleActions, modifier: Modifier = Modifier, today: LocalDate = rememberToday(), )</ID>
+    <ID>CyclomaticComplexMethod:TalkSlotEditor.kt$@Composable @Suppress("LongParameterList", "LongMethod") internal fun TalkSlotEditor( editor: TalkSlotEditorState, chip: SlotChip, weekEvents: List&lt;WeekEvent&gt;, talks: List&lt;Talk&gt;, speakers: List&lt;Speaker&gt;, chairmen: List&lt;Chairman&gt;, externalSpeakers: List&lt;ExternalSpeaker&gt;, canViewMembers: Boolean, isSaving: Boolean, onChange: (TalkSlot) -&gt; Unit, onSelectWeekEvent: (WeekEvent?) -&gt; Unit, onSelectTalk: (Talk?) -&gt; Unit, speakerActions: SpeakerActions, onSelectChairman: (Chairman?) -&gt; Unit, onOpenHistory: (Int) -&gt; Unit, onSave: () -&gt; Unit, onCancel: () -&gt; Unit, onDelete: () -&gt; Unit, )</ID>
+    <ID>CyclomaticComplexMethod:UpdateMemberProfileUseCase.kt$internal fun MemberProfile.validated(requireName: Boolean): Result&lt;MemberProfile&gt;</ID>
+    <ID>CyclomaticComplexMethod:UserManagementContent.kt$@Composable @OptIn(ExperimentalMaterial3AdaptiveApi::class) @Suppress("LongMethod") internal fun UserManagementContent( state: UserManagementUiState, actions: UserManagementActions, modifier: Modifier = Modifier, )</ID>
+    <ID>LongMethod:ContactFields.kt$@Composable internal fun ContactFields( profile: MemberProfile, enabled: Boolean, onChange: (MemberProfile) -&gt; Unit, showAddressAndEmergencyContacts: Boolean = true, )</ID>
+    <ID>LongMethod:ContactFields.kt$@Composable private fun EmergencyContactCard( contact: EmergencyContact, number: Int, enabled: Boolean, onChange: (EmergencyContact) -&gt; Unit, onRemove: () -&gt; Unit, )</ID>
+    <ID>LongMethod:ExternalDirectoryContent.kt$@Composable @OptIn(ExperimentalMaterial3AdaptiveApi::class) internal fun ExternalDirectoryContent( state: ExternalDirectoryUiState, actions: ExternalDirectoryActions, modifier: Modifier = Modifier, )</ID>
+    <ID>LongMethod:ExternalDirectoryContent.kt$@Composable private fun ExternalDirectoryDetail( state: ExternalDirectoryUiState, actions: ExternalDirectoryActions, isBusy: Boolean, onRequestDelete: (DeleteRequest) -&gt; Unit, )</ID>
+    <ID>LongMethod:MemberEditor.kt$@Composable internal fun MemberEditor( editor: MemberEditorState, isSaving: Boolean, isDirty: Boolean, onChange: (MemberProfile) -&gt; Unit, onSave: () -&gt; Unit, onCancel: () -&gt; Unit, )</ID>
+    <ID>LongParameterList:ExternalDirectoryViewModel.kt$ExternalDirectoryViewModel$( private val observeDirectory: ObserveExternalDirectoryUseCase, private val saveCircuit: SaveExternalCircuitUseCase, private val saveCongregation: SaveExternalCongregationUseCase, private val saveSpeaker: SaveVisitingSpeakerUseCase, private val deleteCircuit: DeleteExternalCircuitUseCase, private val deleteCongregation: DeleteExternalCongregationUseCase, private val deleteSpeaker: DeleteVisitingSpeakerUseCase, private val policy: TalkSchedulePermissionPolicy, )</ID>
+    <ID>LongParameterList:TalkScheduleViewModel.kt$TalkScheduleViewModel$( private val observeYear: ObserveTalkYearUseCase, private val observeWeekEvents: ObserveWeekEventsUseCase, private val observeTalkCatalog: ObserveTalkCatalogUseCase, private val observeTalkMembers: ObserveTalkMembersUseCase, private val loadExternalSpeakers: ObserveExternalSpeakersUseCase, private val moveSlot: MoveTalkSlotUseCase, private val createYearSlots: CreateYearSlotsUseCase, private val changeYearTimes: ChangeYearSlotTimesUseCase, private val deleteSlot: DeleteTalkSlotUseCase, private val syncHistory: SyncTalkHistoryWithSlotUseCase, private val confirmSpeaker: ConfirmSpeakerUseCase, private val permissionPolicy: TalkSchedulePermissionPolicy, private val userPolicy: UserPermissionPolicy, )</ID>
+    <ID>LongParameterList:UserManagementViewModel.kt$UserManagementViewModel$( private val observeMembers: ObserveMembersUseCase, private val setMemberApproval: SetMemberApprovalUseCase, private val setMemberRole: SetMemberRoleUseCase, private val createMemberWithoutAccount: CreateMemberWithoutAccountUseCase, private val updateMemberProfile: UpdateMemberProfileUseCase, private val removeMemberUseCase: RemoveMemberUseCase, private val permissionPolicy: UserPermissionPolicy, )</ID>
+    <ID>LoopWithTooManyJumpStatements:SpeakerDirectoryImport.kt$for</ID>
+    <ID>MagicNumber:FirestoreCongregationMetadataRepository.kt$7</ID>
+    <ID>MagicNumber:FirestoreRestClient.kt$FirestoreRestClient$10</ID>
+    <ID>MagicNumber:FirestoreRestClient.kt$FirestoreRestClient$200</ID>
+    <ID>MagicNumber:FirestoreRestClient.kt$FirestoreRestClient$299</ID>
+    <ID>MagicNumber:FirestoreRestClient.kt$FirestoreRestClient.Companion$5</ID>
+    <ID>MagicNumber:FirestoreRestCongregationMetadataRepository.kt$FirestoreRestCongregationMetadataRepository$7</ID>
+    <ID>MagicNumber:JVMFirebaseAuthRepository.kt$FirebaseAuthPlatformService$200</ID>
+    <ID>MagicNumber:JVMFirebaseAuthRepository.kt$FirebaseAuthPlatformService$299</ID>
+    <ID>MatchingDeclarationName:ExternalDirectoryContent.kt$ExternalDirectoryActions</ID>
+    <ID>MatchingDeclarationName:ImportContent.kt$ImportActions</ID>
+    <ID>MatchingDeclarationName:ImportWriting.kt$Written&lt;T&gt;</ID>
+    <ID>MatchingDeclarationName:ListDetailNavigation.kt$ListDetailState</ID>
+    <ID>MatchingDeclarationName:SelectableListCard.kt$CardHighlight</ID>
+    <ID>MatchingDeclarationName:SpeakerPickerContent.kt$SpeakerActions</ID>
+    <ID>MatchingDeclarationName:TalkHistoryContent.kt$TalkHistoryActions</ID>
+    <ID>MatchingDeclarationName:TalkScheduleScreen.kt$TalkScheduleActions</ID>
+    <ID>MatchingDeclarationName:UserManagementContent.kt$UserManagementActions</ID>
+    <ID>MaxLineLength:ContactIcons.kt$// WhatsApp-Logo aus Simple Icons (CC0). Das Logo ist eine Marke von WhatsApp und steht hier nur als Verweis auf die App.</ID>
+    <ID>MaxLineLength:ImportContent.kt$/** The import section of the settings; shows nothing where the user cannot import or the platform has no file dialog. */</ID>
+    <ID>MaxLineLength:SelectableListCard.kt$*</ID>
+    <ID>MaxLineLength:TalkScheduleImport.kt$// An earlier run may have saved the slot but failed to save its speaker: add the speaker again if it is missing.</ID>
+    <ID>MaxLineLength:TalkSlotPresentation.kt$/** Text und Farbe der Statusmarke; der Name des Wochenereignisses steht nie in der Marke, sondern in [slotEventLine]. */</ID>
+    <ID>MaxLineLength:UserManagementViewModel.kt$UserManagementViewModel$/** Markiert [member] als beschäftigt und liefert den angemeldeten Nutzer, sofern für [member] nichts anderes läuft. */</ID>
+    <ID>NestedBlockDepth:FirestoreRestUserRepository.kt$private fun MemberProfile.fields(): JsonObject</ID>
+    <ID>NestedBlockDepth:XlsxReader.kt$XlsxReader$private fun parseSheet(bytes: ByteArray, sharedStrings: List&lt;String&gt;): List&lt;SheetRow&gt;</ID>
+    <ID>ReturnCount:AdminContactSyncingUserRepository.kt$AdminContactSyncingUserRepository$override suspend fun updateMember(congregation: CongregationRef, member: AppUser): Result&lt;AppUser&gt;</ID>
+    <ID>ReturnCount:AdminContactSyncingUserRepository.kt$AdminContactSyncingUserRepository$override suspend fun updateMemberProfile(congregation: CongregationRef, member: AppUser): Result&lt;AppUser&gt;</ID>
+    <ID>ReturnCount:AdminContactSyncingUserRepository.kt$AdminContactSyncingUserRepository$override suspend fun updateOwnProfile(congregation: CongregationRef, member: AppUser): Result&lt;AppUser&gt;</ID>
+    <ID>ReturnCount:ChangeYearSlotTimesUseCase.kt$ChangeYearSlotTimesUseCase$suspend operator fun invoke(user: AppUser, year: Int, time: LocalTime): Result&lt;Int&gt;</ID>
+    <ID>ReturnCount:CongregationRef.kt$CongregationRef.Companion$fun fromDocumentPath(input: String): CongregationRef?</ID>
+    <ID>ReturnCount:CongregationSelectionViewModel.kt$CongregationSelectionViewModel$fun selectUnit(level: OrgLevel, unitId: String)</ID>
+    <ID>ReturnCount:CreateYearSlotsUseCase.kt$CreateYearSlotsUseCase$suspend operator fun invoke(user: AppUser, year: Int): Result&lt;YearSlotsResult&gt;</ID>
+    <ID>ReturnCount:DeleteOrgUnitUseCase.kt$DeleteOrgUnitUseCase$suspend operator fun invoke(user: AppUser, level: OrgLevel, parentIds: List&lt;String&gt;, unit: OrgUnit): Result&lt;Unit&gt;</ID>
+    <ID>ReturnCount:DeleteTalkHistoryEntryUseCase.kt$DeleteTalkHistoryEntryUseCase$suspend operator fun invoke(user: AppUser, talkNumber: Int): Result&lt;Unit&gt;</ID>
+    <ID>ReturnCount:DesktopEnv.kt$DesktopEnv$internal fun findValue( keys: Array&lt;out String&gt;, environment: Map&lt;String, String&gt;, properties: Map&lt;String, String&gt;, loaded: Map&lt;String, String&gt;, ): String?</ID>
+    <ID>ReturnCount:DesktopEnv.kt$DesktopEnv$internal fun parseEntry(rawLine: String): Pair&lt;String, String&gt;?</ID>
+    <ID>ReturnCount:JVMFirebaseAuthRepository.kt$FirebaseAuthPlatformService$private fun performDesktopAuthRequest(endpoint: String, email: String, password: String): FirebaseUser?</ID>
+    <ID>ReturnCount:OrganizationViewModel.kt$OrganizationViewModel$fun save()</ID>
+    <ID>ReturnCount:SaveOrgUnitUseCase.kt$SaveOrgUnitUseCase$suspend operator fun invoke( user: AppUser, level: OrgLevel, parentIds: List&lt;String&gt;, unit: OrgUnit, ): Result&lt;OrgUnit&gt;</ID>
+    <ID>ReturnCount:SaveTalkHistoryEntryUseCase.kt$SaveTalkHistoryEntryUseCase$suspend operator fun invoke(user: AppUser, entry: TalkHistoryEntry): Result&lt;TalkHistoryEntry&gt;</ID>
+    <ID>ReturnCount:SaveTalkSlotUseCase.kt$SaveTalkSlotUseCase$suspend operator fun invoke(user: AppUser, slot: TalkSlot): Result&lt;TalkSlot&gt;</ID>
+    <ID>ReturnCount:SyncTalkHistoryWithSlotUseCase.kt$SyncTalkHistoryWithSlotUseCase$suspend operator fun invoke(user: AppUser, previous: TalkSlot?, current: TalkSlot?): Result&lt;Unit&gt;</ID>
+    <ID>ReturnCount:TalkCatalogManagementViewModel.kt$TalkCatalogManagementViewModel$fun save()</ID>
+    <ID>ReturnCount:TalkScheduleImport.kt$private fun slotEntry(row: ImportRow, run: ScheduleRun): PlanEntry&lt;TalkSlot&gt;?</ID>
+    <ID>ReturnCount:TalkScheduleViewModel.kt$TalkScheduleViewModel$fun changeYearTime()</ID>
+    <ID>ReturnCount:TalkScheduleViewModel.kt$TalkScheduleViewModel$fun save()</ID>
+    <ID>ReturnCount:UserManagementViewModel.kt$UserManagementViewModel$fun saveProfile()</ID>
+    <ID>ReturnCount:WeekEventManagementViewModel.kt$WeekEventManagementViewModel$fun save()</ID>
+    <ID>TooGenericExceptionCaught:FirestoreRestClient.kt$exception: Exception</ID>
+    <ID>TooGenericExceptionCaught:FirestoreTasks.kt$exception: Exception</ID>
+    <ID>TooManyFunctions:AndroidFirebaseAuthRepository.kt$FirebaseAuthPlatformService : FirebaseAuthRepository</ID>
+    <ID>TooManyFunctions:CongregationMetadataViewModel.kt$CongregationMetadataViewModel : ViewModel</ID>
+    <ID>TooManyFunctions:CongregationSelectionViewModel.kt$CongregationSelectionViewModel : ViewModel</ID>
+    <ID>TooManyFunctions:ExternalDirectoryContent.kt$de.geosphere.congregationplaner.talk.presentation.directory.ExternalDirectoryContent.kt</ID>
+    <ID>TooManyFunctions:ExternalDirectoryViewModel.kt$ExternalDirectoryViewModel : ViewModel</ID>
+    <ID>TooManyFunctions:FirebaseAuthManager.kt$FirebaseAuthManager : FirebaseAuthRepository</ID>
+    <ID>TooManyFunctions:FirebaseAuthRepository.kt$FirebaseAuthRepository</ID>
+    <ID>TooManyFunctions:FirestoreExternalSpeakerDirectoryRepository.kt$FirestoreExternalSpeakerDirectoryRepository : ExternalSpeakerDirectoryRepository</ID>
+    <ID>TooManyFunctions:FirestoreRestClient.kt$de.geosphere.congregationplaner.firestore.FirestoreRestClient.kt</ID>
+    <ID>TooManyFunctions:FirestoreRestExternalSpeakerDirectoryRepository.kt$FirestoreRestExternalSpeakerDirectoryRepository : ExternalSpeakerDirectoryRepository</ID>
+    <ID>TooManyFunctions:FirestoreRestUserRepository.kt$FirestoreRestUserRepository : UserRepository</ID>
+    <ID>TooManyFunctions:FirestoreUserRepository.kt$FirestoreUserRepository : UserRepository</ID>
+    <ID>TooManyFunctions:JVMFirebaseAuthRepository.kt$FirebaseAuthPlatformService : FirebaseAuthRepository</ID>
+    <ID>TooManyFunctions:OrganizationViewModel.kt$OrganizationViewModel : ViewModel</ID>
+    <ID>TooManyFunctions:TalkCatalogManagementViewModel.kt$TalkCatalogManagementViewModel : ViewModel</ID>
+    <ID>TooManyFunctions:TalkRepositoryFactory.kt$de.geosphere.congregationplaner.talk.data.TalkRepositoryFactory.kt</ID>
+    <ID>TooManyFunctions:TalkScheduleViewModel.kt$TalkScheduleViewModel : ViewModel</ID>
+    <ID>TooManyFunctions:TalkSlotEditor.kt$de.geosphere.congregationplaner.talk.presentation.schedule.TalkSlotEditor.kt</ID>
+    <ID>TooManyFunctions:TalkSlotPresentation.kt$de.geosphere.congregationplaner.talk.presentation.schedule.TalkSlotPresentation.kt</ID>
+    <ID>TooManyFunctions:UserManagementViewModel.kt$UserManagementViewModel : ViewModel</ID>
+    <ID>TooManyFunctions:UserRepository.kt$UserRepository</ID>
+    <ID>TooManyFunctions:WeekEventManagementViewModel.kt$WeekEventManagementViewModel : ViewModel</ID>
+    <ID>TooManyFunctions:XlsxReader.kt$XlsxReader</ID>
+    <ID>UnusedParameter:TalkSlotPresentation.kt$slot: TalkSlot</ID>
+    <ID>UseCheckOrError:FirestoreRestClient.kt$throw IllegalStateException("FIREBASE_PROJECT_ID is required to access Firestore.")</ID>
+    <ID>UseRequire:FirestoreRestClient.kt$throw IllegalArgumentException("Firestore field '$name' must be a string.")</ID>
+  </CurrentIssues>
+</SmellBaseline>

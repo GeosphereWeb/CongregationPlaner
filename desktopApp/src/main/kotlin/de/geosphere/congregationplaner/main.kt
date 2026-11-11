@@ -11,6 +11,7 @@ import congregationplaner.shared.generated.resources.dummy
 import de.geosphere.congregationplaner.auth.data.FirebaseSupport
 import de.geosphere.congregationplaner.auth.presentation.LoginActions
 import de.geosphere.congregationplaner.auth.presentation.LoginContent
+import de.geosphere.congregationplaner.auth.presentation.LoginForm
 import de.geosphere.congregationplaner.auth.presentation.LoginStep
 import de.geosphere.congregationplaner.auth.presentation.LoginUiState
 import de.geosphere.congregationplaner.organization.presentation.selection.InviteLinkInbox
@@ -59,12 +60,9 @@ fun main(args: Array<String>) {
 fun LoginScreenDesktopPreview() {
     AppTheme {
         LoginContent(
-            state = LoginUiState(
-                email = "demo@congregationplaner.de",
-                password = "Passwort123",
-                firebaseStatus = "Firebase verfügbar",
-            ),
+            state = LoginUiState(form = LoginForm(email = "demo@congregationplaner.de", password = "Passwort123")),
             step = LoginStep(stepLabel = "SCHRITT 2 / 2", title = "Anmelden", showCredentials = true, canSignIn = true),
+            firebaseStatus = "Firebase verfügbar",
             actions = LoginActions(),
         )
     }

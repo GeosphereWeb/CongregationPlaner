@@ -20,11 +20,22 @@ class SaveCongregationUseCase(
         congregation: CongregationMetadata,
     ): Result<CongregationMetadata> {
         require(congregation.id.isNotBlank()) { "A new congregation is created with CreateCongregationUseCase." }
-        if (!policy.canEdit(user, congregation)) return Result.failure(CongregationException.NotAllowed())
-        CongregationName.validate(congregation.name)?.let { return Result.failure(it) }
+        val error = if (policy.canEdit(user, congregation)) {
+            CongregationName.validate(congregation.name)
+        } else {
+            CongregationException.NotAllowed()
+        }
+        if (error != null) return Result.failure(error)
         val trimmed = congregation.copy(name = congregation.name.trim())
-        val owner = repository.findNameOwner(circuitIds, trimmed.name).getOrElse { return Result.failure(it) }
-        if (owner != null && owner != trimmed.id) return Result.failure(CongregationException.NameTaken())
-        return repository.save(circuitIds, trimmed)
+        return repository.findNameOwner(circuitIds, trimmed.name).fold(
+            onSuccess = { owner ->
+                if (owner != null && owner != trimmed.id) {
+                    Result.failure(CongregationException.NameTaken())
+                } else {
+                    repository.save(circuitIds, trimmed)
+                }
+            },
+            onFailure = { Result.failure(it) },
+        )
     }
 }

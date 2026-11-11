@@ -28,12 +28,15 @@ import dev.zacsweers.metro.createGraph
 @Composable
 fun App() {
     AppTheme {
-        val authViewModel = remember { createGraph<AuthGraph>().authViewModel }
+        val authGraph = remember { createGraph<AuthGraph>() }
+        val sessionViewModel = remember { authGraph.sessionViewModel }
+        val loginViewModel = remember { authGraph.loginViewModel }
         val userAccessViewModel = remember { createGraph<UserAccessGraph>().userAccessViewModel }
         val selectionViewModel = remember { createGraph<OrganizationGraph>().congregationSelectionViewModel }
         val navigationViewModel = remember { createGraph<AppNavigationGraph>().appNavigationViewModel }
         val homeViewModel = remember { createGraph<HomeGraph>().homeViewModel }
-        val authState by authViewModel.uiState.collectAsState()
+        val authState by sessionViewModel.uiState.collectAsState()
+        val loginState by loginViewModel.uiState.collectAsState()
         val selectionState by selectionViewModel.uiState.collectAsState()
         val selectedCongregation = selectionState.activeSelection?.ref
         val newCongregation = selectionState.newCongregation
@@ -42,7 +45,14 @@ fun App() {
 
         LaunchedEffect(Unit) {
             FirebaseSupport.initialize()
-            authViewModel.onFirebaseInitialized(FirebaseSupport.isReady())
+            sessionViewModel.onFirebaseInitialized(FirebaseSupport.isReady())
+        }
+
+        // Eine geglückte Anmeldung übernimmt die Sitzung; die Anmeldung beginnt danach wieder von vorn.
+        LaunchedEffect(loginState.signedInUser) {
+            val user = loginState.signedInUser ?: return@LaunchedEffect
+            sessionViewModel.onSignedIn(user)
+            loginViewModel.onSignInHandled()
         }
 
         // Ein Einladungslink, mit dem die App gestartet wurde, wählt die Versammlung vor.
@@ -63,12 +73,12 @@ fun App() {
         }
 
         if (authUser == null) {
-            LoginRoute(authViewModel, selectionViewModel)
+            LoginRoute(loginViewModel, selectionViewModel, authState.firebaseStatus)
             return@AppTheme
         }
 
         val signOut: () -> Unit = {
-            authViewModel.signOut()
+            sessionViewModel.signOut()
             // The effects below do not run on the login screen, so reset here: the next sign-in starts at home.
             navigationViewModel.onUserChanged(null)
         }
@@ -91,8 +101,8 @@ fun App() {
                     isCreating = selectionState.isCreating,
                     errorMessage = selectionState.errorMessage,
                     onCreate = { selectionViewModel.createNewCongregation(authUser) },
-                    onRefresh = authViewModel::refreshEmailVerification,
-                    onResend = authViewModel::resendVerificationEmail,
+                    onRefresh = sessionViewModel::refreshEmailVerification,
+                    onResend = sessionViewModel::resendVerificationEmail,
                     onChangeName = selectionViewModel::cancelNewCongregation,
                     onSignOut = signOut,
                 )

@@ -6,27 +6,25 @@ import androidx.compose.runtime.getValue
 import de.geosphere.congregationplaner.organization.presentation.selection.CongregationSelectionViewModel
 import de.geosphere.congregationplaner.organization.presentation.selection.CongregationSelector
 
-/** Verbindet die Anmeldung mit [AuthViewModel] und der Versammlungsauswahl. */
+/** Verbindet die Anmeldung mit [LoginViewModel] und der Versammlungsauswahl. */
 @Composable
-fun LoginRoute(viewModel: AuthViewModel, selectionViewModel: CongregationSelectionViewModel) {
+fun LoginRoute(viewModel: LoginViewModel, selectionViewModel: CongregationSelectionViewModel, firebaseStatus: String) {
     val state by viewModel.uiState.collectAsState()
     val selection by selectionViewModel.uiState.collectAsState()
     LoginContent(
         state = state,
         step = loginStep(selection, state.globalLogin),
+        firebaseStatus = firebaseStatus,
         actions = LoginActions(
-            onEmailChange = viewModel::onEmailChange,
-            onPasswordChange = viewModel::onPasswordChange,
-            onFirstNameChange = viewModel::onFirstNameChange,
-            onLastNameChange = viewModel::onLastNameChange,
+            onFormChange = viewModel::onFormChange,
             onToggleMode = viewModel::toggleMode,
             onSubmit = viewModel::submit,
             onGoogleClick = viewModel::signInWithGoogle,
-            onGlobalAdminLogin = viewModel::startGlobalLogin,
+            onGlobalAdminLogin = { viewModel.setGlobalLogin(true) },
         ),
         congregationSelector = {
             if (state.globalLogin) {
-                GlobalLoginHint(onChooseCongregation = viewModel::chooseCongregation)
+                GlobalLoginHint(onChooseCongregation = { viewModel.setGlobalLogin(false) })
             } else {
                 CongregationSelector(selectionViewModel, selection)
             }

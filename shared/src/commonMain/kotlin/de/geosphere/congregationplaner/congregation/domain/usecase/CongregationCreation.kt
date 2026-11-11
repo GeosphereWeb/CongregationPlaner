@@ -15,7 +15,14 @@ internal suspend fun CongregationMetadataRepository.createWithFreeName(
 ): Result<CongregationMetadata> {
     CongregationName.validate(name)?.let { return Result.failure(it) }
     val trimmed = name.trim()
-    val owner = findNameOwner(circuitIds, trimmed).getOrElse { return Result.failure(it) }
-    if (owner != null) return Result.failure(CongregationException.NameTaken())
-    return create(circuitIds, CongregationMetadata(name = trimmed), createdBy, firstAdmin)
+    return findNameOwner(circuitIds, trimmed).fold(
+        onSuccess = { owner ->
+            if (owner != null) {
+                Result.failure(CongregationException.NameTaken())
+            } else {
+                create(circuitIds, CongregationMetadata(name = trimmed), createdBy, firstAdmin)
+            }
+        },
+        onFailure = { Result.failure(it) },
+    )
 }
