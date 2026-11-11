@@ -2,6 +2,7 @@ package de.geosphere.congregationplaner.auth.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import de.geosphere.congregationplaner.auth.domain.model.Registration
 import de.geosphere.congregationplaner.auth.domain.repository.FirebaseUser
 import de.geosphere.congregationplaner.auth.domain.usecase.RegisterUseCase
 import de.geosphere.congregationplaner.auth.domain.usecase.SignInUseCase
@@ -20,7 +21,9 @@ enum class AuthMode {
 
 data class LoginForm(
     val email: String = "",
+    val emailConfirmation: String = "",
     val password: String = "",
+    val passwordConfirmation: String = "",
     val firstName: String = "",
     val lastName: String = "",
 )
@@ -68,7 +71,7 @@ class LoginViewModel(
             if (state.isLogin) {
                 signIn(form.email, form.password).fold(::onSignedIn, ::onFailure)
             } else {
-                register(form.email, form.password, form.firstName, form.lastName).fold({ onRegistered() }, ::onFailure)
+                register(form.toRegistration()).fold({ onRegistered() }, ::onFailure)
             }
         }
     }
@@ -106,3 +109,6 @@ class LoginViewModel(
             "Registrierung erfolgreich. Bitte prüfe dein E-Mail-Postfach und bestätige deine E-Mail-Adresse."
     }
 }
+
+private fun LoginForm.toRegistration() =
+    Registration(email, emailConfirmation, password, passwordConfirmation, firstName, lastName)

@@ -8,5 +8,9 @@ sealed class AuthException(message: String) : Exception(message) {
 
     class MissingName : AuthException("Bitte gib Vor- und Nachnamen ein.")
 
+    class EmailMismatch : AuthException("Die E-Mail-Adressen stimmen nicht überein.")
+
+    class PasswordMismatch : AuthException("Die Passwörter stimmen nicht überein.")
+
     class GoogleSignInFailed : AuthException("Google-Anmeldung fehlgeschlagen oder wurde abgebrochen.")
 }
