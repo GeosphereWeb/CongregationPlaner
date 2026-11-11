@@ -12,11 +12,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import de.geosphere.congregationplaner.presentation.components.DetailPlaceholder
-import de.geosphere.congregationplaner.talk.presentation.schedule.EditorActions
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.theming.nightCardColors
+import de.geosphere.congregationplaner.ui.field.FormTextField
+import de.geosphere.congregationplaner.ui.form.EditorActions
+import de.geosphere.congregationplaner.ui.pane.DetailPlaceholder
 
 /** Was nach der Rückfrage gelöscht wird. */
 internal class DeleteRequest(val text: String, val confirm: () -> Unit)
@@ -51,7 +52,7 @@ internal fun ExternalDirectoryDetail(
                 }
             },
         ) {
-            NameField("Name des Kreises", editor.circuit.name) {
+            FormTextField("Name des Kreises", editor.circuit.name) {
                 actions.onEditorChange(editor.copy(circuit = editor.circuit.copy(name = it)))
             }
         }
@@ -73,7 +74,7 @@ internal fun ExternalDirectoryDetail(
             },
         ) {
             Text("Kreis: ${directory.circuitName(editor.congregation.circuitId)}")
-            NameField("Name der Versammlung", editor.congregation.name) {
+            FormTextField("Name der Versammlung", editor.congregation.name) {
                 actions.onEditorChange(editor.copy(congregation = editor.congregation.copy(name = it)))
             }
         }

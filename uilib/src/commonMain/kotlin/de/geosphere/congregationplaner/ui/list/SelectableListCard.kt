@@ -1,5 +1,7 @@
-package de.geosphere.congregationplaner.presentation.components
+package de.geosphere.congregationplaner.ui.list
 
+import de.geosphere.congregationplaner.ui.icon.deleteIcon
+import de.geosphere.congregationplaner.ui.icon.editIcon
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -33,7 +35,7 @@ import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 
 /** Farbliche Hervorhebung eines Listeneintrags: Info (blau) oder Warnung (rötlich). */
-internal enum class CardHighlight(val container: Color?, val border: Color?) {
+enum class CardHighlight(val container: Color?, val border: Color?) {
     None(null, null),
     Info(NightColors.SkyContainer, NightColors.Sky),
     Warning(NightColors.CoralContainer, NightColors.Coral),
@@ -48,7 +50,7 @@ internal enum class CardHighlight(val container: Color?, val border: Color?) {
  */
 @Composable
 @Suppress("LongParameterList")
-internal fun SelectableListCard(
+fun SelectableListCard(
     selected: Boolean,
     onSelect: () -> Unit,
     onDelete: () -> Unit,

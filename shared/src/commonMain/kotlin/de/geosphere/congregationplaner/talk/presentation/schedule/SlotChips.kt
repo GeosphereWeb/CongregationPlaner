@@ -1,8 +1,8 @@
 package de.geosphere.congregationplaner.talk.presentation.schedule
 
-import de.geosphere.congregationplaner.presentation.components.CardHighlight
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.ui.chip.StatusTone
+import de.geosphere.congregationplaner.ui.list.CardHighlight
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.isoDayNumber
 
