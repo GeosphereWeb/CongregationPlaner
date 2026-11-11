@@ -8,6 +8,7 @@ enum class OrgLevel(val collection: String, val label: String) {
     REGION("region", "Region"),
     SUBREGION("subregion", "Subregion"),
     BRANCH("branch", "Zweig"),
+    COUNTRY("country", "Land"),
     CIRCUIT("circuit", "Kreis"),
     CONGREGATION("congregation", "Versammlung"),
     ;

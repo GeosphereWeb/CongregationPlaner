@@ -37,11 +37,12 @@ class FirestoreOrgUnitRepositoryTest {
     private val repository = FirestoreOrgUnitRepository(firestore)
 
     private val subregion = listOf("EMEA", "europe")
-    private val branch = listOf("EMEA", "europe", "central-europe")
+    private val branch = listOf("EMEA", "europe", "central-europe", "de")
 
     init {
         every { firestore.collection("region/EMEA/subregion/europe/branch") } returns branches
-        every { firestore.collection("region/EMEA/subregion/europe/branch/central-europe/circuit") } returns circuits
+        every { firestore.collection("region/EMEA/subregion/europe/branch/central-europe/country/de/circuit") } returns
+            circuits
     }
 
     @Test
@@ -135,7 +136,7 @@ class FirestoreOrgUnitRepositoryTest {
         val children = mockk<CollectionReference>()
         val query = mockk<Query>()
         every { branches.document("b1") } returns reference
-        every { reference.collection("circuit") } returns children
+        every { reference.collection("country") } returns children
         every { children.limit(1) } returns query
         every { query.get() } returns successTask(mockk<QuerySnapshot> { every { this@mockk.isEmpty } returns isEmpty })
     }

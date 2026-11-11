@@ -17,7 +17,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertNull
 
 class CongregationUseCasesTest {
-    private val circuit = listOf("EMEA", "europe", "central-europe", "609a")
+    private val circuit = listOf("EMEA", "europe", "central-europe", "de", "609a")
     private val policy = CongregationPermissionPolicy()
     private val globalAdmin = AppUser(uid = "global-uid", isGlobalAdmin = true)
 

@@ -197,7 +197,7 @@ private val previewUser = AppUser(
 )
 
 private val previewCongregation = SelectedCongregation(
-    ref = CongregationRef("emea", "europe", "central", "609a", "berlin-mitte"),
+    ref = CongregationRef("emea", "europe", "central", "de", "609a", "berlin-mitte"),
     name = "Berlin-Mitte",
 )
 

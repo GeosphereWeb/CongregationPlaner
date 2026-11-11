@@ -26,7 +26,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class FirestoreTalkHistoryRepositoryTest {
-    private val congregation = CongregationRef("EMEA", "europe", "central-europe", "609a", "berlin")
+    private val congregation = CongregationRef("EMEA", "europe", "central-europe", "de", "609a", "berlin")
     private val firestore = mockk<FirebaseFirestore>()
     private val collection = mockk<CollectionReference>()
     private val registration = mockk<ListenerRegistration>(relaxed = true)

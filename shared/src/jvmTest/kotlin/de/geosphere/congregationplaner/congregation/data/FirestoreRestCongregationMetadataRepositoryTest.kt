@@ -18,7 +18,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class FirestoreRestCongregationMetadataRepositoryTest {
-    private val circuit = listOf("EMEA", "europe", "central-europe", "c1")
+    private val circuit = listOf("EMEA", "europe", "central-europe", "de", "c1")
     private val collectionPath = "${FakeFirestoreRestServer.DOCUMENTS_PATH}/${congregationCollectionPath(circuit)}"
 
     @Test

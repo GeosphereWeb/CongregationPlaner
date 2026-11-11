@@ -39,7 +39,7 @@ class NameProfileTest {
             override val displayName = "Max Muster"
             override val idToken: String? = null
         }
-        val congregation = CongregationRef("r", "s", "b", "c", "k")
+        val congregation = CongregationRef("r", "s", "b", "de", "c", "k")
 
         val user = authUser.toNewAppUser(congregation)
 

@@ -34,7 +34,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class FirestoreCongregationMetadataRepositoryTest {
-    private val circuit = listOf("EMEA", "europe", "central-europe", "c1")
+    private val circuit = listOf("EMEA", "europe", "central-europe", "de", "c1")
     private val firestore = mockk<FirebaseFirestore>()
     private val collection = mockk<CollectionReference>()
     private val names = mockk<CollectionReference>()

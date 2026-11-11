@@ -10,8 +10,8 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class CongregationRefTest {
-    private val ref = CongregationRef("EMEA", "europe", "central-europe", "609a", "berlin")
-    private val path = "region/EMEA/subregion/europe/branch/central-europe/circuit/609a/congregation/berlin"
+    private val ref = CongregationRef("EMEA", "europe", "central-europe", "de", "609a", "berlin")
+    private val path = "region/EMEA/subregion/europe/branch/central-europe/country/de/circuit/609a/congregation/berlin"
 
     @Test
     fun `paths follow the organization hierarchy`() {
@@ -57,11 +57,11 @@ class CongregationRefTest {
         listOf(
             "",
             "congregationplaner://join/",
-            "region/EMEA/subregion/europe/branch/central-europe/circuit/609a",
+            "region/EMEA/subregion/europe/branch/central-europe/country/de/circuit/609a",
             "region/EMEA/subregion/europe/branch/central-europe/kreis/609a/congregation/berlin",
-            "region/EMEA/subregion/europe/branch/central-europe/circuit/609a/congregation/..",
-            "region/EMEA/subregion/europe/branch/central-europe/circuit/609a/congregation/ber lin",
-            "region//subregion/europe/branch/central-europe/circuit/609a/congregation/berlin",
+            "region/EMEA/subregion/europe/branch/central-europe/country/de/circuit/609a/congregation/..",
+            "region/EMEA/subregion/europe/branch/central-europe/country/de/circuit/609a/congregation/ber lin",
+            "region//subregion/europe/branch/central-europe/country/de/circuit/609a/congregation/berlin",
         ).forEach { input -> assertNull(CongregationRef.fromDocumentPath(input), "fromDocumentPath($input)") }
         assertNull(CongregationRef.fromIds(listOf("EMEA", "europe")))
     }

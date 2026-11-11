@@ -362,7 +362,7 @@ private fun UserManagementPreview() = PreviewThemeWrapper {
                 ),
             ),
             currentUserId = "2",
-            inviteLink = "congregationplaner://join/region/EMEA/subregion/europe/branch/central-europe/" +
+            inviteLink = "congregationplaner://join/region/EMEA/subregion/europe/branch/central-europe/country/de/" +
                 "circuit/609a/congregation/berlin-mitte",
             isLoading = false,
             canManage = true,

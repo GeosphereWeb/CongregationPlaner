@@ -27,7 +27,7 @@ class FirestoreAdminContactRepositoryTest {
     private val collection = mockk<CollectionReference>()
     private val document = mockk<DocumentReference>()
     private val repository = FirestoreAdminContactRepository(firestore)
-    private val congregation = CongregationRef("EMEA", "europe", "central-europe", "609a", "berlin")
+    private val congregation = CongregationRef("EMEA", "europe", "central-europe", "de", "609a", "berlin")
 
     init {
         every { firestore.collection(congregation.adminContactsPath) } returns collection

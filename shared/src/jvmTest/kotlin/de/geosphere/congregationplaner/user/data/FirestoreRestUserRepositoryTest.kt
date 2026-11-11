@@ -23,7 +23,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class FirestoreRestUserRepositoryTest {
-    private val congregation = CongregationRef("EMEA", "europe", "central-europe", "609a", "berlin")
+    private val congregation = CongregationRef("EMEA", "europe", "central-europe", "de", "609a", "berlin")
     private val membersPath = "${FakeFirestoreRestServer.DOCUMENTS_PATH}/${congregation.membersPath}"
 
     /** The fields a member changes in the own document, in the order of the update mask. */
