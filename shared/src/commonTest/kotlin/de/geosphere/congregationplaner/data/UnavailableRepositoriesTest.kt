@@ -25,7 +25,7 @@ class UnavailableRepositoriesTest {
         override val displayName: String? = null
         override val idToken: String? = null
     }
-    private val congregation = CongregationRef("EMEA", "europe", "central-europe", "609a", "berlin")
+    private val congregation = CongregationRef("EMEA", "europe", "central-europe", "de", "609a", "berlin")
 
     @Test
     fun `unavailable user repository reports the platform`(): Unit = runBlocking {

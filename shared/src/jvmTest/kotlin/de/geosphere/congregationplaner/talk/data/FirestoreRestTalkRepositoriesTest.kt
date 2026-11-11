@@ -19,7 +19,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class FirestoreRestTalkRepositoriesTest {
-    private val congregation = CongregationRef("EMEA", "europe", "central-europe", "609a", "berlin")
+    private val congregation = CongregationRef("EMEA", "europe", "central-europe", "de", "609a", "berlin")
     private val slotsPath = "${FakeFirestoreRestServer.DOCUMENTS_PATH}/${congregation.talkSchedulePath}"
     private val slot = TalkSlot(
         LocalDate(2026, 10, 25),

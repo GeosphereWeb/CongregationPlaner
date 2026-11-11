@@ -15,7 +15,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class FirestoreRestExternalSpeakerDirectoryRepositoryTest {
-    private val congregation = CongregationRef("EMEA", "europe", "central-europe", "609a", "berlin")
+    private val congregation = CongregationRef("EMEA", "europe", "central-europe", "de", "609a", "berlin")
     private val documents = FakeFirestoreRestServer.DOCUMENTS_PATH
     private val circuitsPath = "$documents/${congregation.externalCircuitsPath}"
     private val congregationsPath = "$documents/${congregation.externalCongregationsPath}"

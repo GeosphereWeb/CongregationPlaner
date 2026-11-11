@@ -308,7 +308,7 @@ private fun CongregationSelectorPickingPreview() = SelectorPreview(
 private fun CongregationSelectorSelectedPreview() = SelectorPreview(
     CongregationSelectionUiState(
         selected = SelectedCongregation(
-            CongregationRef("EMEA", "europe", "central-europe", "609a", "berlin-mitte"),
+            CongregationRef("EMEA", "europe", "central-europe", "de", "609a", "berlin-mitte"),
             "Berlin-Mitte",
         ),
     ),

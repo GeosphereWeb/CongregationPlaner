@@ -36,7 +36,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 
 class FirestoreTalkRepositoriesTest {
-    private val congregation = CongregationRef("EMEA", "europe", "central-europe", "609a", "berlin")
+    private val congregation = CongregationRef("EMEA", "europe", "central-europe", "de", "609a", "berlin")
     private val firestore = mockk<FirebaseFirestore>()
     private val collection = mockk<CollectionReference>()
     private val reference = mockk<DocumentReference>()

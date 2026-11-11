@@ -8,11 +8,12 @@ data class CongregationRef(
     val regionId: String,
     val subregionId: String,
     val branchId: String,
+    val countryId: String,
     val circuitId: String,
     val congregationId: String,
 ) {
     /** Die IDs aller Ebenen, von [OrgLevel.REGION] bis [OrgLevel.CONGREGATION]. */
-    val ids: List<String> get() = listOf(regionId, subregionId, branchId, circuitId, congregationId)
+    val ids: List<String> get() = listOf(regionId, subregionId, branchId, countryId, circuitId, congregationId)
 
     /** Die IDs von [OrgLevel.REGION] bis zum Kreis, also die übergeordneten Einheiten der Versammlung. */
     val circuitIds: List<String> get() = ids.dropLast(1)
@@ -38,7 +39,7 @@ data class CongregationRef(
         fun fromIds(ids: List<String>): CongregationRef? {
             if (ids.size != OrgLevel.entries.size || !ids.all(::isValidSegment)) return null
             val id = ids.iterator()
-            return CongregationRef(id.next(), id.next(), id.next(), id.next(), id.next())
+            return CongregationRef(id.next(), id.next(), id.next(), id.next(), id.next(), id.next())
         }
 
         /**

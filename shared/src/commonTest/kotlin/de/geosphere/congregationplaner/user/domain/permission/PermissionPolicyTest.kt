@@ -33,7 +33,7 @@ class PermissionPolicyTest {
     @Test
     fun `global admin changes the name but not the meeting times`() {
         val admin = AppUser(uid = "1", approved = true, isGlobalAdmin = true)
-        val own = CongregationRef("r", "s", "b", "c", "609a")
+        val own = CongregationRef("r", "s", "b", "de", "c", "609a")
         val congregationAdmin = AppUser(
             uid = "2",
             approved = true,
@@ -74,7 +74,7 @@ class PermissionPolicyTest {
 
     @Test
     fun `congregation admin may edit only the own congregation`() {
-        val own = CongregationRef("r", "s", "b", "c", "609a")
+        val own = CongregationRef("r", "s", "b", "de", "c", "609a")
         val admin = AppUser(
             uid = "1",
             approved = true,
