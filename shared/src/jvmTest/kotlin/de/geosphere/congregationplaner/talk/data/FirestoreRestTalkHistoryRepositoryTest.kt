@@ -13,7 +13,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class FirestoreRestTalkHistoryRepositoryTest {
-    private val congregation = CongregationRef("EMEA", "europe", "central-europe", "609a", "berlin")
+    private val congregation = CongregationRef("EMEA", "europe", "central-europe", "de", "609a", "berlin")
     private val path = "${FakeFirestoreRestServer.DOCUMENTS_PATH}/${congregation.talkHistoryPath}"
 
     @Test

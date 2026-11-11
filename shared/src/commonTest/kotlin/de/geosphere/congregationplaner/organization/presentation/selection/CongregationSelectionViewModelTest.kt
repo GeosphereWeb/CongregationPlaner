@@ -32,15 +32,17 @@ import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CongregationSelectionViewModelTest {
-    private val ref = CongregationRef("EMEA", "europe", "central-europe", "609a", "berlin")
+    private val ref = CongregationRef("EMEA", "europe", "central-europe", "de", "609a", "berlin")
     private val berlinSelection = SelectedCongregation(ref, "Berlin", "Kreis Nord")
     private val repository = FakeOrganizationRepository(
         mapOf(
             "region" to listOf(OrgUnit("EMEA")),
             "region/EMEA/subregion" to listOf(OrgUnit("europe", "Europa")),
             "region/EMEA/subregion/europe/branch" to listOf(OrgUnit("central-europe")),
-            "region/EMEA/subregion/europe/branch/central-europe/circuit" to listOf(OrgUnit("609a", "Kreis Nord")),
-            "region/EMEA/subregion/europe/branch/central-europe/circuit/609a/congregation" to listOf(
+            "region/EMEA/subregion/europe/branch/central-europe/country" to listOf(OrgUnit("de", "Deutschland")),
+            "region/EMEA/subregion/europe/branch/central-europe/country/de/circuit" to
+                listOf(OrgUnit("609a", "Kreis Nord")),
+            "region/EMEA/subregion/europe/branch/central-europe/country/de/circuit/609a/congregation" to listOf(
                 OrgUnit("hamburg", "Hamburg"),
                 OrgUnit("berlin", "Berlin"),
             ),
@@ -78,6 +80,7 @@ class CongregationSelectionViewModelTest {
         selectUnit(OrgLevel.REGION, "EMEA")
         selectUnit(OrgLevel.SUBREGION, "europe")
         selectUnit(OrgLevel.BRANCH, "central-europe")
+        selectUnit(OrgLevel.COUNTRY, "de")
         selectUnit(OrgLevel.CIRCUIT, "609a")
     }
 
@@ -94,12 +97,13 @@ class CongregationSelectionViewModelTest {
 
         viewModel.selectUnit(OrgLevel.SUBREGION, "europe")
         viewModel.selectUnit(OrgLevel.BRANCH, "central-europe")
+        viewModel.selectUnit(OrgLevel.COUNTRY, "de")
         viewModel.selectUnit(OrgLevel.CIRCUIT, "609a")
         assertTrue(viewModel.uiState.value.canStartNewCongregation)
         viewModel.newCongregation.start()
 
         assertEquals(
-            NewCongregationDraft(listOf("EMEA", "europe", "central-europe", "609a"), "Kreis Nord"),
+            NewCongregationDraft(listOf("EMEA", "europe", "central-europe", "de", "609a"), "Kreis Nord"),
             viewModel.uiState.value.newCongregation,
         )
     }
@@ -160,14 +164,14 @@ class CongregationSelectionViewModelTest {
         viewModel.newCongregation.create(authUser)
 
         val state = viewModel.uiState.value
-        val expectedRef = CongregationRef("EMEA", "europe", "central-europe", "609a", "new-congregation")
+        val expectedRef = CongregationRef("EMEA", "europe", "central-europe", "de", "609a", "new-congregation")
         assertEquals(SelectedCongregation(expectedRef, "Grafing Süd", "Kreis Nord"), state.selected)
         assertEquals(state.selected, store.load())
         assertNull(state.newCongregation)
         assertFalse(state.isCreating)
         assertFalse(state.isPicking)
         assertEquals("uid-1", congregations.createdBy)
-        assertEquals(listOf("EMEA", "europe", "central-europe", "609a"), congregations.circuit)
+        assertEquals(listOf("EMEA", "europe", "central-europe", "de", "609a"), congregations.circuit)
         val admin = checkNotNull(congregations.firstAdmin)
         assertEquals("Max", admin.firstName)
         assertEquals("Muster", admin.lastName)
@@ -296,6 +300,7 @@ class CongregationSelectionViewModelTest {
         viewModel.selectUnit(OrgLevel.REGION, "EMEA")
         viewModel.selectUnit(OrgLevel.SUBREGION, "europe")
         viewModel.selectUnit(OrgLevel.BRANCH, "central-europe")
+        viewModel.selectUnit(OrgLevel.COUNTRY, "de")
         viewModel.selectUnit(OrgLevel.CIRCUIT, "609a")
         // Versammlungen werden nach Namen sortiert.
         assertEquals(listOf("berlin", "hamburg"), viewModel.uiState.value.levels.last().options.map { it.id })
@@ -314,6 +319,7 @@ class CongregationSelectionViewModelTest {
         viewModel.selectUnit(OrgLevel.REGION, "EMEA")
         viewModel.selectUnit(OrgLevel.SUBREGION, "europe")
         viewModel.selectUnit(OrgLevel.BRANCH, "central-europe")
+        viewModel.selectUnit(OrgLevel.COUNTRY, "de")
         viewModel.selectUnit(OrgLevel.CIRCUIT, "609a")
         viewModel.selectUnit(OrgLevel.CONGREGATION, "berlin")
         assertEquals("Kreis Nord", viewModel.uiState.value.selected?.circuitName)
@@ -326,7 +332,7 @@ class CongregationSelectionViewModelTest {
 
     @Test
     fun `an invite link still selects the congregation when the circuit name is unknown`() {
-        repository.units = repository.units - "region/EMEA/subregion/europe/branch/central-europe/circuit"
+        repository.units = repository.units - "region/EMEA/subregion/europe/branch/central-europe/country/de/circuit"
         val viewModel = createViewModel()
 
         viewModel.inviteLink.applyLink(ref.toInviteLink())

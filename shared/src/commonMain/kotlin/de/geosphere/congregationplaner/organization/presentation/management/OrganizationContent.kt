@@ -60,6 +60,7 @@ internal val OrgLevel.pluralLabel: String
         OrgLevel.REGION -> "Regionen"
         OrgLevel.SUBREGION -> "Subregionen"
         OrgLevel.BRANCH -> "Zweige"
+        OrgLevel.COUNTRY -> "Länder"
         OrgLevel.CIRCUIT -> "Kreise"
         OrgLevel.CONGREGATION -> "Versammlungen"
     }

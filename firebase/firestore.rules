@@ -19,13 +19,14 @@ rules_version = '2';
 //   region/{regionId}                  - name: string (1..100)
 //     subregion/{subregionId}          - name: string (1..100)
 //       branch/{branchId}              - name: string (1..100)
-//         circuit/{circuitId}          - name: string (1..100), overseer_name: string (<= 100, optional)
-//           congregation/{congId}      - name: string, createdBy: uid, midweek_meeting_time / weekend_meeting_time
-//             ('HH:mm'), midweek_meeting_weekday / weekend_meeting_weekday (1 Monday .. 7 Sunday),
-//             yearly_meeting_times (list, <= 100 entries); all of them are required. A congregation is only created in an
-//             existing circuit.
-//           uniqueCongregationNames/{key}    - congregationId: string; one per congregation name of the circuit
-//             (key = name trimmed, lower case, blanks collapsed); makes the name unique within the circuit
+//         country/{countryId}          - name: string (1..100), e.g. "Deutschland"
+//           circuit/{circuitId}        - name: string (1..100), overseer_name: string (<= 100, optional)
+//             congregation/{congId}    - name: string, createdBy: uid, midweek_meeting_time / weekend_meeting_time
+//               ('HH:mm'), midweek_meeting_weekday / weekend_meeting_weekday (1 Monday .. 7 Sunday),
+//               yearly_meeting_times (list, <= 100 entries); all of them are required. A congregation is only created in an
+//               existing circuit.
+//             uniqueCongregationNames/{key}    - congregationId: string; one per congregation name of the circuit
+//               (key = name trimmed, lower case, blanks collapsed); makes the name unique within the circuit
 //
 // Collection: region/.../congregation/{congId}/members
 // Document ID: Firebase Auth UID of the member, or a random Firestore ID for
@@ -121,16 +122,16 @@ service cloud.firestore {
       return name.trim().lower().replace('\\s+', ' ');
     }
 
-    function congregationNamePath(regionId, subregionId, branchId, circuitId, key) {
-      return /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/circuit/$(circuitId)/uniqueCongregationNames/$(key);
+    function congregationNamePath(regionId, subregionId, branchId, countryId, circuitId, key) {
+      return /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/country/$(countryId)/circuit/$(circuitId)/uniqueCongregationNames/$(key);
     }
 
-    function circuitDocPath(regionId, subregionId, branchId, circuitId) {
-      return /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/circuit/$(circuitId);
+    function circuitDocPath(regionId, subregionId, branchId, countryId, circuitId) {
+      return /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/country/$(countryId)/circuit/$(circuitId);
     }
 
-    function congregationDocPath(regionId, subregionId, branchId, circuitId, congId) {
-      return /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/circuit/$(circuitId)/congregation/$(congId);
+    function congregationDocPath(regionId, subregionId, branchId, countryId, circuitId, congId) {
+      return /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/country/$(countryId)/circuit/$(circuitId)/congregation/$(congId);
     }
 
     function isValidCongregationName(name) {
@@ -156,7 +157,7 @@ service cloud.firestore {
 
     // A new congregation carries its creator and comes together with the name document of its circuit, so that a
     // name is taken at most once per circuit.
-    function isValidNewCongregation(regionId, subregionId, branchId, circuitId, congId, data) {
+    function isValidNewCongregation(regionId, subregionId, branchId, countryId, circuitId, congId, data) {
       return data.keys().hasOnly(['name', 'createdBy', 'midweek_meeting_time', 'midweek_meeting_weekday',
           'weekend_meeting_time', 'weekend_meeting_weekday', 'yearly_meeting_times']) &&
         data.keys().hasAll(['name', 'createdBy', 'midweek_meeting_time', 'midweek_meeting_weekday',
@@ -164,24 +165,24 @@ service cloud.firestore {
         data.createdBy == request.auth.uid &&
         isValidMeetingTimes(data) &&
         isValidCongregationName(data.name) &&
-        existsAfter(congregationNamePath(regionId, subregionId, branchId, circuitId, congregationNameKey(data.name))) &&
-        getAfter(congregationNamePath(regionId, subregionId, branchId, circuitId, congregationNameKey(data.name))).data.congregationId == congId;
+        existsAfter(congregationNamePath(regionId, subregionId, branchId, countryId, circuitId, congregationNameKey(data.name))) &&
+        getAfter(congregationNamePath(regionId, subregionId, branchId, countryId, circuitId, congregationNameKey(data.name))).data.congregationId == congId;
     }
 
     // A rename moves the name document along: the new name is taken in the same write.
-    function keepsNameDocument(regionId, subregionId, branchId, circuitId, congId) {
+    function keepsNameDocument(regionId, subregionId, branchId, countryId, circuitId, congId) {
       let data = request.resource.data;
       return data.name == resource.data.name ||
         (isValidCongregationName(data.name) &&
-          existsAfter(congregationNamePath(regionId, subregionId, branchId, circuitId, congregationNameKey(data.name))) &&
-          getAfter(congregationNamePath(regionId, subregionId, branchId, circuitId, congregationNameKey(data.name))).data.congregationId == congId);
+          existsAfter(congregationNamePath(regionId, subregionId, branchId, countryId, circuitId, congregationNameKey(data.name))) &&
+          getAfter(congregationNamePath(regionId, subregionId, branchId, countryId, circuitId, congregationNameKey(data.name))).data.congregationId == congId);
     }
 
     // The creator of a brand-new congregation becomes its first, approved admin. Only possible in the write that
     // creates the congregation: before it the congregation does not exist, after it the creator is `createdBy`.
-    function isFirstAdminOfNewCongregation(regionId, subregionId, branchId, circuitId, congId, uid) {
+    function isFirstAdminOfNewCongregation(regionId, subregionId, branchId, countryId, circuitId, congId, uid) {
       let data = request.resource.data;
-      let congPath = congregationDocPath(regionId, subregionId, branchId, circuitId, congId);
+      let congPath = congregationDocPath(regionId, subregionId, branchId, countryId, circuitId, congId);
       return isVerifiedEmail() &&
         request.auth.uid == uid &&
         !exists(congPath) &&
@@ -196,8 +197,8 @@ service cloud.firestore {
     }
 
     // Approved congregation admin of exactly this congregation.
-    function isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) {
-      let memberPath = /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/circuit/$(circuitId)/congregation/$(congId)/members/$(request.auth.uid);
+    function isCongregationAdmin(regionId, subregionId, branchId, countryId, circuitId, congId) {
+      let memberPath = /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/country/$(countryId)/circuit/$(circuitId)/congregation/$(congId)/members/$(request.auth.uid);
       return isAuthenticated() &&
         exists(memberPath) &&
         get(memberPath).data.approved == true &&
@@ -218,9 +219,9 @@ service cloud.firestore {
 
     // May read (never write) the members of exactly this congregation: admins and approved planners (talk or task) and
     // talk helpers (they need the phone numbers of the speakers). Global admins have no access (ADR-0013).
-    function canViewMembers(regionId, subregionId, branchId, circuitId, congId) {
-      let memberPath = /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/circuit/$(circuitId)/congregation/$(congId)/members/$(request.auth.uid);
-      return isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) ||
+    function canViewMembers(regionId, subregionId, branchId, countryId, circuitId, congId) {
+      let memberPath = /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/country/$(countryId)/circuit/$(circuitId)/congregation/$(congId)/members/$(request.auth.uid);
+      return isCongregationAdmin(regionId, subregionId, branchId, countryId, circuitId, congId) ||
         (isAuthenticated() &&
           exists(memberPath) &&
           get(memberPath).data.approved == true &&
@@ -231,8 +232,8 @@ service cloud.firestore {
 
     // Planners of exactly this congregation: approved members with the role TALK_PLANNER. The role CONGREGATION_ADMIN
     // alone does not grant it, and global admins have no access (ADR-0013).
-    function canPlanTalks(regionId, subregionId, branchId, circuitId, congId) {
-      let memberPath = /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/circuit/$(circuitId)/congregation/$(congId)/members/$(request.auth.uid);
+    function canPlanTalks(regionId, subregionId, branchId, countryId, circuitId, congId) {
+      let memberPath = /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/country/$(countryId)/circuit/$(circuitId)/congregation/$(congId)/members/$(request.auth.uid);
       return isAuthenticated() &&
         exists(memberPath) &&
         get(memberPath).data.approved == true &&
@@ -242,8 +243,8 @@ service cloud.firestore {
     // May see the talk planning of exactly this congregation (talk schedule, directory of external speakers, talk
     // history): approved planners and talk helpers (ADR-0023). Writing stays with the planners, except that a helper
     // may set `confirmed` of a slot.
-    function canViewTalkPlanning(regionId, subregionId, branchId, circuitId, congId) {
-      let memberPath = /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/circuit/$(circuitId)/congregation/$(congId)/members/$(request.auth.uid);
+    function canViewTalkPlanning(regionId, subregionId, branchId, countryId, circuitId, congId) {
+      let memberPath = /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/country/$(countryId)/circuit/$(circuitId)/congregation/$(congId)/members/$(request.auth.uid);
       return isAuthenticated() &&
         exists(memberPath) &&
         get(memberPath).data.approved == true &&
@@ -257,7 +258,7 @@ service cloud.firestore {
         data.cancelsTalk is bool;
     }
 
-    // Region, subregion and branch carry only their name.
+    // Region, subregion, branch and country carry only their name.
     function isValidOrgUnit(data) {
       return data.keys().hasOnly(['name']) && data.keys().hasAll(['name']) &&
         data.name is string && data.name.size() >= 1 && data.name.size() <= 100;
@@ -392,8 +393,8 @@ service cloud.firestore {
 
     // May read the admin contacts of exactly this congregation: global admins and everybody with a member
     // document there, approved or not, so that a new user can see whom to ask for approval.
-    function canReadAdminContacts(regionId, subregionId, branchId, circuitId, congId) {
-      let memberPath = /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/circuit/$(circuitId)/congregation/$(congId)/members/$(request.auth.uid);
+    function canReadAdminContacts(regionId, subregionId, branchId, countryId, circuitId, congId) {
+      let memberPath = /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/country/$(countryId)/circuit/$(circuitId)/congregation/$(congId)/members/$(request.auth.uid);
       return isGlobalAdmin() || (isAuthenticated() && exists(memberPath));
     }
 
@@ -418,8 +419,8 @@ service cloud.firestore {
     }
 
     // The contact mirrors an approved congregation admin as the member document will look after this write.
-    function mirrorsAdminMember(regionId, subregionId, branchId, circuitId, congId, uid, data) {
-      let memberPath = /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/circuit/$(circuitId)/congregation/$(congId)/members/$(uid);
+    // memberPath: the member document of the contact (passed in because rules functions take at most 7 arguments).
+    function mirrorsAdminMember(memberPath, data) {
       return existsAfter(memberPath) &&
         getAfter(memberPath).data.approved == true &&
         hasRole(getAfter(memberPath).data, 'CONGREGATION_ADMIN') &&
@@ -547,11 +548,11 @@ service cloud.firestore {
     // A user may only register themselves in an existing congregation: unapproved, without roles,
     // with the e-mail address from their auth token. The full validation comes last because rules evaluate at most
     // 1000 expressions per request.
-    function isValidSelfRegistration(regionId, subregionId, branchId, circuitId, congId, uid) {
+    function isValidSelfRegistration(regionId, subregionId, branchId, countryId, circuitId, congId, uid) {
       let data = request.resource.data;
       return isAuthenticated() &&
         request.auth.uid == uid &&
-        exists(congregationDocPath(regionId, subregionId, branchId, circuitId, congId)) &&
+        exists(congregationDocPath(regionId, subregionId, branchId, countryId, circuitId, congId)) &&
         data.get('approved', null) == false &&
         data.get('roles', []).size() == 0 &&
         data.get('email', null) == request.auth.token.get('email', null) &&
@@ -561,9 +562,9 @@ service cloud.firestore {
     }
 
     // Admins record persons without an account (e.g. children) with a name.
-    function isValidMemberWithoutAccount(regionId, subregionId, branchId, circuitId, congId) {
+    function isValidMemberWithoutAccount(regionId, subregionId, branchId, countryId, circuitId, congId) {
       let data = request.resource.data;
-      return isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) &&
+      return isCongregationAdmin(regionId, subregionId, branchId, countryId, circuitId, congId) &&
         isValidMember(data) &&
         data.hasAccount == false &&
         data.email == null &&
@@ -638,155 +639,161 @@ service cloud.firestore {
           allow create, update: if isGlobalAdmin() && isValidOrgUnit(request.resource.data);
           allow delete: if isGlobalAdmin();
 
-          match /circuit/{circuitId} {
+          match /country/{countryId} {
             allow read: if true;
-            allow create, update: if isGlobalAdmin() && isValidCircuit(request.resource.data);
+            allow create, update: if isGlobalAdmin() && isValidOrgUnit(request.resource.data);
             allow delete: if isGlobalAdmin();
 
-            // Name documents: one per congregation name of the circuit; the document ID is the name key.
-            match /uniqueCongregationNames/{nameKey} {
+            match /circuit/{circuitId} {
               allow read: if true;
+              allow create, update: if isGlobalAdmin() && isValidCircuit(request.resource.data);
+              allow delete: if isGlobalAdmin();
 
-              allow create: if isAuthenticated() &&
-                request.resource.data.keys().hasOnly(['congregationId']) &&
-                request.resource.data.get('congregationId', null) is string &&
-                existsAfter(congregationDocPath(regionId, subregionId, branchId, circuitId, request.resource.data.congregationId)) &&
-                congregationNameKey(getAfter(congregationDocPath(regionId, subregionId, branchId, circuitId, request.resource.data.congregationId)).data.name) == nameKey;
+              // Name documents: one per congregation name of the circuit; the document ID is the name key.
+              match /uniqueCongregationNames/{nameKey} {
+                allow read: if true;
 
-              // Released only when the congregation is gone or carries another name afterwards.
-              allow delete: if isAuthenticated() &&
-                (isGlobalAdmin() || isCongregationAdmin(regionId, subregionId, branchId, circuitId, resource.data.congregationId)) &&
-                (!existsAfter(congregationDocPath(regionId, subregionId, branchId, circuitId, resource.data.congregationId)) ||
-                  congregationNameKey(getAfter(congregationDocPath(regionId, subregionId, branchId, circuitId, resource.data.congregationId)).data.name) != nameKey);
-            }
+                allow create: if isAuthenticated() &&
+                  request.resource.data.keys().hasOnly(['congregationId']) &&
+                  request.resource.data.get('congregationId', null) is string &&
+                  existsAfter(congregationDocPath(regionId, subregionId, branchId, countryId, circuitId, request.resource.data.congregationId)) &&
+                  congregationNameKey(getAfter(congregationDocPath(regionId, subregionId, branchId, countryId, circuitId, request.resource.data.congregationId)).data.name) == nameKey;
 
-            match /congregation/{congId} {
-              allow read: if true;
-              // Every signed-in user with a confirmed e-mail address may create a congregation (and becomes its admin);
-              // global admins always may.
-              allow create: if (isGlobalAdmin() || isVerifiedEmail()) &&
-                exists(circuitDocPath(regionId, subregionId, branchId, circuitId)) &&
-                isValidNewCongregation(regionId, subregionId, branchId, circuitId, congId, request.resource.data);
-              // The name document goes with the congregation.
-              allow delete: if isGlobalAdmin() &&
-                !existsAfter(congregationNamePath(regionId, subregionId, branchId, circuitId, congregationNameKey(resource.data.name)));
-              // Global admins may change the name only; the congregation admin may also change the meeting times of
-              // exactly this congregation (ADR-0013).
-              allow update: if keepsNameDocument(regionId, subregionId, branchId, circuitId, congId) && (
-                (isGlobalAdmin() &&
-                  request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])) || (
-                isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) &&
-                request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-                  'name', 'midweek_meeting_time', 'midweek_meeting_weekday',
-                  'weekend_meeting_time', 'weekend_meeting_weekday', 'yearly_meeting_times']) &&
-                isValidMeetingTimes(request.resource.data)
-              ));
-
-              // ---------------------------------------------------------
-              // Members of a congregation
-              // ---------------------------------------------------------
-              match /members/{uid} {
-                allow get: if isAuthenticated() && (
-                  request.auth.uid == uid ||
-                  canViewMembers(regionId, subregionId, branchId, circuitId, congId)
-                );
-
-                allow list: if canViewMembers(regionId, subregionId, branchId, circuitId, congId);
-
-                allow create: if isValidSelfRegistration(regionId, subregionId, branchId, circuitId, congId, uid) ||
-                  isValidMemberWithoutAccount(regionId, subregionId, branchId, circuitId, congId) ||
-                  isFirstAdminOfNewCongregation(regionId, subregionId, branchId, circuitId, congId, uid);
-
-                // Admins maintain profiles and roles of every member. In their own document they may change the
-                // roles but neither the approval nor remove their own admin role,
-                // so nobody locks themselves out. The approval of others is set here too.
-                // Every member may change the own contact fields (ownFields(), nothing else).
-                allow update: if isAuthenticated() &&
-                  ((isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) &&
-                    (request.auth.uid == uid
-                      ? (onlyFieldsChanged(profileFields().concat(roleFields())) && keepsOwnAdminRole())
-                      : onlyFieldsChanged(accessFields().concat(profileFields())))) ||
-                   (request.auth.uid == uid && onlyFieldsChanged(ownFields()))) &&
-                  isValidMember(request.resource.data);
-
-                // A member may leave, but an admin may not delete the own document: the congregation would be
-                // left without an admin (another admin may remove them).
-                allow delete: if isAuthenticated() && (
-                  (request.auth.uid == uid && !hasRole(resource.data, 'CONGREGATION_ADMIN')) ||
-                  (request.auth.uid != uid && isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId))
-                );
+                // Released only when the congregation is gone or carries another name afterwards.
+                allow delete: if isAuthenticated() &&
+                  (isGlobalAdmin() || isCongregationAdmin(regionId, subregionId, branchId, countryId, circuitId, resource.data.congregationId)) &&
+                  (!existsAfter(congregationDocPath(regionId, subregionId, branchId, countryId, circuitId, resource.data.congregationId)) ||
+                    congregationNameKey(getAfter(congregationDocPath(regionId, subregionId, branchId, countryId, circuitId, resource.data.congregationId)).data.name) != nameKey);
               }
 
-              // ---------------------------------------------------------
-              // Admin contacts: first and last name of the approved admins of this congregation. Readable
-              // before approval; maintained by admins together with the member document.
-              // ---------------------------------------------------------
-              match /adminContacts/{uid} {
-                allow read: if canReadAdminContacts(regionId, subregionId, branchId, circuitId, congId);
+              match /congregation/{congId} {
+                allow read: if true;
+                // Every signed-in user with a confirmed e-mail address may create a congregation (and becomes its admin);
+                // global admins always may.
+                allow create: if (isGlobalAdmin() || isVerifiedEmail()) &&
+                  exists(circuitDocPath(regionId, subregionId, branchId, countryId, circuitId)) &&
+                  isValidNewCongregation(regionId, subregionId, branchId, countryId, circuitId, congId, request.resource.data);
+                // The name document goes with the congregation.
+                allow delete: if isGlobalAdmin() &&
+                  !existsAfter(congregationNamePath(regionId, subregionId, branchId, countryId, circuitId, congregationNameKey(resource.data.name)));
+                // Global admins may change the name only; the congregation admin may also change the meeting times of
+                // exactly this congregation (ADR-0013).
+                allow update: if keepsNameDocument(regionId, subregionId, branchId, countryId, circuitId, congId) && (
+                  (isGlobalAdmin() &&
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])) || (
+                  isCongregationAdmin(regionId, subregionId, branchId, countryId, circuitId, congId) &&
+                  request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                    'name', 'midweek_meeting_time', 'midweek_meeting_weekday',
+                    'weekend_meeting_time', 'weekend_meeting_weekday', 'yearly_meeting_times']) &&
+                  isValidMeetingTimes(request.resource.data)
+                ));
 
-                allow create, update: if isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) &&
-                  isValidAdminContact(request.resource.data) &&
-                  mirrorsAdminMember(regionId, subregionId, branchId, circuitId, congId, uid, request.resource.data);
+                // ---------------------------------------------------------
+                // Members of a congregation
+                // ---------------------------------------------------------
+                match /members/{uid} {
+                  allow get: if isAuthenticated() && (
+                    request.auth.uid == uid ||
+                    canViewMembers(regionId, subregionId, branchId, countryId, circuitId, congId)
+                  );
 
-                // Admins maintain contacts; everybody may drop their own (e.g. after leaving the congregation).
-                allow delete: if isCongregationAdmin(regionId, subregionId, branchId, circuitId, congId) ||
-                  (isAuthenticated() && request.auth.uid == uid);
-              }
+                  allow list: if canViewMembers(regionId, subregionId, branchId, countryId, circuitId, congId);
 
-              // ---------------------------------------------------------
-              // Talk schedule of a congregation (planners only)
-              // ---------------------------------------------------------
-              match /talkSchedule/{date} {
-                allow read: if canViewTalkPlanning(regionId, subregionId, branchId, circuitId, congId);
-                allow delete: if canPlanTalks(regionId, subregionId, branchId, circuitId, congId);
+                  allow create: if isValidSelfRegistration(regionId, subregionId, branchId, countryId, circuitId, congId, uid) ||
+                    isValidMemberWithoutAccount(regionId, subregionId, branchId, countryId, circuitId, congId) ||
+                    isFirstAdminOfNewCongregation(regionId, subregionId, branchId, countryId, circuitId, congId, uid);
 
-                allow create: if canPlanTalks(regionId, subregionId, branchId, circuitId, congId) &&
-                  isValidTalkSlot(date, request.resource.data);
+                  // Admins maintain profiles and roles of every member. In their own document they may change the
+                  // roles but neither the approval nor remove their own admin role,
+                  // so nobody locks themselves out. The approval of others is set here too.
+                  // Every member may change the own contact fields (ownFields(), nothing else).
+                  allow update: if isAuthenticated() &&
+                    ((isCongregationAdmin(regionId, subregionId, branchId, countryId, circuitId, congId) &&
+                      (request.auth.uid == uid
+                        ? (onlyFieldsChanged(profileFields().concat(roleFields())) && keepsOwnAdminRole())
+                        : onlyFieldsChanged(accessFields().concat(profileFields())))) ||
+                     (request.auth.uid == uid && onlyFieldsChanged(ownFields()))) &&
+                    isValidMember(request.resource.data);
 
-                // Planners change the whole slot; a talk helper only `confirmed` (the speaker is informed).
-                allow update: if (canPlanTalks(regionId, subregionId, branchId, circuitId, congId) &&
-                    isValidTalkSlot(date, request.resource.data)) ||
-                  (canViewTalkPlanning(regionId, subregionId, branchId, circuitId, congId) &&
-                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['confirmed']) &&
-                    request.resource.data.confirmed is bool);
-              }
+                  // A member may leave, but an admin may not delete the own document: the congregation would be
+                  // left without an admin (another admin may remove them).
+                  allow delete: if isAuthenticated() && (
+                    (request.auth.uid == uid && !hasRole(resource.data, 'CONGREGATION_ADMIN')) ||
+                    (request.auth.uid != uid && isCongregationAdmin(regionId, subregionId, branchId, countryId, circuitId, congId))
+                  );
+                }
 
-              // ---------------------------------------------------------
-              // Talk history of a congregation (planners only)
-              // ---------------------------------------------------------
-              match /talkHistory/{talkNumber} {
-                allow read: if canViewTalkPlanning(regionId, subregionId, branchId, circuitId, congId);
-                allow delete: if canPlanTalks(regionId, subregionId, branchId, circuitId, congId);
+                // ---------------------------------------------------------
+                // Admin contacts: first and last name of the approved admins of this congregation. Readable
+                // before approval; maintained by admins together with the member document.
+                // ---------------------------------------------------------
+                match /adminContacts/{uid} {
+                  allow read: if canReadAdminContacts(regionId, subregionId, branchId, countryId, circuitId, congId);
 
-                allow create, update: if canPlanTalks(regionId, subregionId, branchId, circuitId, congId) &&
-                  isValidTalkHistory(talkNumber, request.resource.data);
-              }
+                  allow create, update: if isCongregationAdmin(regionId, subregionId, branchId, countryId, circuitId, congId) &&
+                    isValidAdminContact(request.resource.data) &&
+                    mirrorsAdminMember(/databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/country/$(countryId)/circuit/$(circuitId)/congregation/$(congId)/members/$(uid), request.resource.data);
 
-              // ---------------------------------------------------------
-              // Directory of external speakers (planners only)
-              // ---------------------------------------------------------
-              match /externalCircuits/{externalCircuitId} {
-                allow read: if canViewTalkPlanning(regionId, subregionId, branchId, circuitId, congId);
-                allow delete: if canPlanTalks(regionId, subregionId, branchId, circuitId, congId);
+                  // Admins maintain contacts; everybody may drop their own (e.g. after leaving the congregation).
+                  allow delete: if isCongregationAdmin(regionId, subregionId, branchId, countryId, circuitId, congId) ||
+                    (isAuthenticated() && request.auth.uid == uid);
+                }
 
-                allow create, update: if canPlanTalks(regionId, subregionId, branchId, circuitId, congId) &&
-                  isValidExternalCircuit(request.resource.data);
-              }
+                // ---------------------------------------------------------
+                // Talk schedule of a congregation (planners only)
+                // ---------------------------------------------------------
+                match /talkSchedule/{date} {
+                  allow read: if canViewTalkPlanning(regionId, subregionId, branchId, countryId, circuitId, congId);
+                  allow delete: if canPlanTalks(regionId, subregionId, branchId, countryId, circuitId, congId);
 
-              match /externalCongregations/{externalCongregationId} {
-                allow read: if canViewTalkPlanning(regionId, subregionId, branchId, circuitId, congId);
-                allow delete: if canPlanTalks(regionId, subregionId, branchId, circuitId, congId);
+                  allow create: if canPlanTalks(regionId, subregionId, branchId, countryId, circuitId, congId) &&
+                    isValidTalkSlot(date, request.resource.data);
 
-                allow create, update: if canPlanTalks(regionId, subregionId, branchId, circuitId, congId) &&
-                  isValidExternalCongregation(request.resource.data);
-              }
+                  // Planners change the whole slot; a talk helper only `confirmed` (the speaker is informed).
+                  allow update: if (canPlanTalks(regionId, subregionId, branchId, countryId, circuitId, congId) &&
+                      isValidTalkSlot(date, request.resource.data)) ||
+                    (canViewTalkPlanning(regionId, subregionId, branchId, countryId, circuitId, congId) &&
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['confirmed']) &&
+                      request.resource.data.confirmed is bool);
+                }
 
-              match /visitingSpeakers/{speakerId} {
-                allow read: if canViewTalkPlanning(regionId, subregionId, branchId, circuitId, congId);
-                allow delete: if canPlanTalks(regionId, subregionId, branchId, circuitId, congId);
+                // ---------------------------------------------------------
+                // Talk history of a congregation (planners only)
+                // ---------------------------------------------------------
+                match /talkHistory/{talkNumber} {
+                  allow read: if canViewTalkPlanning(regionId, subregionId, branchId, countryId, circuitId, congId);
+                  allow delete: if canPlanTalks(regionId, subregionId, branchId, countryId, circuitId, congId);
 
-                allow create, update: if canPlanTalks(regionId, subregionId, branchId, circuitId, congId) &&
-                  isValidVisitingSpeaker(request.resource.data);
+                  allow create, update: if canPlanTalks(regionId, subregionId, branchId, countryId, circuitId, congId) &&
+                    isValidTalkHistory(talkNumber, request.resource.data);
+                }
+
+                // ---------------------------------------------------------
+                // Directory of external speakers (planners only)
+                // ---------------------------------------------------------
+                match /externalCircuits/{externalCircuitId} {
+                  allow read: if canViewTalkPlanning(regionId, subregionId, branchId, countryId, circuitId, congId);
+                  allow delete: if canPlanTalks(regionId, subregionId, branchId, countryId, circuitId, congId);
+
+                  allow create, update: if canPlanTalks(regionId, subregionId, branchId, countryId, circuitId, congId) &&
+                    isValidExternalCircuit(request.resource.data);
+                }
+
+                match /externalCongregations/{externalCongregationId} {
+                  allow read: if canViewTalkPlanning(regionId, subregionId, branchId, countryId, circuitId, congId);
+                  allow delete: if canPlanTalks(regionId, subregionId, branchId, countryId, circuitId, congId);
+
+                  allow create, update: if canPlanTalks(regionId, subregionId, branchId, countryId, circuitId, congId) &&
+                    isValidExternalCongregation(request.resource.data);
+                }
+
+                match /visitingSpeakers/{speakerId} {
+                  allow read: if canViewTalkPlanning(regionId, subregionId, branchId, countryId, circuitId, congId);
+                  allow delete: if canPlanTalks(regionId, subregionId, branchId, countryId, circuitId, congId);
+
+                  allow create, update: if canPlanTalks(regionId, subregionId, branchId, countryId, circuitId, congId) &&
+                    isValidVisitingSpeaker(request.resource.data);
+                }
               }
             }
           }

@@ -73,7 +73,7 @@ fun LoginContent(
     }
 }
 
-private val previewRef = CongregationRef("EMEA", "europe", "central-europe", "609a", "berlin-mitte")
+private val previewRef = CongregationRef("EMEA", "europe", "central-europe", "de", "609a", "berlin-mitte")
 
 private val pickingState = CongregationSelectionUiState(
     levels = listOf(

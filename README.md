@@ -112,10 +112,12 @@ wiederhergestellt (Base64 erzeugen: `base64 -w 0 < datei`).
 
 ### Firestore-Datenmodell
 
-| Collection                                                                   | Inhalt                 |
-|------------------------------------------------------------------------------|------------------------|
-| `users`                                                                      | Nutzer, Rolle, Freigabe |
-| `region/EMEA/subregion/europe/branch/central-europe/circuit/609a/congregation` | Versammlungs-Metadaten |
+| Collection                                                                              | Inhalt                  |
+|-----------------------------------------------------------------------------------------|-------------------------|
+| `users`                                                                                 | Nutzer, Rolle, Freigabe |
+| `region/{id}/subregion/{id}/branch/{id}/country/{id}/circuit/{id}/congregation`        | Versammlungs-Metadaten  |
+
+Organisationsebenen: Region → Subregion → Zweig → Land → Kreis → Versammlung (siehe ADR-0026).
 
 > Die Berechtigungsprüfung in der App ersetzt **keine** Firestore Security Rules – diese müssen die Regeln
 > serverseitig ebenfalls durchsetzen.

@@ -12,7 +12,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class LoginStepTest {
-    private val ref = CongregationRef("EMEA", "europe", "central-europe", "609a", "berlin")
+    private val ref = CongregationRef("EMEA", "europe", "central-europe", "de", "609a", "berlin")
     private val selected = SelectedCongregation(ref, "Berlin", "Mitte")
 
     @Test

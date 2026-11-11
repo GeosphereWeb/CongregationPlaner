@@ -33,7 +33,7 @@ class CongregationMetadataViewModelTest {
     private val planer = AppUser(uid = "planer", approved = true, roles = setOf(CongregationRole.CONGREGATION_ADMIN))
     private val berlin = CongregationMetadata(id = "609a", name = "Berlin")
     private val hamburg = CongregationMetadata(id = "610b", name = "Hamburg")
-    private val circuit = listOf("EMEA", "europe", "central-europe", "609a")
+    private val circuit = listOf("EMEA", "europe", "central-europe", "de", "609a")
 
     private lateinit var repository: FakeCongregationRepository
 
@@ -340,7 +340,7 @@ class CongregationMetadataViewModelTest {
     @Test
     fun `the congregation admin edits the meeting times of the own congregation`() {
         val viewModel = createViewModel()
-        val own = CongregationRef("r", "s", "b", "c", "609a")
+        val own = CongregationRef("r", "s", "b", "de", "c", "609a")
         viewModel.onCurrentUserChanged(planer.copy(congregation = own))
 
         viewModel.editCongregation(berlin)
@@ -354,11 +354,11 @@ class CongregationMetadataViewModelTest {
     @Test
     fun `own only shows just the congregation of the user from its circuit`() {
         val viewModel = createViewModel()
-        val own = CongregationRef("r", "s", "b", "c", "609a")
+        val own = CongregationRef("r", "s", "b", "de", "c", "609a")
 
         viewModel.onCurrentUserChanged(planer.copy(congregation = own), ownOnly = true)
         assertEquals(listOf(berlin), viewModel.uiState.value.congregations)
-        assertEquals(listOf("r", "s", "b", "c"), repository.circuits.last())
+        assertEquals(listOf("r", "s", "b", "de", "c"), repository.circuits.last())
 
         viewModel.onCurrentUserChanged(planer.copy(congregation = own), ownOnly = false, circuitIds = circuit)
         assertEquals(listOf(berlin, hamburg), viewModel.uiState.value.congregations)

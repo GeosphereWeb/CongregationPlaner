@@ -4,7 +4,7 @@
 const PROJECT = 'demo-rules-test';
 const FS = `http://127.0.0.1:18080/v1/projects/${PROJECT}/databases/(default)/documents`;
 const AUTH = 'http://127.0.0.1:19099/identitytoolkit.googleapis.com/v1';
-const CIRCUIT = 'region/R/subregion/S/branch/B/circuit/C';
+const CIRCUIT = 'region/R/subregion/S/branch/B/country/L/circuit/C';
 const CONG = `${CIRCUIT}/congregation/K`;
 
 const failures = [];
@@ -98,11 +98,11 @@ await api('PATCH', `${CONG}/members/${adminPlanner.uid}`, memberDoc('adminplanne
 // Ein eigener Admin für die Tests, in denen ein Admin die eigene Rollenliste ändert.
 const selfAdmin = await signUp('selfadmin@test.de');
 await api('PATCH', `${CONG}/members/${selfAdmin.uid}`, memberDoc('selfadmin@test.de', ['CONGREGATION_ADMIN']), owner);
-await api('PATCH', 'region/R/subregion/S/branch/B/circuit/C/uniqueCongregationNames/berlin', fields({ congregationId: 'K' }), owner);
-const OTHER_CONG ='region/R/subregion/S/branch/B/circuit/C/congregation/OTHER';
+await api('PATCH', 'region/R/subregion/S/branch/B/country/L/circuit/C/uniqueCongregationNames/berlin', fields({ congregationId: 'K' }), owner);
+const OTHER_CONG ='region/R/subregion/S/branch/B/country/L/circuit/C/congregation/OTHER';
 // Die Kreise müssen existieren: eine Versammlung entsteht nur in einem vorhandenen Kreis.
 await api('PATCH', CIRCUIT, fields({ name: 'Kreis C' }), owner);
-await api('PATCH', 'region/R/subregion/S/branch/B/circuit/C2', fields({ name: 'Kreis C2' }), owner);
+await api('PATCH', 'region/R/subregion/S/branch/B/country/L/circuit/C2', fields({ name: 'Kreis C2' }), owner);
 await api('PATCH', CONG, fields({ name: 'Berlin', ...fullMeeting }), owner);
 await api('PATCH', OTHER_CONG, fields({ name: 'Hamburg', ...fullMeeting }), owner);
 
@@ -461,7 +461,7 @@ await expect('Global Admin pflegt weiter die Kreise', api('PATCH', 'region/R2', 
 await expect('Normaler Nutzer pflegt keine Kreise', api('PATCH', 'region/R3', fields({ name: 'Region 3' }), plain.token), false);
 
 // ---------- Organisationsbaum: nur der globale Admin, nur bekannte Felder (CP-72) ----------
-const ORG_UNITS = ['region/OR', 'region/OR/subregion/OS', 'region/OR/subregion/OS/branch/OB'];
+const ORG_UNITS = ['region/OR', 'region/OR/subregion/OS', 'region/OR/subregion/OS/branch/OB', 'region/OR/subregion/OS/branch/OB/country/OL'];
 for (const unit of ORG_UNITS) {
   const level = unit.split('/').at(-2);
   await expect(`Global Admin legt ${level} an`, api('PATCH', unit, fields({ name: 'Neu' }), admin.token), true);
@@ -474,7 +474,7 @@ for (const unit of ORG_UNITS) {
   await expect(`Gast legt keine ${level} an`, api('PATCH', unit, fields({ name: 'Neu' })), false);
   await expect(`Gast liest ${level}`, api('GET', unit), true);
 }
-const ORG_CIRCUIT = 'region/OR/subregion/OS/branch/OB/circuit/OC';
+const ORG_CIRCUIT = 'region/OR/subregion/OS/branch/OB/country/OL/circuit/OC';
 await expect('Global Admin legt einen Kreis an', api('PATCH', ORG_CIRCUIT, fields({ name: 'Kreis 1', overseer_name: 'Max Muster' }), admin.token), true);
 await expect('Global Admin legt einen Kreis ohne Kreisaufseher an', api('PATCH', ORG_CIRCUIT, fields({ name: 'Kreis 1' }), admin.token), true);
 await expect('Kreis ohne Namen', api('PATCH', ORG_CIRCUIT, fields({ overseer_name: 'Max' }), admin.token), false);
@@ -499,7 +499,7 @@ await expect('Global Admin mit Planerrolle pflegt weiter die Vortragsliste', api
 
 
 // ---------- Versammlung anlegen: der Ersteller wird Admin, der Name ist pro Kreis eindeutig ----------
-const CIRCUIT_2 = 'region/R/subregion/S/branch/B/circuit/C2';
+const CIRCUIT_2 = 'region/R/subregion/S/branch/B/country/L/circuit/C2';
 const creator = await signUpVerified('creator@test.de');
 const unverified = await signUp('unverified@test.de');
 const intruder = await signUpVerified('intruder@test.de');
@@ -544,7 +544,7 @@ await expect('Der alte Name ist nach dem Umbenennen wieder frei', commit(createB
 await expect('Namensdokumente sind ohne Anmeldung lesbar', api('GET', `${CIRCUIT}/uniqueCongregationNames/${encodeURIComponent('grafing nord')}`), true);
 
 // ---------- Härtung (CP-123): nur existierende Pfade, vollständige Dokumente, Admin bleibt Admin ----------
-const GHOST_CIRCUIT = 'region/R/subregion/S/branch/B/circuit/GHOST';
+const GHOST_CIRCUIT = 'region/R/subregion/S/branch/B/country/L/circuit/GHOST';
 await expect('Versammlung in einem nicht existierenden Kreis', commit(createBatch(GHOST_CIRCUIT, 'G1', 'Geist', 'geist', intruder, 'intruder@test.de'), intruder.token), false);
 await expect('Global Admin legt keine Versammlung in einem nicht existierenden Kreis an', commit([
   setDoc(`${GHOST_CIRCUIT}/congregation/G2`, { name: 'Geist 2', createdBy: admin.uid, ...fullMeeting }),

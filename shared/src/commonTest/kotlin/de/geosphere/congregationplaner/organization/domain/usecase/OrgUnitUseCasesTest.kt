@@ -17,7 +17,7 @@ import kotlin.test.assertTrue
 class OrgUnitUseCasesTest {
     private val admin = AppUser(uid = "a", isGlobalAdmin = true)
     private val member = AppUser(uid = "m", approved = true)
-    private val branch = listOf("r1", "s1", "b1")
+    private val branch = listOf("r1", "s1", "b1", "de")
     private val circuitsPath = OrgLevel.CIRCUIT.collectionPath(branch)
 
     private val repository = FakeOrgUnitRepository()

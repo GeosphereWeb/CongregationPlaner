@@ -27,6 +27,7 @@ class OrganizationViewModelTest {
     private val emea = OrgUnit("r1", "EMEA")
     private val europe = OrgUnit("s1", "Europa")
     private val central = OrgUnit("b1", "Mitteleuropa")
+    private val germany = OrgUnit("de", "Deutschland")
     private val north = OrgUnit("c1", "Kreis Nord", "Max")
 
     private val repository = FakeOrgUnitRepository(
@@ -34,7 +35,8 @@ class OrganizationViewModelTest {
             "region" to listOf(emea),
             "region/r1/subregion" to listOf(europe),
             "region/r1/subregion/s1/branch" to listOf(central),
-            "region/r1/subregion/s1/branch/b1/circuit" to listOf(north),
+            "region/r1/subregion/s1/branch/b1/country" to listOf(germany),
+            "region/r1/subregion/s1/branch/b1/country/de/circuit" to listOf(north),
         ),
     )
     private lateinit var viewModel: OrganizationViewModel
@@ -72,16 +74,17 @@ class OrganizationViewModelTest {
         viewModel.open(emea)
         viewModel.open(europe)
         viewModel.open(central)
+        viewModel.open(germany)
         assertEquals(OrgLevel.CIRCUIT, state.level)
         assertEquals(listOf(north), state.units)
 
         viewModel.open(north)
         assertEquals(OrgLevel.CONGREGATION, state.level)
-        assertEquals(listOf("r1", "s1", "b1", "c1"), state.parentIds)
+        assertEquals(listOf("r1", "s1", "b1", "de", "c1"), state.parentIds)
 
         // Below a circuit there are no further units to open.
         viewModel.open(OrgUnit("k1", "Berlin"))
-        assertEquals(4, state.path.size)
+        assertEquals(5, state.path.size)
     }
 
     @Test
@@ -141,6 +144,7 @@ class OrganizationViewModelTest {
         viewModel.open(emea)
         viewModel.open(europe)
         viewModel.open(central)
+        viewModel.open(germany)
         viewModel.editor.edit(north)
 
         viewModel.delete(north)

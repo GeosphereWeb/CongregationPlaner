@@ -8,7 +8,7 @@ import de.geosphere.congregationplaner.user.domain.repository.UserRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
-internal val testCongregation = CongregationRef("EMEA", "europe", "central-europe", "609a", "berlin")
+internal val testCongregation = CongregationRef("EMEA", "europe", "central-europe", "de", "609a", "berlin")
 
 internal fun testAuthUser(uid: String = "uid-1", email: String? = "user@example.com"): FirebaseUser =
     object : FirebaseUser {
