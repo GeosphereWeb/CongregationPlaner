@@ -1,10 +1,7 @@
 package de.geosphere.congregationplaner.user.presentation.contact
 
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.addPathNodes
-import androidx.compose.ui.unit.dp
+import de.geosphere.congregationplaner.ui.icon.vectorIcon
 import de.geosphere.congregationplaner.user.domain.model.PhoneKind
 import de.geosphere.congregationplaner.user.domain.model.phoneKind
 
@@ -67,11 +64,3 @@ internal val closeIcon = vectorIcon(
     "close",
     "M19,6.41L17.59,5 12,10.59 6.41,5 5,6.41 10.59,12 5,17.59 6.41,19 12,13.41 17.59,19 19,17.59 13.41,12z",
 )
-
-internal fun vectorIcon(name: String, path: String): ImageVector = ImageVector.Builder(
-    name = name,
-    defaultWidth = 24.dp,
-    defaultHeight = 24.dp,
-    viewportWidth = 24f,
-    viewportHeight = 24f,
-).addPath(pathData = addPathNodes(path), fill = SolidColor(Color.Black)).build()

@@ -1,4 +1,4 @@
-package de.geosphere.congregationplaner.talk.presentation.schedule
+package de.geosphere.congregationplaner.ui.form
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -22,8 +22,11 @@ import de.geosphere.congregationplaner.ui.button.SecondaryButton
 import de.geosphere.congregationplaner.ui.card.FieldCard
 import de.geosphere.congregationplaner.ui.field.AppSwitch
 
+private val COMPACT_WIDTH = 600.dp
+private val BUTTON_HEIGHT = 48.dp
+
 @Composable
-internal fun SwitchRow(label: String, checked: Boolean, enabled: Boolean = true, onCheckedChange: (Boolean) -> Unit) {
+fun SwitchRow(label: String, checked: Boolean, enabled: Boolean = true, onCheckedChange: (Boolean) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(label, modifier = Modifier.weight(1f))
         AppSwitch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
@@ -32,7 +35,7 @@ internal fun SwitchRow(label: String, checked: Boolean, enabled: Boolean = true,
 
 /** „Ändern“/„Wählen“ und, falls etwas gewählt ist, „Entfernen“ rechts in einer [FieldCard]. */
 @Composable
-internal fun FieldActions(changeLabel: String, enabled: Boolean, onChange: () -> Unit, onRemove: (() -> Unit)?) {
+fun FieldActions(changeLabel: String, enabled: Boolean, onChange: () -> Unit, onRemove: (() -> Unit)?) {
     Column(horizontalAlignment = Alignment.End) {
         SecondaryButton(changeLabel, onChange, enabled = enabled, outlined = false)
         if (onRemove != null) TextButton(onClick = onRemove) { Text("Entfernen") }
@@ -45,7 +48,7 @@ internal fun FieldActions(changeLabel: String, enabled: Boolean, onChange: () ->
  */
 @Composable
 @Suppress("LongParameterList")
-internal fun EditorActions(
+fun EditorActions(
     saveText: String,
     saveEnabled: Boolean,
     discardEnabled: Boolean,

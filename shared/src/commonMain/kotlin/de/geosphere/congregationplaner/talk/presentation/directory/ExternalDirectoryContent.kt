@@ -30,8 +30,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import de.geosphere.congregationplaner.presentation.components.DetailPane
-import de.geosphere.congregationplaner.presentation.components.ListPaneHeader
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCircuit
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCongregation
@@ -41,6 +39,8 @@ import de.geosphere.congregationplaner.talk.presentation.picker.label
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.ui.list.CollapsingHeaderColumn
+import de.geosphere.congregationplaner.ui.pane.DetailPane
+import de.geosphere.congregationplaner.ui.pane.ListPaneHeader
 
 /** Callbacks der Verwaltung; gebündelt, damit die Composables überschaubare Signaturen behalten. */
 internal data class ExternalDirectoryActions(

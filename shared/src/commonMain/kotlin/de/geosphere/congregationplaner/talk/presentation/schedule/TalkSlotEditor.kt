@@ -40,12 +40,13 @@ import de.geosphere.congregationplaner.ui.button.SecondaryButton
 import de.geosphere.congregationplaner.ui.card.FieldCard
 import de.geosphere.congregationplaner.ui.chip.StatusChip
 import de.geosphere.congregationplaner.ui.chip.StatusTone
+import de.geosphere.congregationplaner.ui.form.EditorActions
+import de.geosphere.congregationplaner.ui.form.FieldActions
+import de.geosphere.congregationplaner.ui.form.SwitchRow
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 
-internal val COMPACT_WIDTH = 600.dp
-internal val ACTION_HEIGHT = 44.dp
-internal val BUTTON_HEIGHT = 48.dp
+private val ACTION_HEIGHT = 44.dp
 
 @Composable
 @Suppress("LongParameterList", "LongMethod")

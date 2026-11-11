@@ -1,12 +1,12 @@
 package de.geosphere.congregationplaner.talk.presentation.schedule
 
 import androidx.compose.ui.text.font.FontWeight
-import de.geosphere.congregationplaner.presentation.components.CardHighlight
 import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.SpeakerContact
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.ui.chip.StatusTone
+import de.geosphere.congregationplaner.ui.list.CardHighlight
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlin.test.Test

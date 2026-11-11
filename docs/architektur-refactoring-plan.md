@@ -13,11 +13,11 @@ Nach jeder Phase hier abhaken und Ticket und PR eintragen.
 | 2 | Login entkoppeln | CP-132 | #150 | in Review |
 | 3 | Logik aus Composables holen | CP-133 | #151 | in Review |
 | 4a | detekt aktivieren, Login-ViewModel teilen | CP-134 | – | in Review |
-| 4b | Große ViewModels und UI-Dateien teilen | CP-134 | – | in Review |
-| 5 | `uilib` auffüllen | – | – | offen |
+| 4b | Große ViewModels und UI-Dateien teilen | CP-134 | #153 | in Review |
+| 5 | `uilib` auffüllen | CP-135 | – | in Review |
 | 6 | UiState-Feinschliff | – | – | offen |
 
-Nächster Schritt: Phase 5 (`uilib` auffüllen). Die Branches sind gestapelt: jede Phase baut auf dem Branch der vorigen auf, bis deren PR gemergt ist.
+Nächster Schritt: Phase 6 (UiState-Feinschliff). Die Branches sind gestapelt: jede Phase baut auf dem Branch der vorigen auf, bis deren PR gemergt ist.
 
 ## Ziele
 
@@ -248,6 +248,11 @@ Die Daten- und Plattformklassen in der Baseline (z. B. `FirestoreRestClient`, `F
 3. `MeetingTimeInput`, `TalkDateInput`, `WeekdaySelector`: nur verschieben, wenn sie ohne Domain-Typen auskommen; sonst den generischen Kern herauslösen.
 4. Weitere mehrfach verwendete Bausteine in `shared` suchen und verschieben.
 5. Previews ziehen mit um.
+
+Umgesetzt in CP-135:
+
+- Nach `uilib`: `DetailPane`, `DetailPlaceholder`, `ListPaneHeader` (`ui/pane`), `SelectableListCard` und `CardHighlight` (`ui/list`), `SwitchRow`, `FieldActions`, `EditorActions` (`ui/form`), `FormTextField` (`ui/field`, ersetzt `NameField`), `StarRating` (`ui/rating`, ersetzt `RankingBar`), dazu `vectorIcon` und die gemeinsamen Icons (`ui/icon`). Die drei gleichen Icon-Hilfsfunktionen in `shared` sind durch `vectorIcon` ersetzt.
+- In `shared` bleiben: `ListDetailNavigation` (braucht `material3-adaptive`, gehört zur Bildschirm-Logik), `MeetingTimeInput`, `TalkDateInput`, `WeekdaySelector` (brauchen `kotlinx-datetime` bzw. fachliche Wochentage; `uilib` bekommt dafür keine neue Abhängigkeit), `ProfileField` und `ContactFields` (Kontakt-Fachlichkeit).
 
 ### Phase 6: UiState-Feinschliff
 

@@ -30,10 +30,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import de.geosphere.congregationplaner.presentation.components.DetailPane
-import de.geosphere.congregationplaner.presentation.components.DetailPlaceholder
-import de.geosphere.congregationplaner.presentation.components.ListPaneHeader
-import de.geosphere.congregationplaner.presentation.components.SelectableListCard
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkHistoryEntry
@@ -43,6 +39,10 @@ import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.theming.nightCardColors
 import de.geosphere.congregationplaner.ui.field.AppSwitch
 import de.geosphere.congregationplaner.ui.list.CollapsingHeaderColumn
+import de.geosphere.congregationplaner.ui.list.SelectableListCard
+import de.geosphere.congregationplaner.ui.pane.DetailPane
+import de.geosphere.congregationplaner.ui.pane.DetailPlaceholder
+import de.geosphere.congregationplaner.ui.pane.ListPaneHeader
 import kotlinx.datetime.LocalDate
 
 /** Callbacks der Historie; gebündelt, damit die Composables überschaubare Signaturen behalten. */
