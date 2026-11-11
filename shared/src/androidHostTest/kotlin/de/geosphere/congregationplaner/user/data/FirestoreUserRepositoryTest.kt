@@ -44,7 +44,7 @@ class FirestoreUserRepositoryTest {
     private val adminDocument = mockk<DocumentReference>()
     private val registration = mockk<ListenerRegistration>(relaxed = true)
     private val repository = FirestoreUserRepository(firestore)
-    private val congregation = CongregationRef("EMEA", "europe", "central-europe", "609a", "berlin")
+    private val congregation = CongregationRef("EMEA", "europe", "central-europe", "de", "609a", "berlin")
 
     private val authUser = object : FirebaseUser {
         override val uid: String = "uid-1"

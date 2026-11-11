@@ -17,9 +17,9 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class FirestoreRestOrgUnitRepositoryTest {
-    private val branch = listOf("EMEA", "europe", "central-europe")
+    private val branch = listOf("EMEA", "europe", "central-europe", "de")
     private val circuitsPath =
-        "${FakeFirestoreRestServer.DOCUMENTS_PATH}/region/EMEA/subregion/europe/branch/central-europe/circuit"
+        "${FakeFirestoreRestServer.DOCUMENTS_PATH}/region/EMEA/subregion/europe/branch/central-europe/country/de/circuit"
 
     @Test
     fun `observe maps the documents of the level`() = runWithServer({

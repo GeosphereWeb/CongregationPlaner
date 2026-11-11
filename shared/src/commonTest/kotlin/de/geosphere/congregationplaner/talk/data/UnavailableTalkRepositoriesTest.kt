@@ -18,7 +18,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 
 class UnavailableTalkRepositoriesTest {
-    private val congregation = CongregationRef("EMEA", "europe", "central-europe", "609a", "berlin")
+    private val congregation = CongregationRef("EMEA", "europe", "central-europe", "de", "609a", "berlin")
     private val slot = TalkSlot(LocalDate(2026, 10, 25), LocalTime(17, 30))
 
     @Test

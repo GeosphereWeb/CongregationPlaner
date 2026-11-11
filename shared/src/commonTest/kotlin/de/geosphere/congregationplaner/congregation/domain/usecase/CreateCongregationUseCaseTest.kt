@@ -20,7 +20,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class CreateCongregationUseCaseTest {
-    private val circuit = listOf("EMEA", "europe", "central", "609a")
+    private val circuit = listOf("EMEA", "europe", "central", "de", "609a")
     private val repository = FakeRepository()
     private val admin = NewCongregationAdmin("uid-1", "max@example.com", "Max Muster", "Max", "Muster", true)
     private val policy = CongregationPermissionPolicy()
