@@ -68,6 +68,9 @@ val sonarExclusions = listOf(
     "**/SuggestionRows.kt",
     // Compose-Hinweis und Tausch-Dialog beim Umplanen; Ablauf (ReassignHolder) und Texte sind getestet
     "**/ReassignViews.kt",
+    // Bottom-Sheet und Detailinhalt des Wochenplans: reine Compose-Hüllen um den Editor; Navigation ist getestet
+    "**/SlotEditorSheet.kt",
+    "**/SlotDetailContent.kt",
     // Compose-Hülle für die Wisch-Aktionen am Termin; Kontakt und Links sind in SpeakerContact und slotContact getestet
     "**/SwipeableSlotItem.kt",
     // Reines Compose-Formular „Mein Profil“; Eingaben und Speichern sind in OwnProfileViewModel getestet
