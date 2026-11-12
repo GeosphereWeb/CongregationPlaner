@@ -5,6 +5,7 @@ import de.geosphere.congregationplaner.talk.domain.model.Chairman
 import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
+import de.geosphere.congregationplaner.talk.domain.model.TalkPlanningSettings
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import kotlinx.datetime.LocalTime
@@ -25,6 +26,8 @@ data class TalkScheduleUiState(
     val speakers: List<Speaker> = emptyList(),
     val chairmen: List<Chairman> = emptyList(),
     val externalSpeakers: List<ExternalSpeaker> = emptyList(),
+    /** Die Stichtage des Planungsassistenten der Versammlung. */
+    val planningSettings: TalkPlanningSettings = TalkPlanningSettings(),
     val isLoading: Boolean = true,
     val canView: Boolean = false,
     val canPlan: Boolean = false,

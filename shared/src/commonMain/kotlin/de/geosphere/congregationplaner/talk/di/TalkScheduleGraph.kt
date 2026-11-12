@@ -4,10 +4,12 @@ import de.geosphere.congregationplaner.congregation.data.createCongregationMetad
 import de.geosphere.congregationplaner.congregation.domain.repository.CongregationMetadataRepository
 import de.geosphere.congregationplaner.talk.data.createExternalSpeakerDirectoryRepository
 import de.geosphere.congregationplaner.talk.data.createTalkCatalogRepository
+import de.geosphere.congregationplaner.talk.data.createTalkPlanningSettingsRepository
 import de.geosphere.congregationplaner.talk.data.createTalkScheduleRepository
 import de.geosphere.congregationplaner.talk.data.createWeekEventRepository
 import de.geosphere.congregationplaner.talk.domain.repository.ExternalSpeakerDirectoryRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkCatalogRepository
+import de.geosphere.congregationplaner.talk.domain.repository.TalkPlanningSettingsRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkScheduleRepository
 import de.geosphere.congregationplaner.talk.domain.repository.WeekEventRepository
 import de.geosphere.congregationplaner.talk.presentation.schedule.TalkScheduleViewModel
@@ -28,6 +30,10 @@ interface TalkScheduleGraph {
 
     @Provides
     fun provideTalkCatalogRepository(): TalkCatalogRepository = createTalkCatalogRepository()
+
+    // Stichtage des Planungsassistenten.
+    @Provides
+    fun provideTalkPlanningSettingsRepository(): TalkPlanningSettingsRepository = createTalkPlanningSettingsRepository()
 
     @Provides
     fun provideExternalSpeakerDirectoryRepository(): ExternalSpeakerDirectoryRepository =
