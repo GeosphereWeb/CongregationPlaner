@@ -62,7 +62,6 @@ import de.geosphere.congregationplaner.talk.presentation.picker.SpeakerActions
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
-import de.geosphere.congregationplaner.ui.button.SecondaryButton
 import de.geosphere.congregationplaner.ui.button.SpeedDialFab
 import de.geosphere.congregationplaner.ui.button.SpeedDialItem
 import de.geosphere.congregationplaner.ui.card.DateBadge
@@ -177,7 +176,7 @@ internal fun TalkScheduleContent(
     today: LocalDate = rememberToday(),
 ) {
     val editor = state.editorView
-    val navigator = rememberListDetailNavigation(state, onClose = actions.onCancelEditing)
+    val navigator = rememberListDetailNavigation(state.navigationState, onClose = actions.onCancelEditing)
     val singlePane = navigator.scaffoldDirective.maxHorizontalPartitions == 1
     val onCancelEditing = if (singlePane) actions.onCancelEditing else actions.onDiscardChanges
     val nextDate = nextSlotDate(state.slots, today)
@@ -339,43 +338,8 @@ internal fun TalkScheduleContent(
                             onBack = actions.onCancelEditing,
                             backEnabled = !state.isSaving,
                         ) {
-                            if (editor != null && !state.canPlan) {
-                                TalkSlotConfirmEditor(
-                                    editor = editor,
-                                    chip = slotChip(slotStatus(editor.slot, nextDate)),
-                                    isSaving = state.isSaving,
-                                    onInformedChange = actions.onInformedChange,
-                                    onSave = actions.onSave,
-                                    onCancel = onCancelEditing,
-                                )
-                            } else if (editor != null) {
-                                if (state.canStartReassign) {
-                                    SecondaryButton(
-                                        text = "Auf anderen Tag umplanen",
-                                        onClick = actions.onStartReassign,
-                                        outlined = false,
-                                    )
-                                }
-                                TalkSlotEditor(
-                                    editor = editor,
-                                    chip = slotChip(slotStatus(editor.slot, nextDate)),
-                                    weekEvents = state.weekEvents,
-                                    talks = state.talks,
-                                    speakers = state.speakers,
-                                    chairmen = state.chairmen,
-                                    externalSpeakers = state.externalSpeakers,
-                                    canViewMembers = state.canViewMembers,
-                                    isSaving = state.isSaving,
-                                    onChange = actions.onEditorChange,
-                                    onSelectWeekEvent = actions.onSelectWeekEvent,
-                                    onSelectTalk = actions.onSelectTalk,
-                                    speakerActions = actions.speaker,
-                                    onSelectChairman = actions.onSelectChairman,
-                                    onOpenHistory = actions.onOpenHistory,
-                                    onSave = actions.onSave,
-                                    onCancel = onCancelEditing,
-                                    onDelete = { editor.original?.let(actions.onDelete) },
-                                )
+                            if (editor != null) {
+                                SlotDetailContent(state, editor, nextDate, actions, onCancelEditing)
                             } else {
                                 DetailPlaceholder("Wähle einen Termin zum Bearbeiten aus.")
                             }
@@ -383,6 +347,12 @@ internal fun TalkScheduleContent(
                     }
                 },
             )
+        }
+    }
+
+    if (singlePane && editor != null) {
+        SlotEditorSheet(isSaving = state.isSaving, onDismiss = actions.onCancelEditing) {
+            SlotDetailContent(state, editor, nextDate, actions, onCancelEditing)
         }
     }
 
