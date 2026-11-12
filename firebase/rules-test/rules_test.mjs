@@ -139,7 +139,13 @@ await expect('externer Redner', putSlot('2026-10-25', { ...base, ...external }),
 await expect('externer Redner mit Vorsitzendem', putSlot('2026-10-25', { ...base, ...external, ...chairman }), true);
 await expect('externer Redner ohne Versammlung', putSlot('2026-10-25', { ...base, ...externalWithoutCongregation }), false);
 await expect('Versammlung ohne externen Redner', putSlot('2026-10-25', { ...base, ...speaker, speakerCongregation: 'Nord' }), false);
-await expect('Redner-Namen ohne ID', putSlot('2026-10-25', { ...base, speakerLastName: 'Muster', speakerFirstName: 'Max' }), false);
+// CP-140: Redner und Vortrag frei eintragen (ohne ID bzw. Nummer)
+await expect('frei eingetragener Redner (Name ohne ID)', putSlot('2026-10-25', { ...base, speakerLastName: 'Muster (Hamburg)', speakerFirstName: '' }), true);
+await expect('frei eingetragener Redner ohne Vornamen-Feld', putSlot('2026-10-25', { ...base, speakerLastName: 'Muster' }), false);
+await expect('frei eingetragener Redner mit leerem Namen', putSlot('2026-10-25', { ...base, speakerLastName: '', speakerFirstName: '' }), false);
+await expect('frei eingetragener Redner mit Versammlung', putSlot('2026-10-25', { ...base, speakerLastName: 'Muster', speakerFirstName: '', speakerCongregation: 'Nord' }), false);
+await expect('frei eingetragener Vortrag (Titel ohne Nummer)', putSlot('2026-10-25', { ...base, talkTitle: 'Sondervortrag' }), true);
+await expect('frei eingetragener Vortrag mit zu langem Titel', putSlot('2026-10-25', { ...base, talkTitle: 'x'.repeat(201) }), false);
 await expect('Redner-ID ohne Namen', putSlot('2026-10-25', { ...base, speakerMemberId: 'm1' }), false);
 await expect('Vorsitzender unvollständig', putSlot('2026-10-25', { ...base, chairmanMemberId: 'm2', chairmanLastName: 'Alt' }), false);
 await expect('Vortrag mit Nummer und Titel', putSlot('2026-10-25', { ...base, talkNumber: 12, talkTitle: 'Der Weg zum Glück' }), true);

@@ -9,7 +9,7 @@ internal fun slotReadOnlyLines(slot: TalkSlot): List<String> = listOfNotNull(
     if (slot.talkCancelled) {
         "Der Vortrag entfällt."
     } else {
-        slot.talkNumber?.let { "Vortrag: Nr. $it – ${slot.talkTitle.orEmpty()}" } ?: "Noch kein Vortrag gewählt"
+        slotTalkText(slot)?.let { "Vortrag: $it" } ?: "Noch kein Vortrag gewählt"
     },
     "Redner: ${slotSpeakerLine(slot)}".takeUnless { slot.talkCancelled },
     slot.chairman?.let { "Vorsitz: ${it.displayName}" },

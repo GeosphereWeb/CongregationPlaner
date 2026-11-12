@@ -14,6 +14,8 @@ class SlotPickerHolder(private val session: TalkScheduleSession, private val edi
 
     fun selectTalk(talk: Talk?) = pick { it.withTalk(talk) }
 
+    fun selectFreeSpeaker(name: String) = pick { it.withFreeSpeaker(name) }
+
     fun selectSpeaker(speaker: Speaker?) = pick { it.withSpeaker(speaker) }
 
     fun selectExternalSpeaker(speaker: ExternalSpeaker?) = pick { it.withExternalSpeaker(speaker) }

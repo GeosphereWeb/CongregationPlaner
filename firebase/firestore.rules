@@ -310,17 +310,19 @@ service cloud.firestore {
       return value == null || (value is string && value.size() >= minLen && value.size() <= maxLen);
     }
 
-    // Talk number and title are a snapshot of the talk list: both set or both null.
+    // Talk number and title are a snapshot of the talk list; a title without a number is a talk entered freely that
+    // is not in the list. A number always has its title.
     function isValidTalkFields(data) {
       let talkNumber = data.get('talkNumber', null);
       let talkTitle = data.get('talkTitle', null);
       return (talkNumber == null || (talkNumber is int && talkNumber >= 1 && talkNumber <= 9999)) &&
         isOptionalText(talkTitle, 1, 200) &&
-        ((talkNumber == null) == (talkTitle == null));
+        (talkNumber == null || talkTitle != null);
     }
 
-    // The speaker is a member or an external speaker (never both); the name fields are set exactly then, and the
-    // congregation snapshot belongs to external speakers only.
+    // The speaker is a member, an external speaker (never both) or a name entered freely without an id; member and
+    // external speaker always carry their name, last and first name go together, and the congregation snapshot
+    // belongs to external speakers only.
     function isValidSpeakerFields(data) {
       let memberId = data.get('speakerMemberId', null);
       let externalId = data.get('externalSpeakerId', null);
@@ -335,8 +337,8 @@ service cloud.firestore {
         isOptionalText(congregation, 1, 100) &&
         (memberId == null || externalId == null) &&
         ((externalId == null) == (congregation == null)) &&
-        (hasSpeaker == (lastName != null)) &&
-        (hasSpeaker == (firstName != null));
+        (!hasSpeaker || lastName != null) &&
+        ((lastName == null) == (firstName == null));
     }
 
     // The chairman is a member snapshot: id, last name and first name all set or all null.

@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.MemberRef
+import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 
@@ -29,6 +30,8 @@ import de.geosphere.congregationplaner.theming.ThemePreviews
 internal data class SpeakerActions(
     val onSelectMember: (MemberRef?) -> Unit = {},
     val onSelectExternal: (ExternalSpeaker?) -> Unit = {},
+    /** Trägt einen Redner, der in keiner Liste steht, mit dem Suchtext als Namen ein. */
+    val onFreeSpeaker: (String) -> Unit = {},
 )
 
 /**
@@ -46,6 +49,7 @@ internal fun SpeakerPickerDialog(
     var query by remember { mutableStateOf("") }
     val matchingMembers = remember(members, query) { members.matching(query) }
     val matchingExternal = remember(externalSpeakers, query) { externalSpeakers.matchingExternal(query) }
+    val freeName = freeEntryOf(query, TalkSlot.MAX_PERSON_NAME_LENGTH)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Redner wählen") },
@@ -86,7 +90,11 @@ internal fun SpeakerPickerDialog(
                 }
             }
         },
-        confirmButton = {},
+        confirmButton = {
+            freeName?.let { name ->
+                TextButton(onClick = { actions.onFreeSpeaker(name) }) { Text("„$name“ frei eintragen") }
+            }
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen") } },
     )
 }
