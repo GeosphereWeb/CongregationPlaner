@@ -72,3 +72,15 @@ data class TalkScheduleUiState(
     val editorView: TalkSlotEditorState?
         get() = editor?.copy(usage = planningUsageOf(allSlots, planningSettings, editor.original?.date))
 }
+
+/**
+ * Zustand für die Listen-/Detail-Navigation des Wochenplans: Auf schmalen Bildschirmen öffnet der Editor als
+ * Bottom-Sheet über der Liste ([SlotEditorSheet]), also wird nie zum Detail navigiert. Speichern schließt ihn
+ * weiterhin.
+ */
+internal val TalkScheduleUiState.navigationState: ListDetailState
+    get() = object : ListDetailState {
+        override val hasDetail: Boolean = false
+        override val isSaving: Boolean = this@navigationState.isSaving
+        override val errorMessage: String? = this@navigationState.errorMessage
+    }
