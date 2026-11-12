@@ -167,7 +167,7 @@ internal fun TalkScheduleContent(
     modifier: Modifier = Modifier,
     today: LocalDate = rememberToday(),
 ) {
-    val editor = state.editor
+    val editor = state.editorView
     val navigator = rememberListDetailNavigation(state, onClose = actions.onCancelEditing)
     val singlePane = navigator.scaffoldDirective.maxHorizontalPartitions == 1
     val onCancelEditing = if (singlePane) actions.onCancelEditing else actions.onDiscardChanges

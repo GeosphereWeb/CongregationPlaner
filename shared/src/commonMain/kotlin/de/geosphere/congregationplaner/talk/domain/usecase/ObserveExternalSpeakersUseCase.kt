@@ -7,8 +7,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 /**
- * Die externen Redner als Auswahl für die Vortragsplanung: Name und Name ihrer Versammlung. Redner, deren
- * Versammlung fehlt, werden übersprungen.
+ * Die externen Redner als Auswahl für die Vortragsplanung: Name, Name ihrer Versammlung und ihre Vorträge.
+ * Redner, deren Versammlung fehlt, werden übersprungen.
  */
 @Inject
 class ObserveExternalSpeakersUseCase(private val observeDirectory: ObserveExternalDirectoryUseCase) {
@@ -23,6 +23,7 @@ class ObserveExternalSpeakersUseCase(private val observeDirectory: ObserveExtern
                     it,
                     speaker.mobilePhone,
                     speaker.landlinePhone,
+                    speaker.talkNumbers,
                 )
             }
         }

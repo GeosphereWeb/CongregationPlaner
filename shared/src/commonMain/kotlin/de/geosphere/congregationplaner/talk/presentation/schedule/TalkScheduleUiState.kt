@@ -3,15 +3,24 @@ package de.geosphere.congregationplaner.talk.presentation.schedule
 import de.geosphere.congregationplaner.presentation.components.ListDetailState
 import de.geosphere.congregationplaner.talk.domain.model.Chairman
 import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
+import de.geosphere.congregationplaner.talk.domain.model.PlanningUsage
 import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkPlanningSettings
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
+import de.geosphere.congregationplaner.talk.domain.model.planningUsageOf
 import kotlinx.datetime.LocalTime
 
-/** Der gerade bearbeitete Termin; [original] ist `null`, solange ein neuer Termin entsteht. */
-data class TalkSlotEditorState(val slot: TalkSlot, val original: TalkSlot? = null) {
+/**
+ * Der gerade bearbeitete Termin; [original] ist `null`, solange ein neuer Termin entsteht. [usage] sagt den
+ * Auswahldialogen, wann Redner und Vorträge zuletzt eingeplant sind und welche der Stichtag sperrt.
+ */
+data class TalkSlotEditorState(
+    val slot: TalkSlot,
+    val original: TalkSlot? = null,
+    val usage: PlanningUsage = PlanningUsage(),
+) {
     val isNew: Boolean get() = original == null
     val isDirty: Boolean get() = slot != original
 }
@@ -26,6 +35,8 @@ data class TalkScheduleUiState(
     val speakers: List<Speaker> = emptyList(),
     val chairmen: List<Chairman> = emptyList(),
     val externalSpeakers: List<ExternalSpeaker> = emptyList(),
+    /** Alle Termine der Versammlung über alle Jahre (nur für Planer), Grundlage der Vorschläge. */
+    val allSlots: List<TalkSlot> = emptyList(),
     /** Die Stichtage des Planungsassistenten der Versammlung. */
     val planningSettings: TalkPlanningSettings = TalkPlanningSettings(),
     val isLoading: Boolean = true,
@@ -43,4 +54,8 @@ data class TalkScheduleUiState(
     override val isSaving: Boolean = false,
 ) : ListDetailState {
     override val hasDetail: Boolean get() = editor != null
+
+    /** Der Editor samt Nutzung der Redner und Vorträge; der bearbeitete Termin selbst sperrt nichts. */
+    val editorView: TalkSlotEditorState?
+        get() = editor?.copy(usage = planningUsageOf(allSlots, planningSettings, editor.original?.date))
 }
