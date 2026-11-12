@@ -4,6 +4,7 @@ import androidx.compose.ui.text.font.FontWeight
 import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.SpeakerContact
+import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.ui.chip.StatusTone
 import de.geosphere.congregationplaner.ui.list.CardHighlight
@@ -299,5 +300,48 @@ class TalkSlotPresentationTest {
         val speakers = listOf(Speaker("m1", "Muster", "Max", mobilePhone = "0170 1234567"))
 
         assertNull(slotContact(slot(), speakers, emptyList()))
+    }
+
+    @Test
+    fun `free entries are shown with a hint and count as planned`() {
+        val free = slot { it.withFreeTalk("Sondervortrag").withFreeSpeaker("Gast (Hamburg)") }
+
+        assertEquals("Sondervortrag (frei eingetragen)", slotTalkText(free))
+        assertEquals("Sondervortrag (frei eingetragen)", slotTitle(free))
+        assertEquals("Gast (Hamburg) (frei eingetragen)", slotSpeakerText(free))
+        assertEquals("Gast (Hamburg) · frei eingetragen", slotSpeakerLine(free))
+        assertTrue(free.canBeInformed)
+        assertEquals(SlotStatus.PLANNED, slotStatus(free, nextSlotDate = null))
+    }
+
+    @Test
+    fun `talk and speaker texts for list entries and empty slots`() {
+        val listed = slot {
+            it.copy(talkNumber = 12, talkTitle = "Der Weg zum Glück", speakerMemberId = "m1")
+                .copy(speakerLastName = "Muster", speakerFirstName = "Max")
+        }
+
+        assertEquals("Nr. 12 – Der Weg zum Glück", slotTalkText(listed))
+        assertEquals("Muster, Max", slotSpeakerText(listed))
+        assertNull(slotTalkText(slot()))
+        assertNull(slotSpeakerText(slot()))
+        assertEquals(SlotStatus.NOT_PLANNED, slotStatus(slot(), nextSlotDate = null))
+    }
+
+    @Test
+    fun `a free entry replaces a listed talk or speaker completely`() {
+        val listed = slot {
+            it.copy(talkNumber = 12, talkTitle = "Titel", externalSpeakerId = "e1", speakerCongregation = "Nord")
+                .copy(speakerLastName = "Extern", speakerFirstName = "Eva")
+        }
+
+        val free = listed.withFreeTalk("Neu").withFreeSpeaker("Gast")
+
+        assertEquals(null, free.talkNumber)
+        assertEquals("Neu", free.talkTitle)
+        assertEquals(null, free.externalSpeakerId)
+        assertEquals(null, free.speakerCongregation)
+        assertEquals("Gast", free.freeSpeakerName)
+        assertEquals(listed.withTalk(Talk(7, "Sieben")).talkNumber, 7)
     }
 }

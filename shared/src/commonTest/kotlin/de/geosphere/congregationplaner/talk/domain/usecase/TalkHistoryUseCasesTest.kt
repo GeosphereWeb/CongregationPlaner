@@ -77,4 +77,14 @@ class TalkHistoryUseCasesTest {
         assertEquals(testCongregation, schedule.requestedCongregation)
         assertTrue(observe(user.copy(congregation = null)).toList().isEmpty())
     }
+
+    @Test
+    fun `a free speaker is named in the history and a free talk without number is left out`() {
+        val freeSpeaker = slot(spring).copy(speakerLastName = "Gast (Hamburg)", speakerFirstName = "")
+        val freeTalk = slot(autumn, number = null).copy(talkTitle = "Sondervortrag")
+
+        val history = talkHistoryOf(listOf(freeSpeaker, freeTalk))
+
+        assertEquals(listOf(TalkHistoryEntry(7, listOf(spring), mapOf(spring to "Gast (Hamburg)"))), history)
+    }
 }

@@ -29,8 +29,6 @@ fun talkHistoryOf(slots: List<TalkSlot>): List<TalkHistoryEntry> = slots
         TalkHistoryEntry(
             talkNumber = number,
             heldOn = held.map { it.date }.distinct().sorted(),
-            speakers = held.mapNotNull { slot ->
-                (slot.speaker?.displayName ?: slot.externalSpeaker?.displayName)?.let { slot.date to it }
-            }.toMap(),
+            speakers = held.mapNotNull { slot -> slot.speakerDisplayName?.let { slot.date to it } }.toMap(),
         )
     }.sortedBy { it.talkNumber }

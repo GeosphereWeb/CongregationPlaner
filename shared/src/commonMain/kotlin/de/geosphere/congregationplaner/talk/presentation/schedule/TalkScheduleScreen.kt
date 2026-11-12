@@ -129,6 +129,7 @@ fun TalkScheduleScreen(
             speaker = SpeakerActions(
                 onSelectMember = viewModel.picker::selectSpeaker,
                 onSelectExternal = viewModel.picker::selectExternalSpeaker,
+                onFreeSpeaker = viewModel.picker::selectFreeSpeaker,
             ),
             onSelectChairman = viewModel.picker::selectChairman,
             onOpenHistory = onOpenHistory,

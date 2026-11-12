@@ -12,12 +12,14 @@ import kotlinx.datetime.LocalTime
  * @param talkCancelled `true`, wenn an diesem Tag kein Vortrag gehalten wird; Vorbelegung ist
  *   [WeekEvent.cancelsTalk], der Planer kann sie überschreiben.
  * @param talkNumber Nummer des Vortrags aus der Vortragsliste; der Titel wird mitgespeichert, damit alte
- *   Termine unverändert bleiben, wenn sich der Titel in der Liste ändert. Nummer und Titel gehören zusammen.
+ *   Termine unverändert bleiben, wenn sich der Titel in der Liste ändert. Ein Titel ohne Nummer ist ein frei
+ *   eingetragener Vortrag, der nicht in der Liste steht.
  * @param speakerMemberId Das Mitglied der Versammlung, das den Vortrag hält; Name und Vorname werden als
  *   Momentaufnahme mitgespeichert. Die drei Redner-Felder gehören zusammen.
  * @param externalSpeakerId Statt eines Mitglieds ein externer Redner aus der Liste der Versammlung; Name, Vorname
  *   und [speakerCongregation] (seine Versammlung) sind eine Momentaufnahme. Ein Termin hat höchstens eines von
- *   [speakerMemberId] und [externalSpeakerId].
+ *   [speakerMemberId] und [externalSpeakerId]. Ein Name ohne beide IDs ist ein frei eingetragener Redner, der in
+ *   keiner Liste steht; sein Name steht dann vollständig in [speakerLastName].
  * @param confirmed `true`, wenn der Planer den Termin bestätigt hat (z. B. weil der Redner zugesagt hat); ältere
  *   Termine ohne das Feld gelten als nicht bestätigt.
  * @param note Freie Notiz des Planers zum Termin (höchstens [MAX_NOTE_LENGTH] Zeichen); `null` = keine.
@@ -57,8 +59,22 @@ data class TalkSlot(
     val chairman: Chairman?
         get() = chairmanMemberId?.let { Chairman(it, chairmanLastName.orEmpty(), chairmanFirstName.orEmpty()) }
 
-    /** `true`, wenn ein Mitglied oder ein externer Redner eingeteilt ist. */
-    val hasSpeaker: Boolean get() = speakerMemberId != null || externalSpeakerId != null
+    /** `true`, wenn ein Mitglied, ein externer oder ein frei eingetragener Redner eingeteilt ist. */
+    val hasSpeaker: Boolean get() = speakerMemberId != null || externalSpeakerId != null || speakerLastName != null
+
+    /** Der frei eingetragene Redner (ohne Mitglied und ohne externen Redner); `null`, wenn es keinen gibt. */
+    val freeSpeakerName: String?
+        get() = speakerLastName.takeIf { speakerMemberId == null && externalSpeakerId == null }
+
+    /** Anzeigename des Redners, gleich ob Mitglied, externer oder frei eingetragener Redner. */
+    val speakerDisplayName: String?
+        get() = externalSpeaker?.displayName ?: speaker?.displayName ?: freeSpeakerName
+
+    /** `true`, wenn ein Vortrag aus der Liste oder ein frei eingetragener Vortrag gewählt ist. */
+    val hasTalk: Boolean get() = talkNumber != null || talkTitle != null
+
+    /** `true` für einen frei eingetragenen Vortrag: Titel ohne Nummer. */
+    val isFreeTalk: Boolean get() = talkNumber == null && talkTitle != null
 
     companion object {
         const val MAX_WEEK_EVENT_NAME_LENGTH = 100

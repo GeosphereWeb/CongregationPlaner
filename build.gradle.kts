@@ -60,6 +60,8 @@ val sonarExclusions = listOf(
     "**/CongregationDetail.kt",
     "**/TalkScheduleScreen.kt",
     "**/TalkSlotEditor.kt",
+    // Reiner Compose-Auswahldialog; Suche und freier Eintrag (matching, freeEntryOf) sind in TalkPickerSearchTest getestet
+    "**/TalkPickerDialog.kt",
     // Compose-Hülle für die Wisch-Aktionen am Termin; Kontakt und Links sind in SpeakerContact und slotContact getestet
     "**/SwipeableSlotItem.kt",
     // Reines Compose-Formular „Mein Profil“; Eingaben und Speichern sind in OwnProfileViewModel getestet

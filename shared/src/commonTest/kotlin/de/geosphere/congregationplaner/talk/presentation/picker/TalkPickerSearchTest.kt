@@ -28,4 +28,12 @@ class TalkPickerSearchTest {
         assertEquals(emptyList(), talks.matching("40"))
         assertEquals(emptyList(), talks.matching("pausiert"))
     }
+
+    @Test
+    fun `the query becomes a free entry when it is not blank and short enough`() {
+        assertEquals("Sondervortrag", freeEntryOf("  Sondervortrag ", maxLength = 20))
+        assertEquals(null, freeEntryOf("   ", maxLength = 20))
+        assertEquals(null, freeEntryOf("x".repeat(21), maxLength = 20))
+        assertEquals("x".repeat(20), freeEntryOf("x".repeat(20), maxLength = 20))
+    }
 }
