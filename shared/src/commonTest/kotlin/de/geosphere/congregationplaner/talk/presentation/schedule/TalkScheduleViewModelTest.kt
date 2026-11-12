@@ -8,6 +8,7 @@ import de.geosphere.congregationplaner.talk.domain.model.ExternalCongregation
 import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
+import de.geosphere.congregationplaner.talk.domain.model.TalkPlanningSettings
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
@@ -21,11 +22,14 @@ import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalDirect
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalSpeakersUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkCatalogUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkMembersUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkPlanningSettingsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkYearUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveWeekEventsUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.SaveTalkPlanningSettingsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.testing.FakeExternalSpeakerDirectoryRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
+import de.geosphere.congregationplaner.talk.testing.FakeTalkPlanningSettingsRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
 import de.geosphere.congregationplaner.talk.testing.FakeWeekEventRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
@@ -118,6 +122,7 @@ class TalkScheduleViewModelTest {
     private lateinit var users: FakeUserRepository
     private lateinit var externals: FakeExternalSpeakerDirectoryRepository
     private lateinit var congregations: FakeCongregationMetadataRepository
+    private lateinit var settings: FakeTalkPlanningSettingsRepository
     private lateinit var viewModel: TalkScheduleViewModel
 
     @BeforeTest
@@ -135,6 +140,7 @@ class TalkScheduleViewModelTest {
         congregations = FakeCongregationMetadataRepository(
             listOf(CongregationMetadata(id = testCongregation.congregationId)),
         )
+        settings = FakeTalkPlanningSettingsRepository()
         val policy = TalkSchedulePermissionPolicy()
         val save = SaveTalkSlotUseCase(repository, policy)
         val delete = DeleteTalkSlotUseCase(repository, policy)
@@ -154,6 +160,8 @@ class TalkScheduleViewModelTest {
                 ObserveTalkCatalogUseCase(catalog),
                 ObserveTalkMembersUseCase(ObserveMembersUseCase(users)),
                 ObserveExternalSpeakersUseCase(ObserveExternalDirectoryUseCase(externals)),
+                ObserveTalkPlanningSettingsUseCase(settings, policy),
+                SaveTalkPlanningSettingsUseCase(settings, policy),
                 policy,
                 UserPermissionPolicy(),
             ),
@@ -781,5 +789,36 @@ class TalkScheduleViewModelTest {
         viewModel.editor.newSlot()
         viewModel.editor.discard()
         assertNull(state.editor)
+    }
+
+    @Test
+    fun `planner sees and changes the cut-off dates which are saved at once`() {
+        settings.settings.value = TalkPlanningSettings(talkFreeSince = LocalDate(2024, 1, 14))
+        viewModel.onCurrentUserChanged(planner)
+        assertEquals(LocalDate(2024, 1, 14), state.planningSettings.talkFreeSince)
+
+        viewModel.planningSettings.setSpeakerFreeSince(LocalDate(2025, 11, 2))
+        viewModel.planningSettings.setTalkFreeSince(null)
+
+        assertEquals(TalkPlanningSettings(speakerFreeSince = LocalDate(2025, 11, 2)), state.planningSettings)
+        assertEquals(TalkPlanningSettings(speakerFreeSince = LocalDate(2025, 11, 2)), settings.saved.last())
+        assertEquals(testCongregation, settings.requestedCongregation)
+    }
+
+    @Test
+    fun `a failed save of the cut-off dates shows the error and a helper may not change them`() {
+        settings.saveResult = Result.failure(IllegalStateException())
+        viewModel.onCurrentUserChanged(planner)
+
+        viewModel.planningSettings.setSpeakerFreeSince(LocalDate(2025, 11, 2))
+        assertEquals("Die Stichtage konnten nicht gespeichert werden.", state.errorMessage)
+
+        settings.saveResult = Result.success(Unit)
+        viewModel.dismissError()
+        viewModel.onCurrentUserChanged(planner.copy(uid = "helper", roles = setOf(CongregationRole.TALK_HELPER)))
+        viewModel.planningSettings.setTalkFreeSince(LocalDate(2024, 1, 14))
+
+        assertTrue(settings.saved.isEmpty())
+        assertNotNull(state.errorMessage)
     }
 }

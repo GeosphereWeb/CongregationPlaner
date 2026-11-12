@@ -4,11 +4,13 @@ import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCircuit
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCongregation
 import de.geosphere.congregationplaner.talk.domain.model.Talk
+import de.geosphere.congregationplaner.talk.domain.model.TalkPlanningSettings
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.repository.ExternalSpeakerDirectoryRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkCatalogRepository
+import de.geosphere.congregationplaner.talk.domain.repository.TalkPlanningSettingsRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkScheduleRepository
 import de.geosphere.congregationplaner.talk.domain.repository.WeekEventRepository
 import kotlinx.coroutines.flow.Flow
@@ -25,7 +27,15 @@ expect fun createTalkCatalogRepository(): TalkCatalogRepository
 
 expect fun createExternalSpeakerDirectoryRepository(): ExternalSpeakerDirectoryRepository
 
+expect fun createTalkPlanningSettingsRepository(): TalkPlanningSettingsRepository
+
 internal const val TALK_SCHEDULE_SUBCOLLECTION = "talkSchedule"
+
+/** Einstellungen der Versammlung; die Stichtage des Planungsassistenten stehen in [TALK_PLANNING_SETTINGS_ID]. */
+internal const val SETTINGS_SUBCOLLECTION = "settings"
+internal const val TALK_PLANNING_SETTINGS_ID = "talkPlanning"
+internal const val SPEAKER_FREE_SINCE_FIELD = "speakerFreeSince"
+internal const val TALK_FREE_SINCE_FIELD = "talkFreeSince"
 
 /** Verzeichnis externer Redner (Kreis → Versammlung → Redner), je eigener Versammlung gepflegt. */
 internal const val EXTERNAL_CIRCUITS_SUBCOLLECTION = "externalCircuits"
@@ -39,6 +49,8 @@ internal const val WEEK_EVENTS_COLLECTION_PATH = "weekEvents"
 internal const val TALK_CATALOG_COLLECTION_PATH = "talkCatalog"
 
 internal val CongregationRef.talkSchedulePath: String get() = "$documentPath/$TALK_SCHEDULE_SUBCOLLECTION"
+
+internal val CongregationRef.settingsPath: String get() = "$documentPath/$SETTINGS_SUBCOLLECTION"
 
 internal val CongregationRef.externalCircuitsPath: String get() = "$documentPath/$EXTERNAL_CIRCUITS_SUBCOLLECTION"
 
@@ -140,3 +152,20 @@ fun unavailableExternalSpeakerDirectoryRepository(platform: String): ExternalSpe
 
         override suspend fun deleteSpeaker(congregation: CongregationRef, id: String): Result<Unit> = unavailable()
     }
+
+fun unavailableTalkPlanningSettingsRepository(platform: String): TalkPlanningSettingsRepository =
+    object : TalkPlanningSettingsRepository {
+        override fun observe(congregation: CongregationRef): Flow<TalkPlanningSettings> = flow {
+            throw UnsupportedOperationException("Firestore is not configured for $platform.")
+        }
+
+        override suspend fun save(
+            congregation: CongregationRef,
+            settings: TalkPlanningSettings,
+        ): Result<TalkPlanningSettings> =
+            Result.failure(UnsupportedOperationException("Firestore is not configured for $platform."))
+    }
+
+/** Ein gespeichertes Datum (`yyyy-MM-dd`); ein fehlendes oder ungültiges gilt als nicht gesetzt. */
+internal fun parseSettingsDate(value: String?): LocalDate? =
+    value?.let { runCatching { LocalDate.parse(it) }.getOrNull() }

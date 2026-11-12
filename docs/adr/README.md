@@ -78,3 +78,4 @@ Numbers are sequential and permanent. Never reuse or renumber an existing ADR, e
 - [ADR-0025: Zustandshalter je Teilaufgabe statt großer Bildschirm-ViewModels](0025-state-holders-for-screen-view-models.md) — Accepted
 - [ADR-0026: Land als eigene Ebene zwischen Zweig und Kreis](0026-country-level-in-organization-tree.md) — Accepted
 - [ADR-0027: Vortragshistorie aus den Terminen berechnen](0027-talk-history-derived-from-schedule.md) — Accepted
+- [ADR-0028: Stichtage des Planungsassistenten pro Versammlung](0028-talk-planning-settings-per-congregation.md) — Accepted

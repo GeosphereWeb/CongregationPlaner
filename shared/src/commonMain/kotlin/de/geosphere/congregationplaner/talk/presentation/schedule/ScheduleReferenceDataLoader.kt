@@ -4,7 +4,9 @@ import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermis
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalSpeakersUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkCatalogUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkMembersUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkPlanningSettingsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveWeekEventsUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.SaveTalkPlanningSettingsUseCase
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
 import dev.zacsweers.metro.Inject
@@ -13,13 +15,16 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
-/** Die UseCases für die Listen, aus denen der Editor wählt. */
+/** Die UseCases für die Listen, aus denen der Editor wählt, und für die Stichtage des Planungsassistenten. */
+@Suppress("LongParameterList") // ein reines Bündel der Abhängigkeiten, damit das ViewModel überschaubar bleibt
 @Inject
 class ScheduleReferenceUseCases(
     val observeWeekEvents: ObserveWeekEventsUseCase,
     val observeTalkCatalog: ObserveTalkCatalogUseCase,
     val observeTalkMembers: ObserveTalkMembersUseCase,
     val observeExternalSpeakers: ObserveExternalSpeakersUseCase,
+    val observePlanningSettings: ObserveTalkPlanningSettingsUseCase,
+    val savePlanningSettings: SaveTalkPlanningSettingsUseCase,
     val talkPolicy: TalkSchedulePermissionPolicy,
     val userPolicy: UserPermissionPolicy,
 )
@@ -39,6 +44,7 @@ class ScheduleReferenceDataLoader(
         TALKS("Vortragsliste"),
         EXTERNAL_SPEAKERS("Externe Redner"),
         MEMBERS("Redner und Vorsitzende"),
+        PLANNING_SETTINGS("Stichtage"),
     }
 
     fun observe(user: AppUser) {
@@ -50,6 +56,9 @@ class ScheduleReferenceDataLoader(
         keep(Source.TALKS, canPlan, { useCases.observeTalkCatalog() }) { state, talks -> state.copy(talks = talks) }
         keep(Source.EXTERNAL_SPEAKERS, canView, { useCases.observeExternalSpeakers(user) }) { state, speakers ->
             state.copy(externalSpeakers = speakers)
+        }
+        keep(Source.PLANNING_SETTINGS, canView, { useCases.observePlanningSettings(user) }) { state, settings ->
+            state.copy(planningSettings = settings)
         }
         val canViewMembers = canView && useCases.userPolicy.canViewMembers(user)
         keep(Source.MEMBERS, canViewMembers, { useCases.observeTalkMembers(user) }) { state, members ->
