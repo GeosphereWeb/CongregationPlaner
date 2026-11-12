@@ -63,7 +63,7 @@ Numbers are sequential and permanent. Never reuse or renumber an existing ADR, e
 - [ADR-0004: Lese-Berechtigung VIEW_MEMBERS für Mitgliederdaten](0004-view-members-permission.md) — Accepted (teilweise ersetzt durch ADR-0012, ADR-0013)
 - [ADR-0005: Externe Redner je Versammlung ohne Verweis auf fremde Mitglieder](0005-external-speakers.md) — Superseded by ADR-0008
 - [ADR-0006: Pflegeoberflächen als Liste/Detail mit sofortiger Listenaktualisierung](0006-list-detail-maintenance-screens.md) — Accepted
-- [ADR-0007: Vortragshistorie je Versammlung als eigene Subcollection](0007-talk-history.md) — Accepted
+- [ADR-0007: Vortragshistorie je Versammlung als eigene Subcollection](0007-talk-history.md) — Superseded by ADR-0027
 - [ADR-0008: Verzeichnis externer Redner mit eigener Hierarchie Kreis → Versammlung → Redner](0008-external-speaker-directory.md) — Accepted
 - [ADR-0009: Vortragsplanung getrennt von der Rolle Versammlungsadmin](0009-separate-planning-from-congregation-admin.md) — Accepted (teilweise ersetzt durch ADR-0012, ADR-0013)
 - [ADR-0010: Nachtblau-Design als Tokens in `theming` und Bausteine in `uilib`](0010-night-design-tokens-and-login-components.md) — Accepted (ergänzt durch ADR-0014)
@@ -76,3 +76,5 @@ Numbers are sequential and permanent. Never reuse or renumber an existing ADR, e
 - [ADR-0017: Organisationsbaum in der App pflegen](0017-organization-tree-maintained-in-app.md) — Accepted
 - [ADR-0024: Policies setzt der UseCase durch, die UI liest Rechte aus dem Zustand](0024-policy-enforcement-in-use-cases.md) — Accepted
 - [ADR-0025: Zustandshalter je Teilaufgabe statt großer Bildschirm-ViewModels](0025-state-holders-for-screen-view-models.md) — Accepted
+- [ADR-0026: Land als eigene Ebene zwischen Zweig und Kreis](0026-country-level-in-organization-tree.md) — Accepted
+- [ADR-0027: Vortragshistorie aus den Terminen berechnen](0027-talk-history-derived-from-schedule.md) — Accepted

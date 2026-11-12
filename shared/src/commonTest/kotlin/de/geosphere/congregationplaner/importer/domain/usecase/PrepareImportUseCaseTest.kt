@@ -15,14 +15,12 @@ import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermis
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalDirectoryUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveExternalCircuitUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveExternalCongregationUseCase
-import de.geosphere.congregationplaner.talk.domain.usecase.SaveTalkHistoryEntryUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveTalkUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveVisitingSpeakerUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveWeekEventUseCase
 import de.geosphere.congregationplaner.talk.testing.FakeExternalSpeakerDirectoryRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
-import de.geosphere.congregationplaner.talk.testing.FakeTalkHistoryRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
 import de.geosphere.congregationplaner.talk.testing.FakeWeekEventRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
@@ -45,7 +43,6 @@ class PrepareImportUseCaseTest {
     private val weekEvents = FakeWeekEventRepository(listOf(WeekEvent("e9", "Kreiskongress", cancelsTalk = true)))
     private val catalog = FakeTalkCatalogRepository(listOf(Talk(12, "Zwölf")))
     private val schedule = FakeTalkScheduleRepository()
-    private val history = FakeTalkHistoryRepository()
     private val directory = FakeExternalSpeakerDirectoryRepository()
     private val planning = TalkSchedulePermissionPolicy()
     private val reference = TalkReferenceDataPolicy()
@@ -57,7 +54,6 @@ class PrepareImportUseCaseTest {
         catalog,
         ObserveExternalDirectoryUseCase(directory),
         schedule,
-        history,
         FakeCongregationMetadataRepository(congregations),
         ImportReferenceDataUseCase(SaveWeekEventUseCase(weekEvents, reference), SaveTalkUseCase(catalog, reference)),
         ImportSpeakerDirectoryUseCase(
@@ -68,7 +64,6 @@ class PrepareImportUseCaseTest {
         ImportTalkScheduleUseCase(
             SaveVisitingSpeakerUseCase(directory, planning),
             SaveTalkSlotUseCase(schedule, planning),
-            SaveTalkHistoryEntryUseCase(history, planning),
         ),
     )
 

@@ -28,6 +28,10 @@ internal class FirestoreTalkScheduleRepository(private val firestore: FirebaseFi
         return observeDocuments(query, "talk slot", ::toSlotOrNull).map { it.filterNotNull() }
     }
 
+    override fun observeAll(congregation: CongregationRef): Flow<List<TalkSlot>> =
+        observeDocuments(firestore.collection(congregation.talkSchedulePath), "talk slot", ::toSlotOrNull)
+            .map { slots -> slots.filterNotNull().sortedBy { it.date } }
+
     override suspend fun saveSlot(congregation: CongregationRef, slot: TalkSlot): Result<TalkSlot> =
         runFirestoreCatching("save talk slot") {
             firestore.collection(congregation.talkSchedulePath).document(slot.id)

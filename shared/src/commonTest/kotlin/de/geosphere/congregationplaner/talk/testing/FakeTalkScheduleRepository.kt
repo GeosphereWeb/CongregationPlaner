@@ -39,6 +39,11 @@ internal class FakeTalkScheduleRepository(slots: List<TalkSlot> = emptyList()) :
         return observeError?.let { error -> flow { throw error } } ?: slots
     }
 
+    override fun observeAll(congregation: CongregationRef): Flow<List<TalkSlot>> {
+        requestedCongregation = congregation
+        return observeError?.let { error -> flow { throw error } } ?: slots
+    }
+
     override suspend fun saveSlot(congregation: CongregationRef, slot: TalkSlot): Result<TalkSlot> {
         requestedCongregation = congregation
         saveGate?.await()

@@ -9,6 +9,9 @@ interface TalkScheduleRepository {
     /** Alle Termine des Kalenderjahres, aufsteigend nach Datum. */
     fun observeYear(congregation: CongregationRef, year: Int): Flow<List<TalkSlot>>
 
+    /** Alle Termine der Versammlung über alle Jahre, aufsteigend nach Datum (Grundlage der Vortragshistorie). */
+    fun observeAll(congregation: CongregationRef): Flow<List<TalkSlot>>
+
     suspend fun saveSlot(congregation: CongregationRef, slot: TalkSlot): Result<TalkSlot>
 
     /**

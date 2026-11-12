@@ -1,9 +1,9 @@
 package de.geosphere.congregationplaner.talk.di
 
 import de.geosphere.congregationplaner.talk.data.createTalkCatalogRepository
-import de.geosphere.congregationplaner.talk.data.createTalkHistoryRepository
+import de.geosphere.congregationplaner.talk.data.createTalkScheduleRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkCatalogRepository
-import de.geosphere.congregationplaner.talk.domain.repository.TalkHistoryRepository
+import de.geosphere.congregationplaner.talk.domain.repository.TalkScheduleRepository
 import de.geosphere.congregationplaner.talk.presentation.history.TalkHistoryViewModel
 import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Provides
@@ -15,6 +15,7 @@ interface TalkHistoryGraph {
     @Provides
     fun provideTalkCatalogRepository(): TalkCatalogRepository = createTalkCatalogRepository()
 
+    // Die Historie wird aus den Terminen berechnet.
     @Provides
-    fun provideTalkHistoryRepository(): TalkHistoryRepository = createTalkHistoryRepository()
+    fun provideTalkScheduleRepository(): TalkScheduleRepository = createTalkScheduleRepository()
 }

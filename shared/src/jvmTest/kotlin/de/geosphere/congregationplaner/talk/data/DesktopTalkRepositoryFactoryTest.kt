@@ -10,6 +10,5 @@ class DesktopTalkRepositoryFactoryTest {
         assertIs<FirestoreRestWeekEventRepository>(createWeekEventRepository())
         assertIs<FirestoreRestTalkCatalogRepository>(createTalkCatalogRepository())
         assertIs<FirestoreRestExternalSpeakerDirectoryRepository>(createExternalSpeakerDirectoryRepository())
-        assertIs<FirestoreRestTalkHistoryRepository>(createTalkHistoryRepository())
     }
 }

@@ -15,14 +15,12 @@ import de.geosphere.congregationplaner.talk.domain.permission.TalkReferenceDataP
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveExternalCircuitUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveExternalCongregationUseCase
-import de.geosphere.congregationplaner.talk.domain.usecase.SaveTalkHistoryEntryUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveTalkUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveVisitingSpeakerUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveWeekEventUseCase
 import de.geosphere.congregationplaner.talk.testing.FakeExternalSpeakerDirectoryRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
-import de.geosphere.congregationplaner.talk.testing.FakeTalkHistoryRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
 import de.geosphere.congregationplaner.talk.testing.FakeWeekEventRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
@@ -118,18 +116,16 @@ class ImportUseCasesTest {
     }
 
     @Test
-    fun scheduleWritesHistoryOnlyForSlotsThatWereSaved() = runBlocking {
+    fun scheduleWritesNewSpeakersAndOnlyValidSlots() = runBlocking {
         val directory = FakeExternalSpeakerDirectoryRepository(
             circuits = listOf(ExternalCircuit("7", "Nord")),
             congregations = listOf(ExternalCongregation("20", "7", "Musterstadt")),
         )
         val schedule = FakeTalkScheduleRepository()
-        val history = FakeTalkHistoryRepository()
         val policy = TalkSchedulePermissionPolicy()
         val useCase = ImportTalkScheduleUseCase(
             SaveVisitingSpeakerUseCase(directory, policy),
             SaveTalkSlotUseCase(schedule, policy),
-            SaveTalkHistoryEntryUseCase(history, policy),
         )
         val good = TalkSlot(LocalDate(2023, 1, 1), LocalTime(9, 30), talkNumber = 12, talkTitle = "Zwölf")
         val bad = TalkSlot(LocalDate(2023, 1, 8), LocalTime(9, 30), talkNumber = 45, talkTitle = "") // invalid
@@ -141,12 +137,10 @@ class ImportUseCasesTest {
                 newSpeakers = listOf(VisitingSpeaker("99", "20", "Neu")),
                 warnings = emptyList(),
             ),
-            existingHistory = emptyList(),
         )
 
         assertEquals(listOf(good), schedule.savedSlots)
-        assertEquals(listOf(12), history.savedEntries.map { it.talkNumber })
-        assertEquals(3, report.created) // speaker, slot, history
+        assertEquals(2, report.created) // speaker, slot
         assertEquals(1, report.failures.size)
     }
 
@@ -157,12 +151,11 @@ class ImportUseCasesTest {
         val useCase = ImportTalkScheduleUseCase(
             SaveVisitingSpeakerUseCase(FakeExternalSpeakerDirectoryRepository(), policy),
             SaveTalkSlotUseCase(schedule, policy),
-            SaveTalkHistoryEntryUseCase(FakeTalkHistoryRepository(), policy),
         )
         val slot = TalkSlot(LocalDate(2023, 1, 1), LocalTime(9, 30))
 
         val report =
-            useCase(member, TalkScheduleImport(plan(slot to ImportKind.CREATE), emptyList(), emptyList()), emptyList())
+            useCase(member, TalkScheduleImport(plan(slot to ImportKind.CREATE), emptyList(), emptyList()))
 
         assertTrue(schedule.savedSlots.isEmpty())
         assertEquals(0, report.created)

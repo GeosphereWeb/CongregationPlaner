@@ -284,7 +284,7 @@ Für den Import in die Online-Datenbank die Desktop-App mit `FIREBASE_USE_EMULAT
 | 1 | `tblWochenereignis.xlsx` | Wochenereignisse | globaler Admin |
 | 2 | `Export_tblVortaege.xlsx` | Vortragsliste | globaler Admin |
 | 3 | `Export_Kreis-Versl-Redner-Vortraege.xlsx` | Kreise, Versammlungen, Redner mit Vorträgen | Vortragsplaner der Ziel-Versammlung |
-| 4 | `Export_Vortragsplanung.xlsx` | Termine und Vortragshistorie | Vortragsplaner der Ziel-Versammlung |
+| 4 | `Export_Vortragsplanung.xlsx` | Termine (die Vortragshistorie folgt daraus) | Vortragsplaner der Ziel-Versammlung |
 
 Ablauf je Datei: wählen, Vorschau prüfen (anlegen / ändern / unverändert, Fehlerzeilen mit Zeilennummer), „Importieren“,
 Bericht lesen. Vor der Bestätigung wird nichts geschrieben.
