@@ -1,12 +1,12 @@
 package de.geosphere.congregationplaner.talk.presentation.history
 
 import de.geosphere.congregationplaner.talk.domain.model.Talk
-import de.geosphere.congregationplaner.talk.domain.model.TalkHistoryEntry
+import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkCatalogUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkHistoryUseCase
 import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
-import de.geosphere.congregationplaner.talk.testing.FakeTalkHistoryRepository
+import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.testing.testCongregation
@@ -16,6 +16,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -42,18 +43,18 @@ class TalkHistoryViewModelTest {
     private val autumn = LocalDate(2026, 10, 25)
 
     private lateinit var catalog: FakeTalkCatalogRepository
-    private lateinit var history: FakeTalkHistoryRepository
+    private lateinit var schedule: FakeTalkScheduleRepository
     private lateinit var viewModel: TalkHistoryViewModel
 
     @BeforeTest
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         catalog = FakeTalkCatalogRepository(listOf(second, first))
-        history = FakeTalkHistoryRepository(listOf(TalkHistoryEntry(1, listOf(spring, autumn))))
+        schedule = FakeTalkScheduleRepository(listOf(held(1, spring), held(1, autumn)))
         val policy = TalkSchedulePermissionPolicy()
         viewModel = TalkHistoryViewModel(
             ObserveTalkCatalogUseCase(catalog),
-            ObserveTalkHistoryUseCase(history),
+            ObserveTalkHistoryUseCase(schedule),
             policy,
         )
     }
@@ -64,6 +65,16 @@ class TalkHistoryViewModelTest {
     }
 
     private val state get() = viewModel.uiState.value
+
+    private fun held(number: Int, day: LocalDate, lastName: String? = null, firstName: String? = null) = TalkSlot(
+        date = day,
+        time = LocalTime(10, 0),
+        talkNumber = number,
+        talkTitle = "Vortrag $number",
+        speakerMemberId = lastName?.let { "m-$it" },
+        speakerLastName = lastName,
+        speakerFirstName = firstName,
+    )
 
     @Test
     fun `planner sees every talk with its last held day or none`() {
@@ -139,7 +150,7 @@ class TalkHistoryViewModelTest {
         viewModel.selectTalk(second)
         assertNull(state.selected?.entry)
 
-        history.entries.value = history.entries.value + TalkHistoryEntry(2, listOf(autumn), listOf(autumn))
+        schedule.slots.value = schedule.slots.value + held(2, autumn)
 
         assertEquals(listOf(autumn), state.selected?.entry?.heldOn)
     }
@@ -189,9 +200,10 @@ class TalkHistoryViewModelTest {
 
     @Test
     fun `groups follow the frequency and the speaker search applies at once`() {
-        history.entries.value = listOf(
-            TalkHistoryEntry(1, listOf(spring, autumn), speakers = mapOf(autumn to "Muster, Max")),
-            TalkHistoryEntry(2, listOf(spring), speakers = mapOf(spring to "Berg, Lea")),
+        schedule.slots.value = listOf(
+            held(1, LocalDate(2025, 3, 2)),
+            held(1, autumn, "Muster", "Max"),
+            held(2, spring, "Berg", "Lea"),
         )
         viewModel.onCurrentUserChanged(planner)
 

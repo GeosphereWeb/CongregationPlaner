@@ -9,7 +9,6 @@ import de.geosphere.congregationplaner.importer.domain.model.PlanEntry
 import de.geosphere.congregationplaner.importer.domain.model.kindFor
 import de.geosphere.congregationplaner.talk.domain.model.ExternalDirectory
 import de.geosphere.congregationplaner.talk.domain.model.Talk
-import de.geosphere.congregationplaner.talk.domain.model.TalkHistoryEntry
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
@@ -180,32 +179,4 @@ private fun createSpeaker(id: String, row: ImportRow, run: ScheduleRun): Visitin
     }
     run.newSpeakers[id] = speaker
     return speaker
-}
-
-/**
- * The history that follows from the slots that will be written (create or update): each held talk gets its day, as
- * planned day with the speaker's name, merged into the entry that already exists.
- */
-fun planTalkHistory(slots: ImportPlan<TalkSlot>, existing: List<TalkHistoryEntry>): ImportPlan<TalkHistoryEntry> {
-    val written = slots.entries.filter { it.kind != ImportKind.SKIP }.map { it.item }
-        .filter { it.talkNumber != null && !it.talkCancelled }
-    val entries = written.groupBy { it.talkNumber }.map { (number, talkSlots) ->
-        val current = existing.firstOrNull { it.talkNumber == number }
-        val wanted = talkSlots.fold(current ?: TalkHistoryEntry(requireNotNull(number), emptyList())) { entry, slot ->
-            entry.withDay(slot)
-        }
-        PlanEntry(wanted, kindFor(current, wanted))
-    }.sortedBy { it.item.talkNumber }
-    return ImportPlan(entries, emptyList())
-}
-
-private fun TalkHistoryEntry.withDay(slot: TalkSlot): TalkHistoryEntry {
-    val days = (heldOn + slot.date).distinct().sorted().takeLast(TalkHistoryEntry.MAX_DATES)
-    val name = slot.externalSpeaker?.displayName
-    val named = if (name == null) speakers - slot.date else speakers + (slot.date to name)
-    return copy(
-        heldOn = days,
-        plannedOn = (plannedOn + slot.date).distinct().sorted().takeLast(TalkHistoryEntry.MAX_DATES),
-        speakers = named.filterKeys { it in days },
-    )
 }

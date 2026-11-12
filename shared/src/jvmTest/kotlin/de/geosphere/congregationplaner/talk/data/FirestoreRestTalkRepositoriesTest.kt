@@ -54,6 +54,25 @@ class FirestoreRestTalkRepositoriesTest {
     }
 
     @Test
+    fun `observeAll keeps every year and sorts by date`() = runWithServer(
+        responder = {
+            FakeResponse(
+                200,
+                """{"documents":[${document("2027-01-03")},${document("2024-11-01")},${document("2026-10-25")}]}""",
+            )
+        },
+    ) { server ->
+        val slots = FirestoreRestTalkScheduleRepository(idTokenProvider = { "token-123" })
+            .observeAll(congregation).first()
+
+        assertEquals(
+            listOf(LocalDate(2024, 11, 1), LocalDate(2026, 10, 25), LocalDate(2027, 1, 3)),
+            slots.map { it.date },
+        )
+        assertEquals(slotsPath, server.requests.single().path)
+    }
+
+    @Test
     fun `observeYear follows the page token to read every page`() = runWithServer(
         responder = { request ->
             if (request.query.orEmpty().contains("pageToken=next%2F1")) {

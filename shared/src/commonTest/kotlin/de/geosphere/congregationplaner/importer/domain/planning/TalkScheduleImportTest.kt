@@ -8,16 +8,15 @@ import de.geosphere.congregationplaner.talk.domain.model.ExternalCircuit
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCongregation
 import de.geosphere.congregationplaner.talk.domain.model.ExternalDirectory
 import de.geosphere.congregationplaner.talk.domain.model.Talk
-import de.geosphere.congregationplaner.talk.domain.model.TalkHistoryEntry
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
+import de.geosphere.congregationplaner.talk.domain.model.talkHistoryOf
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 class TalkScheduleImportTest {
     private val sunday = LocalDate(2023, 1, 1) // serial 44927
@@ -134,20 +133,18 @@ class TalkScheduleImportTest {
     }
 
     @Test
-    fun historyCollectsHeldDaysWithSpeakerAndIgnoresCancelledAndSkippedSlots() {
+    fun historyFollowsFromImportedSlotsWithSpeakerAndWithoutCancelledTalks() {
         val slots = planTalkSchedule(
             table(full(), full(serial = "44934", event = "2"), full(serial = "44941")),
             context(),
-        ).slots
-        val history = planTalkHistory(slots, listOf(TalkHistoryEntry(12, listOf(LocalDate(2020, 1, 5)))))
-        val entry = history.entries.single()
-        assertEquals(ImportKind.UPDATE, entry.kind)
-        assertEquals(listOf(LocalDate(2020, 1, 5), sunday, LocalDate(2023, 1, 15)), entry.item.heldOn)
-        assertEquals(listOf(sunday, LocalDate(2023, 1, 15)), entry.item.plannedOn)
-        assertEquals("Berg, Lea (Musterstadt)", entry.item.speakers[sunday])
-        assertNull(entry.item.speakers[LocalDate(2023, 1, 8)])
-        val skipped = slots.copy(entries = slots.entries.map { it.copy(kind = ImportKind.SKIP) })
-        assertTrue(planTalkHistory(skipped, emptyList()).entries.isEmpty())
+        ).slots.entries.map { it.item }
+
+        val entry = talkHistoryOf(slots).single()
+
+        assertEquals(12, entry.talkNumber)
+        assertEquals(listOf(sunday, LocalDate(2023, 1, 15)), entry.heldOn)
+        assertEquals("Berg, Lea (Musterstadt)", entry.speakers[sunday])
+        assertNull(entry.speakers[LocalDate(2023, 1, 8)])
     }
 
     @Test

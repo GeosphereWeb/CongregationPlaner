@@ -4,13 +4,11 @@ import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCircuit
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCongregation
 import de.geosphere.congregationplaner.talk.domain.model.Talk
-import de.geosphere.congregationplaner.talk.domain.model.TalkHistoryEntry
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.repository.ExternalSpeakerDirectoryRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkCatalogRepository
-import de.geosphere.congregationplaner.talk.domain.repository.TalkHistoryRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkScheduleRepository
 import de.geosphere.congregationplaner.talk.domain.repository.WeekEventRepository
 import kotlinx.coroutines.flow.Flow
@@ -27,12 +25,7 @@ expect fun createTalkCatalogRepository(): TalkCatalogRepository
 
 expect fun createExternalSpeakerDirectoryRepository(): ExternalSpeakerDirectoryRepository
 
-expect fun createTalkHistoryRepository(): TalkHistoryRepository
-
 internal const val TALK_SCHEDULE_SUBCOLLECTION = "talkSchedule"
-
-/** Wann welcher Vortrag in der Versammlung gehalten wurde; ein Dokument je Vortragsnummer. */
-internal const val TALK_HISTORY_SUBCOLLECTION = "talkHistory"
 
 /** Verzeichnis externer Redner (Kreis → Versammlung → Redner), je eigener Versammlung gepflegt. */
 internal const val EXTERNAL_CIRCUITS_SUBCOLLECTION = "externalCircuits"
@@ -46,8 +39,6 @@ internal const val WEEK_EVENTS_COLLECTION_PATH = "weekEvents"
 internal const val TALK_CATALOG_COLLECTION_PATH = "talkCatalog"
 
 internal val CongregationRef.talkSchedulePath: String get() = "$documentPath/$TALK_SCHEDULE_SUBCOLLECTION"
-
-internal val CongregationRef.talkHistoryPath: String get() = "$documentPath/$TALK_HISTORY_SUBCOLLECTION"
 
 internal val CongregationRef.externalCircuitsPath: String get() = "$documentPath/$EXTERNAL_CIRCUITS_SUBCOLLECTION"
 
@@ -65,6 +56,10 @@ fun unavailableTalkScheduleRepository(platform: String): TalkScheduleRepository 
         Result.failure(UnsupportedOperationException("Firestore is not configured for $platform."))
 
     override fun observeYear(congregation: CongregationRef, year: Int): Flow<List<TalkSlot>> = flow {
+        throw UnsupportedOperationException("Firestore is not configured for $platform.")
+    }
+
+    override fun observeAll(congregation: CongregationRef): Flow<List<TalkSlot>> = flow {
         throw UnsupportedOperationException("Firestore is not configured for $platform.")
     }
 
@@ -106,20 +101,6 @@ fun unavailableTalkCatalogRepository(platform: String): TalkCatalogRepository = 
     override suspend fun save(talk: Talk): Result<Talk> = unavailable()
 
     override suspend fun delete(number: Int): Result<Unit> = unavailable()
-}
-
-fun unavailableTalkHistoryRepository(platform: String): TalkHistoryRepository = object : TalkHistoryRepository {
-    private fun <T> unavailable(): Result<T> =
-        Result.failure(UnsupportedOperationException("Firestore is not configured for $platform."))
-
-    override fun observeAll(congregation: CongregationRef): Flow<List<TalkHistoryEntry>> = flow {
-        throw UnsupportedOperationException("Firestore is not configured for $platform.")
-    }
-
-    override suspend fun save(congregation: CongregationRef, entry: TalkHistoryEntry): Result<TalkHistoryEntry> =
-        unavailable()
-
-    override suspend fun delete(congregation: CongregationRef, talkNumber: Int): Result<Unit> = unavailable()
 }
 
 fun unavailableExternalSpeakerDirectoryRepository(platform: String): ExternalSpeakerDirectoryRepository =
