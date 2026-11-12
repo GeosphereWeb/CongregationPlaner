@@ -1,6 +1,5 @@
 package de.geosphere.congregationplaner.talk.presentation.picker
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,9 +21,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.MemberRef
+import de.geosphere.congregationplaner.talk.domain.model.PlanningUsage
+import de.geosphere.congregationplaner.talk.domain.model.TalkPlanningSettings
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
+import kotlinx.datetime.LocalDate
 
 /** Callbacks der Redner-Auswahl; gebündelt, damit die Composables überschaubare Signaturen behalten. */
 internal data class SpeakerActions(
@@ -36,7 +38,9 @@ internal data class SpeakerActions(
 
 /**
  * Auswahl des Redners: eigene Redner (nur mit der Berechtigung, die Mitglieder zu lesen) und externe Redner aus dem
- * Verzeichnis, das in der eigenen Verwaltung gepflegt wird.
+ * Verzeichnis, das in der eigenen Verwaltung gepflegt wird. Vorgeschlagen werden zuerst die Redner, die am längsten
+ * nicht eingeplant sind; Redner, die der Stichtag aus [usage] sperrt, lassen sich einblenden. Die externen Redner sind
+ * schon auf den gewählten Vortrag eingeschränkt (siehe [offering]).
  */
 @Composable
 internal fun SpeakerPickerDialog(
@@ -45,10 +49,22 @@ internal fun SpeakerPickerDialog(
     canViewMembers: Boolean,
     actions: SpeakerActions,
     onDismiss: () -> Unit,
+    usage: PlanningUsage = PlanningUsage(),
 ) {
     var query by remember { mutableStateOf("") }
+    var showBlocked by remember { mutableStateOf(false) }
     val matchingMembers = remember(members, query) { members.matching(query) }
     val matchingExternal = remember(externalSpeakers, query) { externalSpeakers.matchingExternal(query) }
+    val memberSuggestions = remember(matchingMembers, usage, showBlocked) {
+        matchingMembers.suggestedMembers(usage, showBlocked)
+    }
+    val externalSuggestions = remember(matchingExternal, usage, showBlocked) {
+        matchingExternal.suggestedExternal(usage, showBlocked)
+    }
+    val blockedCount = remember(matchingMembers, matchingExternal, usage) {
+        matchingMembers.count { usage.isMemberBlocked(it.memberId) } +
+            matchingExternal.count { usage.isExternalBlocked(it.id) }
+    }
     val freeName = freeEntryOf(query, TalkSlot.MAX_PERSON_NAME_LENGTH)
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -62,30 +78,23 @@ internal fun SpeakerPickerDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
+                if (blockedCount > 0) ShowBlockedToggle(blockedCount, showBlocked) { showBlocked = it }
                 LazyColumn(modifier = Modifier.heightIn(max = 320.dp)) {
                     if (canViewMembers) {
                         item { SectionTitle("Eigene Redner") }
-                        if (matchingMembers.isEmpty()) item { Text("Kein Mitglied gefunden.") }
-                        items(matchingMembers, key = { "member-${it.memberId}" }) { member ->
-                            Text(
-                                member.displayName,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { actions.onSelectMember(member) }
-                                    .padding(vertical = 12.dp),
-                            )
+                        if (memberSuggestions.isEmpty()) item { Text("Kein freies Mitglied gefunden.") }
+                        items(memberSuggestions, key = { "member-${it.item.memberId}" }) { suggestion ->
+                            SuggestionRow(suggestion.item.displayName, suggestion.note, suggestion.blocked) {
+                                actions.onSelectMember(suggestion.item)
+                            }
                         }
                     }
                     item { SectionTitle("Externe Redner") }
-                    if (matchingExternal.isEmpty()) item { Text("Kein externer Redner gefunden.") }
-                    items(matchingExternal, key = { "external-${it.id}" }) { speaker ->
-                        Text(
-                            speaker.displayName,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { actions.onSelectExternal(speaker) }
-                                .padding(vertical = 12.dp),
-                        )
+                    if (externalSuggestions.isEmpty()) item { Text("Kein freier externer Redner gefunden.") }
+                    items(externalSuggestions, key = { "external-${it.item.id}" }) { suggestion ->
+                        SuggestionRow(suggestion.item.displayName, suggestion.note, suggestion.blocked) {
+                            actions.onSelectExternal(suggestion.item)
+                        }
                     }
                 }
             }
@@ -108,10 +117,14 @@ private fun SectionTitle(text: String) {
 @Composable
 private fun SpeakerPickerDialogPreview() = PreviewThemeWrapper {
     SpeakerPickerDialog(
-        members = listOf(MemberRef("1", "Muster", "Max")),
+        members = listOf(MemberRef("1", "Muster", "Max"), MemberRef("2", "Beispiel", "Ben")),
         externalSpeakers = listOf(ExternalSpeaker("e1", "Beispiel", "Tim", "Nord")),
         canViewMembers = true,
         actions = SpeakerActions(),
         onDismiss = {},
+        usage = PlanningUsage(
+            settings = TalkPlanningSettings(speakerFreeSince = LocalDate(2025, 6, 1)),
+            memberLastPlanned = mapOf("1" to LocalDate(2026, 2, 1), "2" to LocalDate(2024, 10, 6)),
+        ),
     )
 }
