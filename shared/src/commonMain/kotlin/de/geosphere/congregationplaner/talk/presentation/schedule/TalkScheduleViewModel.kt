@@ -43,6 +43,7 @@ class TalkScheduleViewModel(
     val picker = SlotPickerHolder(session, editor)
     val changes = SlotChangesHolder(session, slotChangeUseCases, ::changeYear)
     val yearSetup = YearSetupHolder(session, yearSetupUseCases)
+    val planningSettings = PlanningSettingsHolder(session, referenceUseCases)
     private val referenceData = ScheduleReferenceDataLoader(session, referenceUseCases)
 
     private var slotsJob: Job? = null

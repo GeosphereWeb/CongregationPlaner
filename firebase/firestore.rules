@@ -86,6 +86,11 @@ rules_version = '2';
 //     ranking: int (0..5); all of them are required
 // The rules check the form only, not whether circuitId/congregationId exist; the app does that.
 //
+// Document: region/.../congregation/{congId}/settings/talkPlanning (ADR-0028)
+// Cut-off dates of the talk planning assistant: speakerFreeSince, talkFreeSince: string 'yyyy-MM-dd' | null (both
+//   optional). Readable by planners and talk helpers of this congregation, written only by the planners; never
+//   deleted.
+//
 // Collection: weekEvents (global, identical for all congregations)
 // Document ID: free. Fields: name: string (1..100), cancelsTalk: bool.
 //   Readable by every signed-in user; written only by global admins (in the app or the console).
@@ -358,6 +363,15 @@ service cloud.firestore {
       return date.matches('^[0-9]{4}-(0[13578]|1[02])-(0[1-9]|[12][0-9]|3[01])$') ||
         date.matches('^[0-9]{4}-(0[469]|11)-(0[1-9]|[12][0-9]|30)$') ||
         date.matches('^[0-9]{4}-02-(0[1-9]|1[0-9]|2[0-9])$');
+    }
+
+    // Cut-off dates of the talk planning assistant: each an optional date (yyyy-MM-dd) or null.
+    function isValidTalkPlanningSettings(data) {
+      let speaker = data.get('speakerFreeSince', null);
+      let talk = data.get('talkFreeSince', null);
+      return data.keys().hasOnly(['speakerFreeSince', 'talkFreeSince']) &&
+        (speaker == null || (speaker is string && isValidDateId(speaker))) &&
+        (talk == null || (talk is string && isValidDateId(talk)));
     }
 
     function isValidTalkSlot(date, data) {
@@ -747,6 +761,16 @@ service cloud.firestore {
                     (canViewTalkPlanning(regionId, subregionId, branchId, countryId, circuitId, congId) &&
                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['confirmed']) &&
                       request.resource.data.confirmed is bool);
+                }
+
+                // ---------------------------------------------------------
+                // Settings of the congregation: cut-off dates of the talk planning assistant (CP-141)
+                // ---------------------------------------------------------
+                match /settings/{settingId} {
+                  allow read: if canViewTalkPlanning(regionId, subregionId, branchId, countryId, circuitId, congId);
+                  allow create, update: if settingId == 'talkPlanning' &&
+                    canPlanTalks(regionId, subregionId, branchId, countryId, circuitId, congId) &&
+                    isValidTalkPlanningSettings(request.resource.data);
                 }
 
                 // ---------------------------------------------------------
