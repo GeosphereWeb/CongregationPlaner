@@ -1,15 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Congregation Planer – Adaptive Icon (108 × 108 dp, Schutzzone Ø 66 dp) -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
     <path
-        android:pathData="M33,64V60A8,8 0 0 1 41,52H45A8,8 0 0 1 53,60V64Z"
+        android:pathData="M28,64V60.5A11,11 0 0,1 39,49.5H45A11,11 0 0,1 56,60.5V64Z"
         android:fillColor="#8E6CC8" />
     <path
-        android:pathData="M36.5,45A6.5,6.5 0 1 0 49.5,45A6.5,6.5 0 1 0 36.5,45Z"
+        android:pathData="M33,39.5A9,9 0 1,0 51,39.5A9,9 0 1,0 33,39.5Z"
         android:fillColor="#D3C4EE" />
     <path
         android:pathData="M63,59.5C63,54 59,51.6 54.6,51.1"
@@ -17,25 +16,25 @@
         android:strokeWidth="1.6"
         android:strokeLineCap="round" />
     <path
-        android:pathData="M51.4,50.9A2,2 0 1 0 55.4,50.9A2,2 0 1 0 51.4,50.9Z"
+        android:pathData="M51.4,50.9A2,2 0 1,0 55.4,50.9A2,2 0 1,0 51.4,50.9Z"
         android:fillColor="#A3A8F0" />
     <path
-        android:pathData="M34,62H52V77.5H37.5A1.5,1.5 0 0 1 36,76.2Z"
+        android:pathData="M34,62H52V77.5H37.5A1.5,1.5 0 0,1 36,76.2Z"
         android:fillColor="#7A55B5" />
     <path
-        android:pathData="M44.2,62H57.8A1.2,1.2 0 0 1 59,63.2V76.8A1.2,1.2 0 0 1 57.8,78H44.2A1.2,1.2 0 0 1 43,76.8V63.2A1.2,1.2 0 0 1 44.2,62Z"
+        android:pathData="M44.2,62H57.8A1.2,1.2 0 0,1 59,63.2V76.8A1.2,1.2 0 0,1 57.8,78H44.2A1.2,1.2 0 0,1 43,76.8V63.2A1.2,1.2 0 0,1 44.2,62Z"
         android:fillColor="#B9A2E0" />
     <path
-        android:pathData="M48,67H54A1,1 0 0 1 55,68V68A1,1 0 0 1 54,69H48A1,1 0 0 1 47,68V68A1,1 0 0 1 48,67Z"
+        android:pathData="M48,67H54A1,1 0 0,1 55,68V68A1,1 0 0,1 54,69H48A1,1 0 0,1 47,68V68A1,1 0 0,1 48,67Z"
         android:fillColor="#7A55B5" />
     <path
-        android:pathData="M39.3,76.6H62.7A2.3,2.3 0 0 1 65,78.9V78.9A2.3,2.3 0 0 1 62.7,81.2H39.3A2.3,2.3 0 0 1 37,78.9V78.9A2.3,2.3 0 0 1 39.3,76.6Z"
+        android:pathData="M39.3,76.6H62.7A2.3,2.3 0 0,1 65,78.9V78.9A2.3,2.3 0 0,1 62.7,81.2H39.3A2.3,2.3 0 0,1 37,78.9V78.9A2.3,2.3 0 0,1 39.3,76.6Z"
         android:fillColor="#E8ECF5" />
     <path
-        android:pathData="M31.4,59.2H70.6A2.4,2.4 0 0 1 73,61.6V61.6A2.4,2.4 0 0 1 70.6,64H31.4A2.4,2.4 0 0 1 29,61.6V61.6A2.4,2.4 0 0 1 31.4,59.2Z"
+        android:pathData="M31.4,59.2H70.6A2.4,2.4 0 0,1 73,61.6V61.6A2.4,2.4 0 0,1 70.6,64H31.4A2.4,2.4 0 0,1 29,61.6V61.6A2.4,2.4 0 0,1 31.4,59.2Z"
         android:fillColor="#E8ECF5" />
     <path
-        android:pathData="M60,28H72A6,6 0 0 1 78,34V39A6,6 0 0 1 72,45H60A6,6 0 0 1 54,39V34A6,6 0 0 1 60,28Z"
+        android:pathData="M60,28H72A6,6 0 0,1 78,34V39A6,6 0 0,1 72,45H60A6,6 0 0,1 54,39V34A6,6 0 0,1 60,28Z"
         android:fillColor="#A3A8F0" />
     <path
         android:pathData="M58.5,43L55.5,50.5L65.5,43Z"
