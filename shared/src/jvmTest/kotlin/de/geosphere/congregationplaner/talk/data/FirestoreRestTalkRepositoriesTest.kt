@@ -123,6 +123,22 @@ class FirestoreRestTalkRepositoriesTest {
     }
 
     @Test
+    fun `saveSlots writes all slots in one commit`() = runWithServer({ FakeResponse(200, "{}") }) { server ->
+        val other = TalkSlot(LocalDate(2026, 11, 1), LocalTime(10, 0), talkNumber = 12, talkTitle = "Zwölf")
+
+        val result = FirestoreRestTalkScheduleRepository(idTokenProvider = { "token-123" })
+            .saveSlots(congregation, listOf(slot, other))
+
+        assertTrue(result.isSuccess)
+        val request = server.requests.single()
+        assertEquals("POST", request.method)
+        assertEquals("${FakeFirestoreRestServer.DOCUMENTS_PATH}:commit", request.path)
+        assertTrue(request.body.contains("${congregation.talkSchedulePath}/2026-10-25"))
+        assertTrue(request.body.contains("${congregation.talkSchedulePath}/2026-11-01"))
+        assertTrue(request.body.contains(""""talkNumber":{"integerValue":"12"}"""))
+    }
+
+    @Test
     fun `createMissingSlots creates only slots that do not exist yet`() = runWithServer(
         responder = { request ->
             // Firestore lehnt die Anlage mit 409 ab, wenn es den Termin schon gibt.

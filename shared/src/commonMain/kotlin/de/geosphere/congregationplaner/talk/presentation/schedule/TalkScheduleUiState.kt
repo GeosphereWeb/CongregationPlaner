@@ -9,6 +9,7 @@ import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkPlanningSettings
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
+import de.geosphere.congregationplaner.talk.domain.model.hasAssignment
 import de.geosphere.congregationplaner.talk.domain.model.planningUsageOf
 import kotlinx.datetime.LocalTime
 
@@ -25,6 +26,9 @@ data class TalkSlotEditorState(
     val isDirty: Boolean get() = slot != original
 }
 
+/** Ein Termin wird umgeplant: [source] ist der Termin, dessen Vortrag wandert; [swapTarget] wartet auf „Tauschen?“. */
+data class ReassignState(val source: TalkSlot, val swapTarget: TalkSlot? = null)
+
 data class TalkScheduleUiState(
     val year: Int,
     val slots: List<TalkSlot> = emptyList(),
@@ -39,6 +43,8 @@ data class TalkScheduleUiState(
     val allSlots: List<TalkSlot> = emptyList(),
     /** Die Stichtage des Planungsassistenten der Versammlung. */
     val planningSettings: TalkPlanningSettings = TalkPlanningSettings(),
+    /** Läuft gerade das Umplanen auf einen anderen Tag, wartet die Liste auf den Zieltag. */
+    val reassign: ReassignState? = null,
     val isLoading: Boolean = true,
     val canView: Boolean = false,
     val canPlan: Boolean = false,
@@ -54,6 +60,13 @@ data class TalkScheduleUiState(
     override val isSaving: Boolean = false,
 ) : ListDetailState {
     override val hasDetail: Boolean get() = editor != null
+
+    /** Ein gespeicherter, unveränderter Termin mit Vortrag oder Redner lässt sich auf einen anderen Tag umplanen. */
+    val canStartReassign: Boolean
+        get() = canPlan &&
+            !isSaving &&
+            reassign == null &&
+            editor?.takeUnless { it.isDirty }?.original?.hasAssignment == true
 
     /** Der Editor samt Nutzung der Redner und Vorträge; der bearbeitete Termin selbst sperrt nichts. */
     val editorView: TalkSlotEditorState?

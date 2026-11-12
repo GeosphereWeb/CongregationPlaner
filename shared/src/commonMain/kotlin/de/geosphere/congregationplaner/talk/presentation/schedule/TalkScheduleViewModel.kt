@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.presentation.state.UiStateStore
+import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkYearUseCase
 import de.geosphere.congregationplaner.user.domain.model.AppUser
@@ -44,6 +45,7 @@ class TalkScheduleViewModel(
     val changes = SlotChangesHolder(session, slotChangeUseCases, ::changeYear)
     val yearSetup = YearSetupHolder(session, yearSetupUseCases)
     val planningSettings = PlanningSettingsHolder(session, referenceUseCases)
+    val reassign = ReassignHolder(session, slotChangeUseCases.reassignTalk)
     private val referenceData = ScheduleReferenceDataLoader(session, referenceUseCases)
 
     private var slotsJob: Job? = null
@@ -66,6 +68,9 @@ class TalkScheduleViewModel(
         referenceData.observe(user)
         observeSlots()
     }
+
+    /** Ein Termin in der Liste wurde angetippt: beim Umplanen ist er der Zieltag, sonst öffnet er sich. */
+    fun selectSlot(slot: TalkSlot) = if (store.value.reassign != null) reassign.pickTarget(slot) else editor.edit(slot)
 
     /** Nimmt einen Stand in den Filter auf oder heraus; mehrere Stände ergänzen sich. */
     fun toggleStatusFilter(status: SlotStatus) = store.update { state ->

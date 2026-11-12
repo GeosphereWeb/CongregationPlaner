@@ -14,6 +14,9 @@ interface TalkScheduleRepository {
 
     suspend fun saveSlot(congregation: CongregationRef, slot: TalkSlot): Result<TalkSlot>
 
+    /** Speichert alle [slots] in einem Schreibvorgang: entweder alle oder keiner (z. B. beim Tauschen). */
+    suspend fun saveSlots(congregation: CongregationRef, slots: List<TalkSlot>): Result<Unit>
+
     /**
      * Legt nur die Termine aus [slots] an, deren Datum noch keinen Termin hat; bestehende Termine bleiben
      * unverändert. Liefert die Zahl der neu angelegten Termine.

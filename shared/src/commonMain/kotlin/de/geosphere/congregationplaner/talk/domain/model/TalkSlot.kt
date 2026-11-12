@@ -160,6 +160,12 @@ sealed class TalkScheduleException(message: String) : Exception(message) {
 
     class SpeakerIsChairman : TalkScheduleException("Redner und Vorsitzender dürfen nicht dieselbe Person sein.")
 
+    class NothingToReassign : TalkScheduleException("An diesem Termin ist kein Vortrag und kein Redner eingeplant.")
+
+    class TargetCancelled : TalkScheduleException("Am gewählten Tag entfällt der Vortrag.")
+
+    class SameDay : TalkScheduleException("Bitte wähle einen anderen Tag.")
+
     class InvalidTalk :
         TalkScheduleException(
             "Der Vortrag ist ungültig: Nummer ab 1 und ein Titel mit höchstens " +
