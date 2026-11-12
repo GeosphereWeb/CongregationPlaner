@@ -21,10 +21,14 @@ class SaveTalkSlotUseCase(
         if (congregation == null || !policy.canPlanTalks(user)) {
             return Result.failure(TalkScheduleException.NotAllowed())
         }
-        val cleaned = slot.trimmed()
-        cleaned.validationError()?.let { return Result.failure(it) }
-        return repository.saveSlot(congregation, cleaned)
+        return slot.checked().fold({ repository.saveSlot(congregation, it) }, { Result.failure(it) })
     }
+}
+
+/** Der Termin ohne Leerzeichen am Rand, sofern er gültig ist; sonst der fachliche Fehler. */
+internal fun TalkSlot.checked(): Result<TalkSlot> {
+    val cleaned = trimmed()
+    return cleaned.validationError()?.let { Result.failure(it) } ?: Result.success(cleaned)
 }
 
 private fun TalkSlot.trimmed(): TalkSlot = copy(
