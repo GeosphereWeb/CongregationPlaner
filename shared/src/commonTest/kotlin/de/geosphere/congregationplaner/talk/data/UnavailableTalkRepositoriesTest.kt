@@ -4,6 +4,7 @@ import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCircuit
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCongregation
 import de.geosphere.congregationplaner.talk.domain.model.Talk
+import de.geosphere.congregationplaner.talk.domain.model.TalkPlanningSettings
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
@@ -62,6 +63,16 @@ class UnavailableTalkRepositoriesTest {
         assertIs<UnsupportedOperationException>(repository.deleteCircuit(congregation, "c1").exceptionOrNull())
         assertIs<UnsupportedOperationException>(repository.deleteCongregation(congregation, "g1").exceptionOrNull())
         assertIs<UnsupportedOperationException>(repository.deleteSpeaker(congregation, "s1").exceptionOrNull())
+    }
+
+    @Test
+    fun `unavailable talk planning settings repository fails with the platform name`(): Unit = runBlocking {
+        val repository = unavailableTalkPlanningSettingsRepository("iOS")
+
+        assertFailsWith<UnsupportedOperationException> { repository.observe(congregation).first() }
+        val save = repository.save(congregation, TalkPlanningSettings()).exceptionOrNull()
+        assertIs<UnsupportedOperationException>(save)
+        assertEquals("Firestore is not configured for iOS.", save.message)
     }
 
     @Test

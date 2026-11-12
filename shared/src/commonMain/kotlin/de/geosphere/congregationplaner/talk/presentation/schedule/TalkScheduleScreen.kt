@@ -106,6 +106,8 @@ internal data class TalkScheduleActions(
     val onDismissChangeYearTime: () -> Unit = {},
     val onDismissInfo: () -> Unit = {},
     val onToggleStatusFilter: (SlotStatus) -> Unit = {},
+    val onSpeakerFreeSinceChange: (LocalDate?) -> Unit = {},
+    val onTalkFreeSinceChange: (LocalDate?) -> Unit = {},
 )
 
 @Composable
@@ -147,6 +149,8 @@ fun TalkScheduleScreen(
             onDismissChangeYearTime = viewModel.yearSetup::dismissTime,
             onDismissInfo = viewModel::dismissInfo,
             onToggleStatusFilter = viewModel::toggleStatusFilter,
+            onSpeakerFreeSinceChange = viewModel.planningSettings::setSpeakerFreeSince,
+            onTalkFreeSinceChange = viewModel.planningSettings::setTalkFreeSince,
         ),
     )
 }
@@ -227,7 +231,18 @@ internal fun TalkScheduleContent(
 
         CollapsingHeaderColumn(
             listState = listState,
-            header = { StatusFilterRow(state.slots, state.statusFilter, actions.onToggleStatusFilter) },
+            header = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    if (state.canPlan) {
+                        PlanningCutoffRow(
+                            state.planningSettings,
+                            actions.onSpeakerFreeSinceChange,
+                            actions.onTalkFreeSinceChange,
+                        )
+                    }
+                    StatusFilterRow(state.slots, state.statusFilter, actions.onToggleStatusFilter)
+                }
+            },
             modifier = Modifier.weight(1f).fillMaxWidth(),
         ) {
             ListDetailPaneScaffold(
