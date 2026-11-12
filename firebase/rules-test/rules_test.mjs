@@ -222,6 +222,21 @@ const HIST = `${CONG}/talkHistory`;
 await expect('Planer schreibt keine talkHistory mehr', api('PATCH', `${HIST}/7`, fields({ heldOn: ['2026-03-01'] }), planner.token), false);
 await expect('Planer liest keine talkHistory mehr', api('GET', HIST, undefined, planner.token), false);
 
+// ---------- Stichtage des Planungsassistenten (CP-141) ----------
+const SETTINGS = `${CONG}/settings`;
+const putSettings = (id, data, token = planner.token) => api('PATCH', `${SETTINGS}/${id}`, fields(data), token);
+await expect('Planer setzt Stichtage', putSettings('talkPlanning', { speakerFreeSince: '2025-11-01', talkFreeSince: '2024-01-15' }), true);
+await expect('Planer setzt Stichtage zurück', putSettings('talkPlanning', { speakerFreeSince: null, talkFreeSince: null }), true);
+await expect('Planer setzt nur einen Stichtag', putSettings('talkPlanning', { talkFreeSince: '2024-01-15' }), true);
+await expect('Stichtag mit ungültigem Datum', putSettings('talkPlanning', { speakerFreeSince: '2025-13-01' }), false);
+await expect('Stichtag als Zahl', putSettings('talkPlanning', { speakerFreeSince: 20251101 }), false);
+await expect('Stichtage mit Zusatzfeld', putSettings('talkPlanning', { speakerFreeSince: null, x: 'y' }), false);
+await expect('anderes Einstellungsdokument', putSettings('other', { speakerFreeSince: null }), false);
+await expect('Stichtage lesen als Planer', api('GET', `${SETTINGS}/talkPlanning`, undefined, planner.token), true);
+await expect('Stichtage lesen ohne Planerrolle', api('GET', `${SETTINGS}/talkPlanning`, undefined, plain.token), false);
+await expect('Stichtage setzen ohne Planerrolle', putSettings('talkPlanning', { speakerFreeSince: null }, plain.token), false);
+await expect('Planer löscht die Stichtage nicht', api('DELETE', `${SETTINGS}/talkPlanning`, undefined, planner.token), false);
+
 // ---------- Mitglieder lesen (Planerrollen) ----------
 const MEMBERS = `${CONG}/members`;
 await expect('Vortragsplaner listet Mitglieder', api('GET', MEMBERS, undefined, planner.token), true);
@@ -630,6 +645,8 @@ await expect('Helfer liest die externen Kreise', api('GET', EXT_CIRCUITS, undefi
 await expect('Helfer liest die externen Versammlungen', api('GET', EXT_CONGREGATIONS, undefined, helper.token), true);
 await expect('Helfer liest die externen Redner', api('GET', EXT_SPEAKERS, undefined, helper.token), true);
 await expect('Helfer liest keine talkHistory', api('GET', HIST, undefined, helper.token), false);
+await expect('Helfer liest die Stichtage', api('GET', `${CONG}/settings/talkPlanning`, undefined, helper.token), true);
+await expect('Helfer setzt keine Stichtage', api('PATCH', `${CONG}/settings/talkPlanning`, fields({ speakerFreeSince: null }), helper.token), false);
 await expect('Helfer listet die Mitglieder', api('GET', MEMBERS, undefined, helper.token), true);
 await expect('Helfer liest ein fremdes Mitglied', api('GET', `${MEMBERS}/${planner.uid}`, undefined, helper.token), true);
 
