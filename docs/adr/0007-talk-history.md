@@ -1,7 +1,7 @@
 # ADR-0007: Vortragshistorie je Versammlung als eigene Subcollection
 
 ## Status
-Accepted
+Superseded by [ADR-0027](0027-talk-history-derived-from-schedule.md)
 
 ## Context
 Die Planung soll später kürzlich gehaltene Vorträge nicht vorschlagen und erkennen, welche Vorträge noch nie gehalten wurden. Die Termine in `talkSchedule` enthalten zwar Vortragsnummern, doch früher gehaltene Vorträge (vor der Nutzung der App) lassen sich dort nicht nachtragen, und die Auswertung müsste alle Jahre lesen.

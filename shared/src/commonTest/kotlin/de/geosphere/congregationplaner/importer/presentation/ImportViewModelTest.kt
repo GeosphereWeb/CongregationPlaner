@@ -16,14 +16,12 @@ import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermis
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalDirectoryUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveExternalCircuitUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveExternalCongregationUseCase
-import de.geosphere.congregationplaner.talk.domain.usecase.SaveTalkHistoryEntryUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveTalkUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveVisitingSpeakerUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveWeekEventUseCase
 import de.geosphere.congregationplaner.talk.testing.FakeExternalSpeakerDirectoryRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
-import de.geosphere.congregationplaner.talk.testing.FakeTalkHistoryRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
 import de.geosphere.congregationplaner.talk.testing.FakeWeekEventRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
@@ -80,13 +78,11 @@ class ImportViewModelTest {
 
     private fun viewModel(source: ImportFileSource): ImportViewModel {
         val events = FakeWeekEventRepository()
-        val history = FakeTalkHistoryRepository()
         val prepare = PrepareImportUseCase(
             events,
             catalog,
             ObserveExternalDirectoryUseCase(directory),
             schedule,
-            history,
             FakeCongregationMetadataRepository(listOf(CongregationMetadata(id = testCongregation.congregationId))),
             ImportReferenceDataUseCase(SaveWeekEventUseCase(events, reference), SaveTalkUseCase(catalog, reference)),
             ImportSpeakerDirectoryUseCase(
@@ -97,7 +93,6 @@ class ImportViewModelTest {
             ImportTalkScheduleUseCase(
                 SaveVisitingSpeakerUseCase(directory, planning),
                 SaveTalkSlotUseCase(schedule, planning),
-                SaveTalkHistoryEntryUseCase(history, planning),
             ),
         )
         return ImportViewModel(source, prepare, reference, planning)

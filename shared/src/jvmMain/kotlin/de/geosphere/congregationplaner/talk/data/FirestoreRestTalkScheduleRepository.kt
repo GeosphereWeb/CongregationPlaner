@@ -41,6 +41,12 @@ internal class FirestoreRestTalkScheduleRepository(
             .mapNotNull { document -> runCatching { document.toSlot() }.getOrNull() }
     }
 
+    override fun observeAll(congregation: CongregationRef): Flow<List<TalkSlot>> = pollingFlow {
+        client.listAllDocuments(congregation.talkSchedulePath)
+            .sortedBy { it.id }
+            .mapNotNull { document -> runCatching { document.toSlot() }.getOrNull() }
+    }
+
     override suspend fun saveSlot(congregation: CongregationRef, slot: TalkSlot): Result<TalkSlot> = runCatchingIo {
         // PATCH ohne updateMask ersetzt das Dokument und legt es bei Bedarf an.
         client.request("PATCH", client.documentUrl(congregation.talkSchedulePath, slot.id), slot.toBody())

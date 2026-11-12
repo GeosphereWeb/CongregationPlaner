@@ -4,7 +4,6 @@ import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCircuit
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCongregation
 import de.geosphere.congregationplaner.talk.domain.model.Talk
-import de.geosphere.congregationplaner.talk.domain.model.TalkHistoryEntry
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
@@ -26,6 +25,7 @@ class UnavailableTalkRepositoriesTest {
         val repository = unavailableTalkScheduleRepository("iOS")
 
         assertFailsWith<UnsupportedOperationException> { repository.observeYear(congregation, 2026).first() }
+        assertFailsWith<UnsupportedOperationException> { repository.observeAll(congregation).first() }
         val save = repository.saveSlot(congregation, slot).exceptionOrNull()
         assertIs<UnsupportedOperationException>(save)
         assertEquals("Firestore is not configured for iOS.", save.message)
@@ -62,16 +62,6 @@ class UnavailableTalkRepositoriesTest {
         assertIs<UnsupportedOperationException>(repository.deleteCircuit(congregation, "c1").exceptionOrNull())
         assertIs<UnsupportedOperationException>(repository.deleteCongregation(congregation, "g1").exceptionOrNull())
         assertIs<UnsupportedOperationException>(repository.deleteSpeaker(congregation, "s1").exceptionOrNull())
-    }
-
-    @Test
-    fun `unavailable talk history repository fails with the platform name`(): Unit = runBlocking {
-        val repository = unavailableTalkHistoryRepository("iOS")
-
-        assertFailsWith<UnsupportedOperationException> { repository.observeAll(congregation).first() }
-        val entry = TalkHistoryEntry(1, listOf(LocalDate(2026, 3, 1)))
-        assertIs<UnsupportedOperationException>(repository.save(congregation, entry).exceptionOrNull())
-        assertIs<UnsupportedOperationException>(repository.delete(congregation, 1).exceptionOrNull())
     }
 
     @Test
