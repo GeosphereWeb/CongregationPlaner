@@ -56,20 +56,33 @@ private fun TalkSlot.hasValidWeekEvent(): Boolean = if (weekEventId == null) {
         weekEventName.length <= TalkSlot.MAX_WEEK_EVENT_NAME_LENGTH
 }
 
-private fun TalkSlot.hasValidTalk(): Boolean = if (talkNumber == null) {
-    talkTitle == null
-} else {
-    talkNumber >= 1 && !talkTitle.isNullOrEmpty() && talkTitle.length <= TalkSlot.MAX_TALK_TITLE_LENGTH
+// Ohne Nummer ist der Titel ein frei eingetragener Vortrag; er darf auch fehlen.
+private fun TalkSlot.hasValidTalk(): Boolean = when {
+    talkNumber == null -> talkTitle == null || talkTitle.isValidTalkTitle()
+    else -> talkNumber >= 1 && talkTitle != null && talkTitle.isValidTalkTitle()
 }
 
-// Ein Mitglied oder ein externer Redner mit Versammlung, nie beides.
+private fun String.isValidTalkTitle(): Boolean = isNotEmpty() && length <= TalkSlot.MAX_TALK_TITLE_LENGTH
+
+// Ein Mitglied, ein externer Redner mit Versammlung oder ein frei eingetragener Name, nie mehreres.
 private fun TalkSlot.hasValidSpeaker(): Boolean = when {
     speakerMemberId != null && externalSpeakerId != null -> false
     externalSpeakerId != null ->
         hasValidMember(externalSpeakerId, speakerLastName, speakerFirstName) &&
             !speakerCongregation.isNullOrEmpty() &&
             speakerCongregation.length <= TalkSlot.MAX_PERSON_NAME_LENGTH
-    else -> speakerCongregation == null && hasValidMember(speakerMemberId, speakerLastName, speakerFirstName)
+    speakerMemberId != null ->
+        speakerCongregation == null && hasValidMember(speakerMemberId, speakerLastName, speakerFirstName)
+    else -> speakerCongregation == null && hasValidFreeName(speakerLastName, speakerFirstName)
+}
+
+// Ein frei eingetragener Redner: Name gesetzt (Vorname darf leer sein) oder beides leer.
+private fun hasValidFreeName(lastName: String?, firstName: String?): Boolean = if (lastName == null) {
+    firstName == null
+} else {
+    lastName.isNotEmpty() &&
+        firstName != null &&
+        maxOf(lastName.length, firstName.length) <= TalkSlot.MAX_PERSON_NAME_LENGTH
 }
 
 // Mitglied-ID, Familienname und Vorname gehören zusammen (alle gesetzt oder alle leer).

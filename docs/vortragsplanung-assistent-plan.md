@@ -44,9 +44,10 @@ geplanter Vortrag mit Redner lässt sich leicht auf einen anderen Tag umplanen.
    Historie-Ansicht liest die Termine; Nachtragen legt einen Termin in der Vergangenheit an. Termine über
    Jahresgrenzen laden (Abfrage „ab Datum“ für Android und Desktop). ADR, Rules-Test, Deploy, Emulator-Kopie der
    Regeln, Datenbereinigung in Cloud und Emulator.
-2. **Freie Eingabe von Redner und Vortrag.** Im Auswahldialog „Nicht in der Liste? Frei eintragen“. Regeln lockern
-   (Name ohne ID, Titel ohne Nummer), Rules-Test. Freie Einträge sind als „frei eingetragen“ markiert; freie Vorträge
-   stehen in der Historie in einer Gruppe „ohne Nummer“.
+2. **Freie Eingabe von Redner und Vortrag.** Im Auswahldialog wird der Suchtext mit „„…“ frei eintragen“ übernommen.
+   Regeln lockern (Name ohne ID, Titel ohne Nummer), Rules-Test. Freie Einträge sind als „frei eingetragen“ markiert.
+   Ein freier Redner ist nur ein Name (die Versammlung kann in Klammern dahinter stehen); ein freier Vortrag hat keine
+   Nummer und erscheint deshalb nicht in der Historie nach Nummern.
 3. **Stichtage pro Versammlung.** Modell, Repository, UseCases, Regeln mit Rules-Test. Zeile oben in der Planung:
    „Redner frei seit … · Vorträge frei seit …“ mit Datumsauswahl.
 4. **Sperrlogik und Vorschläge.** Reine Funktion mit Tests (Stichtag-Grenze, Zukunft, eigener Termin, externer

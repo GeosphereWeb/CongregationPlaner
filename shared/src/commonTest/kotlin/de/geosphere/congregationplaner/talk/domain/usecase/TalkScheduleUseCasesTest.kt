@@ -108,7 +108,6 @@ class TalkScheduleUseCasesTest {
             slot().copy(talkNumber = 0, talkTitle = "Titel"),
             slot().copy(talkNumber = 12, talkTitle = " "),
             slot().copy(talkNumber = 12, talkTitle = null),
-            slot().copy(talkNumber = null, talkTitle = "Titel"),
             slot().copy(talkNumber = 12, talkTitle = "x".repeat(TalkSlot.MAX_TALK_TITLE_LENGTH + 1)),
         )
         invalid.forEach { assertIs<TalkScheduleException.InvalidTalk>(save(admin, it).exceptionOrNull()) }
@@ -204,6 +203,38 @@ class TalkScheduleUseCasesTest {
         val saved = repository.savedSlots.single()
         assertEquals(ExternalSpeaker("e1", "Extern", "Eva", "Nord"), saved.externalSpeaker)
         assertNull(saved.speaker)
+    }
+
+    @Test
+    fun `save accepts a talk and a speaker entered freely and trims them`() = runBlocking {
+        save(
+            admin,
+            slot().copy(talkTitle = " Sondervortrag ", speakerLastName = " Gast (Hamburg) ", speakerFirstName = ""),
+        )
+
+        val saved = repository.savedSlots.single()
+        assertEquals(null, saved.talkNumber)
+        assertEquals("Sondervortrag", saved.talkTitle)
+        assertTrue(saved.isFreeTalk)
+        assertEquals("Gast (Hamburg)", saved.freeSpeakerName)
+        assertEquals("Gast (Hamburg)", saved.speakerDisplayName)
+        assertTrue(saved.hasSpeaker && saved.hasTalk)
+    }
+
+    @Test
+    fun `save rejects invalid free entries`() = runBlocking {
+        val tooLong = "x".repeat(TalkSlot.MAX_TALK_TITLE_LENGTH + 1)
+        assertIs<TalkScheduleException.InvalidTalk>(save(admin, slot().copy(talkTitle = " ")).exceptionOrNull())
+        assertIs<TalkScheduleException.InvalidTalk>(save(admin, slot().copy(talkTitle = tooLong)).exceptionOrNull())
+        val invalidSpeakers = listOf(
+            slot().copy(speakerLastName = " ", speakerFirstName = ""),
+            slot().copy(speakerLastName = "Gast", speakerFirstName = "", speakerCongregation = "Nord"),
+            slot().copy(speakerLastName = "x".repeat(TalkSlot.MAX_PERSON_NAME_LENGTH + 1), speakerFirstName = ""),
+        )
+        invalidSpeakers.forEach {
+            assertIs<TalkScheduleException.InvalidSpeaker>(save(admin, it).exceptionOrNull())
+        }
+        assertTrue(repository.savedSlots.isEmpty())
     }
 
     @Test

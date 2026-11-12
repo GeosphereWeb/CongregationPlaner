@@ -59,6 +59,8 @@ class TalkSlotReadOnlyTest {
         assertTrue(planned.canBeInformed)
         assertFalse(empty.canBeInformed)
         assertFalse(planned.copy(talkCancelled = true).canBeInformed)
-        assertFalse(planned.copy(speakerMemberId = null).canBeInformed)
+        assertFalse(planned.copy(speakerMemberId = null, speakerLastName = null, speakerFirstName = null).canBeInformed)
+        // Without the member id the name is a speaker entered freely, who can be informed as well.
+        assertTrue(planned.copy(speakerMemberId = null).canBeInformed)
     }
 }

@@ -13,10 +13,8 @@ import kotlinx.datetime.LocalDate
 /** Name des Wochenereignisses als Zeile über dem Titel in der Liste; nur dort steht er. */
 internal fun slotEventLine(slot: TalkSlot): String? = slot.weekEventName
 
-/** „Nr. 12 – Thema“; ohne gespeichertes Thema nur die Nummer. */
-internal fun slotTitle(slot: TalkSlot): String = slot.talkNumber?.let { number ->
-    slot.talkTitle?.takeIf { it.isNotBlank() }?.let { "Nr. $number – $it" } ?: "Nr. $number"
-} ?: "Noch nicht geplant"
+/** „Nr. 12 – Thema“; ohne gespeichertes Thema nur die Nummer, ein frei eingetragener Vortrag mit Hinweis. */
+internal fun slotTitle(slot: TalkSlot): String = slotTalkText(slot) ?: "Noch nicht geplant"
 
 /**
  * Titel in der Liste mit fetter Vortragsnummer („**Nr. 34** – Thema“); an einem entfallenden Termin ist nichts geplant,
@@ -32,7 +30,7 @@ internal fun slotListTitle(slot: TalkSlot): AnnotatedString? {
 /** Redner in der Liste; an einem entfallenden Termin steht dort nichts (siehe [slotListTitle]). */
 /** „Informiert“ lässt sich nur für einen Termin mit Vortrag und Redner setzen, der nicht entfällt. */
 internal val TalkSlot.canBeInformed: Boolean
-    get() = talkNumber != null && (speaker != null || externalSpeaker != null) && !talkCancelled
+    get() = hasTalk && hasSpeaker && !talkCancelled
 
 internal fun slotListSpeakerLine(slot: TalkSlot): String? = slotSpeakerLine(slot).takeUnless { slot.talkCancelled }
 
@@ -64,6 +62,7 @@ internal fun slotSpeakerLine(slot: TalkSlot): String {
     return when {
         external != null -> "${personName(slot)} · ${external.congregationName}"
         member != null -> "${member.displayName} · eigene Versammlung"
+        slot.freeSpeakerName != null -> "${slot.freeSpeakerName} · $FREE_ENTRY_HINT"
         else -> "Redner noch offen"
     }
 }

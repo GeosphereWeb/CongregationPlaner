@@ -78,7 +78,8 @@ internal fun TalkSlotEditor(
     // Wer schon Vorsitzender ist, kann nicht Redner sein, und umgekehrt.
     val selectableSpeakers = speakers.filterNot { it.memberId == slot.chairmanMemberId }
     val selectableChairmen = chairmen.filterNot { it.memberId == slot.speakerMemberId }
-    val speakerText = slot.externalSpeaker?.displayName ?: slot.speaker?.displayName
+    val speakerText = slotSpeakerText(slot)
+    val talkText = slotTalkText(slot)
 
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SlotHeader(slot, chip)
@@ -110,15 +111,15 @@ internal fun TalkSlotEditor(
 
         FieldCard(
             label = "Vortrag",
-            value = slot.talkNumber?.let { "Nr. $it – ${slot.talkTitle.orEmpty()}" } ?: "Noch kein Vortrag gewählt",
+            value = talkText ?: "Noch kein Vortrag gewählt",
             supporting = if (slot.talkCancelled) "Der Vortrag entfällt, eine Auswahl ist nicht nötig." else null,
-            missing = slot.talkNumber == null && !slot.talkCancelled,
+            missing = talkText == null && !slot.talkCancelled,
             action = {
                 FieldActions(
-                    changeLabel = if (slot.talkNumber == null) "Wählen" else "Ändern",
+                    changeLabel = if (talkText == null) "Wählen" else "Ändern",
                     enabled = !slot.talkCancelled,
                     onChange = { showTalkPicker = true },
-                    onRemove = if (slot.talkNumber != null) ({ onSelectTalk(null) }) else null,
+                    onRemove = if (talkText != null) ({ onSelectTalk(null) }) else null,
                 )
             },
         )
@@ -257,6 +258,10 @@ internal fun TalkSlotEditor(
                 showTalkPicker = false
             },
             onDismiss = { showTalkPicker = false },
+            onFreeEntry = {
+                onChange(slot.withFreeTalk(it))
+                showTalkPicker = false
+            },
         )
     }
 }
@@ -317,6 +322,10 @@ private fun SpeakerActions.closingPicker(close: () -> Unit): SpeakerActions = co
     },
     onSelectExternal = {
         onSelectExternal(it)
+        close()
+    },
+    onFreeSpeaker = {
+        onFreeSpeaker(it)
         close()
     },
 )
@@ -398,4 +407,13 @@ private fun TalkSlotEditorCompletePreview() {
         confirmed = true,
     )
     EditorPreview(slot, slot, SlotChip("Informiert", StatusTone.Mint))
+}
+
+@ThemePreviews
+@Composable
+private fun TalkSlotEditorFreeEntriesPreview() {
+    val slot = TalkSlot(LocalDate(2026, 11, 15), LocalTime(17, 30))
+        .withFreeTalk("Sondervortrag zum Bezirkskongress")
+        .withFreeSpeaker("Gast, Paul (Hamburg)")
+    EditorPreview(slot, slot, SlotChip("Geplant", StatusTone.Gold))
 }

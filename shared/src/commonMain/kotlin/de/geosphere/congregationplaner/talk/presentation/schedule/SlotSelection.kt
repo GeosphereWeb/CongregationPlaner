@@ -18,6 +18,18 @@ internal fun TalkSlot.withWeekEvent(event: WeekEvent?): TalkSlot = if (event == 
 internal fun TalkSlot.withTalk(talk: Talk?): TalkSlot =
     if (talk != null && !talk.active) this else copy(talkNumber = talk?.number, talkTitle = talk?.title)
 
+/** Ein frei eingetragener Vortrag, der nicht in der Liste steht: nur der Titel, ohne Nummer. */
+internal fun TalkSlot.withFreeTalk(title: String): TalkSlot = copy(talkNumber = null, talkTitle = title)
+
+/** Ein frei eingetragener Redner, der in keiner Liste steht: nur der Name, ohne ID und Versammlung. */
+internal fun TalkSlot.withFreeSpeaker(name: String): TalkSlot = copy(
+    speakerMemberId = null,
+    speakerLastName = name,
+    speakerFirstName = "",
+    externalSpeakerId = null,
+    speakerCongregation = null,
+)
+
 /** Ein Mitglied als Redner; `null`, wenn es schon Vorsitzender ist. */
 internal fun TalkSlot.withSpeaker(speaker: Speaker?): TalkSlot? = when {
     speaker != null && speaker.memberId == chairmanMemberId -> null
