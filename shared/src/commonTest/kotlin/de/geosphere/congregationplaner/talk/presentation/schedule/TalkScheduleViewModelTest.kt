@@ -330,6 +330,23 @@ class TalkScheduleViewModelTest {
     }
 
     @Test
+    fun `planner enters a talk and a speaker freely and saves them`() {
+        viewModel.onCurrentUserChanged(planner)
+        viewModel.editor.newSlot()
+        viewModel.picker.selectSpeaker(maxMuster)
+
+        viewModel.editor.update(state.editor!!.slot.withFreeTalk("Sondervortrag"))
+        viewModel.picker.selectFreeSpeaker("Gast (Hamburg)")
+        viewModel.changes.save()
+
+        val saved = repository.savedSlots.single()
+        assertNull(saved.talkNumber)
+        assertEquals("Sondervortrag", saved.talkTitle)
+        assertNull(saved.speakerMemberId)
+        assertEquals("Gast (Hamburg)", saved.freeSpeakerName)
+    }
+
+    @Test
     fun `talk planner sees the speakers and selects one as snapshot`() {
         viewModel.onCurrentUserChanged(viewer)
 

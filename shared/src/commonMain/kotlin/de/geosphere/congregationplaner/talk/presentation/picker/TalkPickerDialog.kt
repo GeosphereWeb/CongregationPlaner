@@ -20,14 +20,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.talk.domain.model.Talk
+import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 
-/** Auswahl aus der Vortragsliste mit Suche nach Nummer oder Titel; nicht aktive Vorträge sind nicht wählbar. */
+/**
+ * Auswahl aus der Vortragsliste mit Suche nach Nummer oder Titel; nicht aktive Vorträge sind nicht wählbar. Steht der
+ * Vortrag nicht in der Liste, trägt [onFreeEntry] den Suchtext als Titel ohne Nummer ein.
+ */
 @Composable
-internal fun TalkPickerDialog(talks: List<Talk>, onSelect: (Talk) -> Unit, onDismiss: () -> Unit) {
+internal fun TalkPickerDialog(
+    talks: List<Talk>,
+    onSelect: (Talk) -> Unit,
+    onDismiss: () -> Unit,
+    onFreeEntry: (String) -> Unit = {},
+) {
     var query by remember { mutableStateOf("") }
     val matches = remember(talks, query) { talks.matching(query) }
+    val freeTitle = freeEntryOf(query, TalkSlot.MAX_TALK_TITLE_LENGTH)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Vortrag wählen") },
@@ -51,7 +61,9 @@ internal fun TalkPickerDialog(talks: List<Talk>, onSelect: (Talk) -> Unit, onDis
                 }
             }
         },
-        confirmButton = {},
+        confirmButton = {
+            freeTitle?.let { title -> TextButton(onClick = { onFreeEntry(title) }) { Text("„$title“ frei eintragen") } }
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen") } },
     )
 }

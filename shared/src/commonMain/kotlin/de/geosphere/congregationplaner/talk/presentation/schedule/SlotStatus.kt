@@ -56,7 +56,7 @@ internal fun nextSlotDate(slots: List<TalkSlot>, today: LocalDate): LocalDate? =
 internal fun slotStatus(slot: TalkSlot, nextSlotDate: LocalDate?): SlotStatus = when {
     slot.talkCancelled -> SlotStatus.CANCELLED
     slot.date == nextSlotDate -> SlotStatus.NEXT
-    slot.talkNumber == null || !slot.hasSpeaker -> SlotStatus.NOT_PLANNED
+    !slot.hasTalk || !slot.hasSpeaker -> SlotStatus.NOT_PLANNED
     slot.confirmed -> SlotStatus.INFORMED
     else -> SlotStatus.PLANNED
 }
