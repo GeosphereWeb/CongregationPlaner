@@ -18,6 +18,7 @@ import de.geosphere.congregationplaner.talk.domain.usecase.ConfirmSpeakerUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.CreateYearSlotsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.MoveTalkSlotUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.ObserveAllTalkSlotsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalDirectoryUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalSpeakersUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkCatalogUseCase
@@ -162,6 +163,7 @@ class TalkScheduleViewModelTest {
                 ObserveExternalSpeakersUseCase(ObserveExternalDirectoryUseCase(externals)),
                 ObserveTalkPlanningSettingsUseCase(settings, policy),
                 SaveTalkPlanningSettingsUseCase(settings, policy),
+                ObserveAllTalkSlotsUseCase(repository),
                 policy,
                 UserPermissionPolicy(),
             ),
@@ -820,5 +822,27 @@ class TalkScheduleViewModelTest {
 
         assertTrue(settings.saved.isEmpty())
         assertNotNull(state.errorMessage)
+    }
+
+    @Test
+    fun `the editor gets the usage of all slots without the edited one and helpers load no slots of all years`() {
+        val planned = october25.copy(talkNumber = 12, talkTitle = "Der Weg zum Glück", speakerMemberId = "m1")
+            .copy(speakerLastName = "Muster", speakerFirstName = "Max")
+        val earlier =
+            TalkSlot(LocalDate(2025, 3, 2), LocalTime(17, 30), talkNumber = 12, talkTitle = "Der Weg zum Glück")
+        repository.slots.value = listOf(earlier, planned, november1)
+        settings.settings.value = TalkPlanningSettings(talkFreeSince = LocalDate(2025, 1, 1))
+        viewModel.onCurrentUserChanged(planner)
+
+        viewModel.editor.edit(planned)
+
+        val usage = state.editorView!!.usage
+        assertEquals(LocalDate(2025, 3, 2), usage.talkLastPlanned[12])
+        assertTrue(usage.isTalkBlocked(12))
+        assertEquals(null, usage.memberLastPlanned["m1"])
+        assertEquals(3, state.allSlots.size)
+
+        viewModel.onCurrentUserChanged(planner.copy(uid = "helper", roles = setOf(CongregationRole.TALK_HELPER)))
+        assertTrue(state.allSlots.isEmpty())
     }
 }

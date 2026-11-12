@@ -58,7 +58,11 @@ class ExternalSpeakerDirectoryUseCasesTest {
         val speakers = ObserveExternalSpeakersUseCase(ObserveExternalDirectoryUseCase(repository))(admin).first()
 
         assertEquals(
-            listOf(ExternalSpeaker("s1", "Berg", "Lea", "Altdorf"), ExternalSpeaker("s2", "zorn", "Tim", "Zell")),
+            listOf(
+                // The talks of a speaker go along so that the picker can limit speakers and talks to each other.
+                ExternalSpeaker("s1", "Berg", "Lea", "Altdorf", talkNumbers = listOf(12)),
+                ExternalSpeaker("s2", "zorn", "Tim", "Zell"),
+            ),
             speakers,
         )
         assertEquals("Berg, Lea (Altdorf)", speakers.first().displayName)

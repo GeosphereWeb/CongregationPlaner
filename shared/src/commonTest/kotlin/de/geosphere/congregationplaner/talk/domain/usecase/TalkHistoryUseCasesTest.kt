@@ -87,4 +87,14 @@ class TalkHistoryUseCasesTest {
 
         assertEquals(listOf(TalkHistoryEntry(7, listOf(spring), mapOf(spring to "Gast (Hamburg)"))), history)
     }
+
+    @Test
+    fun `all slots of the congregation are observed and nothing without one`() = runBlocking {
+        val schedule = FakeTalkScheduleRepository(listOf(slot(spring), slot(future)))
+        val observeAll = ObserveAllTalkSlotsUseCase(schedule)
+        val user = AppUser(uid = "1", approved = true, congregation = testCongregation)
+
+        assertEquals(listOf(spring, future), observeAll(user).first().map { it.date })
+        assertTrue(observeAll(user.copy(congregation = null)).toList().isEmpty())
+    }
 }

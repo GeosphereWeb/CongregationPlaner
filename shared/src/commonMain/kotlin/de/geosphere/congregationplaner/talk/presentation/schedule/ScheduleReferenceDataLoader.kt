@@ -1,6 +1,7 @@
 package de.geosphere.congregationplaner.talk.presentation.schedule
 
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
+import de.geosphere.congregationplaner.talk.domain.usecase.ObserveAllTalkSlotsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalSpeakersUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkCatalogUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkMembersUseCase
@@ -25,6 +26,7 @@ class ScheduleReferenceUseCases(
     val observeExternalSpeakers: ObserveExternalSpeakersUseCase,
     val observePlanningSettings: ObserveTalkPlanningSettingsUseCase,
     val savePlanningSettings: SaveTalkPlanningSettingsUseCase,
+    val observeAllSlots: ObserveAllTalkSlotsUseCase,
     val talkPolicy: TalkSchedulePermissionPolicy,
     val userPolicy: UserPermissionPolicy,
 )
@@ -45,6 +47,7 @@ class ScheduleReferenceDataLoader(
         EXTERNAL_SPEAKERS("Externe Redner"),
         MEMBERS("Redner und Vorsitzende"),
         PLANNING_SETTINGS("Stichtage"),
+        ALL_SLOTS("Termine für die Vorschläge"),
     }
 
     fun observe(user: AppUser) {
@@ -60,6 +63,10 @@ class ScheduleReferenceDataLoader(
         keep(Source.PLANNING_SETTINGS, canView, { useCases.observePlanningSettings(user) }) { state, settings ->
             state.copy(planningSettings = settings)
         }
+        // Nur Planer wählen Redner und Vorträge aus, also brauchen nur sie die Termine aller Jahre.
+        keep(Source.ALL_SLOTS, canPlan, { useCases.observeAllSlots(user) }) { state, slots ->
+            state.copy(allSlots = slots)
+        }
         val canViewMembers = canView && useCases.userPolicy.canViewMembers(user)
         keep(Source.MEMBERS, canViewMembers, { useCases.observeTalkMembers(user) }) { state, members ->
             state.copy(speakers = members.speakers, chairmen = members.chairmen)
@@ -69,6 +76,7 @@ class ScheduleReferenceDataLoader(
     private fun TalkScheduleUiState.withoutPersonsFrom(source: Source): TalkScheduleUiState = when (source) {
         Source.EXTERNAL_SPEAKERS -> copy(externalSpeakers = emptyList())
         Source.MEMBERS -> copy(speakers = emptyList(), chairmen = emptyList())
+        Source.ALL_SLOTS -> copy(allSlots = emptyList())
         else -> this
     }
 

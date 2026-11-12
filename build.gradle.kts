@@ -64,6 +64,8 @@ val sonarExclusions = listOf(
     "**/TalkPickerDialog.kt",
     // Compose-Zeile der Stichtage mit Datumswähler; Beschriftung (cutoffLabel) und Speichern sind getestet
     "**/PlanningCutoffRow.kt",
+    // Compose-Zeilen der Auswahldialoge; Reihenfolge, Sperre und Hinweistext (Suggestion) sind getestet
+    "**/SuggestionRows.kt",
     // Compose-Hülle für die Wisch-Aktionen am Termin; Kontakt und Links sind in SpeakerContact und slotContact getestet
     "**/SwipeableSlotItem.kt",
     // Reines Compose-Formular „Mein Profil“; Eingaben und Speichern sind in OwnProfileViewModel getestet
