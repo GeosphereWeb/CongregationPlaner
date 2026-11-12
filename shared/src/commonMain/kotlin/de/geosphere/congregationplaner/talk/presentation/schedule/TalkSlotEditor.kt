@@ -32,6 +32,9 @@ import de.geosphere.congregationplaner.talk.presentation.picker.MemberPickerDial
 import de.geosphere.congregationplaner.talk.presentation.picker.SpeakerActions
 import de.geosphere.congregationplaner.talk.presentation.picker.SpeakerPickerDialog
 import de.geosphere.congregationplaner.talk.presentation.picker.TalkPickerDialog
+import de.geosphere.congregationplaner.talk.presentation.picker.offeredBy
+import de.geosphere.congregationplaner.talk.presentation.picker.offering
+import de.geosphere.congregationplaner.talk.presentation.picker.selectedExternal
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
@@ -231,10 +234,11 @@ internal fun TalkSlotEditor(
     if (showSpeakerPicker) {
         SpeakerPickerDialog(
             members = selectableSpeakers,
-            externalSpeakers = externalSpeakers,
+            externalSpeakers = externalSpeakers.offering(slot.talkNumber),
             canViewMembers = canViewMembers,
             actions = speakerActions.closingPicker { showSpeakerPicker = false },
             onDismiss = { showSpeakerPicker = false },
+            usage = editor.usage,
         )
     }
 
@@ -252,7 +256,7 @@ internal fun TalkSlotEditor(
 
     if (showTalkPicker) {
         TalkPickerDialog(
-            talks = talks,
+            talks = talks.offeredBy(slot.selectedExternal(externalSpeakers)),
             onSelect = {
                 onSelectTalk(it)
                 showTalkPicker = false
@@ -262,6 +266,7 @@ internal fun TalkSlotEditor(
                 onChange(slot.withFreeTalk(it))
                 showTalkPicker = false
             },
+            usage = editor.usage,
         )
     }
 }
