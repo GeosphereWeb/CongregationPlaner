@@ -26,6 +26,7 @@ import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkMembersUse
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkPlanningSettingsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkYearUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveWeekEventsUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.ReassignTalkUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveTalkPlanningSettingsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.testing.FakeExternalSpeakerDirectoryRepository
@@ -151,6 +152,7 @@ class TalkScheduleViewModelTest {
                 MoveTalkSlotUseCase(save, delete),
                 delete,
                 ConfirmSpeakerUseCase(repository, policy),
+                ReassignTalkUseCase(repository, policy),
             ),
             YearSetupUseCases(
                 CreateYearSlotsUseCase(repository, congregations, policy),
@@ -844,5 +846,82 @@ class TalkScheduleViewModelTest {
 
         viewModel.onCurrentUserChanged(planner.copy(uid = "helper", roles = setOf(CongregationRole.TALK_HELPER)))
         assertTrue(state.allSlots.isEmpty())
+    }
+
+    private val plannedOctober = october25.copy(
+        talkNumber = 12,
+        talkTitle = "Der Weg zum Glück",
+        speakerMemberId = "m1",
+        speakerLastName = "Muster",
+        speakerFirstName = "Max",
+    )
+
+    @Test
+    fun `a planned talk is moved to a free day picked in the list`() {
+        repository.slots.value = listOf(plannedOctober, november1)
+        viewModel.onCurrentUserChanged(planner)
+        viewModel.selectSlot(plannedOctober)
+        assertTrue(state.canStartReassign)
+
+        viewModel.reassign.start()
+        assertNull(state.editor)
+        assertEquals(plannedOctober, state.reassign?.source)
+
+        viewModel.selectSlot(november1)
+
+        assertNull(state.reassign)
+        assertEquals(12, repository.slots.value.single { it.date == november1.date }.talkNumber)
+        assertNull(repository.slots.value.single { it.date == october25.date }.talkNumber)
+        assertEquals("Umgeplant: So, 25.10.2026 → So, 01.11.2026.", state.infoMessage)
+    }
+
+    @Test
+    fun `a planned target day asks before swapping and the same day cancels`() {
+        val plannedNovember = november1.copy(talkNumber = 31, talkTitle = "Glück im Alltag")
+        repository.slots.value = listOf(plannedOctober, plannedNovember)
+        viewModel.onCurrentUserChanged(planner)
+        viewModel.selectSlot(plannedOctober)
+        viewModel.reassign.start()
+
+        viewModel.selectSlot(plannedNovember)
+        assertEquals(plannedNovember, state.reassign?.swapTarget)
+        assertTrue(repository.savedSlots.isEmpty())
+
+        viewModel.reassign.dismissSwap()
+        assertNull(state.reassign?.swapTarget)
+        viewModel.selectSlot(plannedNovember)
+        viewModel.reassign.confirmSwap()
+
+        assertEquals(31, repository.slots.value.single { it.date == october25.date }.talkNumber)
+        assertEquals(12, repository.slots.value.single { it.date == november1.date }.talkNumber)
+
+        viewModel.selectSlot(plannedNovember)
+        viewModel.reassign.start()
+        viewModel.selectSlot(plannedNovember.copy())
+        assertNull(state.reassign)
+    }
+
+    @Test
+    fun `reassigning needs a saved unchanged slot with a talk or speaker`() {
+        viewModel.onCurrentUserChanged(planner)
+        viewModel.selectSlot(november1)
+        assertFalse(state.canStartReassign)
+        viewModel.reassign.start()
+        assertNull(state.reassign)
+
+        viewModel.selectSlot(plannedOctober)
+        viewModel.editor.update(plannedOctober.copy(note = "geändert"))
+        assertFalse(state.canStartReassign)
+
+        repository.saveResult = Result.failure(IllegalStateException())
+        viewModel.editor.discard()
+        viewModel.selectSlot(plannedOctober)
+        viewModel.reassign.start()
+        viewModel.selectSlot(november1)
+        assertEquals("Der Vortrag konnte nicht umgeplant werden.", state.errorMessage)
+        assertEquals(plannedOctober, state.reassign?.source)
+
+        viewModel.reassign.cancel()
+        assertNull(state.reassign)
     }
 }

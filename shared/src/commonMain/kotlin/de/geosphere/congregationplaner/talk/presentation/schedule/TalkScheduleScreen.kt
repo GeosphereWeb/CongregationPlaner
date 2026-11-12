@@ -62,6 +62,7 @@ import de.geosphere.congregationplaner.talk.presentation.picker.SpeakerActions
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
+import de.geosphere.congregationplaner.ui.button.SecondaryButton
 import de.geosphere.congregationplaner.ui.button.SpeedDialFab
 import de.geosphere.congregationplaner.ui.button.SpeedDialItem
 import de.geosphere.congregationplaner.ui.card.DateBadge
@@ -108,6 +109,10 @@ internal data class TalkScheduleActions(
     val onToggleStatusFilter: (SlotStatus) -> Unit = {},
     val onSpeakerFreeSinceChange: (LocalDate?) -> Unit = {},
     val onTalkFreeSinceChange: (LocalDate?) -> Unit = {},
+    val onStartReassign: () -> Unit = {},
+    val onCancelReassign: () -> Unit = {},
+    val onConfirmSwap: () -> Unit = {},
+    val onDismissSwap: () -> Unit = {},
 )
 
 @Composable
@@ -123,7 +128,7 @@ fun TalkScheduleScreen(
         actions = TalkScheduleActions(
             onYearChange = viewModel::changeYear,
             onNewSlot = viewModel.editor::newSlot,
-            onEditSlot = viewModel.editor::edit,
+            onEditSlot = viewModel::selectSlot,
             onEditorChange = viewModel.editor::update,
             onInformedChange = viewModel.editor::setSpeakerInformed,
             onSelectWeekEvent = viewModel.picker::selectWeekEvent,
@@ -151,6 +156,10 @@ fun TalkScheduleScreen(
             onToggleStatusFilter = viewModel::toggleStatusFilter,
             onSpeakerFreeSinceChange = viewModel.planningSettings::setSpeakerFreeSince,
             onTalkFreeSinceChange = viewModel.planningSettings::setTalkFreeSince,
+            onStartReassign = viewModel.reassign::start,
+            onCancelReassign = viewModel.reassign::cancel,
+            onConfirmSwap = viewModel.reassign::confirmSwap,
+            onDismissSwap = viewModel.reassign::dismissSwap,
         ),
     )
 }
@@ -218,6 +227,8 @@ internal fun TalkScheduleContent(
                 TextButton(onClick = actions.onDismissInfo) { Text("OK") }
             }
         }
+
+        state.reassign?.let { ReassignBanner(it.source, actions.onCancelReassign) }
 
         if (state.isLoading) {
             CircularProgressIndicator()
@@ -338,6 +349,13 @@ internal fun TalkScheduleContent(
                                     onCancel = onCancelEditing,
                                 )
                             } else if (editor != null) {
+                                if (state.canStartReassign) {
+                                    SecondaryButton(
+                                        text = "Auf anderen Tag umplanen",
+                                        onClick = actions.onStartReassign,
+                                        outlined = false,
+                                    )
+                                }
                                 TalkSlotEditor(
                                     editor = editor,
                                     chip = slotChip(slotStatus(editor.slot, nextDate)),
@@ -365,6 +383,12 @@ internal fun TalkScheduleContent(
                     }
                 },
             )
+        }
+    }
+
+    state.reassign?.let { reassign ->
+        reassign.swapTarget?.let { target ->
+            SwapDialog(reassign.source, target, actions.onConfirmSwap, actions.onDismissSwap)
         }
     }
 

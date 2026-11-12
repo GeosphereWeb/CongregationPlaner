@@ -53,6 +53,10 @@ internal class FirestoreRestTalkScheduleRepository(
         slot
     }
 
+    override suspend fun saveSlots(congregation: CongregationRef, slots: List<TalkSlot>): Result<Unit> = runCatchingIo {
+        client.commit(slots.map { client.writeUpdate("${congregation.talkSchedulePath}/${it.id}", it.toFields()) })
+    }
+
     // `currentDocument.exists=false` lässt Firestore einen vorhandenen Termin mit 409 ablehnen, statt ihn zu ersetzen.
     override suspend fun createMissingSlots(congregation: CongregationRef, slots: List<TalkSlot>): Result<Int> =
         runCatchingIo {
@@ -107,26 +111,26 @@ internal class FirestoreRestTalkScheduleRepository(
         note = fields.optionalStringField("note"),
     )
 
-    private fun TalkSlot.toBody(): String = firestoreFields(
-        JsonObject().apply {
-            add("time", firestoreString(time.toString()))
-            add("talkCancelled", firestoreBoolean(talkCancelled))
-            add("confirmed", firestoreBoolean(confirmed))
-            add("note", firestoreNullableString(note))
-            add("weekEventId", firestoreNullableString(weekEventId))
-            add("weekEventName", firestoreNullableString(weekEventName))
-            add("talkNumber", firestoreNullableInteger(talkNumber))
-            add("talkTitle", firestoreNullableString(talkTitle))
-            add("speakerMemberId", firestoreNullableString(speakerMemberId))
-            add("speakerLastName", firestoreNullableString(speakerLastName))
-            add("speakerFirstName", firestoreNullableString(speakerFirstName))
-            add("chairmanMemberId", firestoreNullableString(chairmanMemberId))
-            add("chairmanLastName", firestoreNullableString(chairmanLastName))
-            add("chairmanFirstName", firestoreNullableString(chairmanFirstName))
-            add("externalSpeakerId", firestoreNullableString(externalSpeakerId))
-            add("speakerCongregation", firestoreNullableString(speakerCongregation))
-        },
-    )
+    private fun TalkSlot.toBody(): String = firestoreFields(toFields())
+
+    private fun TalkSlot.toFields(): JsonObject = JsonObject().apply {
+        add("time", firestoreString(time.toString()))
+        add("talkCancelled", firestoreBoolean(talkCancelled))
+        add("confirmed", firestoreBoolean(confirmed))
+        add("note", firestoreNullableString(note))
+        add("weekEventId", firestoreNullableString(weekEventId))
+        add("weekEventName", firestoreNullableString(weekEventName))
+        add("talkNumber", firestoreNullableInteger(talkNumber))
+        add("talkTitle", firestoreNullableString(talkTitle))
+        add("speakerMemberId", firestoreNullableString(speakerMemberId))
+        add("speakerLastName", firestoreNullableString(speakerLastName))
+        add("speakerFirstName", firestoreNullableString(speakerFirstName))
+        add("chairmanMemberId", firestoreNullableString(chairmanMemberId))
+        add("chairmanLastName", firestoreNullableString(chairmanLastName))
+        add("chairmanFirstName", firestoreNullableString(chairmanFirstName))
+        add("externalSpeakerId", firestoreNullableString(externalSpeakerId))
+        add("speakerCongregation", firestoreNullableString(speakerCongregation))
+    }
 }
 
 private const val HTTP_CONFLICT = 409

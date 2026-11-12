@@ -40,6 +40,15 @@ internal class FirestoreTalkScheduleRepository(private val firestore: FirebaseFi
             slot
         }
 
+    override suspend fun saveSlots(congregation: CongregationRef, slots: List<TalkSlot>): Result<Unit> =
+        runFirestoreCatching("save talk slots") {
+            val collection = firestore.collection(congregation.talkSchedulePath)
+            val batch = firestore.batch()
+            slots.forEach { batch.set(collection.document(it.id), it.toFirestoreFields()) }
+            batch.commit().awaitResult()
+            Unit
+        }
+
     // Die Transaktion liest zuerst alle Tage und schreibt nur die fehlenden; so überschreibt auch ein zweites Gerät
     // nichts, das zwischenzeitlich angelegt wurde.
     override suspend fun createMissingSlots(congregation: CongregationRef, slots: List<TalkSlot>): Result<Int> =

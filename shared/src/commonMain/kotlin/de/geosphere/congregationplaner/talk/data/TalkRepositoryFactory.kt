@@ -77,6 +77,8 @@ fun unavailableTalkScheduleRepository(platform: String): TalkScheduleRepository 
 
     override suspend fun saveSlot(congregation: CongregationRef, slot: TalkSlot): Result<TalkSlot> = unavailable()
 
+    override suspend fun saveSlots(congregation: CongregationRef, slots: List<TalkSlot>): Result<Unit> = unavailable()
+
     override suspend fun createMissingSlots(congregation: CongregationRef, slots: List<TalkSlot>): Result<Int> =
         unavailable()
 

@@ -4,6 +4,7 @@ import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.usecase.ConfirmSpeakerUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.MoveTalkSlotUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.ReassignTalkUseCase
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.launch
@@ -14,6 +15,7 @@ class SlotChangeUseCases(
     val moveSlot: MoveTalkSlotUseCase,
     val deleteSlot: DeleteTalkSlotUseCase,
     val confirmSpeaker: ConfirmSpeakerUseCase,
+    val reassignTalk: ReassignTalkUseCase,
 )
 
 /** Speichert und löscht Termine; [onYearChange] zeigt das Jahr des Termins. */

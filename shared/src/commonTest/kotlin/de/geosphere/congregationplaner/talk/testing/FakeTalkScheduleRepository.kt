@@ -44,6 +44,15 @@ internal class FakeTalkScheduleRepository(slots: List<TalkSlot> = emptyList()) :
         return observeError?.let { error -> flow { throw error } } ?: slots
     }
 
+    override suspend fun saveSlots(congregation: CongregationRef, slots: List<TalkSlot>): Result<Unit> {
+        requestedCongregation = congregation
+        return saveResult.map {
+            savedSlots += slots
+            this.slots.value = (this.slots.value.filterNot { slot -> slots.any { it.date == slot.date } } + slots)
+                .sortedBy { it.date }
+        }
+    }
+
     override suspend fun saveSlot(congregation: CongregationRef, slot: TalkSlot): Result<TalkSlot> {
         requestedCongregation = congregation
         saveGate?.await()
