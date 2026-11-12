@@ -66,6 +66,8 @@ val sonarExclusions = listOf(
     "**/PlanningCutoffRow.kt",
     // Compose-Zeilen der Auswahldialoge; Reihenfolge, Sperre und Hinweistext (Suggestion) sind getestet
     "**/SuggestionRows.kt",
+    // Compose-Hinweis und Tausch-Dialog beim Umplanen; Ablauf (ReassignHolder) und Texte sind getestet
+    "**/ReassignViews.kt",
     // Compose-Hülle für die Wisch-Aktionen am Termin; Kontakt und Links sind in SpeakerContact und slotContact getestet
     "**/SwipeableSlotItem.kt",
     // Reines Compose-Formular „Mein Profil“; Eingaben und Speichern sind in OwnProfileViewModel getestet

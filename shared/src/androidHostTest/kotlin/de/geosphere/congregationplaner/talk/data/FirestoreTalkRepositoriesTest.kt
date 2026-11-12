@@ -11,6 +11,7 @@ import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.Transaction
+import com.google.firebase.firestore.WriteBatch
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
@@ -34,6 +35,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 class FirestoreTalkRepositoriesTest {
     private val congregation = CongregationRef("EMEA", "europe", "central-europe", "de", "609a", "berlin")
@@ -100,6 +102,24 @@ class FirestoreTalkRepositoriesTest {
 
         assertEquals(listOf(slot, TalkSlot(LocalDate(2027, 1, 3), LocalTime(10, 0))), slots)
         verify { registration.remove() }
+    }
+
+    @Test
+    fun `saveSlots writes all slots in one batch`() = runBlocking {
+        val batch = mockk<WriteBatch>()
+        val other = mockk<DocumentReference>()
+        every { firestore.batch() } returns batch
+        every { collection.document("2026-11-01") } returns other
+        every { batch.set(any<DocumentReference>(), any()) } returns batch
+        every { batch.commit() } returns successTask<Void?>(null)
+
+        val result = FirestoreTalkScheduleRepository(firestore)
+            .saveSlots(congregation, listOf(slot, TalkSlot(LocalDate(2026, 11, 1), LocalTime(10, 0))))
+
+        assertTrue(result.isSuccess)
+        verify { batch.set(reference, any()) }
+        verify { batch.set(other, any()) }
+        verify(exactly = 1) { batch.commit() }
     }
 
     @Test
