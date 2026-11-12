@@ -8,7 +8,6 @@ import de.geosphere.congregationplaner.talk.domain.model.ExternalCongregation
 import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
-import de.geosphere.congregationplaner.talk.domain.model.TalkHistoryEntry
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
@@ -25,10 +24,8 @@ import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkMembersUse
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkYearUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveWeekEventsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveTalkSlotUseCase
-import de.geosphere.congregationplaner.talk.domain.usecase.SyncTalkHistoryWithSlotUseCase
 import de.geosphere.congregationplaner.talk.testing.FakeExternalSpeakerDirectoryRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
-import de.geosphere.congregationplaner.talk.testing.FakeTalkHistoryRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
 import de.geosphere.congregationplaner.talk.testing.FakeWeekEventRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
@@ -120,7 +117,6 @@ class TalkScheduleViewModelTest {
     private lateinit var catalog: FakeTalkCatalogRepository
     private lateinit var users: FakeUserRepository
     private lateinit var externals: FakeExternalSpeakerDirectoryRepository
-    private lateinit var history: FakeTalkHistoryRepository
     private lateinit var congregations: FakeCongregationMetadataRepository
     private lateinit var viewModel: TalkScheduleViewModel
 
@@ -136,7 +132,6 @@ class TalkScheduleViewModelTest {
             listOf(ExternalCongregation("g1", "c1", "Nord")),
             listOf(VisitingSpeaker("e1", "g1", "Extern", "Eva")),
         )
-        history = FakeTalkHistoryRepository()
         congregations = FakeCongregationMetadataRepository(
             listOf(CongregationMetadata(id = testCongregation.congregationId)),
         )
@@ -148,7 +143,6 @@ class TalkScheduleViewModelTest {
             SlotChangeUseCases(
                 MoveTalkSlotUseCase(save, delete),
                 delete,
-                SyncTalkHistoryWithSlotUseCase(history, policy),
                 ConfirmSpeakerUseCase(repository, policy),
             ),
             YearSetupUseCases(
@@ -658,38 +652,6 @@ class TalkScheduleViewModelTest {
 
         assertEquals(listOf(slot), repository.savedSlots)
         assertEquals(slot, state.editor?.original)
-        assertFalse(state.isSaving)
-    }
-
-    @Test
-    fun `saving a slot with a talk records the day in the talk history and deleting it removes it`() {
-        viewModel.onCurrentUserChanged(planner)
-        viewModel.editor.newSlot()
-        val slot = TalkSlot(LocalDate(2026, 11, 8), LocalTime(10, 0), talkNumber = 12, talkTitle = "Der Weg zum Glück")
-        viewModel.editor.update(slot)
-
-        viewModel.changes.save()
-
-        assertEquals(listOf(TalkHistoryEntry(12, listOf(slot.date), listOf(slot.date))), history.entries.value)
-
-        viewModel.changes.delete(slot)
-
-        assertTrue(history.entries.value.isEmpty())
-    }
-
-    @Test
-    fun `a history failure keeps the saved slot and reports the history error`() {
-        history.saveResult = Result.failure(IllegalStateException("denied"))
-        viewModel.onCurrentUserChanged(planner)
-        viewModel.editor.newSlot()
-        val slot = TalkSlot(LocalDate(2026, 11, 8), LocalTime(10, 0), talkNumber = 12, talkTitle = "Der Weg zum Glück")
-        viewModel.editor.update(slot)
-
-        viewModel.changes.save()
-
-        assertEquals(listOf(slot), repository.savedSlots)
-        assertEquals(slot, state.editor?.original)
-        assertTrue(state.errorMessage!!.contains("Vortragshistorie"))
         assertFalse(state.isSaving)
     }
 

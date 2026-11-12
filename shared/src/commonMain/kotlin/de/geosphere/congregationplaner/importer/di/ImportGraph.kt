@@ -7,12 +7,10 @@ import de.geosphere.congregationplaner.importer.data.createImportFileSource
 import de.geosphere.congregationplaner.importer.presentation.ImportViewModel
 import de.geosphere.congregationplaner.talk.data.createExternalSpeakerDirectoryRepository
 import de.geosphere.congregationplaner.talk.data.createTalkCatalogRepository
-import de.geosphere.congregationplaner.talk.data.createTalkHistoryRepository
 import de.geosphere.congregationplaner.talk.data.createTalkScheduleRepository
 import de.geosphere.congregationplaner.talk.data.createWeekEventRepository
 import de.geosphere.congregationplaner.talk.domain.repository.ExternalSpeakerDirectoryRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkCatalogRepository
-import de.geosphere.congregationplaner.talk.domain.repository.TalkHistoryRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkScheduleRepository
 import de.geosphere.congregationplaner.talk.domain.repository.WeekEventRepository
 import dev.zacsweers.metro.DependencyGraph
@@ -37,9 +35,6 @@ interface ImportGraph {
     @Provides
     fun provideExternalSpeakerDirectoryRepository(): ExternalSpeakerDirectoryRepository =
         createExternalSpeakerDirectoryRepository()
-
-    @Provides
-    fun provideTalkHistoryRepository(): TalkHistoryRepository = createTalkHistoryRepository()
 
     @Provides
     fun provideCongregationMetadataRepository(): CongregationMetadataRepository = createCongregationMetadataRepository()

@@ -88,6 +88,21 @@ class FirestoreTalkRepositoriesTest {
     }
 
     @Test
+    fun `observeAll reads the whole collection, skips invalid documents and sorts by date`(): Unit = withMockedLog {
+        val invalidId = mockk<DocumentSnapshot> { every { id } returns "2026-02-31" }
+        emitSnapshot(
+            collection,
+            querySnapshot(plainDocument("2027-01-03"), invalidId, slotDocument("2026-10-25")),
+            null,
+        )
+
+        val slots = runBlocking { FirestoreTalkScheduleRepository(firestore).observeAll(congregation).first() }
+
+        assertEquals(listOf(slot, TalkSlot(LocalDate(2027, 1, 3), LocalTime(10, 0))), slots)
+        verify { registration.remove() }
+    }
+
+    @Test
     fun `observeYear skips invalid documents and fails on listener errors`(): Unit = withMockedLog {
         val query = mockk<Query>()
         val ranged = mockk<Query>()

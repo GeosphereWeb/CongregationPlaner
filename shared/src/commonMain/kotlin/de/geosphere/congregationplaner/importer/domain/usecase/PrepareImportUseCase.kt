@@ -11,13 +11,11 @@ import de.geosphere.congregationplaner.importer.domain.planning.TalkScheduleImpo
 import de.geosphere.congregationplaner.importer.domain.planning.excelSerialToDate
 import de.geosphere.congregationplaner.importer.domain.planning.planSpeakerDirectory
 import de.geosphere.congregationplaner.importer.domain.planning.planTalkCatalog
-import de.geosphere.congregationplaner.importer.domain.planning.planTalkHistory
 import de.geosphere.congregationplaner.importer.domain.planning.planTalkSchedule
 import de.geosphere.congregationplaner.importer.domain.planning.planWeekEvents
 import de.geosphere.congregationplaner.talk.domain.model.ExternalDirectory
 import de.geosphere.congregationplaner.talk.domain.model.TalkScheduleException
 import de.geosphere.congregationplaner.talk.domain.repository.TalkCatalogRepository
-import de.geosphere.congregationplaner.talk.domain.repository.TalkHistoryRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkScheduleRepository
 import de.geosphere.congregationplaner.talk.domain.repository.WeekEventRepository
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalDirectoryUseCase
@@ -49,7 +47,7 @@ class PreparedImport(
 )
 
 /**
- * Reads the current data of the target (week events, catalog, directory, slots, history, meeting times), builds the
+ * Reads the current data of the target (week events, catalog, directory, slots, meeting times), builds the
  * [ImportPlan]s for a parsed file and returns them as a [PreparedImport] to confirm.
  */
 @Suppress("LongParameterList")
@@ -59,7 +57,6 @@ class PrepareImportUseCase(
     private val catalog: TalkCatalogRepository,
     private val directory: ObserveExternalDirectoryUseCase,
     private val schedule: TalkScheduleRepository,
-    private val history: TalkHistoryRepository,
     private val congregations: CongregationMetadataRepository,
     private val importReference: ImportReferenceDataUseCase,
     private val importDirectory: ImportSpeakerDirectoryUseCase,
@@ -115,7 +112,6 @@ class PrepareImportUseCase(
         val years = dates.map { it.year }.distinct()
         val times = meetingTimes(user, years)
         val events = weekEvents.observeWeekEvents().first()
-        val existingHistory = user.congregation?.let { history.observeAll(it).first() }.orEmpty()
         val context = ScheduleImportContext(
             existingSlots = existingSlots(user, years),
             catalog = catalog.observeTalks().first(),
@@ -125,12 +121,11 @@ class PrepareImportUseCase(
             timeFor = { year -> times.getValue(year) },
         )
         val import = planTalkSchedule(table, context)
-        val historyPlan = planTalkHistory(import.slots, existingHistory)
         return PreparedImport(
-            listOf(import.slots.summary("Termine"), historyPlan.summary("Historie (nach dem Speichern der Termine)")),
+            listOf(import.slots.summary("Termine")),
             import.slots.errors,
             import.warnings + newSpeakerNotes(import),
-        ) { importSchedule(user, import, existingHistory) }
+        ) { importSchedule(user, import) }
     }
 
     private suspend fun currentDirectory(user: AppUser): ExternalDirectory = directory(user).first()

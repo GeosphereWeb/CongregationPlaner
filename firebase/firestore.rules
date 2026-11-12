@@ -240,9 +240,9 @@ service cloud.firestore {
         hasRole(get(memberPath).data, 'TALK_PLANNER');
     }
 
-    // May see the talk planning of exactly this congregation (talk schedule, directory of external speakers, talk
-    // history): approved planners and talk helpers (ADR-0023). Writing stays with the planners, except that a helper
-    // may set `confirmed` of a slot.
+    // May see the talk planning of exactly this congregation (talk schedule, from which the app derives the talk
+    // history, and the directory of external speakers): approved planners and talk helpers (ADR-0023). Writing stays
+    // with the planners, except that a helper may set `confirmed` of a slot.
     function canViewTalkPlanning(regionId, subregionId, branchId, countryId, circuitId, congId) {
       let memberPath = /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/country/$(countryId)/circuit/$(circuitId)/congregation/$(congId)/members/$(request.auth.uid);
       return isAuthenticated() &&
@@ -303,16 +303,6 @@ service cloud.firestore {
         data.email is string && data.email.size() <= 200 &&
         data.talkNumbers is list && data.talkNumbers.size() <= 200 &&
         data.ranking is int && data.ranking >= 0 && data.ranking <= 5;
-    }
-
-    // Talk history: one document per talk number holding the days the talk was given (plannedOn: from the planning,
-    // speakers: speaker name per day).
-    function isValidTalkHistory(talkNumber, data) {
-      return talkNumber.matches('[1-9][0-9]{0,3}') &&
-        data.keys().hasOnly(['heldOn', 'plannedOn', 'speakers']) && data.keys().hasAll(['heldOn']) &&
-        data.heldOn is list && data.heldOn.size() >= 1 && data.heldOn.size() <= 100 &&
-        (!('plannedOn' in data) || (data.plannedOn is list && data.plannedOn.size() <= 100)) &&
-        (!('speakers' in data) || (data.speakers is map && data.speakers.size() <= 100));
     }
 
     // A text that is either absent (null) or a string with minLen..maxLen characters.
@@ -755,17 +745,6 @@ service cloud.firestore {
                     (canViewTalkPlanning(regionId, subregionId, branchId, countryId, circuitId, congId) &&
                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['confirmed']) &&
                       request.resource.data.confirmed is bool);
-                }
-
-                // ---------------------------------------------------------
-                // Talk history of a congregation (planners only)
-                // ---------------------------------------------------------
-                match /talkHistory/{talkNumber} {
-                  allow read: if canViewTalkPlanning(regionId, subregionId, branchId, countryId, circuitId, congId);
-                  allow delete: if canPlanTalks(regionId, subregionId, branchId, countryId, circuitId, congId);
-
-                  allow create, update: if canPlanTalks(regionId, subregionId, branchId, countryId, circuitId, congId) &&
-                    isValidTalkHistory(talkNumber, request.resource.data);
                 }
 
                 // ---------------------------------------------------------
