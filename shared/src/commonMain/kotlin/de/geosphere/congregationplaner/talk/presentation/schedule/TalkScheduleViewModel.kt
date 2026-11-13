@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.presentation.state.UiStateStore
+import de.geosphere.congregationplaner.talk.domain.model.MessageSender
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkYearUseCase
@@ -33,7 +34,23 @@ class TalkScheduleViewModel(
 ) : ViewModel() {
     private val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
     private val session = TalkScheduleSession(
-        UiStateStore(TalkScheduleUiState(year = today.year)),
+        // Die WhatsApp-Links und die Prüfung des Vortrags im Editor folgen jeder Änderung von Terminen, Rednern,
+        // Vorlagen, Absender und Vortragsliste.
+        UiStateStore(TalkScheduleUiState(year = today.year)) { state ->
+            state.copy(
+                editor = state.editor?.let { editor ->
+                    editor.copy(talkCheck = referenceUseCases.checkSlotTalk(editor.slot, state.talks))
+                },
+                whatsAppMessages = state.slots.associate { slot ->
+                    slot.id to referenceUseCases.buildWhatsAppMessages(
+                        slot,
+                        slotContact(slot, state.speakers, state.externalSpeakers),
+                        state.messageTemplates,
+                        state.messageSender,
+                    )
+                },
+            )
+        },
         viewModelScope,
         permissionPolicy,
     )

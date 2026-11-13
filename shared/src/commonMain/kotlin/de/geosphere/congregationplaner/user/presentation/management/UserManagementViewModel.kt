@@ -27,9 +27,13 @@ class UserManagementViewModel(
 ) : ViewModel() {
     private var currentUser: AppUser? = null
 
-    // Die Rechte werden bei jeder Zustandsänderung neu abgeleitet, damit sie zu Nutzer und Mitgliederliste passen.
+    // Rechte und Kandidaten zum Verknüpfen werden bei jeder Zustandsänderung neu abgeleitet, damit sie zu Nutzer und
+    // Mitgliederliste passen.
     private val store = UiStateStore(UserManagementUiState()) {
-        it.copy(memberPermissions = memberPermissions(permissionPolicy, currentUser, it.members))
+        it.copy(
+            memberPermissions = memberPermissions(permissionPolicy, currentUser, it.members),
+            linkCandidates = transferUseCases.findLinkCandidates(it.members),
+        )
     }
     val uiState: StateFlow<UserManagementUiState> = store.state
 

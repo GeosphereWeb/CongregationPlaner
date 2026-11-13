@@ -20,6 +20,7 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.talk.domain.model.SpeakerContact
+import de.geosphere.congregationplaner.talk.domain.model.WhatsAppMessage
 import de.geosphere.congregationplaner.theming.NightPreviewWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.ui.chip.StatusTone

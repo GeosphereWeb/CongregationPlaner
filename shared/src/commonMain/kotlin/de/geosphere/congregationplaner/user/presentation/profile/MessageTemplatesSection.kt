@@ -29,6 +29,7 @@ import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.DEFAULT_MESSAGE_TEMPLATES
 import de.geosphere.congregationplaner.user.domain.model.MessagePlaceholder
 import de.geosphere.congregationplaner.user.domain.model.MessageTemplate
+import de.geosphere.congregationplaner.user.domain.usecase.MessageTemplateEdit
 import de.geosphere.congregationplaner.user.domain.usecase.canKeepMessageTemplates
 import de.geosphere.congregationplaner.user.presentation.contact.ProfileField
 import dev.zacsweers.metro.createGraph
@@ -43,10 +44,10 @@ internal fun MessageTemplatesSection(user: AppUser, modifier: Modifier = Modifie
     MessageTemplatesForm(
         state = state,
         actions = MessageTemplatesActions(
-            onChange = viewModel::onTemplateChange,
-            onAdd = viewModel::addTemplate,
-            onRemove = viewModel::removeTemplate,
-            onMakeDefault = viewModel::makeDefault,
+            onChange = { index, template -> viewModel.edit(MessageTemplateEdit.Change(index, template)) },
+            onAdd = { viewModel.edit(MessageTemplateEdit.Add) },
+            onRemove = { viewModel.edit(MessageTemplateEdit.Remove(it)) },
+            onMakeDefault = { viewModel.edit(MessageTemplateEdit.MakeDefault(it)) },
             onSave = viewModel::save,
         ),
         modifier = modifier,

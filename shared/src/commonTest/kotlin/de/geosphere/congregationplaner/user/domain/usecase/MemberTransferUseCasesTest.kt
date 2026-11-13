@@ -156,6 +156,18 @@ class MemberTransferUseCasesTest {
     }
 
     @Test
+    fun `link candidates are the persons without account sorted by their label`() {
+        val zora = person.copy(uid = "p2", profile = MemberProfile(lastName = "Zora", firstName = "Ben"))
+        val anna = person.copy(uid = "p3", profile = MemberProfile(lastName = "Berg", firstName = "Anna"))
+
+        // The label is "first name last name": Anna Berg, Ben Zora, Max Muster.
+        assertEquals(
+            listOf("p3", "p2", "p1"),
+            FindLinkCandidatesUseCase()(listOf(zora, account, person, anna)).map { it.uid },
+        )
+    }
+
+    @Test
     fun `a failure while reading the slots is reported`() = runBlocking {
         schedule.observeError = IllegalStateException("offline")
 

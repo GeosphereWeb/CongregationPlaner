@@ -3,14 +3,17 @@ package de.geosphere.congregationplaner.talk.presentation.schedule
 import de.geosphere.congregationplaner.presentation.components.ListDetailState
 import de.geosphere.congregationplaner.talk.domain.model.Chairman
 import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
+import de.geosphere.congregationplaner.talk.domain.model.MessageSender
 import de.geosphere.congregationplaner.talk.domain.model.PlanningUsage
 import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkPlanningSettings
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
+import de.geosphere.congregationplaner.talk.domain.model.WhatsAppMessage
 import de.geosphere.congregationplaner.talk.domain.model.hasAssignment
 import de.geosphere.congregationplaner.talk.domain.model.planningUsageOf
+import de.geosphere.congregationplaner.talk.domain.usecase.SlotTalkCheck
 import de.geosphere.congregationplaner.user.domain.model.DEFAULT_MESSAGE_TEMPLATES
 import de.geosphere.congregationplaner.user.domain.model.MessageTemplate
 import kotlinx.datetime.LocalTime
@@ -23,6 +26,8 @@ data class TalkSlotEditorState(
     val slot: TalkSlot,
     val original: TalkSlot? = null,
     val usage: PlanningUsage = PlanningUsage(),
+    /** Wie der Vortrag zur Vortragsliste passt (vom ViewModel über den UseCase abgeleitet). */
+    val talkCheck: SlotTalkCheck = SlotTalkCheck(),
 ) {
     val isNew: Boolean get() = original == null
     val isDirty: Boolean get() = slot != original
@@ -50,6 +55,8 @@ data class TalkScheduleUiState(
     /** Die WhatsApp-Vorlagen des Nutzers (die erste ist der Standard) und sein Name für die Platzhalter. */
     val messageTemplates: List<MessageTemplate> = DEFAULT_MESSAGE_TEMPLATES,
     val messageSender: MessageSender = MessageSender(),
+    /** Die ausgefüllten WhatsApp-Vorlagen je Termin-ID (vom ViewModel über den UseCase abgeleitet). */
+    val whatsAppMessages: Map<String, List<WhatsAppMessage>> = emptyMap(),
     val isLoading: Boolean = true,
     val canView: Boolean = false,
     val canPlan: Boolean = false,
