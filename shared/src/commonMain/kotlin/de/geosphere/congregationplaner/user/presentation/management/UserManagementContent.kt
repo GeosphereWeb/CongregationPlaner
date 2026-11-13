@@ -71,6 +71,19 @@ internal data class UserManagementActions(
     val onCancelEditing: () -> Unit = {},
     val onDiscardChanges: () -> Unit = {},
     val onDismissError: () -> Unit = {},
+    val transfer: MemberTransferActions = MemberTransferActions(),
+)
+
+/** Callbacks für Redner übernehmen und Konten verknüpfen. */
+internal data class MemberTransferActions(
+    val onOpenAdopt: () -> Unit = {},
+    val onToggleSpeaker: (String) -> Unit = {},
+    val onAdopt: () -> Unit = {},
+    val onCloseAdopt: () -> Unit = {},
+    val onOpenLink: (AppUser) -> Unit = {},
+    val onSelectPerson: (String) -> Unit = {},
+    val onLink: () -> Unit = {},
+    val onCloseLink: () -> Unit = {},
 )
 
 @Composable
@@ -90,6 +103,16 @@ fun UserManagementScreen(viewModel: UserManagementViewModel, modifier: Modifier 
             onCancelEditing = viewModel.editor::cancel,
             onDiscardChanges = viewModel.editor::discard,
             onDismissError = viewModel::dismissError,
+            transfer = MemberTransferActions(
+                onOpenAdopt = viewModel.transfer::openAdopt,
+                onToggleSpeaker = viewModel.transfer::toggleSpeaker,
+                onAdopt = viewModel.transfer::adopt,
+                onCloseAdopt = viewModel.transfer::closeAdopt,
+                onOpenLink = viewModel.transfer::openLink,
+                onSelectPerson = viewModel.transfer::selectPerson,
+                onLink = viewModel.transfer::link,
+                onCloseLink = viewModel.transfer::closeLink,
+            ),
         ),
     )
 }
@@ -123,6 +146,29 @@ internal fun UserManagementContent(
                 Text(message, color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
                 TextButton(onClick = actions.onDismissError) { Text("OK") }
             }
+        }
+        state.infoMessage?.let { message ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(message, color = NightColors.Mint, modifier = Modifier.weight(1f))
+                TextButton(onClick = actions.onDismissError) { Text("OK") }
+            }
+        }
+        state.adoptDialog?.let { dialog ->
+            AdoptSpeakersDialog(
+                dialog = dialog,
+                onToggle = actions.transfer.onToggleSpeaker,
+                onConfirm = actions.transfer.onAdopt,
+                onDismiss = actions.transfer.onCloseAdopt,
+            )
+        }
+        state.linkDialog?.let { dialog ->
+            LinkAccountDialog(
+                dialog = dialog,
+                candidates = state.linkCandidates,
+                onSelect = actions.transfer.onSelectPerson,
+                onConfirm = actions.transfer.onLink,
+                onDismiss = actions.transfer.onCloseLink,
+            )
         }
 
         if (state.isLoading) {
@@ -169,8 +215,10 @@ internal fun UserManagementContent(
                                 }
                             }
                             SpeedDialFab(
-                                items = listOf(
+                                items = listOfNotNull(
                                     SpeedDialItem("Person ohne Konto hinzufügen", actions.onAddMemberWithoutAccount),
+                                    SpeedDialItem("Redner als Mitglieder übernehmen", actions.transfer.onOpenAdopt)
+                                        .takeIf { state.canTransfer },
                                 ),
                                 contentDescription = "Mitglieder hinzufügen",
                                 enabled = !state.isSaving,
@@ -192,6 +240,13 @@ internal fun UserManagementContent(
                                 val isBusy = member?.uid in state.busyMemberIds
                                 if (member != null && member.hasAccount) {
                                     MemberAccessCard(member, state.permissionsOf(member), isBusy, actions)
+                                }
+                                if (member != null && state.canLink(member)) {
+                                    SecondaryButton(
+                                        text = "Mit Person ohne Konto verknüpfen",
+                                        onClick = { actions.transfer.onOpenLink(member) },
+                                        enabled = !isBusy && !state.isSaving,
+                                    )
                                 }
                                 MemberEditor(
                                     editor = editor,
