@@ -9,6 +9,13 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 class MemberRowTextTest {
+    @Test
+    fun `the login email is shown only for members with an account`() {
+        assertEquals("Anmeldung: max@example.com", memberLoginEmail(AppUser(uid = "1", email = "max@example.com")))
+        assertNull(memberLoginEmail(AppUser(uid = "2", email = " ")))
+        assertNull(memberLoginEmail(AppUser(uid = "3")))
+        assertNull(memberLoginEmail(AppUser(uid = "4", email = "kind@example.com", hasAccount = false)))
+    }
     private val brother = MemberProfile(lastName = "Muster", firstName = "Max", category = MemberCategory.BROTHER)
 
     @Test
