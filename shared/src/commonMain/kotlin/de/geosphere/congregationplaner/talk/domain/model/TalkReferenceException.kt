@@ -12,6 +12,10 @@ sealed class TalkReferenceException(message: String) : Exception(message) {
                 "Titeländerungen, je Tag eine.",
         )
 
+    class MissingNumber : TalkReferenceException("Bitte gib eine Vortragsnummer ein.")
+
+    class NumberTaken(number: Int) : TalkReferenceException("Die Nummer $number gibt es schon.")
+
     class InvalidWeekEvent :
         TalkReferenceException(
             "Der Name des Wochenereignisses muss 1 bis ${TalkSlot.MAX_WEEK_EVENT_NAME_LENGTH} Zeichen haben.",
