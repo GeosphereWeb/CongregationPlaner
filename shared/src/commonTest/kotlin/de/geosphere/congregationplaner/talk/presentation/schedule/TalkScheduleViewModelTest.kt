@@ -37,10 +37,14 @@ import de.geosphere.congregationplaner.talk.testing.FakeWeekEventRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
+import de.geosphere.congregationplaner.user.domain.model.DEFAULT_MESSAGE_TEMPLATES
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
+import de.geosphere.congregationplaner.user.domain.model.MessageTemplate
 import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
 import de.geosphere.congregationplaner.user.domain.usecase.ObserveMembersUseCase
+import de.geosphere.congregationplaner.user.domain.usecase.ObserveMessageTemplatesUseCase
+import de.geosphere.congregationplaner.user.testing.FakeMessageTemplateRepository
 import de.geosphere.congregationplaner.user.testing.FakeUserRepository
 import de.geosphere.congregationplaner.user.testing.testCongregation
 import kotlinx.coroutines.CompletableDeferred
@@ -125,6 +129,7 @@ class TalkScheduleViewModelTest {
     private lateinit var externals: FakeExternalSpeakerDirectoryRepository
     private lateinit var congregations: FakeCongregationMetadataRepository
     private lateinit var settings: FakeTalkPlanningSettingsRepository
+    private lateinit var templates: FakeMessageTemplateRepository
     private lateinit var viewModel: TalkScheduleViewModel
 
     @BeforeTest
@@ -143,6 +148,7 @@ class TalkScheduleViewModelTest {
             listOf(CongregationMetadata(id = testCongregation.congregationId)),
         )
         settings = FakeTalkPlanningSettingsRepository()
+        templates = FakeMessageTemplateRepository()
         val policy = TalkSchedulePermissionPolicy()
         val save = SaveTalkSlotUseCase(repository, policy)
         val delete = DeleteTalkSlotUseCase(repository, policy)
@@ -168,6 +174,7 @@ class TalkScheduleViewModelTest {
                 ObserveAllTalkSlotsUseCase(repository),
                 policy,
                 UserPermissionPolicy(),
+                ObserveMessageTemplatesUseCase(templates),
             ),
             policy,
             UserPermissionPolicy(),
@@ -181,6 +188,18 @@ class TalkScheduleViewModelTest {
     }
 
     private val state get() = viewModel.uiState.value
+
+    @Test
+    fun `the own message templates and name are ready for the WhatsApp swipe`() {
+        assertEquals(DEFAULT_MESSAGE_TEMPLATES, state.messageTemplates)
+
+        viewModel.onCurrentUserChanged(planner.copy(profile = MemberProfile(lastName = "Planer", firstName = "Paul")))
+        val own = listOf(MessageTemplate("Kurz", "Hallo {Vorname}"))
+        templates.templates.value = own
+
+        assertEquals(own, state.messageTemplates)
+        assertEquals(MessageSender("Paul", "Planer"), state.messageSender)
+    }
 
     @Test
     fun `create year asks first and creates the missing slots after the confirmation`() {

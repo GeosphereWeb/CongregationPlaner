@@ -481,6 +481,24 @@ service cloud.firestore {
         phones is list && phones.size() >= 1 && phones.size() <= 3;
     }
 
+    function isValidMessageTemplates(templates) {
+      let list = templates;
+      let count = list is list ? list.size() : 99;
+      return count >= 1 && count <= 4 &&
+        (list[0] is map && isValidMessageTemplate(list[0])) &&
+        (count < 2 || (list[1] is map && isValidMessageTemplate(list[1]))) &&
+        (count < 3 || (list[2] is map && isValidMessageTemplate(list[2]))) &&
+        (count < 4 || (list[3] is map && isValidMessageTemplate(list[3])));
+    }
+
+    function isValidMessageTemplate(template) {
+      let name = template.get('name', null);
+      let text = template.get('text', null);
+      return template.keys().hasOnly(['name', 'text']) &&
+        name is string && name.size() >= 1 && name.size() <= 40 &&
+        text is string && text.size() >= 1 && text.size() <= 1000;
+    }
+
     function roleFields() {
       return ['roles'];
     }
@@ -727,6 +745,16 @@ service cloud.firestore {
                     (request.auth.uid == uid && !hasRole(resource.data, 'CONGREGATION_ADMIN')) ||
                     (request.auth.uid != uid && isCongregationAdmin(regionId, subregionId, branchId, countryId, circuitId, congId))
                   );
+
+                  // Personal settings of the member, only for the member: `messageTemplates` holds the WhatsApp
+                  // texts {templates: list (1..4) of {name (1..40), text (1..1000)}}; the first one is the default.
+                  match /settings/{settingId} {
+                    allow read, delete: if isAuthenticated() && request.auth.uid == uid;
+                    allow create, update: if isAuthenticated() && request.auth.uid == uid &&
+                      settingId == 'messageTemplates' &&
+                      request.resource.data.keys().hasOnly(['templates']) &&
+                      isValidMessageTemplates(request.resource.data.get('templates', null));
+                  }
                 }
 
                 // ---------------------------------------------------------

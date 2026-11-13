@@ -79,3 +79,4 @@ Numbers are sequential and permanent. Never reuse or renumber an existing ADR, e
 - [ADR-0026: Land als eigene Ebene zwischen Zweig und Kreis](0026-country-level-in-organization-tree.md) — Accepted
 - [ADR-0027: Vortragshistorie aus den Terminen berechnen](0027-talk-history-derived-from-schedule.md) — Accepted
 - [ADR-0028: Stichtage des Planungsassistenten pro Versammlung](0028-talk-planning-settings-per-congregation.md) — Accepted
+- [ADR-0029: WhatsApp-Vorlagen in einem eigenen Einstellungs-Dokument des Mitglieds](0029-message-templates-in-member-settings-document.md) — Accepted

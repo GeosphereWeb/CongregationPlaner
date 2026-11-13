@@ -10,6 +10,7 @@ import de.geosphere.congregationplaner.talk.domain.usecase.ObserveWeekEventsUseC
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveTalkPlanningSettingsUseCase
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
+import de.geosphere.congregationplaner.user.domain.usecase.ObserveMessageTemplatesUseCase
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
@@ -29,6 +30,7 @@ class ScheduleReferenceUseCases(
     val observeAllSlots: ObserveAllTalkSlotsUseCase,
     val talkPolicy: TalkSchedulePermissionPolicy,
     val userPolicy: UserPermissionPolicy,
+    val observeMessageTemplates: ObserveMessageTemplatesUseCase,
 )
 
 /**
@@ -48,6 +50,7 @@ class ScheduleReferenceDataLoader(
         MEMBERS("Redner und Vorsitzende"),
         PLANNING_SETTINGS("Stichtage"),
         ALL_SLOTS("Termine für die Vorschläge"),
+        MESSAGE_TEMPLATES("WhatsApp-Vorlagen"),
     }
 
     fun observe(user: AppUser) {
@@ -70,6 +73,9 @@ class ScheduleReferenceDataLoader(
         val canViewMembers = canView && useCases.userPolicy.canViewMembers(user)
         keep(Source.MEMBERS, canViewMembers, { useCases.observeTalkMembers(user) }) { state, members ->
             state.copy(speakers = members.speakers, chairmen = members.chairmen)
+        }
+        keep(Source.MESSAGE_TEMPLATES, canView, { useCases.observeMessageTemplates(user) }) { state, templates ->
+            state.copy(messageTemplates = templates)
         }
     }
 
