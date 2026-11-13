@@ -303,13 +303,13 @@ class TalkSlotPresentationTest {
     }
 
     @Test
-    fun `free entries are shown with a hint and count as planned`() {
+    fun `free entries are shown without a hint and count as planned`() {
         val free = slot { it.withFreeTalk("Sondervortrag").withFreeSpeaker("Gast (Hamburg)") }
 
-        assertEquals("Sondervortrag (frei eingetragen)", slotTalkText(free))
-        assertEquals("Sondervortrag (frei eingetragen)", slotTitle(free))
-        assertEquals("Gast (Hamburg) (frei eingetragen)", slotSpeakerText(free))
-        assertEquals("Gast (Hamburg) · frei eingetragen", slotSpeakerLine(free))
+        assertEquals("Sondervortrag", slotTalkText(free))
+        assertEquals("Sondervortrag", slotTitle(free))
+        assertEquals("Gast (Hamburg)", slotSpeakerText(free))
+        assertEquals("Gast (Hamburg)", slotSpeakerLine(free))
         assertTrue(free.canBeInformed)
         assertEquals(SlotStatus.PLANNED, slotStatus(free, nextSlotDate = null))
     }
