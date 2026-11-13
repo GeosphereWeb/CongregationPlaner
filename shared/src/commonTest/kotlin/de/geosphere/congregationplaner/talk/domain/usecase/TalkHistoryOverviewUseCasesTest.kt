@@ -1,4 +1,4 @@
-package de.geosphere.congregationplaner.talk.presentation.history
+package de.geosphere.congregationplaner.talk.domain.usecase
 
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkHistoryEntry
@@ -7,7 +7,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class TalkHistoryOverviewTest {
+class TalkHistoryOverviewUseCasesTest {
+    private val searchSpeakerHistory = SearchSpeakerHistoryUseCase()
     private val d1 = LocalDate(2025, 1, 5)
     private val d2 = LocalDate(2025, 6, 1)
     private val d3 = LocalDate(2026, 2, 8)
@@ -21,11 +22,10 @@ class TalkHistoryOverviewTest {
         ),
         TalkHistoryEntry(4, listOf(d2), speakers = mapOf(d2 to "Muster, Max")),
     )
-    private val rows = talks.map { talk -> TalkHistoryRow(talk, history.firstOrNull { it.talkNumber == talk.number }) }
 
     @Test
     fun `talks are grouped by frequency with the most often first and never held last`() {
-        val groups = rows.groupedByFrequency()
+        val groups = BuildTalkHistoryOverviewUseCase()(talks, history).groups
 
         assertEquals(listOf(3, 1, 0), groups.map { it.count })
         assertEquals(listOf(2), groups[0].rows.map { it.talk.number })
@@ -34,14 +34,8 @@ class TalkHistoryOverviewTest {
     }
 
     @Test
-    fun `group titles name the count or that it was never held`() {
-        assertEquals("3× gehalten", FrequencyGroup(3, emptyList()).title)
-        assertEquals("Noch nie gehalten", FrequencyGroup(0, emptyList()).title)
-    }
-
-    @Test
     fun `no groups without talks`() {
-        assertTrue(emptyList<TalkHistoryRow>().groupedByFrequency().isEmpty())
+        assertTrue(BuildTalkHistoryOverviewUseCase()(emptyList(), history).groups.isEmpty())
     }
 
     @Test

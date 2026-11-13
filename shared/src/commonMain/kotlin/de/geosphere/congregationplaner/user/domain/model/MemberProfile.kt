@@ -79,6 +79,23 @@ data class MemberProfile(
     }
 }
 
+/**
+ * Trennt den Auth-Anzeigenamen („Vorname Nachname“) am letzten Leerzeichen: „Anna Maria Müller“ ergibt den Vornamen
+ * „Anna Maria“ und den Nachnamen „Müller“. Ein einzelnes Wort ist der Vorname. Im Profil lässt sich beides korrigieren.
+ */
+fun String?.toNameProfile(): MemberProfile {
+    val name = this?.trim().orEmpty()
+    val split = name.lastIndexOf(' ')
+    return if (split < 0) {
+        MemberProfile(firstName = name.take(MemberProfile.MAX_NAME_LENGTH))
+    } else {
+        MemberProfile(
+            firstName = name.substring(0, split).trim().take(MemberProfile.MAX_NAME_LENGTH),
+            lastName = name.substring(split + 1).trim().take(MemberProfile.MAX_NAME_LENGTH),
+        )
+    }
+}
+
 /** Werte des Firestore-Felds `category`. */
 enum class MemberCategory(val label: String) {
     BROTHER("Bruder"),

@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkHistoryEntry
+import de.geosphere.congregationplaner.talk.domain.usecase.TalkHistoryRow
 import de.geosphere.congregationplaner.talk.presentation.common.toDisplayText
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
@@ -242,7 +243,7 @@ private fun TalkHistoryDetail(row: TalkHistoryRow?) {
 private fun TalkHistoryContentPreview() = PreviewThemeWrapper {
     val talks = listOf(Talk(1, "Beispielvortrag"), Talk(2, "Noch nie gehalten"))
     TalkHistoryContent(
-        state = TalkHistoryUiState(
+        state = previewState(
             talks = talks,
             history = listOf(
                 TalkHistoryEntry(
@@ -264,7 +265,7 @@ private fun TalkHistoryContentPreview() = PreviewThemeWrapper {
 private fun TalkHistorySearchPreview() = PreviewThemeWrapper {
     val talks = listOf(Talk(1, "Beispielvortrag"), Talk(2, "Zweiter Vortrag"), Talk(3, "Noch nie gehalten"))
     TalkHistoryContent(
-        state = TalkHistoryUiState(
+        state = previewState(
             talks = talks,
             history = listOf(
                 TalkHistoryEntry(
@@ -296,7 +297,7 @@ private fun TalkHistorySearchPreview() = PreviewThemeWrapper {
 private fun TalkHistoryGroupedPreview() = PreviewThemeWrapper {
     val talks = listOf(Talk(1, "Beispielvortrag"), Talk(2, "Zweiter Vortrag"), Talk(3, "Noch nie gehalten"))
     TalkHistoryContent(
-        state = TalkHistoryUiState(
+        state = previewState(
             talks = talks,
             history = listOf(TalkHistoryEntry(2, listOf(LocalDate(2026, 5, 3)))),
             isLoading = false,
