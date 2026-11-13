@@ -43,6 +43,7 @@ internal fun MemberProfile.validated(requireName: Boolean): Result<MemberProfile
         cleaned.appointment != Appointment.NONE && !cleaned.canHaveAppointment ->
             MemberProfileException.AppointmentNotAllowed()
         cleaned.isSpeaker && !cleaned.canBeSpeaker -> MemberProfileException.SpeakerNotAllowed()
+        !cleaned.hasValidTalks() -> MemberProfileException.InvalidTalks()
         !MemberProfile.isValidPhone(cleaned.mobilePhone) || !MemberProfile.isValidPhone(cleaned.landlinePhone) ->
             MemberProfileException.InvalidPhone()
         cleaned.emails.size > MemberProfile.MAX_EMAILS -> MemberProfileException.TooManyEmails()
@@ -52,7 +53,12 @@ internal fun MemberProfile.validated(requireName: Boolean): Result<MemberProfile
     return error?.let { Result.failure(it) } ?: Result.success(cleaned)
 }
 
+private fun MemberProfile.hasValidTalks(): Boolean = (isSpeaker || talkNumbers.isEmpty()) &&
+    talkNumbers.size <= MemberProfile.MAX_TALKS &&
+    talkNumbers.all { it in 1..MemberProfile.MAX_TALK_NUMBER }
+
 private fun MemberProfile.cleaned(): MemberProfile = copy(
+    talkNumbers = talkNumbers.distinct().sorted(),
     lastName = lastName.trim(),
     firstName = firstName.trim(),
     mobilePhone = formatPhoneNumber(mobilePhone),

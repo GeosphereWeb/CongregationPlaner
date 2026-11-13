@@ -59,9 +59,37 @@ class PlanningSuggestionsTest {
         assertEquals(listOf(known, unknown), listOf(known, unknown).offering(null))
         assertEquals(listOf(known, unknown), listOf(known, unknown).offering(3))
         assertEquals(listOf(unknown), listOf(known, unknown).offering(4))
-        assertEquals(listOf(2, 3), talks.offeredBy(known).map { it.number })
-        assertEquals(talks, talks.offeredBy(unknown))
+        assertEquals(listOf(2, 3), talks.offeredBy(known.talkNumbers).map { it.number })
+        assertEquals(talks, talks.offeredBy(unknown.talkNumbers))
         assertEquals(talks, talks.offeredBy(null))
+    }
+
+    @Test
+    fun `home speakers are limited to the chosen talk`() {
+        val known = MemberRef("m1", "Muster", "Max", talkNumbers = listOf(2, 3))
+        val unknown = MemberRef("m2", "Beispiel", "Ben")
+
+        assertEquals(listOf(known, unknown), listOf(known, unknown).offeringMembers(null))
+        assertEquals(listOf(known, unknown), listOf(known, unknown).offeringMembers(2))
+        assertEquals(listOf(unknown), listOf(known, unknown).offeringMembers(4))
+    }
+
+    @Test
+    fun `the talks of the selected home or external speaker limit the talk list`() {
+        val member = MemberRef("m1", "Muster", "Max", talkNumbers = listOf(1))
+        val external = ExternalSpeaker("e1", "Extern", "Eva", "Nord", talkNumbers = listOf(2, 3))
+        val slot = TalkSlot(LocalDate(2026, 1, 4), LocalTime(10, 0))
+
+        assertEquals(
+            listOf(1),
+            slot.copy(speakerMemberId = "m1").selectedSpeakerTalks(listOf(member), listOf(external)),
+        )
+        assertEquals(
+            listOf(2, 3),
+            slot.copy(externalSpeakerId = "e1").selectedSpeakerTalks(listOf(member), listOf(external)),
+        )
+        assertNull(slot.copy(speakerMemberId = "gone").selectedSpeakerTalks(listOf(member), listOf(external)))
+        assertNull(slot.selectedSpeakerTalks(listOf(member), listOf(external)))
     }
 
     @Test

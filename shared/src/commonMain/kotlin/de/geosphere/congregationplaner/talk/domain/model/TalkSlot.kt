@@ -121,13 +121,17 @@ data class TalkTitleChange(val validFrom: LocalDate, val title: String)
 /** Die Vorträge mit dem Titel, der am [date] gilt. */
 fun List<Talk>.asOf(date: LocalDate): List<Talk> = map { it.asOf(date) }
 
-/** Ein Mitglied der Versammlung, wie es als Redner oder Vorsitzender im Termin ausgewählt wird. */
+/**
+ * Ein Mitglied der Versammlung, wie es als Redner oder Vorsitzender im Termin ausgewählt wird; [talkNumbers] sind die
+ * Vorträge eines Redners (leer = unbekannt).
+ */
 data class MemberRef(
     val memberId: String,
     val lastName: String,
     val firstName: String,
     val mobilePhone: String = "",
     val landlinePhone: String = "",
+    val talkNumbers: List<Int> = emptyList(),
 ) {
     val displayName: String get() = listOf(lastName, firstName).filter(String::isNotBlank).joinToString(", ")
 }
