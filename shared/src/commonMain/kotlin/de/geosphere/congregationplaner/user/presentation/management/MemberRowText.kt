@@ -27,5 +27,9 @@ internal fun memberSubtitle(member: AppUser): String {
     return parts.joinToString(" · ").ifEmpty { "Mitglied" }
 }
 
+/** „Anmeldung: name@beispiel.de“; `null` für Personen ohne Konto oder ohne bekannte Adresse. */
+internal fun memberLoginEmail(member: AppUser): String? =
+    member.email?.takeIf { member.hasAccount && it.isNotBlank() }?.let { "Anmeldung: $it" }
+
 /** Marke am Ende der Zeile: nur bei wartender Freigabe. */
 internal fun memberBadge(member: AppUser): String? = "offen".takeIf { member.isPending }
