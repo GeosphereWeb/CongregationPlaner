@@ -2,6 +2,7 @@ package de.geosphere.congregationplaner.user.presentation.management
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,11 +12,17 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -31,6 +38,7 @@ internal fun AdoptSpeakersDialog(
     onToggle: (String) -> Unit,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
+    onFilter: (String?) -> Unit = {},
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -42,11 +50,14 @@ internal fun AdoptSpeakersDialog(
                         "zeigen danach auf sie, und sie verschwinden aus dem Rednerverzeichnis.",
                     style = MaterialTheme.typography.bodySmall,
                 )
+                if (dialog.congregations.size > 1) {
+                    CongregationFilter(dialog, onFilter)
+                }
                 when {
                     dialog.isLoading -> CircularProgressIndicator()
                     dialog.speakers.isEmpty() -> Text("Das Rednerverzeichnis ist leer.")
                     else -> LazyColumn(Modifier.heightIn(max = 360.dp)) {
-                        items(dialog.speakers, key = { it.id }) { speaker ->
+                        items(dialog.visibleSpeakers, key = { it.id }) { speaker ->
                             Row(
                                 Modifier.fillMaxWidth().clickable(enabled = !dialog.isWorking) { onToggle(speaker.id) },
                                 verticalAlignment = Alignment.CenterVertically,
@@ -73,6 +84,28 @@ internal fun AdoptSpeakersDialog(
         },
         dismissButton = { TextButton(onClick = onDismiss, enabled = !dialog.isWorking) { Text("Abbrechen") } },
     )
+}
+
+/** Auswahl „Alle Versammlungen“ oder eine Versammlung des Verzeichnisses. */
+@Composable
+private fun CongregationFilter(dialog: AdoptSpeakersDialogState, onFilter: (String?) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        TextButton(onClick = { expanded = true }, enabled = !dialog.isWorking) {
+            Text("Versammlung: ${dialog.congregationFilter ?: "Alle"} ▾")
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            (listOf<String?>(null) + dialog.congregations).forEach { congregation ->
+                DropdownMenuItem(
+                    text = { Text(congregation ?: "Alle Versammlungen") },
+                    onClick = {
+                        expanded = false
+                        onFilter(congregation)
+                    },
+                )
+            }
+        }
+    }
 }
 
 /** Auswahl der Person ohne Konto, deren Angaben und Termine auf das Konto übergehen. */
@@ -128,6 +161,21 @@ private fun AdoptSpeakersDialogPreview() = PreviewThemeWrapper {
             speakers = listOf(SpeakerChoice("1", "Berg, Lea", "Musterstadt"), SpeakerChoice("2", "Kern, Tom", "Nord")),
             selected = setOf("1"),
             isLoading = false,
+        ),
+        onToggle = {},
+        onConfirm = {},
+        onDismiss = {},
+    )
+}
+
+@ThemePreviews
+@Composable
+private fun AdoptSpeakersDialogFilteredPreview() = PreviewThemeWrapper {
+    AdoptSpeakersDialog(
+        dialog = AdoptSpeakersDialogState(
+            speakers = listOf(SpeakerChoice("1", "Berg, Lea", "Musterstadt"), SpeakerChoice("2", "Kern, Tom", "Nord")),
+            isLoading = false,
+            congregationFilter = "Nord",
         ),
         onToggle = {},
         onConfirm = {},
