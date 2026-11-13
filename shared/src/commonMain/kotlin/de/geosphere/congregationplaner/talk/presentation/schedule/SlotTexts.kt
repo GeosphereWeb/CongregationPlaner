@@ -13,7 +13,7 @@ import kotlinx.datetime.LocalDate
 /** Name des Wochenereignisses als Zeile über dem Titel in der Liste; nur dort steht er. */
 internal fun slotEventLine(slot: TalkSlot): String? = slot.weekEventName
 
-/** „Nr. 12 – Thema“; ohne gespeichertes Thema nur die Nummer, ein frei eingetragener Vortrag mit Hinweis. */
+/** „Nr. 12 – Thema“; ohne gespeichertes Thema nur die Nummer, ein frei eingetragener Vortrag nur mit Titel. */
 internal fun slotTitle(slot: TalkSlot): String = slotTalkText(slot) ?: "Noch nicht geplant"
 
 /**
@@ -55,15 +55,17 @@ internal fun slotContact(
     return contact?.takeIf { it.isReachable }
 }
 
-/** Redner mit Herkunft: „Muster, Max · eigene Versammlung“, „Extern, Eva · Nord“ oder „Redner noch offen“. */
+/**
+ * Redner mit Herkunft: „Muster, Max · eigene Versammlung“, „Extern, Eva · Nord“, ein frei eingetragener Redner nur mit
+ * Namen oder „Redner noch offen“.
+ */
 internal fun slotSpeakerLine(slot: TalkSlot): String {
     val external = slot.externalSpeaker
     val member = slot.speaker
     return when {
         external != null -> "${personName(slot)} · ${external.congregationName}"
         member != null -> "${member.displayName} · eigene Versammlung"
-        slot.freeSpeakerName != null -> "${slot.freeSpeakerName} · $FREE_ENTRY_HINT"
-        else -> "Redner noch offen"
+        else -> slot.freeSpeakerName ?: "Redner noch offen"
     }
 }
 

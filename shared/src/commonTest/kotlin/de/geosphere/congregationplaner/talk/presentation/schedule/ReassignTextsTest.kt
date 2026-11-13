@@ -26,7 +26,7 @@ class ReassignTextsTest {
             reassignBannerText(source),
         )
         assertEquals(
-            "Am So, 15.11.2026 ist schon „Sondervortrag (frei eingetragen)“ eingeplant. " +
+            "Am So, 15.11.2026 ist schon „Sondervortrag“ eingeplant. " +
                 "Sollen die Termine So, 08.11.2026 und So, 15.11.2026 tauschen?",
             swapQuestion(source, target),
         )
