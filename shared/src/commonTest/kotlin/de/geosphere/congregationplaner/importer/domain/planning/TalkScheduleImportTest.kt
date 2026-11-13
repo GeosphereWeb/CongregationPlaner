@@ -12,11 +12,13 @@ import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.model.talkHistoryOf
+import de.geosphere.congregationplaner.talk.domain.usecase.checked
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class TalkScheduleImportTest {
     private val sunday = LocalDate(2023, 1, 1) // serial 44927
@@ -45,6 +47,7 @@ class TalkScheduleImportTest {
         speaker: String = "5",
         talk: String = "12",
         event: String = "",
+        title: String = "",
     ) = row(
         number,
         "Datum" to serial,
@@ -55,6 +58,7 @@ class TalkScheduleImportTest {
         "ID_Versammlung" to "20",
         "Name" to "Musterstadt",
         "Nummer" to talk,
+        "Titel" to title,
         "rednerIstInformiert" to "1",
     )
 
@@ -86,21 +90,41 @@ class TalkScheduleImportTest {
     }
 
     @Test
-    fun speakerOnlyInTheScheduleIsCreatedFromTheRowAndWarnsAboutSameName() {
+    fun speakerNotInTheDirectoryIsKeptByNameOnly() {
         val result = planTalkSchedule(table(full(speaker = "99", talk = "45")), context())
-        assertEquals(
-            VisitingSpeaker("99", "20", "Berg", "Lea", talkNumbers = listOf(45)),
-            result.newSpeakers.single(),
-        )
-        assertEquals("99", result.slots.entries.single().item.externalSpeakerId)
+        val slot = result.slots.entries.single().item
+
+        assertNull(slot.externalSpeakerId)
+        assertEquals("Berg, Lea (Musterstadt)", slot.freeSpeakerName)
+        assertEquals(45, slot.talkNumber)
+        assertTrue(slot.checked().isSuccess)
         assertEquals(listOf(2), result.warnings.map { it.row })
+        assertEquals(emptyList(), result.slots.errors)
+    }
+
+    @Test
+    fun talkNotInTheCatalogIsKeptByTitleOnly() {
+        val result = planTalkSchedule(table(full(talk = "999", title = "Alter Vortrag")), context())
+        val slot = result.slots.entries.single().item
+
+        assertNull(slot.talkNumber)
+        assertEquals("Alter Vortrag", slot.talkTitle)
+        assertTrue(slot.checked().isSuccess)
+        assertEquals("5", slot.externalSpeakerId)
+        assertEquals(listOf(2), result.warnings.map { it.row })
+        assertEquals(emptyList(), result.slots.errors)
+    }
+
+    @Test
+    fun knownTalkKeepsTheTitleOfTheCatalog() {
+        val slot = planTalkSchedule(table(full(title = "Alter Titel")), context()).slots.entries.single().item
+        assertEquals("Zwölf", slot.talkTitle)
     }
 
     @Test
     fun invalidRowsAreReportedAndDoNotStopTheImport() {
         val unknownTalk = row(5, "Datum" to "44934", "Nummer" to "999")
-        val unknownSpeaker =
-            row(6, "Datum" to "44941", "ID_Redner" to "77", "Nachname" to "X", "ID_Versammlung" to "404")
+        val unknownSpeaker = row(6, "Datum" to "44941", "ID_Redner" to "77")
         val result = planTalkSchedule(
             table(row(2, "Datum" to "abc"), full(3), row(4, "Datum" to "44927"), unknownTalk, unknownSpeaker),
             context(),
@@ -148,22 +172,12 @@ class TalkScheduleImportTest {
     }
 
     @Test
-    fun skippedSlotStillGetsItsMissingScheduleOnlySpeakerOnRepeat() {
-        val first = planTalkSchedule(table(full(speaker = "99", talk = "45")), context())
-        val saved = first.slots.entries.map { it.item }
+    fun secondRunSkipsSlotsWithFreeEntriesOnly() {
+        val rows = table(full(speaker = "99", talk = "999", title = "Alter Vortrag"))
+        val saved = planTalkSchedule(rows, context()).slots.entries.map { it.item }
 
-        val again = planTalkSchedule(table(full(speaker = "99", talk = "45")), context(saved))
+        val again = planTalkSchedule(rows, context(saved))
 
         assertEquals(listOf(ImportKind.SKIP), again.slots.entries.map { it.kind })
-        assertEquals(listOf("99"), again.newSpeakers.map { it.id })
-    }
-
-    @Test
-    fun skippedSlotDoesNotRecreateASpeakerThatAlreadyExists() {
-        val saved = planTalkSchedule(table(full()), context()).slots.entries.map { it.item }
-
-        val again = planTalkSchedule(table(full()), context(saved))
-
-        assertEquals(emptyList(), again.newSpeakers)
     }
 }

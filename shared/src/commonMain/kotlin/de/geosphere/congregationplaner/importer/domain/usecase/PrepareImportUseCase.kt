@@ -7,7 +7,6 @@ import de.geosphere.congregationplaner.importer.domain.model.ImportPlan
 import de.geosphere.congregationplaner.importer.domain.model.ImportReport
 import de.geosphere.congregationplaner.importer.domain.model.ImportTable
 import de.geosphere.congregationplaner.importer.domain.planning.ScheduleImportContext
-import de.geosphere.congregationplaner.importer.domain.planning.TalkScheduleImport
 import de.geosphere.congregationplaner.importer.domain.planning.excelSerialToDate
 import de.geosphere.congregationplaner.importer.domain.planning.planSpeakerDirectory
 import de.geosphere.congregationplaner.importer.domain.planning.planTalkCatalog
@@ -124,7 +123,7 @@ class PrepareImportUseCase(
         return PreparedImport(
             listOf(import.slots.summary("Termine")),
             import.slots.errors,
-            import.warnings + newSpeakerNotes(import),
+            import.warnings,
         ) { importSchedule(user, import) }
     }
 
@@ -145,14 +144,6 @@ class PrepareImportUseCase(
 
 private fun <T> ImportPlan<T>.summary(label: String) =
     PlanSummary(label, count(ImportKind.CREATE), count(ImportKind.UPDATE), count(ImportKind.SKIP))
-
-private fun newSpeakerNotes(import: TalkScheduleImport): List<ImportError> = if (import.newSpeakers.isEmpty()) {
-    emptyList()
-} else {
-    listOf(
-        ImportError(0, "${import.newSpeakers.size} Redner nur in der Planung werden neu angelegt"),
-    )
-}
 
 /** The schedule file carries event ID and name per row; match the name against the events that now exist. */
 private fun eventIdsByName(table: ImportTable, idByName: Map<String, String>): Map<String, String> =

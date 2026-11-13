@@ -123,7 +123,7 @@ private val previewPending = PendingImport(
     PreparedImport(
         summaries = listOf(PlanSummary("Termine", 199, 12, 50), PlanSummary("Historie", 80, 0, 0)),
         errors = listOf(ImportError(17, "Ungültiges Datum: abc")),
-        warnings = listOf(ImportError(0, "6 Redner nur in der Planung werden neu angelegt")),
+        warnings = listOf(ImportError(4, "Redner 77 ist nicht in der Rednerliste; nur der Name")),
         run = { ImportReport() },
     ),
 )
