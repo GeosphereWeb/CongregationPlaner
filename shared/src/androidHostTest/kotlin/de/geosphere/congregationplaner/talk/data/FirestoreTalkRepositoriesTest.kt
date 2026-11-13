@@ -16,6 +16,7 @@ import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
+import de.geosphere.congregationplaner.talk.domain.model.TalkTitleChange
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.testing.assertFailure
 import de.geosphere.congregationplaner.testing.failedTask
@@ -294,7 +295,12 @@ class FirestoreTalkRepositoriesTest {
 
     @Test
     fun `talk catalog maps documents and skips ids that are not a talk number`(): Unit = withMockedLog {
-        val active = catalogDocument("12", "Der Weg zum Glück", true)
+        val changes = listOf(
+            mapOf("validFrom" to "2027-01-01", "title" to "Neuer Titel"),
+            mapOf("validFrom" to "kein Datum", "title" to "Übersprungen"),
+            "kein Eintrag",
+        )
+        val active = catalogDocument("12", "Der Weg zum Glück", true, changes)
         val paused = catalogDocument("7", "Pausiert", false)
         val defaults = catalogDocument("9", null, null)
         val notANumber = catalogDocument("abc", "Ungültig", true)
@@ -304,7 +310,11 @@ class FirestoreTalkRepositoriesTest {
         val talks = runBlocking { FirestoreTalkCatalogRepository(firestore).observeTalks().first() }
 
         assertEquals(
-            listOf(Talk(12, "Der Weg zum Glück", true), Talk(7, "Pausiert", false), Talk(9, "", true)),
+            listOf(
+                Talk(12, "Der Weg zum Glück", true, listOf(TalkTitleChange(LocalDate(2027, 1, 1), "Neuer Titel"))),
+                Talk(7, "Pausiert", false),
+                Talk(9, "", true),
+            ),
             talks,
         )
     }
@@ -334,10 +344,16 @@ class FirestoreTalkRepositoriesTest {
         }
     }
 
-    private fun catalogDocument(id: String, title: String?, active: Boolean?): DocumentSnapshot = mockk {
+    private fun catalogDocument(
+        id: String,
+        title: String?,
+        active: Boolean?,
+        titleChanges: Any? = null,
+    ): DocumentSnapshot = mockk {
         every { this@mockk.id } returns id
         every { getString("title") } returns title
         every { getBoolean("active") } returns active
+        every { this@mockk.get("titleChanges") } returns titleChanges
     }
 
     private fun querySnapshot(vararg documents: DocumentSnapshot): QuerySnapshot = mockk {

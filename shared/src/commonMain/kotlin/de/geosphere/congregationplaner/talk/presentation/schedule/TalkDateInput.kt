@@ -24,12 +24,12 @@ import kotlinx.datetime.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun TalkDateInput(date: LocalDate, onDateChange: (LocalDate) -> Unit) {
+internal fun TalkDateInput(date: LocalDate, label: String = "Datum", onDateChange: (LocalDate) -> Unit) {
     var showDatePicker by remember { mutableStateOf(false) }
     OutlinedTextField(
         value = date.toDisplayText(),
         onValueChange = {},
-        label = { Text("Datum") },
+        label = { Text(label) },
         modifier = Modifier.fillMaxWidth().clickable { showDatePicker = true },
         readOnly = true,
         supportingText = { Text("Tippen, um ein Datum auszuwählen.") },

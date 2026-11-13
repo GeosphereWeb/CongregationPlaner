@@ -86,13 +86,33 @@ data class TalkSlot(
 
 /**
  * Ein Vortrag aus der Vortragsliste (`talkCatalog/{Nummer}`); sie gilt für alle Versammlungen und Kreise.
- * Die Nummer bleibt stabil, der Titel kann sich ändern, und ein Vortrag kann zeitweise nicht [active] sein.
+ * Die Nummer bleibt stabil, und ein Vortrag kann zeitweise nicht [active] sein. Der Titel kann sich ändern:
+ * [title] ist der ursprüngliche Titel, [titleChanges] sind die späteren Titel mit dem Tag, ab dem sie gelten.
  */
-data class Talk(val number: Int, val title: String, val active: Boolean = true) {
+data class Talk(
+    val number: Int,
+    val title: String,
+    val active: Boolean = true,
+    val titleChanges: List<TalkTitleChange> = emptyList(),
+) {
+    /** Der Titel, der am [date] gilt: die letzte Änderung bis dahin, sonst der ursprüngliche [title]. */
+    fun titleOn(date: LocalDate): String =
+        titleChanges.filter { it.validFrom <= date }.maxByOrNull { it.validFrom }?.title ?: title
+
+    /** Der Vortrag mit dem Titel, der am [date] gilt, z. B. für die Auswahl an einem Termin. */
+    fun asOf(date: LocalDate): Talk = copy(title = titleOn(date))
+
     companion object {
         const val MAX_NUMBER = 9999
+        const val MAX_TITLE_CHANGES = 10
     }
 }
+
+/** Ein neuer Titel eines Vortrags, der ab [validFrom] gilt. */
+data class TalkTitleChange(val validFrom: LocalDate, val title: String)
+
+/** Die Vorträge mit dem Titel, der am [date] gilt. */
+fun List<Talk>.asOf(date: LocalDate): List<Talk> = map { it.asOf(date) }
 
 /** Ein Mitglied der Versammlung, wie es als Redner oder Vorsitzender im Termin ausgewählt wird. */
 data class MemberRef(
