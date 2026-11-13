@@ -14,11 +14,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** Die Sitzung; [user] ist gesetzt, solange jemand angemeldet ist. */
+/**
+ * Die Sitzung; [user] ist gesetzt, solange jemand angemeldet ist. [globalLogin] merkt sich, dass er sich als globaler
+ * Admin angemeldet hat.
+ */
 data class SessionUiState(
     val firebaseStatus: String = "Firebase wird initialisiert...",
     val user: FirebaseUser? = null,
     val emailVerified: Boolean = false,
+    val globalLogin: Boolean = false,
 )
 
 @Inject
@@ -43,8 +47,9 @@ class SessionViewModel(
         restoreSession()
     }
 
-    fun onSignedIn(user: FirebaseUser) = mutableUiState.update {
-        it.copy(user = user, emailVerified = user.emailVerified)
+    // shortcut: globalLogin is not persisted; after an app restart the session falls back to the stored congregation.
+    fun onSignedIn(user: FirebaseUser, globalLogin: Boolean = false) = mutableUiState.update {
+        it.copy(user = user, emailVerified = user.emailVerified, globalLogin = globalLogin)
     }
 
     fun signOut() {

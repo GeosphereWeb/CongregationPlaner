@@ -75,6 +75,20 @@ internal fun UserAccessGateScreen(
             onSignOut = onSignOut,
         )
 
+        is UserAccessState.NotGlobalAdmin -> GateContent(
+            current = "Kein globaler Admin",
+            chipText = "Nicht eingetragen",
+            chipTone = StatusTone.Gold,
+            title = "Noch kein Zugang",
+            message = globalAdminMessage(state.email.orEmpty()),
+            adminContacts = null,
+            hint = "Sobald du eingetragen bist, geht es ohne neue Anmeldung weiter.",
+            primaryAction = "Status prüfen",
+            onPrimaryAction = onRefresh,
+            onChangeCongregation = null,
+            onSignOut = onSignOut,
+        )
+
         is UserAccessState.Error -> GateContent(
             current = "Zugriff nicht geprüft",
             chipText = "Fehler",
@@ -103,7 +117,7 @@ private fun GateContent(
     hint: String?,
     primaryAction: String,
     onPrimaryAction: () -> Unit,
-    onChangeCongregation: () -> Unit,
+    onChangeCongregation: (() -> Unit)?,
     onSignOut: () -> Unit,
 ) {
     NightScreen(stepLabel = "ZUGANG", current = current, previous = listOf("Konto angelegt")) {
@@ -117,7 +131,9 @@ private fun GateContent(
         Spacer(Modifier.weight(1f))
         Column(modifier = Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             PrimaryButton(primaryAction, onPrimaryAction, Modifier.fillMaxWidth())
-            SecondaryButton("Andere Versammlung wählen", onChangeCongregation, Modifier.fillMaxWidth())
+            if (onChangeCongregation != null) {
+                SecondaryButton("Andere Versammlung wählen", onChangeCongregation, Modifier.fillMaxWidth())
+            }
             SecondaryButton("Abmelden", onSignOut, Modifier.fillMaxWidth(), outlined = false)
         }
     }
@@ -202,6 +218,10 @@ private fun UserAccessGateNoAdminPreview() = GatePreview(previewApproval, AdminC
 @ThemePreviews
 @Composable
 private fun UserAccessGateAdminsFailedPreview() = GatePreview(previewApproval, AdminContactsState.Failed)
+
+@ThemePreviews
+@Composable
+private fun UserAccessGateNotGlobalAdminPreview() = GatePreview(UserAccessState.NotGlobalAdmin("name@beispiel.de"))
 
 @ThemePreviews
 @Composable

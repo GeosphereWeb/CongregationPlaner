@@ -16,6 +16,12 @@ sealed interface UserAccessState {
     /** Der Nutzer ist angemeldet, aber vom Versammlungsadmin noch nicht freigegeben. */
     data class NeedsApproval(val user: AppUser) : UserAccessState
 
+    /**
+     * Der Nutzer hat sich als globaler Admin angemeldet, steht aber (noch) nicht in `admins`. Er gehört zu keiner
+     * Versammlung; eintragen kann ihn nur der Betreiber der App.
+     */
+    data class NotGlobalAdmin(val email: String?) : UserAccessState
+
     /** Der Nutzer ist angemeldet und freigegeben. */
     data class Authorized(val user: AppUser) : UserAccessState
 
