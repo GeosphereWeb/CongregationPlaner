@@ -1,6 +1,8 @@
 package de.geosphere.congregationplaner.auth.di
 
 import de.geosphere.congregationplaner.auth.data.FirebaseAuthManager
+import de.geosphere.congregationplaner.auth.data.createConnectivityRepository
+import de.geosphere.congregationplaner.auth.domain.repository.ConnectivityRepository
 import de.geosphere.congregationplaner.auth.domain.repository.FirebaseAuthRepository
 import de.geosphere.congregationplaner.auth.presentation.LoginViewModel
 import de.geosphere.congregationplaner.auth.presentation.SessionViewModel
@@ -14,4 +16,7 @@ interface AuthGraph {
 
     @Provides
     fun provideAuthRepository(): FirebaseAuthRepository = FirebaseAuthManager
+
+    @Provides
+    fun provideConnectivityRepository(): ConnectivityRepository = createConnectivityRepository()
 }

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.geosphere.congregationplaner.auth.domain.repository.FirebaseUser
 import de.geosphere.congregationplaner.auth.domain.usecase.GetSignedInUserUseCase
+import de.geosphere.congregationplaner.auth.domain.usecase.ObserveConnectivityUseCase
 import de.geosphere.congregationplaner.auth.domain.usecase.RefreshCurrentUserUseCase
 import de.geosphere.congregationplaner.auth.domain.usecase.ResendVerificationEmailUseCase
 import de.geosphere.congregationplaner.auth.domain.usecase.SignOutUseCase
@@ -19,7 +20,7 @@ import kotlinx.coroutines.launch
  * Admin angemeldet hat.
  */
 data class SessionUiState(
-    val firebaseStatus: String = "Firebase wird initialisiert...",
+    val firebaseStatus: String = firebaseStatusText(ready = null, online = true),
     val user: FirebaseUser? = null,
     val emailVerified: Boolean = false,
     val globalLogin: Boolean = false,
@@ -31,20 +32,34 @@ class SessionViewModel(
     private val signOutUseCase: SignOutUseCase,
     private val refreshCurrentUser: RefreshCurrentUserUseCase,
     private val resendVerification: ResendVerificationEmailUseCase,
+    observeConnectivity: ObserveConnectivityUseCase,
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(SessionUiState())
     val uiState: StateFlow<SessionUiState> = mutableUiState.asStateFlow()
 
+    private var firebaseReady: Boolean? = null
+    private var online = true
+
     init {
         restoreSession()
+        viewModelScope.launch {
+            observeConnectivity().collect {
+                online = it
+                showStatus()
+            }
+        }
     }
 
     /** Nach dem Start von Firebase: Status anzeigen und eine bestehende Sitzung übernehmen. */
     fun onFirebaseInitialized(ready: Boolean) {
-        mutableUiState.update {
-            it.copy(firebaseStatus = if (ready) "Firebase verfügbar" else "Firebase nicht konfiguriert")
-        }
+        firebaseReady = ready
+        showStatus()
         restoreSession()
+    }
+
+    private fun showStatus() {
+        val status = firebaseStatusText(firebaseReady, online)
+        mutableUiState.update { it.copy(firebaseStatus = status) }
     }
 
     // shortcut: globalLogin is not persisted; after an app restart the session falls back to the stored congregation.
