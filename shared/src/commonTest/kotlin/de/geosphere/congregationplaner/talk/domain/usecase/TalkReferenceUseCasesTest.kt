@@ -3,6 +3,7 @@ package de.geosphere.congregationplaner.talk.domain.usecase
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkReferenceException
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
+import de.geosphere.congregationplaner.talk.domain.model.TalkTitleChange
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.permission.TalkReferenceDataPolicy
 import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
@@ -10,6 +11,7 @@ import de.geosphere.congregationplaner.talk.testing.FakeWeekEventRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -50,6 +52,23 @@ class TalkReferenceUseCasesTest {
         invalid.forEach { assertIs<TalkReferenceException.InvalidTalk>(saveTalk(admin, it).exceptionOrNull()) }
         assertTrue(catalog.savedTalks.isEmpty())
         assertTrue(saveTalk(admin, Talk(Talk.MAX_NUMBER, "x".repeat(TalkSlot.MAX_TALK_TITLE_LENGTH))).isSuccess)
+    }
+
+    @Test
+    fun `title changes are trimmed and sorted and must be valid`() = runBlocking {
+        val later = TalkTitleChange(LocalDate(2028, 1, 1), " Dritter ")
+        val earlier = TalkTitleChange(LocalDate(2027, 1, 1), "Zweiter")
+
+        val saved = saveTalk(admin, Talk(12, "Erster", titleChanges = listOf(later, earlier))).getOrThrow()
+
+        assertEquals(listOf(earlier, later.copy(title = "Dritter")), saved.titleChanges)
+        val sameDay = listOf(earlier, earlier.copy(title = "Anders"))
+        val tooMany = (1..Talk.MAX_TITLE_CHANGES + 1).map { TalkTitleChange(LocalDate(2027, 1, it), "T$it") }
+        listOf(sameDay, tooMany, listOf(earlier.copy(title = " "))).forEach { changes ->
+            assertIs<TalkReferenceException.InvalidTalk>(
+                saveTalk(admin, Talk(12, "Erster", titleChanges = changes)).exceptionOrNull(),
+            )
+        }
     }
 
     @Test

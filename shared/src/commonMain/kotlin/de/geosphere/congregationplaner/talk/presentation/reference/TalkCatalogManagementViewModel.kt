@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.geosphere.congregationplaner.presentation.components.ListDetailState
 import de.geosphere.congregationplaner.talk.domain.model.Talk
+import de.geosphere.congregationplaner.talk.domain.model.TalkTitleChange
 import de.geosphere.congregationplaner.talk.domain.permission.TalkReferenceDataPolicy
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkCatalogUseCase
@@ -16,6 +17,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
+import kotlin.time.Clock
 
 /**
  * Der gerade bearbeitete Vortrag. Die Nummer ist die Dokument-ID und nur bei einem neuen Vortrag änderbar;
@@ -26,14 +31,35 @@ data class TalkEditorState(
     val title: String,
     val active: Boolean,
     val original: Talk? = null,
+    /** Spätere Titel mit dem Tag, ab dem sie gelten; [title] ist der ursprüngliche Titel. */
+    val titleChanges: List<TalkTitleChange> = original?.titleChanges.orEmpty(),
 ) {
     val isNew: Boolean get() = original == null
-    val talk: Talk? get() = numberText.toIntOrNull()?.let { Talk(it, title, active) }
+    val talk: Talk? get() = numberText.toIntOrNull()?.let { Talk(it, title, active, titleChanges) }
     val isDirty: Boolean get() = isNew || talk != original
+    val canAddTitleChange: Boolean get() = titleChanges.size < Talk.MAX_TITLE_CHANGES
+
+    /**
+     * Eine neue Änderung ab [date] mit dem Titel, der bisher an diesem Tag gilt (zum Anpassen); bei
+     * [Talk.MAX_TITLE_CHANGES] Änderungen bleibt alles, wie es ist.
+     */
+    fun withTitleChangeAdded(date: LocalDate): TalkEditorState {
+        if (!canAddTitleChange) return this
+        val current = Talk(0, title, active, titleChanges).titleOn(date)
+        return copy(titleChanges = titleChanges + TalkTitleChange(date, current))
+    }
+
+    fun withTitleChange(index: Int, change: TalkTitleChange): TalkEditorState =
+        copy(titleChanges = titleChanges.mapIndexed { i, current -> if (i == index) change else current })
+
+    fun withoutTitleChange(index: Int): TalkEditorState =
+        copy(titleChanges = titleChanges.filterIndexed { i, _ -> i != index })
 }
 
 data class TalkCatalogUiState(
     val talks: List<Talk> = emptyList(),
+    /** Heute; die Liste zeigt den Titel, der heute gilt. */
+    val today: LocalDate = Clock.System.todayIn(TimeZone.currentSystemDefault()),
     val isLoading: Boolean = true,
     val canManage: Boolean = false,
     val editor: TalkEditorState? = null,

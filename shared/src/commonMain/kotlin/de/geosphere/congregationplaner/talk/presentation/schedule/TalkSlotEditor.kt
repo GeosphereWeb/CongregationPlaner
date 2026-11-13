@@ -28,6 +28,7 @@ import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
+import de.geosphere.congregationplaner.talk.domain.model.asOf
 import de.geosphere.congregationplaner.talk.presentation.picker.MemberPickerDialog
 import de.geosphere.congregationplaner.talk.presentation.picker.SpeakerActions
 import de.geosphere.congregationplaner.talk.presentation.picker.SpeakerPickerDialog
@@ -83,6 +84,9 @@ internal fun TalkSlotEditor(
     val selectableChairmen = chairmen.filterNot { it.memberId == slot.speakerMemberId }
     val speakerText = slotSpeakerText(slot)
     val talkText = slotTalkText(slot)
+    val newerTitle = outdatedTalkTitle(slot, talks)
+    // Die Auswahl zeigt und übernimmt den Titel, der am Termintag gilt.
+    val talksOnDate = remember(talks, slot.date) { talks.asOf(slot.date) }
 
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SlotHeader(slot, chip)
@@ -115,7 +119,11 @@ internal fun TalkSlotEditor(
         FieldCard(
             label = "Vortrag",
             value = talkText ?: "Noch kein Vortrag gewählt",
-            supporting = if (slot.talkCancelled) "Der Vortrag entfällt, eine Auswahl ist nicht nötig." else null,
+            supporting = if (slot.talkCancelled) {
+                "Der Vortrag entfällt, eine Auswahl ist nicht nötig."
+            } else {
+                inactiveTalkHint(slot, talks)
+            },
             missing = talkText == null && !slot.talkCancelled,
             action = {
                 FieldActions(
@@ -126,6 +134,13 @@ internal fun TalkSlotEditor(
                 )
             },
         )
+        newerTitle?.let { title ->
+            SecondaryButton(
+                text = "Titel aktualisieren: „$title“",
+                onClick = { onChange(slot.copy(talkTitle = title)) },
+                enabled = !isSaving,
+            )
+        }
         slot.talkNumber?.let { number ->
             // Ungespeicherte Änderungen gingen beim Wechsel verloren.
             SecondaryButton(
@@ -256,7 +271,7 @@ internal fun TalkSlotEditor(
 
     if (showTalkPicker) {
         TalkPickerDialog(
-            talks = talks.offeredBy(slot.selectedExternal(externalSpeakers)),
+            talks = talksOnDate.offeredBy(slot.selectedExternal(externalSpeakers)),
             onSelect = {
                 onSelectTalk(it)
                 showTalkPicker = false

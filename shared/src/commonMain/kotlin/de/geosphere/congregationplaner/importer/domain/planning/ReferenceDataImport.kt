@@ -77,8 +77,14 @@ fun planTalkCatalog(table: ImportTable, existing: List<Talk>): ImportPlan<Talk> 
             errors += ImportError(row.number, error ?: "Ungültige Zeile")
             continue
         }
-        val wanted = Talk(number, title, row.text(TALK_ACTIVE_COLUMN)?.toDoubleOrNull() != 0.0)
         val current = existing.firstOrNull { it.number == number }
+        // The source has no title history; changes kept in the app survive a new import.
+        val wanted = Talk(
+            number,
+            title,
+            row.text(TALK_ACTIVE_COLUMN)?.toDoubleOrNull() != 0.0,
+            current?.titleChanges.orEmpty(),
+        )
         val kind = when {
             current == null -> ImportKind.CREATE
             current == wanted -> ImportKind.SKIP

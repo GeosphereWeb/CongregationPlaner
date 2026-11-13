@@ -38,7 +38,9 @@ import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.presentation.components.ListDetailState
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.talk.domain.model.Talk
+import de.geosphere.congregationplaner.talk.domain.model.TalkTitleChange
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
+import de.geosphere.congregationplaner.talk.presentation.schedule.TalkDateInput
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.theming.nightCardColors
@@ -47,6 +49,7 @@ import de.geosphere.congregationplaner.ui.field.AppSwitch
 import de.geosphere.congregationplaner.ui.list.SelectableListCard
 import de.geosphere.congregationplaner.ui.pane.DetailPane
 import de.geosphere.congregationplaner.ui.pane.DetailPlaceholder
+import kotlinx.datetime.LocalDate
 
 /** Callbacks der Pflege-Oberfläche; gebündelt, damit die Composables überschaubare Signaturen behalten. */
 internal data class TalkCatalogActions(
@@ -202,21 +205,24 @@ private fun TalkCatalogTab(state: TalkCatalogUiState, actions: TalkCatalogAction
                         actionsEnabled = !state.isSaving,
                         canDelete = true,
                     ) {
-                        Text("${talk.number} – ${talk.title}", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "${talk.number} – ${talk.titleOn(state.today)}",
+                            style = MaterialTheme.typography.titleMedium,
+                        )
                         if (!talk.active) Text("nicht aktiv", color = MaterialTheme.colorScheme.error)
                     }
                 }
             }
         },
         detail = {
-            state.editor?.let { TalkEditorCard(it, state.isSaving, actions) }
+            state.editor?.let { TalkEditorCard(it, state.isSaving, state.today, actions) }
                 ?: DetailPlaceholder("Wähle einen Vortrag aus oder lege einen neuen an.")
         },
     )
 }
 
 @Composable
-private fun TalkEditorCard(editor: TalkEditorState, isSaving: Boolean, actions: TalkCatalogActions) {
+private fun TalkEditorCard(editor: TalkEditorState, isSaving: Boolean, today: LocalDate, actions: TalkCatalogActions) {
     Card(colors = nightCardColors()) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(if (editor.isNew) "Neuer Vortrag" else "Vortrag ändern", style = MaterialTheme.typography.titleMedium)
@@ -233,7 +239,7 @@ private fun TalkEditorCard(editor: TalkEditorState, isSaving: Boolean, actions: 
             OutlinedTextField(
                 value = editor.title,
                 onValueChange = { actions.onEditorChange(editor.copy(title = it)) },
-                label = { Text("Titel") },
+                label = { Text(if (editor.titleChanges.isEmpty()) "Titel" else "Ursprünglicher Titel") },
                 modifier = Modifier.fillMaxWidth(),
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -242,11 +248,53 @@ private fun TalkEditorCard(editor: TalkEditorState, isSaving: Boolean, actions: 
                     actions.onEditorChange(editor.copy(active = it))
                 })
             }
+            TitleChanges(editor, isSaving, today, actions.onEditorChange)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = actions.onSave, enabled = !isSaving && editor.isDirty) {
                     Text(if (isSaving) "Speichert …" else "Speichern")
                 }
                 TextButton(onClick = actions.onCancel, enabled = !isSaving) { Text("Schließen") }
+            }
+        }
+    }
+}
+
+/** Die Titelhistorie: je Änderung ab welchem Tag welcher Titel gilt; geplante Termine nehmen den gültigen Titel. */
+@Composable
+private fun TitleChanges(
+    editor: TalkEditorState,
+    isSaving: Boolean,
+    today: LocalDate,
+    onEditorChange: (TalkEditorState) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Titeländerungen", style = MaterialTheme.typography.titleSmall)
+        Text(
+            "Ab dem Datum gilt der neue Titel. Termine an früheren Tagen behalten den Titel, der damals galt.",
+            style = MaterialTheme.typography.bodySmall,
+        )
+        editor.titleChanges.forEachIndexed { index, change ->
+            Card(colors = nightCardColors()) {
+                Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TalkDateInput(change.validFrom, label = "Gilt ab") {
+                        onEditorChange(editor.withTitleChange(index, change.copy(validFrom = it)))
+                    }
+                    OutlinedTextField(
+                        value = change.title,
+                        onValueChange = { onEditorChange(editor.withTitleChange(index, change.copy(title = it))) },
+                        label = { Text("Neuer Titel") },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isSaving,
+                    )
+                    TextButton(onClick = { onEditorChange(editor.withoutTitleChange(index)) }, enabled = !isSaving) {
+                        Text("Änderung entfernen")
+                    }
+                }
+            }
+        }
+        if (editor.canAddTitleChange) {
+            TextButton(onClick = { onEditorChange(editor.withTitleChangeAdded(today)) }, enabled = !isSaving) {
+                Text("Titeländerung hinzufügen")
             }
         }
     }
@@ -328,7 +376,12 @@ private fun TalkReferenceContentPreview() = PreviewThemeWrapper {
             talks = listOf(Talk(1, "Beispielvortrag"), Talk(2, "Pausierter Vortrag", active = false)),
             isLoading = false,
             canManage = true,
-            editor = TalkEditorState("3", "Neuer Vortrag", active = true),
+            editor = TalkEditorState(
+                "3",
+                "Alter Titel",
+                active = true,
+                titleChanges = listOf(TalkTitleChange(LocalDate(2027, 1, 1), "Neuer Titel")),
+            ),
         ),
         catalogActions = TalkCatalogActions(),
         eventState = WeekEventUiState(
