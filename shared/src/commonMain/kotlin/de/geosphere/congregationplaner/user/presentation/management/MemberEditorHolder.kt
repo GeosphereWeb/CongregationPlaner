@@ -1,6 +1,7 @@
 package de.geosphere.congregationplaner.user.presentation.management
 
 import de.geosphere.congregationplaner.presentation.state.UiStateStore
+import de.geosphere.congregationplaner.talk.presentation.directory.parseTalkNumbers
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.usecase.CreateMemberWithoutAccountUseCase
@@ -35,6 +36,10 @@ class MemberEditorHolder(
         state.copy(editor = state.editor?.copy(profile = profile.normalized().withinInputLimits()))
     }
 
+    fun updateTalks(text: String) = store.update { state ->
+        state.copy(editor = state.editor?.copy(talksText = text))
+    }
+
     fun cancel() {
         if (!store.value.isSaving) store.update { it.copy(editor = null, errorMessage = null) }
     }
@@ -43,7 +48,7 @@ class MemberEditorHolder(
     fun discard() {
         if (store.value.isSaving) return
         store.update { state ->
-            val reverted = state.editor?.takeUnless { it.isNew }?.let { it.copy(profile = it.original) }
+            val reverted = state.editor?.takeUnless { it.isNew }?.let { MemberEditorState(it.original, it.member) }
             state.copy(editor = reverted, errorMessage = null)
         }
     }
@@ -55,15 +60,22 @@ class MemberEditorHolder(
         val uid = editor?.member?.uid
         val busy = state.isSaving || uid in state.busyMemberIds
         if (editor == null || user == null || busy) return
+        // Wer kein Redner ist, hat keine Vorträge; die Eingabe zählt dann nicht.
+        val talks = if (editor.profile.isSpeaker) parseTalkNumbers(editor.talksText) else emptyList()
+        if (talks == null) {
+            store.update { it.copy(errorMessage = INVALID_TALKS_MESSAGE) }
+            return
+        }
+        val profile = editor.profile.copy(talkNumbers = talks)
 
         store.update {
             it.copy(isSaving = true, busyMemberIds = it.busyMemberIds + setOfNotNull(uid), errorMessage = null)
         }
         scope.launch {
             val result = if (editor.member == null) {
-                useCases.createMemberWithoutAccount(user, editor.profile)
+                useCases.createMemberWithoutAccount(user, profile)
             } else {
-                useCases.updateMemberProfile(user, editor.member.copy(profile = editor.profile))
+                useCases.updateMemberProfile(user, editor.member.copy(profile = profile))
             }
             store.update { current ->
                 result.fold(
@@ -81,6 +93,10 @@ class MemberEditorHolder(
                 )
             }
         }
+    }
+
+    private companion object {
+        const val INVALID_TALKS_MESSAGE = "Vorträge: bitte nur Nummern, getrennt durch Komma oder Leerzeichen."
     }
 
     private fun open(allowed: Boolean, editor: MemberEditorState) = store.update {

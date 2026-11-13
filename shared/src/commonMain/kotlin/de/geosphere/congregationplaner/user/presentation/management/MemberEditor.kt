@@ -35,6 +35,7 @@ internal fun MemberEditor(
     onChange: (MemberProfile) -> Unit,
     onSave: () -> Unit,
     onCancel: () -> Unit,
+    onTalksChange: (String) -> Unit = {},
 ) {
     val profile = editor.profile
     Card(colors = nightCardColors()) {
@@ -70,14 +71,7 @@ internal fun MemberEditor(
                     enabled = profile.category != MemberCategory.CHILD,
                 )
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Redner", modifier = Modifier.weight(1f))
-                AppSwitch(
-                    checked = profile.isSpeaker,
-                    onCheckedChange = { onChange(profile.copy(isSpeaker = it)) },
-                    enabled = profile.canBeSpeaker,
-                )
-            }
+            SpeakerFields(editor, enabled = !isSaving, onChange = onChange, onTalksChange = onTalksChange)
             if (profile.canHaveAppointment) {
                 ChipGroup("Dienstamt") {
                     Appointment.entries.forEach { appointment ->
@@ -103,6 +97,28 @@ internal fun MemberEditor(
     }
 }
 
+/** Der Schalter „Redner“ und für Redner die Nummern ihrer Vorträge. */
+@Composable
+private fun SpeakerFields(
+    editor: MemberEditorState,
+    enabled: Boolean,
+    onChange: (MemberProfile) -> Unit,
+    onTalksChange: (String) -> Unit,
+) {
+    val profile = editor.profile
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("Redner", modifier = Modifier.weight(1f))
+        AppSwitch(
+            checked = profile.isSpeaker,
+            onCheckedChange = { onChange(profile.copy(isSpeaker = it)) },
+            enabled = profile.canBeSpeaker,
+        )
+    }
+    if (profile.isSpeaker) {
+        ProfileField(editor.talksText, "Vorträge (Nummern, z. B. 12, 45)", enabled, onTalksChange)
+    }
+}
+
 @Composable
 private fun ChipGroup(label: String, chips: @Composable () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -123,6 +139,8 @@ private fun MemberEditorPreview() = PreviewThemeWrapper {
                 baptized = true,
                 appointment = Appointment.ELDER,
                 mobilePhone = "+49 170 1234567",
+                isSpeaker = true,
+                talkNumbers = listOf(12, 45),
             ),
             member = AppUser(uid = "1", email = "max@example.com"),
         ),

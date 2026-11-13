@@ -48,6 +48,8 @@ rules_version = '2';
 //     anything but 'NONE' only for baptized brothers)
 //   - mobilePhone, landlinePhone: string (<= 30 chars, digits and + ( ) / - space)
 //   - isSpeaker: bool (marks talk speakers, only for category 'BROTHER')
+//   - talkNumbers: list<int> (<= 200 entries, the talks a speaker gives; empty unless isSpeaker; the app checks
+//     the numbers 1..9999)
 //   - emails: list (<= 3) of string (an e-mail address, <= 254 chars): further addresses besides the sign-in `email`
 //   - street (<= 100 chars), postalCode (<= 10 chars), city (<= 100 chars): string
 //   - emergencyContacts: list (<= 5) of maps {name: string (1..100), relation: string (<= 50, optional),
@@ -483,16 +485,17 @@ service cloud.firestore {
       return value is string && value.size() <= 254 && value.matches('^[^@ ]+@[^@ ]+[.][^@ ]+$');
     }
 
-    // Rules have no loops; at most five contacts are checked one by one.
+    // Rules have no loops; at most five contacts are checked one by one. A contact that is no map fails in keys() and
+    // so denies the request; this saves the explicit type checks for the limit of 1000 expressions.
     function isValidEmergencyContacts(contacts) {
       let list = contacts;
       let count = list is list ? list.size() : 99;
       return count <= 5 &&
-        (count < 1 || (list[0] is map && isValidEmergencyContact(list[0]))) &&
-        (count < 2 || (list[1] is map && isValidEmergencyContact(list[1]))) &&
-        (count < 3 || (list[2] is map && isValidEmergencyContact(list[2]))) &&
-        (count < 4 || (list[3] is map && isValidEmergencyContact(list[3]))) &&
-        (count < 5 || (list[4] is map && isValidEmergencyContact(list[4])));
+        (count < 1 || isValidEmergencyContact(list[0])) &&
+        (count < 2 || isValidEmergencyContact(list[1])) &&
+        (count < 3 || isValidEmergencyContact(list[2])) &&
+        (count < 4 || isValidEmergencyContact(list[3])) &&
+        (count < 5 || isValidEmergencyContact(list[4]));
     }
 
     // Only the shape is checked; the content of the numbers is validated by the app (like talkNumbers), because
@@ -539,7 +542,7 @@ service cloud.firestore {
     }
 
     function profileFields() {
-      return ownFields().concat(['category', 'baptized', 'appointment', 'isSpeaker']);
+      return ownFields().concat(['category', 'baptized', 'appointment', 'isSpeaker', 'talkNumbers']);
     }
 
     // Every profile field is present (the app writes them all).
@@ -561,7 +564,8 @@ service cloud.firestore {
         isShortString(data.city, 100) &&
         isValidEmergencyContacts(data.emergencyContacts) &&
         data.isSpeaker is bool &&
-        (data.isSpeaker == false || category == 'BROTHER');
+        (data.isSpeaker == false || category == 'BROTHER') &&
+        data.talkNumbers is list && data.talkNumbers.size() <= (data.isSpeaker ? 200 : 0);
     }
 
     // The names may be filled: they come from the display name of the sign-up.
@@ -571,7 +575,8 @@ service cloud.firestore {
         data.appointment == 'NONE' &&
         data.mobilePhone == '' &&
         data.landlinePhone == '' &&
-        data.isSpeaker == false;
+        data.isSpeaker == false &&
+        data.talkNumbers.size() == 0;
     }
 
     // Persons without an account never get access to the app.

@@ -30,6 +30,16 @@ class MemberProfileTest {
     }
 
     @Test
+    fun `normalizing sorts the talks of a speaker and drops them for everyone else`() {
+        val speaker =
+            MemberProfile(category = MemberCategory.BROTHER, isSpeaker = true, talkNumbers = listOf(45, 12, 45))
+
+        assertEquals(listOf(12, 45), speaker.normalized().talkNumbers)
+        assertTrue(speaker.copy(isSpeaker = false).normalized().talkNumbers.isEmpty())
+        assertTrue(speaker.copy(category = MemberCategory.SISTER).normalized().talkNumbers.isEmpty())
+    }
+
+    @Test
     fun `only baptized brothers with an appointment can be chairmen`() {
         val elder = MemberProfile(category = MemberCategory.BROTHER, baptized = true, appointment = Appointment.ELDER)
 
