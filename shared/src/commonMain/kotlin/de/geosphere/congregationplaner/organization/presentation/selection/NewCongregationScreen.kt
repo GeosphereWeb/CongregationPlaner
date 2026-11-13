@@ -28,6 +28,7 @@ import de.geosphere.congregationplaner.ui.header.PanelTitle
 internal fun NewCongregationScreen(
     draft: NewCongregationDraft,
     emailVerified: Boolean,
+    email: String?,
     isCreating: Boolean,
     errorMessage: String?,
     onCreate: () -> Unit,
@@ -53,10 +54,7 @@ internal fun NewCongregationScreen(
                     SecondaryButton("Anderen Namen wählen", onChangeName, Modifier.fillMaxWidth(), outlined = false)
                 }
             } else {
-                PanelTitle(
-                    "E-Mail-Adresse bestätigen",
-                    "Wir haben dir eine E-Mail geschickt. Öffne den Link darin, dann legen wir „${draft.name}“ an.",
-                )
+                PanelTitle("E-Mail-Adresse bestätigen", verificationHint(draft.name, email))
                 PrimaryButton("Ich habe bestätigt", onRefresh, Modifier.fillMaxWidth())
                 SecondaryButton("E-Mail erneut senden", onResend, Modifier.fillMaxWidth(), outlined = false)
                 Text(
@@ -76,6 +74,7 @@ private fun NewCongregationScreenPreview() = PreviewThemeWrapper {
     NewCongregationScreen(
         draft = NewCongregationDraft(circuitIds = listOf("c1"), circuitName = "Süd", name = "Musterstadt"),
         emailVerified = false,
+        email = "max@example.com",
         isCreating = false,
         errorMessage = null,
         onCreate = {},

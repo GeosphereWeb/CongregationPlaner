@@ -98,6 +98,7 @@ fun App() {
                 NewCongregationScreen(
                     draft = newCongregation,
                     emailVerified = authState.emailVerified,
+                    email = authUser.email,
                     isCreating = selectionState.isCreating,
                     errorMessage = selectionState.errorMessage,
                     onCreate = { selectionViewModel.newCongregation.create(authUser) },
