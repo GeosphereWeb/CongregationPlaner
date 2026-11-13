@@ -5,7 +5,9 @@ import de.geosphere.congregationplaner.importer.domain.model.ImportRow
 import de.geosphere.congregationplaner.importer.domain.model.ImportTable
 import de.geosphere.congregationplaner.importer.domain.model.PlanEntry
 import de.geosphere.congregationplaner.talk.domain.model.Talk
+import de.geosphere.congregationplaner.talk.domain.model.TalkTitleChange
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
+import kotlinx.datetime.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -62,6 +64,14 @@ class ReferenceDataImportTest {
             ),
             plan.entries,
         )
+    }
+
+    @Test
+    fun importKeepsTheTitleChangesOfAnExistingTalk() {
+        val changes = listOf(TalkTitleChange(LocalDate(2027, 1, 1), "Zwei neu"))
+        val plan = planTalkCatalog(table(talk("2", "Zwei")), listOf(Talk(2, "Zwei", titleChanges = changes)))
+
+        assertEquals(PlanEntry(Talk(2, "Zwei", titleChanges = changes), ImportKind.SKIP), plan.entries.single())
     }
 
     @Test

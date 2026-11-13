@@ -6,6 +6,7 @@ import de.geosphere.congregationplaner.talk.domain.model.ExternalCongregation
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkPlanningSettings
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
+import de.geosphere.congregationplaner.talk.domain.model.TalkTitleChange
 import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.repository.ExternalSpeakerDirectoryRepository
@@ -171,3 +172,9 @@ fun unavailableTalkPlanningSettingsRepository(platform: String): TalkPlanningSet
 /** Ein gespeichertes Datum (`yyyy-MM-dd`); ein fehlendes oder ungültiges gilt als nicht gesetzt. */
 internal fun parseSettingsDate(value: String?): LocalDate? =
     value?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+
+/** Eine gespeicherte Titeländerung; ohne gültiges Datum oder ohne Titel wird sie übersprungen. */
+internal fun titleChangeOrNull(validFrom: String?, title: String?): TalkTitleChange? {
+    val date = parseSettingsDate(validFrom)
+    return if (date != null && title != null) TalkTitleChange(date, title) else null
+}

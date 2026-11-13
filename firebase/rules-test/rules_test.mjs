@@ -259,7 +259,7 @@ await expect('Mitglied ohne Rolle liest ein fremdes Mitglied', api('GET', `${MEM
 await expect('Global Admin listet Mitglieder nicht', api('GET', MEMBERS, undefined, admin.token), false);
 
 // ---------- Vortragsliste und Wochenereignisse ----------
-const talk = (title = 'T', active = true) => fields({ title, active });
+const talk = (title = 'T', active = true, titleChanges = []) => fields({ title, active, titleChanges });
 await expect('Vortragsliste lesen als angemeldeter Nutzer', api('GET', 'talkCatalog', undefined, plain.token), true);
 await expect('Vortragsliste lesen ohne Anmeldung', api('GET', 'talkCatalog'), false);
 await expect('Vortrag schreiben als normaler Nutzer', api('PATCH', 'talkCatalog/12', talk(), plain.token), false);
@@ -270,6 +270,16 @@ await expect('Vortrag Nummer 012', api('PATCH', 'talkCatalog/012', talk(), admin
 await expect('Vortrag Nummer 10000', api('PATCH', 'talkCatalog/10000', talk(), admin.token), false);
 await expect('Vortrag ohne active', api('PATCH', 'talkCatalog/13', fields({ title: 'T' }), admin.token), false);
 await expect('Vortrag mit leerem Titel', api('PATCH', 'talkCatalog/13', talk(''), admin.token), false);
+await expect('Vortrag ohne Titeländerungen-Feld', api('PATCH', 'talkCatalog/13', fields({ title: 'T', active: true }), admin.token), false);
+const change = (validFrom, title = 'Neuer Titel') => ({ validFrom, title });
+const tenChanges = [...Array(10).keys()].map((i) => change(`2027-01-${String(i + 1).padStart(2, '0')}`, 'x'.repeat(200)));
+await expect('Vortrag mit Titeländerung', api('PATCH', 'talkCatalog/13', talk('Alt', true, [change('2027-01-01')]), admin.token), true);
+await expect('Vortrag mit zehn Titeländerungen', api('PATCH', 'talkCatalog/13', talk('Alt', true, tenChanges), admin.token), true);
+await expect('Vortrag mit elf Titeländerungen', api('PATCH', 'talkCatalog/13', talk('Alt', true, [...tenChanges, change('2027-02-01')]), admin.token), false);
+await expect('Titeländerung ohne gültiges Datum', api('PATCH', 'talkCatalog/13', talk('Alt', true, [change('1.1.2027')]), admin.token), false);
+await expect('Titeländerung mit leerem Titel', api('PATCH', 'talkCatalog/13', talk('Alt', true, [change('2027-01-01', '')]), admin.token), false);
+await expect('Titeländerung mit Zusatzfeld', api('PATCH', 'talkCatalog/13', talk('Alt', true, [{ validFrom: '2027-01-01', title: 'N', note: 'x' }]), admin.token), false);
+await expect('Titeländerung als Planer', api('PATCH', 'talkCatalog/13', talk('Alt', true, [change('2027-01-01')]), planner.token), false);
 await expect('Vortrag löschen als Global Admin', api('DELETE', 'talkCatalog/12', undefined, admin.token), true);
 await expect('Vortrag löschen als normaler Nutzer', api('DELETE', 'talkCatalog/12', undefined, plain.token), false);
 await expect('Wochenereignis schreiben als Global Admin', api('PATCH', 'weekEvents/k', fields({ name: 'Kongress', cancelsTalk: true }), admin.token), true);

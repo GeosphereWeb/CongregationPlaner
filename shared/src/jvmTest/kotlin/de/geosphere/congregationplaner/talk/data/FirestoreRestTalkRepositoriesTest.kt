@@ -5,6 +5,7 @@ import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
+import de.geosphere.congregationplaner.talk.domain.model.TalkTitleChange
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.testing.FakeFirestoreRestServer
 import de.geosphere.congregationplaner.testing.FakeFirestoreRestServer.FakeResponse
@@ -251,7 +252,12 @@ class FirestoreRestTalkRepositoriesTest {
         FakeResponse(
             200,
             """{"documents":[
-                {"name":"x/talkCatalog/12","fields":{"title":{"stringValue":"Der Weg zum Glück"}}},
+                {"name":"x/talkCatalog/12","fields":{"title":{"stringValue":"Der Weg zum Glück"},
+                    "titleChanges":{"arrayValue":{"values":[
+                        {"mapValue":{"fields":{"validFrom":{"stringValue":"2027-01-01"},
+                            "title":{"stringValue":"Neuer Titel"}}}},
+                        {"mapValue":{"fields":{"validFrom":{"stringValue":"kaputt"},
+                            "title":{"stringValue":"Übersprungen"}}}}]}}}},
                 {"name":"x/talkCatalog/7","fields":{"title":{"stringValue":"Pausiert"},"active":{"booleanValue":false}}},
                 {"name":"x/talkCatalog/abc","fields":{"title":{"stringValue":"Ungültig"}}},
                 {"name":"x/talkCatalog/0","fields":{"title":{"stringValue":"Null"}}}]}""",
@@ -259,7 +265,13 @@ class FirestoreRestTalkRepositoriesTest {
     }) { server ->
         val talks = FirestoreRestTalkCatalogRepository(idTokenProvider = { "token-123" }).observeTalks().first()
 
-        assertEquals(listOf(Talk(12, "Der Weg zum Glück", true), Talk(7, "Pausiert", false)), talks)
+        assertEquals(
+            listOf(
+                Talk(12, "Der Weg zum Glück", true, listOf(TalkTitleChange(LocalDate(2027, 1, 1), "Neuer Titel"))),
+                Talk(7, "Pausiert", false),
+            ),
+            talks,
+        )
         assertEquals("${FakeFirestoreRestServer.DOCUMENTS_PATH}/talkCatalog", server.requests.first().path)
     }
 

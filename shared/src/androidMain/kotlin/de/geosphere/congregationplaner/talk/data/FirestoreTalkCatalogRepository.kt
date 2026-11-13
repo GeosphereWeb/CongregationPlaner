@@ -22,7 +22,15 @@ internal class FirestoreTalkCatalogRepository(private val firestore: FirebaseFir
 
     override suspend fun save(talk: Talk): Result<Talk> = runFirestoreCatching("save talk") {
         firestore.collection(TALK_CATALOG_COLLECTION_PATH).document(talk.number.toString())
-            .set(mapOf("title" to talk.title, "active" to talk.active))
+            .set(
+                mapOf(
+                    "title" to talk.title,
+                    "active" to talk.active,
+                    "titleChanges" to talk.titleChanges.map {
+                        mapOf("validFrom" to it.validFrom.toString(), "title" to it.title)
+                    },
+                ),
+            )
             .awaitResult()
         talk
     }
@@ -43,5 +51,8 @@ private fun toTalkOrNull(document: DocumentSnapshot): Talk? {
         number = number,
         title = document.getString("title").orEmpty(),
         active = document.getBoolean("active") ?: true,
+        titleChanges = (document.get("titleChanges") as? List<*>).orEmpty().mapNotNull { change ->
+            (change as? Map<*, *>)?.let { titleChangeOrNull(it["validFrom"] as? String, it["title"] as? String) }
+        },
     )
 }

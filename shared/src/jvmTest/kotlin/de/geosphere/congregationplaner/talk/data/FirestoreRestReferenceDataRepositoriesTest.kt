@@ -1,12 +1,14 @@
 package de.geosphere.congregationplaner.talk.data
 
 import de.geosphere.congregationplaner.talk.domain.model.Talk
+import de.geosphere.congregationplaner.talk.domain.model.TalkTitleChange
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.testing.FakeFirestoreRestServer
 import de.geosphere.congregationplaner.testing.FakeFirestoreRestServer.FakeResponse
 import de.geosphere.congregationplaner.testing.FakeFirestoreRestServer.RecordedRequest
 import de.geosphere.congregationplaner.testing.withFirestoreRestConfig
 import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -18,7 +20,12 @@ class FirestoreRestReferenceDataRepositoriesTest {
     fun `saveTalk patches the document of the number with title and active flag`() = runWithServer({
         FakeResponse(200, "{}")
     }) { server ->
-        val talk = Talk(12, "Der Weg zum Glück", active = false)
+        val talk = Talk(
+            12,
+            "Der Weg zum Glück",
+            active = false,
+            titleChanges = listOf(TalkTitleChange(LocalDate(2027, 1, 1), "Neuer Titel")),
+        )
 
         assertEquals(talk, FirestoreRestTalkCatalogRepository(idTokenProvider = { "t" }).save(talk).getOrThrow())
 
@@ -27,6 +34,8 @@ class FirestoreRestReferenceDataRepositoriesTest {
         assertEquals("$documents/$TALK_CATALOG_COLLECTION_PATH/12", request.path)
         assertTrue(request.body.contains(""""title":{"stringValue":"Der Weg zum Glück"}"""))
         assertTrue(request.body.contains(""""active":{"booleanValue":false}"""))
+        assertTrue(request.body.contains(""""validFrom":{"stringValue":"2027-01-01"}"""))
+        assertTrue(request.body.contains(""""title":{"stringValue":"Neuer Titel"}"""))
     }
 
     @Test
