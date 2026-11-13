@@ -22,6 +22,7 @@ class UserManagementViewModel(
     private val observeMembers: ObserveMembersUseCase,
     accessUseCases: MemberAccessUseCases,
     editorUseCases: MemberEditorUseCases,
+    transferUseCases: MemberTransferUseCases,
     private val permissionPolicy: UserPermissionPolicy,
 ) : ViewModel() {
     private var currentUser: AppUser? = null
@@ -34,6 +35,7 @@ class UserManagementViewModel(
 
     val access = MemberAccessHolder(store, viewModelScope, accessUseCases) { currentUser }
     val editor = MemberEditorHolder(store, viewModelScope, editorUseCases) { currentUser }
+    val transfer = MemberTransferHolder(store, viewModelScope, transferUseCases) { currentUser }
 
     private val inviteLinks = InviteLinkCache()
     private var observeJob: Job? = null
@@ -50,13 +52,14 @@ class UserManagementViewModel(
                 currentUserId = user.uid,
                 inviteLink = inviteLinks.linkFor(congregation),
                 canManage = canManage,
+                canTransfer = transfer.canTransfer(user),
                 editor = it.editor?.takeIf { canManage },
             )
         }
         if (!observing || congregation != observedCongregation) observe(congregation)
     }
 
-    fun dismissError() = store.update { it.copy(errorMessage = null) }
+    fun dismissError() = store.update { it.copy(errorMessage = null, infoMessage = null) }
 
     private fun observe(congregation: CongregationRef?) {
         observeJob?.cancel()

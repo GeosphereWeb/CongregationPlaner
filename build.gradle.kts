@@ -77,6 +77,8 @@ val sonarExclusions = listOf(
     "**/OwnProfileSection.kt",
     // Reines Compose-Formular der WhatsApp-Vorlagen; Bearbeiten und Speichern sind in MessageTemplatesViewModel getestet
     "**/MessageTemplatesSection.kt",
+    // Reine Compose-Dialoge für Redner übernehmen und Konto verknüpfen; die Abläufe sind in MemberTransferHolder getestet
+    "**/MemberTransferDialogs.kt",
     // Reines Compose-Formular der Anmeldung; der Vergleich von E-Mail und Passwort ist in RegisterUseCase getestet
     "**/CredentialsForm.kt",
     // Compose-Oberfläche, deren einzige neue Zeilen die @ThemePreviews-Vorschau sind; Logik liegt in ViewModels/Modellen
