@@ -51,7 +51,7 @@ fun App() {
         // Eine geglückte Anmeldung übernimmt die Sitzung; die Anmeldung beginnt danach wieder von vorn.
         LaunchedEffect(loginState.signedInUser) {
             val user = loginState.signedInUser ?: return@LaunchedEffect
-            sessionViewModel.onSignedIn(user)
+            sessionViewModel.onSignedIn(user, loginState.globalLogin)
             loginViewModel.onSignInHandled()
         }
 
@@ -64,11 +64,11 @@ fun App() {
 
         // Die Nutzerdaten liegen unterhalb der Versammlung; ohne gewählte Versammlung gibt es keinen Zugriff, außer für
         // globale Admins (ADR-0013).
-        LaunchedEffect(authUser, selectedCongregation) {
+        LaunchedEffect(authUser, selectedCongregation, authState.globalLogin) {
             if (authUser == null) {
                 userAccessViewModel.onSignedOut()
             } else {
-                userAccessViewModel.onSignedIn(authUser, selectedCongregation)
+                userAccessViewModel.onSignedIn(authUser, selectedCongregation, authState.globalLogin)
             }
         }
 

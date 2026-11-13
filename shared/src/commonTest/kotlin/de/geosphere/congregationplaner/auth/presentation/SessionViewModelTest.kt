@@ -65,6 +65,10 @@ class SessionViewModelTest {
 
         assertEquals("uid-1", viewModel.uiState.value.user?.uid)
         assertTrue(viewModel.uiState.value.emailVerified)
+        assertEquals(false, viewModel.uiState.value.globalLogin)
+
+        viewModel.onSignedIn(FakeAuthUser(), globalLogin = true)
+        assertTrue(viewModel.uiState.value.globalLogin)
     }
 
     @Test
