@@ -116,46 +116,39 @@ class ImportUseCasesTest {
     }
 
     @Test
-    fun scheduleWritesNewSpeakersAndOnlyValidSlots() = runBlocking {
-        val directory = FakeExternalSpeakerDirectoryRepository(
-            circuits = listOf(ExternalCircuit("7", "Nord")),
-            congregations = listOf(ExternalCongregation("20", "7", "Musterstadt")),
-        )
+    fun scheduleWritesOnlyValidSlotsAndCreatesNoSpeakers() = runBlocking {
         val schedule = FakeTalkScheduleRepository()
-        val policy = TalkSchedulePermissionPolicy()
-        val useCase = ImportTalkScheduleUseCase(
-            SaveVisitingSpeakerUseCase(directory, policy),
-            SaveTalkSlotUseCase(schedule, policy),
-        )
+        val useCase = ImportTalkScheduleUseCase(SaveTalkSlotUseCase(schedule, TalkSchedulePermissionPolicy()))
         val good = TalkSlot(LocalDate(2023, 1, 1), LocalTime(9, 30), talkNumber = 12, talkTitle = "Zwölf")
+        val free = TalkSlot(
+            LocalDate(2023, 1, 15),
+            LocalTime(9, 30),
+            talkTitle = "Alt",
+            speakerLastName = "Gast",
+            speakerFirstName = "",
+        )
         val bad = TalkSlot(LocalDate(2023, 1, 8), LocalTime(9, 30), talkNumber = 45, talkTitle = "") // invalid
 
         val report = useCase(
             planner,
             TalkScheduleImport(
-                slots = plan(good to ImportKind.CREATE, bad to ImportKind.CREATE),
-                newSpeakers = listOf(VisitingSpeaker("99", "20", "Neu")),
+                slots = plan(good to ImportKind.CREATE, bad to ImportKind.CREATE, free to ImportKind.CREATE),
                 warnings = emptyList(),
             ),
         )
 
-        assertEquals(listOf(good), schedule.savedSlots)
-        assertEquals(2, report.created) // speaker, slot
+        assertEquals(listOf(good, free), schedule.savedSlots)
+        assertEquals(2, report.created)
         assertEquals(1, report.failures.size)
     }
 
     @Test
     fun scheduleWithoutPlannerRoleWritesNothing() = runBlocking {
         val schedule = FakeTalkScheduleRepository()
-        val policy = TalkSchedulePermissionPolicy()
-        val useCase = ImportTalkScheduleUseCase(
-            SaveVisitingSpeakerUseCase(FakeExternalSpeakerDirectoryRepository(), policy),
-            SaveTalkSlotUseCase(schedule, policy),
-        )
+        val useCase = ImportTalkScheduleUseCase(SaveTalkSlotUseCase(schedule, TalkSchedulePermissionPolicy()))
         val slot = TalkSlot(LocalDate(2023, 1, 1), LocalTime(9, 30))
 
-        val report =
-            useCase(member, TalkScheduleImport(plan(slot to ImportKind.CREATE), emptyList(), emptyList()))
+        val report = useCase(member, TalkScheduleImport(plan(slot to ImportKind.CREATE), emptyList()))
 
         assertTrue(schedule.savedSlots.isEmpty())
         assertEquals(0, report.created)
