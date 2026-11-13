@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner.congregation.domain.usecase
 
+import de.geosphere.congregationplaner.auth.domain.repository.FirebaseUser
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationException
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationName
@@ -47,6 +48,27 @@ class CreateCongregationUseCaseTest {
         assertEquals(circuit, repository.circuits.single())
         assertEquals("uid-1", repository.createdBy)
         assertEquals(admin, repository.firstAdmin)
+    }
+
+    @Test
+    fun `the signed in user becomes first admin with names from the display name`() = runBlocking<Unit> {
+        val user = object : FirebaseUser {
+            override val uid = "uid-1"
+            override val email = "max@example.com"
+            override val displayName = "Max Muster"
+            override val idToken: String? = null
+            override val emailVerified = true
+        }
+
+        CreateOwnCongregationUseCase(repository)(circuit, "Grafing Süd", user).getOrThrow()
+
+        assertEquals(admin, repository.firstAdmin)
+    }
+
+    @Test
+    fun `the entered name is cut to the allowed length`() {
+        val limited = CreateOwnCongregationUseCase(repository).limitName("x".repeat(CongregationName.MAX_LENGTH + 5))
+        assertEquals(CongregationName.MAX_LENGTH, limited.length)
     }
 
     @Test

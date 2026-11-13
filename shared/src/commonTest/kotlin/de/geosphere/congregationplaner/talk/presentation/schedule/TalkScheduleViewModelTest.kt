@@ -21,6 +21,7 @@ import de.geosphere.congregationplaner.talk.domain.usecase.CheckSlotTalkUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ConfirmSpeakerUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.CreateYearSlotsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkSlotUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.IsSlotDateTakenUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.MoveTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveAllTalkSlotsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalDirectoryUseCase
@@ -163,6 +164,7 @@ class TalkScheduleViewModelTest {
                 delete,
                 ConfirmSpeakerUseCase(repository, policy),
                 ReassignTalkUseCase(repository, policy),
+                IsSlotDateTakenUseCase(),
             ),
             YearSetupUseCases(
                 CreateYearSlotsUseCase(repository, congregations, policy),

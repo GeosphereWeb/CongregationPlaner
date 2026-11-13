@@ -3,6 +3,7 @@ package de.geosphere.congregationplaner.talk.presentation.schedule
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.usecase.ConfirmSpeakerUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkSlotUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.IsSlotDateTakenUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.MoveTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ReassignTalkUseCase
 import de.geosphere.congregationplaner.user.domain.model.AppUser
@@ -16,6 +17,7 @@ class SlotChangeUseCases(
     val deleteSlot: DeleteTalkSlotUseCase,
     val confirmSpeaker: ConfirmSpeakerUseCase,
     val reassignTalk: ReassignTalkUseCase,
+    val isSlotDateTaken: IsSlotDateTakenUseCase,
 )
 
 /** Speichert und löscht Termine; [onYearChange] zeigt das Jahr des Termins. */
@@ -38,10 +40,7 @@ class SlotChangesHolder(
 
     private fun savePlanned(state: TalkScheduleUiState, editor: TalkSlotEditorState) {
         val user = session.allowedUser() ?: return
-        val slot = editor.slot
-        // shortcut: geprüft wird nur gegen das geladene Jahr; beim Verschieben über den Jahreswechsel kann ein
-        // Termin im anderen Jahr überschrieben werden. Bei Bedarf vor dem Speichern das Zieldokument lesen.
-        if (state.slots.any { it.date == slot.date && it.date != editor.original?.date }) {
+        if (useCases.isSlotDateTaken(state.slots, editor.slot, editor.original?.date)) {
             store.update { it.copy(errorMessage = "Für diesen Tag gibt es schon einen Termin.") }
         } else {
             write(user, editor)

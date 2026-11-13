@@ -4,6 +4,7 @@ import de.geosphere.congregationplaner.organization.domain.model.OrgLevel
 import de.geosphere.congregationplaner.organization.domain.model.OrgUnit
 import de.geosphere.congregationplaner.organization.domain.permission.OrganizationPermissionPolicy
 import de.geosphere.congregationplaner.organization.domain.usecase.DeleteOrgUnitUseCase
+import de.geosphere.congregationplaner.organization.domain.usecase.LimitOrgUnitInputUseCase
 import de.geosphere.congregationplaner.organization.domain.usecase.ObserveOrgUnitsUseCase
 import de.geosphere.congregationplaner.organization.domain.usecase.SaveOrgUnitUseCase
 import de.geosphere.congregationplaner.organization.testing.FakeOrgUnitRepository
@@ -52,6 +53,7 @@ class OrganizationViewModelTest {
             SaveOrgUnitUseCase(repository, policy),
             DeleteOrgUnitUseCase(repository, policy),
             policy,
+            LimitOrgUnitInputUseCase(),
         )
         viewModel.onCurrentUserChanged(admin)
     }

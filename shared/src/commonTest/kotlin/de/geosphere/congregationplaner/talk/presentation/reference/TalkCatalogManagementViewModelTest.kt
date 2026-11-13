@@ -3,6 +3,8 @@ package de.geosphere.congregationplaner.talk.presentation.reference
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkTitleChange
 import de.geosphere.congregationplaner.talk.domain.permission.TalkReferenceDataPolicy
+import de.geosphere.congregationplaner.talk.domain.usecase.CheckNewTalkNumberUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.CleanTalkNumberInputUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.EditTalkTitleChangesUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkCatalogUseCase
@@ -47,7 +49,11 @@ class TalkCatalogManagementViewModelTest {
             SaveTalkUseCase(catalog, policy),
             DeleteTalkUseCase(catalog, policy),
             policy,
-            EditTalkTitleChangesUseCase(),
+            TalkInputUseCases(
+                CleanTalkNumberInputUseCase(),
+                CheckNewTalkNumberUseCase(),
+                EditTalkTitleChangesUseCase(),
+            ),
         )
     }
 

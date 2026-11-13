@@ -3,6 +3,7 @@ package de.geosphere.congregationplaner.user.data
 import de.geosphere.congregationplaner.auth.domain.repository.FirebaseUser
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
+import de.geosphere.congregationplaner.user.domain.model.toNameProfile
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
