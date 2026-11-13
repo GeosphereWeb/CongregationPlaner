@@ -18,14 +18,32 @@ import kotlinx.coroutines.launch
 /** Ein Redner aus dem Verzeichnis zur Auswahl: „Berg, Lea“ und seine Versammlung. */
 data class SpeakerChoice(val id: String, val name: String, val congregation: String)
 
-/** Auswahl der Redner, die Mitglieder werden; [speakers] ist leer, solange das Verzeichnis lädt. */
+/**
+ * Auswahl der Redner, die Mitglieder werden; [speakers] ist leer, solange das Verzeichnis lädt. [congregationFilter]
+ * beschränkt die Liste auf eine Versammlung, `null` zeigt alle.
+ */
 data class AdoptSpeakersDialogState(
     val speakers: List<SpeakerChoice> = emptyList(),
     val selected: Set<String> = emptySet(),
     val isLoading: Boolean = true,
     val isWorking: Boolean = false,
+    val congregationFilter: String? = null,
 ) {
     val canConfirm: Boolean get() = selected.isNotEmpty() && !isWorking
+
+    /** Die Versammlungen der Redner, alphabetisch, ohne leere Namen. */
+    val congregations: List<String>
+        get() = speakers.map { it.congregation }.filter(String::isNotBlank).distinct().sortedBy { it.lowercase() }
+
+    val visibleSpeakers: List<SpeakerChoice>
+        get() = congregationFilter?.let { filter -> speakers.filter { it.congregation == filter } } ?: speakers
+
+    /** Wechselt den Filter; ausgeblendete Redner verlieren ihre Auswahl, damit nichts Verdecktes übernommen wird. */
+    fun filteredBy(congregation: String?): AdoptSpeakersDialogState {
+        val next = copy(congregationFilter = congregation)
+        val visibleIds = next.visibleSpeakers.mapTo(mutableSetOf()) { it.id }
+        return next.copy(selected = selected intersect visibleIds)
+    }
 }
 
 /** Verknüpfen von [account] mit einer Person ohne Konto; [selectedPersonId] ist die gewählte Person. */
@@ -91,6 +109,11 @@ class MemberTransferHolder(
         val dialog = state.adoptDialog ?: return@update state
         val selected = if (id in dialog.selected) dialog.selected - id else dialog.selected + id
         state.copy(adoptDialog = dialog.copy(selected = selected))
+    }
+
+    fun filterCongregation(congregation: String?) = store.update { state ->
+        val dialog = state.adoptDialog?.takeUnless { it.isWorking } ?: return@update state
+        state.copy(adoptDialog = dialog.filteredBy(congregation))
     }
 
     fun closeAdopt() = store.update { it.copy(adoptDialog = it.adoptDialog?.takeIf { dialog -> dialog.isWorking }) }
