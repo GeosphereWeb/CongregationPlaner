@@ -67,6 +67,15 @@ class UserAccessViewModelTest {
     }
 
     @Test
+    fun `global login without admin entry gets no member document and no admin contacts`() {
+        viewModel.onSignedIn(authUser, testCongregation, globalLogin = true)
+
+        assertEquals(UserAccessState.NotGlobalAdmin(authUser.email), viewModel.accessState.value)
+        assertEquals(0, repository.loadCount)
+        assertEquals(AdminContactsState.Loading, viewModel.adminContacts.value)
+    }
+
+    @Test
     fun `signed in user follows approval changes in the selected congregation`() {
         viewModel.onSignedIn(authUser, testCongregation)
         assertEquals(UserAccessState.NeedsApproval(pending), viewModel.accessState.value)

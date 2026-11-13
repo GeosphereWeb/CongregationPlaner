@@ -19,6 +19,20 @@ class ApprovalMessageTest {
     }
 
     @Test
+    fun `global admin message names the account and does not mention a congregation admin`() {
+        val message = globalAdminMessage("name@beispiel.de")
+
+        assertEquals(
+            "Dein Konto name@beispiel.de ist noch nicht als globaler Admin eingetragen. Globale Admins gehören zu " +
+                "keiner Versammlung; eintragen kann dich nur der Betreiber der App. Gehörst du zu einer Versammlung, " +
+                "melde dich ab und wähle sie bei der Anmeldung.",
+            message.text,
+        )
+        val span = message.spanStyles.single()
+        assertEquals("name@beispiel.de", message.text.substring(span.start, span.end))
+    }
+
+    @Test
     fun `approval message without an email still reads as a sentence`() {
         assertEquals(true, approvalMessage("").text.startsWith("Dein Konto  wurde angelegt"))
     }
