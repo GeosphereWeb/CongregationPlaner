@@ -342,6 +342,27 @@ await expect('Mitglied speichert ungültige E-Mail-Adresse', api('PATCH', ownNam
 await expect('Mitglied ändert die E-Mail-Adressen eines anderen', api('PATCH', ownName(planner.uid, 'emails'), emailsBody('a@b.de'), plain.token), false);
 await expect('Mitglied ändert die Anmelde-E-Mail', api('PATCH', ownName(plain.uid, 'email'), { fields: { email: { stringValue: 'neu@b.de' } } }, plain.token), false);
 
+// ---------- Eigene WhatsApp-Vorlagen (members/{uid}/settings/messageTemplates) ----------
+const templatesPath = (uid, id = 'messageTemplates') => `${CONG}/members/${uid}/settings/${id}`;
+const putTemplates = (uid, templates, token, id) => api('PATCH', templatesPath(uid, id), fields({ templates }), token);
+const fourTemplates = [1, 2, 3, 4].map((i) => ({ name: 'V'.repeat(40), text: `Hallo {Vorname} ${i} `.padEnd(1000, 'x') }));
+await expect('Mitglied speichert eine Vorlage', putTemplates(plain.uid, [{ name: 'Anfrage', text: 'Hallo {Vorname}' }], plain.token), true);
+await expect('Mitglied speichert vier Vorlagen in voller Länge', putTemplates(plain.uid, fourTemplates, plain.token), true);
+await expect('Mitglied liest die eigenen Vorlagen', api('GET', templatesPath(plain.uid), undefined, plain.token), true);
+await expect('Admin speichert die eigenen Vorlagen', putTemplates(adminPlanner.uid, [{ name: 'A', text: 'B' }], adminPlanner.token), true);
+await expect('Mitglied speichert fünf Vorlagen', putTemplates(plain.uid, [1, 2, 3, 4, 5].map((i) => ({ name: `V${i}`, text: 'T' })), plain.token), false);
+await expect('Mitglied speichert keine Vorlage', putTemplates(plain.uid, [], plain.token), false);
+await expect('Vorlage ohne Text', putTemplates(plain.uid, [{ name: 'Anfrage', text: '' }], plain.token), false);
+await expect('Vorlage mit zu langem Namen', putTemplates(plain.uid, [{ name: 'x'.repeat(41), text: 'T' }], plain.token), false);
+await expect('Vorlage mit zu langem Text', putTemplates(plain.uid, [{ name: 'A', text: 'x'.repeat(1001) }], plain.token), false);
+await expect('Vorlage mit Zusatzfeld', putTemplates(plain.uid, [{ name: 'A', text: 'T', isDefault: true }], plain.token), false);
+await expect('Vorlagen-Dokument mit Zusatzfeld', api('PATCH', templatesPath(plain.uid), fields({ templates: [{ name: 'A', text: 'T' }], extra: 1 }), plain.token), false);
+await expect('Anderes Einstellungs-Dokument', putTemplates(plain.uid, [{ name: 'A', text: 'T' }], plain.token, 'other'), false);
+await expect('Mitglied ändert die Vorlagen eines anderen', putTemplates(planner.uid, [{ name: 'A', text: 'T' }], plain.token), false);
+await expect('Mitglied liest die Vorlagen eines anderen', api('GET', templatesPath(planner.uid), undefined, plain.token), false);
+await expect('Versammlungsadmin ändert die Vorlagen eines Mitglieds', putTemplates(plain.uid, [{ name: 'A', text: 'T' }], congAdmin.token), false);
+await expect('Versammlungsadmin liest die Vorlagen eines Mitglieds', api('GET', templatesPath(plain.uid), undefined, congAdmin.token), false);
+
 // ---------- Adresse und Notfallkontakte im Mitgliedsdokument (ADR-0016) ----------
 const ADDRESS_FIELDS = ['street', 'postalCode', 'city', 'emergencyContacts'];
 const phonesValue = (phones) => ({ arrayValue: { values: phones.map((stringValue) => ({ stringValue })) } });

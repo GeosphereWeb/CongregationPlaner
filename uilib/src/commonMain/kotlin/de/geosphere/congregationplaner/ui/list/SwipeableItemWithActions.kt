@@ -2,7 +2,7 @@ package de.geosphere.congregationplaner.ui.list
 
 import androidx.compose.animation.core.animate
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -122,18 +122,30 @@ fun SwipeableItemWithActions(
     }
 }
 
-/** Runder Icon-Button für eine Aktion hinter einem wischbaren Eintrag; 48 dp groß, damit er gut zu treffen ist. */
+/**
+ * Runder Icon-Button für eine Aktion hinter einem wischbaren Eintrag; 48 dp groß, damit er gut zu treffen ist.
+ * [onLongClick] bietet bei Bedarf eine zweite Aktion (z. B. eine Auswahl) mit [longClickLabel] für TalkBack.
+ */
 @Composable
+@Suppress("LongParameterList")
 fun SwipeActionButton(
     icon: ImageVector,
     contentDescription: String,
     tone: StatusTone,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
+    longClickLabel: String? = null,
 ) {
     Box(
         modifier = modifier.size(48.dp).clip(CircleShape).background(tone.container)
-            .clickable(onClickLabel = contentDescription, role = Role.Button, onClick = onClick),
+            .combinedClickable(
+                onClickLabel = contentDescription,
+                role = Role.Button,
+                onLongClickLabel = longClickLabel,
+                onLongClick = onLongClick,
+                onClick = onClick,
+            ),
         contentAlignment = Alignment.Center,
     ) {
         Icon(rememberVectorPainter(icon), contentDescription = contentDescription, tint = tone.content)
