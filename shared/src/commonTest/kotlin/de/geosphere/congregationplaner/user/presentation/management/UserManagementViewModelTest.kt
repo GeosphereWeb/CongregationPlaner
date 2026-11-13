@@ -150,6 +150,43 @@ class UserManagementViewModelTest {
     }
 
     @Test
+    fun `the speaker list can be filtered by congregation`() {
+        viewModel.onCurrentUserChanged(adminPlanner)
+        viewModel.transfer.openAdopt()
+        viewModel.transfer.toggleSpeaker("e1")
+
+        viewModel.transfer.filterCongregation("Süd")
+        assertEquals("Süd", viewModel.uiState.value.adoptDialog?.congregationFilter)
+        assertTrue(viewModel.uiState.value.adoptDialog?.visibleSpeakers.orEmpty().isEmpty())
+        assertTrue(viewModel.uiState.value.adoptDialog?.selected.orEmpty().isEmpty())
+
+        viewModel.transfer.filterCongregation(null)
+        assertEquals(2, viewModel.uiState.value.adoptDialog?.visibleSpeakers?.size)
+    }
+
+    @Test
+    fun `filtering keeps only visible speakers selected and lists each congregation once`() {
+        val dialog = AdoptSpeakersDialogState(
+            speakers = listOf(
+                SpeakerChoice("1", "Berg, Lea", "nord"),
+                SpeakerChoice("2", "Kern, Tom", "Musterstadt"),
+                SpeakerChoice("3", "Alt, Anton", "Musterstadt"),
+                SpeakerChoice("4", "Ohne, Ort", ""),
+            ),
+            selected = setOf("1", "2"),
+            isLoading = false,
+        )
+
+        assertEquals(listOf("Musterstadt", "nord"), dialog.congregations)
+        assertEquals(4, dialog.visibleSpeakers.size)
+
+        val filtered = dialog.filteredBy("Musterstadt")
+        assertEquals(listOf("2", "3"), filtered.visibleSpeakers.map { it.id })
+        assertEquals(setOf("2"), filtered.selected)
+        assertEquals(4, filtered.filteredBy(null).visibleSpeakers.size)
+    }
+
+    @Test
     fun `dialogs close and failures of adopting and loading are reported`() {
         viewModel.onCurrentUserChanged(adminPlanner)
         viewModel.transfer.openAdopt()

@@ -78,6 +78,7 @@ internal data class UserManagementActions(
 internal data class MemberTransferActions(
     val onOpenAdopt: () -> Unit = {},
     val onToggleSpeaker: (String) -> Unit = {},
+    val onFilterCongregation: (String?) -> Unit = {},
     val onAdopt: () -> Unit = {},
     val onCloseAdopt: () -> Unit = {},
     val onOpenLink: (AppUser) -> Unit = {},
@@ -106,6 +107,7 @@ fun UserManagementScreen(viewModel: UserManagementViewModel, modifier: Modifier 
             transfer = MemberTransferActions(
                 onOpenAdopt = viewModel.transfer::openAdopt,
                 onToggleSpeaker = viewModel.transfer::toggleSpeaker,
+                onFilterCongregation = viewModel.transfer::filterCongregation,
                 onAdopt = viewModel.transfer::adopt,
                 onCloseAdopt = viewModel.transfer::closeAdopt,
                 onOpenLink = viewModel.transfer::openLink,
@@ -157,6 +159,7 @@ internal fun UserManagementContent(
             AdoptSpeakersDialog(
                 dialog = dialog,
                 onToggle = actions.transfer.onToggleSpeaker,
+                onFilter = actions.transfer.onFilterCongregation,
                 onConfirm = actions.transfer.onAdopt,
                 onDismiss = actions.transfer.onCloseAdopt,
             )
