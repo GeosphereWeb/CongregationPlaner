@@ -38,6 +38,11 @@ data class UserManagementUiState(
     val memberPermissions: Map<String, MemberPermissions> = emptyMap(),
     val editor: MemberEditorState? = null,
     override val isSaving: Boolean = false,
+    /** Darf Redner übernehmen und Konten verknüpfen (Versammlungsadmin mit Vortragsplaner-Rolle). */
+    val canTransfer: Boolean = false,
+    val adoptDialog: AdoptSpeakersDialogState? = null,
+    val linkDialog: LinkAccountDialogState? = null,
+    val infoMessage: String? = null,
 ) : ListDetailState {
     override val hasDetail: Boolean get() = editor != null
 
@@ -46,6 +51,12 @@ data class UserManagementUiState(
         get() = editor?.member?.let { selected -> members.firstOrNull { it.uid == selected.uid } ?: selected }
 
     fun permissionsOf(member: AppUser): MemberPermissions = memberPermissions[member.uid] ?: MemberPermissions()
+
+    /** Personen ohne Konto, mit denen sich ein Konto verknüpfen lässt. */
+    val linkCandidates: List<AppUser> get() = linkCandidates(members)
+
+    /** „Mit Person ohne Konto verknüpfen“ gibt es nur für Konten und nur, wenn es eine solche Person gibt. */
+    fun canLink(member: AppUser): Boolean = canTransfer && member.hasAccount && linkCandidates.isNotEmpty()
 
     /** Übernimmt ein gespeichertes Mitglied in die Liste: ersetzt es oder hängt es an. */
     fun withSavedMember(saved: AppUser): UserManagementUiState = copy(

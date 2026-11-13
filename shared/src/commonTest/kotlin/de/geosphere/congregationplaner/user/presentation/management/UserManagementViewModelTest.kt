@@ -1,13 +1,25 @@
 package de.geosphere.congregationplaner.user.presentation.management
 
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
+import de.geosphere.congregationplaner.talk.domain.model.ExternalCongregation
+import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
+import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
+import de.geosphere.congregationplaner.talk.domain.repository.ExternalSpeakerDirectoryRepository
+import de.geosphere.congregationplaner.talk.domain.usecase.DeleteVisitingSpeakerUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.MoveSlotsToMemberUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalDirectoryUseCase
+import de.geosphere.congregationplaner.talk.testing.FakeExternalSpeakerDirectoryRepository
+import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
+import de.geosphere.congregationplaner.user.domain.usecase.AdoptVisitingSpeakersUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.CreateMemberWithoutAccountUseCase
+import de.geosphere.congregationplaner.user.domain.usecase.LinkMemberAccountUseCase
+import de.geosphere.congregationplaner.user.domain.usecase.MemberTransferPolicy
 import de.geosphere.congregationplaner.user.domain.usecase.ObserveMembersUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.RemoveMemberUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.SetMemberApprovalUseCase
@@ -17,6 +29,8 @@ import de.geosphere.congregationplaner.user.testing.FakeUserRepository
 import de.geosphere.congregationplaner.user.testing.testCongregation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -66,8 +80,166 @@ class UserManagementViewModelTest {
             CreateMemberWithoutAccountUseCase(repository, policy),
             UpdateMemberProfileUseCase(repository, policy),
         ),
+        transferUseCases(),
         policy,
     )
+
+    private val schedule = FakeTalkScheduleRepository()
+    private val directory = FakeExternalSpeakerDirectoryRepository(
+        congregations = listOf(ExternalCongregation("c1", "k1", "Nord")),
+        speakers = listOf(VisitingSpeaker("e1", "c1", "Berg", "Lea"), VisitingSpeaker("e2", "c1", "Alt", "Anton")),
+    )
+
+    private fun transferUseCases(
+        directory: ExternalSpeakerDirectoryRepository = this.directory,
+    ): MemberTransferUseCases {
+        val talkPolicy = TalkSchedulePermissionPolicy()
+        val transferPolicy = MemberTransferPolicy(policy, talkPolicy)
+        val moveSlots = MoveSlotsToMemberUseCase(schedule, talkPolicy)
+        return MemberTransferUseCases(
+            ObserveExternalDirectoryUseCase(directory),
+            AdoptVisitingSpeakersUseCase(
+                CreateMemberWithoutAccountUseCase(repository, policy),
+                moveSlots,
+                DeleteVisitingSpeakerUseCase(directory, talkPolicy),
+                transferPolicy,
+            ),
+            LinkMemberAccountUseCase(
+                UpdateMemberProfileUseCase(repository, policy),
+                moveSlots,
+                RemoveMemberUseCase(repository, policy),
+                transferPolicy,
+            ),
+            transferPolicy,
+        )
+    }
+
+    private val adminPlanner get() = admin.copy(roles = admin.roles + CongregationRole.TALK_PLANNER)
+
+    @Test
+    fun `only an admin with the planner role may transfer`() {
+        viewModel.onCurrentUserChanged(admin)
+        assertFalse(viewModel.uiState.value.canTransfer)
+        viewModel.transfer.openAdopt()
+        assertNull(viewModel.uiState.value.adoptDialog)
+
+        viewModel.onCurrentUserChanged(adminPlanner)
+        assertTrue(viewModel.uiState.value.canTransfer)
+    }
+
+    @Test
+    fun `chosen speakers become members`() {
+        viewModel.onCurrentUserChanged(adminPlanner)
+        viewModel.transfer.openAdopt()
+        assertEquals(
+            listOf(SpeakerChoice("e2", "Alt, Anton", "Nord"), SpeakerChoice("e1", "Berg, Lea", "Nord")),
+            viewModel.uiState.value.adoptDialog?.speakers,
+        )
+
+        viewModel.transfer.toggleSpeaker("e1")
+        viewModel.transfer.toggleSpeaker("e2")
+        viewModel.transfer.toggleSpeaker("e2")
+        viewModel.transfer.adopt()
+
+        assertNull(viewModel.uiState.value.adoptDialog)
+        assertEquals("1 Redner ist jetzt Mitglied der Versammlung.", viewModel.uiState.value.infoMessage)
+        assertEquals(listOf("Berg"), repository.createdMembers.map { it.profile.lastName })
+        assertEquals(listOf("e1"), directory.deletedIds)
+    }
+
+    @Test
+    fun `dialogs close and failures of adopting and loading are reported`() {
+        viewModel.onCurrentUserChanged(adminPlanner)
+        viewModel.transfer.openAdopt()
+        viewModel.transfer.closeAdopt()
+        assertNull(viewModel.uiState.value.adoptDialog)
+
+        // A speaker without first name cannot become a member; the reason is shown.
+        directory.speakers.value = listOf(VisitingSpeaker("e3", "c1", "Ohne", ""))
+        viewModel.transfer.openAdopt()
+        viewModel.transfer.toggleSpeaker("e3")
+        viewModel.transfer.adopt()
+        assertNull(viewModel.uiState.value.infoMessage)
+        assertTrue(viewModel.uiState.value.errorMessage.orEmpty().startsWith("Ohne:"))
+        viewModel.dismissError()
+
+        val broken = object : ExternalSpeakerDirectoryRepository by directory {
+            override fun observeSpeakers(congregation: CongregationRef): Flow<List<VisitingSpeaker>> =
+                flow { throw IllegalStateException("offline") }
+        }
+        val failing = UserManagementViewModel(
+            ObserveMembersUseCase(repository),
+            MemberAccessUseCases(
+                SetMemberApprovalUseCase(repository, policy),
+                SetMemberRoleUseCase(repository, policy),
+                RemoveMemberUseCase(repository, policy),
+            ),
+            MemberEditorUseCases(
+                CreateMemberWithoutAccountUseCase(repository, policy),
+                UpdateMemberProfileUseCase(repository, policy),
+            ),
+            transferUseCases(broken),
+            policy,
+        )
+        failing.onCurrentUserChanged(adminPlanner)
+        failing.transfer.openAdopt()
+        assertNull(failing.uiState.value.adoptDialog)
+        assertEquals("offline", failing.uiState.value.errorMessage)
+    }
+
+    @Test
+    fun `linking is refused without rights or account and failures are reported`() {
+        val person = AppUser(
+            uid = "p1",
+            hasAccount = false,
+            congregation = testCongregation,
+            profile = MemberProfile(lastName = "Muster", firstName = "Max"),
+        )
+        repository.members.value = listOf(admin, pending, person)
+        viewModel.onCurrentUserChanged(admin)
+        viewModel.transfer.openLink(pending)
+        assertNull(viewModel.uiState.value.linkDialog)
+
+        viewModel.onCurrentUserChanged(adminPlanner)
+        viewModel.transfer.openLink(person)
+        assertNull(viewModel.uiState.value.linkDialog)
+        viewModel.transfer.openLink(pending)
+        viewModel.transfer.closeLink()
+        assertNull(viewModel.uiState.value.linkDialog)
+
+        repository.updateProfileResult = Result.failure(IllegalStateException("denied"))
+        viewModel.transfer.openLink(pending)
+        viewModel.transfer.selectPerson("p1")
+        viewModel.transfer.link()
+        assertNull(viewModel.uiState.value.linkDialog)
+        assertEquals("denied", viewModel.uiState.value.errorMessage)
+        assertTrue(repository.removedUids.isEmpty())
+    }
+
+    @Test
+    fun `an account is linked with a person without account`() {
+        val person = AppUser(
+            uid = "p1",
+            hasAccount = false,
+            congregation = testCongregation,
+            profile = MemberProfile(lastName = "Muster", firstName = "Max"),
+        )
+        repository.members.value = listOf(admin, pending, person)
+        viewModel.onCurrentUserChanged(adminPlanner)
+        assertTrue(viewModel.uiState.value.canLink(pending))
+        assertFalse(viewModel.uiState.value.canLink(person))
+
+        viewModel.editor.edit(pending)
+        viewModel.transfer.openLink(pending)
+        viewModel.transfer.selectPerson("p1")
+        viewModel.transfer.link()
+
+        val state = viewModel.uiState.value
+        assertNull(state.linkDialog)
+        assertEquals(listOf("p1"), repository.removedUids)
+        assertEquals("Muster", state.editor?.profile?.lastName)
+        assertFalse(state.members.any { it.uid == "p1" })
+    }
 
     private fun permissionsOf(member: AppUser) = viewModel.uiState.value.permissionsOf(member)
 
