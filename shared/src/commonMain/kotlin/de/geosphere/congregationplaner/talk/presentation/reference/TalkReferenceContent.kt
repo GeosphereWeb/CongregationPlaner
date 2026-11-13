@@ -40,6 +40,7 @@ import de.geosphere.congregationplaner.presentation.components.rememberListDetai
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkTitleChange
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
+import de.geosphere.congregationplaner.talk.domain.usecase.TalkTitleChangeEdit
 import de.geosphere.congregationplaner.talk.presentation.schedule.TalkDateInput
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
@@ -60,6 +61,7 @@ internal data class TalkCatalogActions(
     val onDelete: (Talk) -> Unit = {},
     val onCancel: () -> Unit = {},
     val onDismissError: () -> Unit = {},
+    val onTitleChangeEdit: (TalkTitleChangeEdit) -> Unit = {},
 )
 
 internal data class WeekEventActions(
@@ -90,6 +92,7 @@ fun TalkReferenceScreen(
             onDelete = catalogViewModel::delete,
             onCancel = catalogViewModel::cancelEditing,
             onDismissError = catalogViewModel::dismissError,
+            onTitleChangeEdit = catalogViewModel.titleChanges::edit,
         ),
         eventState = eventState,
         eventActions = WeekEventActions(
@@ -248,7 +251,7 @@ private fun TalkEditorCard(editor: TalkEditorState, isSaving: Boolean, today: Lo
                     actions.onEditorChange(editor.copy(active = it))
                 })
             }
-            TitleChanges(editor, isSaving, today, actions.onEditorChange)
+            TitleChanges(editor, isSaving, today, actions.onTitleChangeEdit)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = actions.onSave, enabled = !isSaving && editor.isDirty) {
                     Text(if (isSaving) "Speichert …" else "Speichern")
@@ -265,7 +268,7 @@ private fun TitleChanges(
     editor: TalkEditorState,
     isSaving: Boolean,
     today: LocalDate,
-    onEditorChange: (TalkEditorState) -> Unit,
+    onEdit: (TalkTitleChangeEdit) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Titeländerungen", style = MaterialTheme.typography.titleSmall)
@@ -277,23 +280,23 @@ private fun TitleChanges(
             Card(colors = nightCardColors()) {
                 Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     TalkDateInput(change.validFrom, label = "Gilt ab") {
-                        onEditorChange(editor.withTitleChange(index, change.copy(validFrom = it)))
+                        onEdit(TalkTitleChangeEdit.Change(index, change.copy(validFrom = it)))
                     }
                     OutlinedTextField(
                         value = change.title,
-                        onValueChange = { onEditorChange(editor.withTitleChange(index, change.copy(title = it))) },
+                        onValueChange = { onEdit(TalkTitleChangeEdit.Change(index, change.copy(title = it))) },
                         label = { Text("Neuer Titel") },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !isSaving,
                     )
-                    TextButton(onClick = { onEditorChange(editor.withoutTitleChange(index)) }, enabled = !isSaving) {
+                    TextButton(onClick = { onEdit(TalkTitleChangeEdit.Remove(index)) }, enabled = !isSaving) {
                         Text("Änderung entfernen")
                     }
                 }
             }
         }
         if (editor.canAddTitleChange) {
-            TextButton(onClick = { onEditorChange(editor.withTitleChangeAdded(today)) }, enabled = !isSaving) {
+            TextButton(onClick = { onEdit(TalkTitleChangeEdit.Add(today)) }, enabled = !isSaving) {
                 Text("Titeländerung hinzufügen")
             }
         }

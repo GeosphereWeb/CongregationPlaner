@@ -4,8 +4,10 @@ import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkTitleChange
 import de.geosphere.congregationplaner.talk.domain.permission.TalkReferenceDataPolicy
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.EditTalkTitleChangesUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkCatalogUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveTalkUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.TalkTitleChangeEdit
 import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
@@ -45,6 +47,7 @@ class TalkCatalogManagementViewModelTest {
             SaveTalkUseCase(catalog, policy),
             DeleteTalkUseCase(catalog, policy),
             policy,
+            EditTalkTitleChangesUseCase(),
         )
     }
 
@@ -114,15 +117,16 @@ class TalkCatalogManagementViewModelTest {
         viewModel.onCurrentUserChanged(admin)
         viewModel.editTalk(first)
 
-        viewModel.updateEditor(state.editor!!.withTitleChangeAdded(state.today))
+        assertTrue(state.editor!!.canAddTitleChange)
+        viewModel.titleChanges.edit(TalkTitleChangeEdit.Add(state.today))
         val added = state.editor!!.titleChanges.single()
         assertEquals(state.today, added.validFrom)
         assertEquals(first.title, added.title)
 
-        viewModel.updateEditor(state.editor!!.withTitleChange(0, TalkTitleChange(LocalDate(2027, 1, 1), "Neu")))
-        viewModel.updateEditor(state.editor!!.withTitleChangeAdded(LocalDate(2028, 1, 1)))
+        viewModel.titleChanges.edit(TalkTitleChangeEdit.Change(0, TalkTitleChange(LocalDate(2027, 1, 1), "Neu")))
+        viewModel.titleChanges.edit(TalkTitleChangeEdit.Add(LocalDate(2028, 1, 1)))
         assertEquals("Neu", state.editor!!.titleChanges[1].title)
-        viewModel.updateEditor(state.editor!!.withoutTitleChange(1))
+        viewModel.titleChanges.edit(TalkTitleChangeEdit.Remove(1))
         viewModel.save()
 
         val saved = catalog.savedTalks.single()
@@ -135,7 +139,7 @@ class TalkCatalogManagementViewModelTest {
         viewModel.onCurrentUserChanged(admin)
         viewModel.editTalk(first)
         repeat(Talk.MAX_TITLE_CHANGES + 2) { day ->
-            viewModel.updateEditor(state.editor!!.withTitleChangeAdded(LocalDate(2027, 1, day + 1)))
+            viewModel.titleChanges.edit(TalkTitleChangeEdit.Add(LocalDate(2027, 1, day + 1)))
         }
 
         assertEquals(Talk.MAX_TITLE_CHANGES, state.editor!!.titleChanges.size)

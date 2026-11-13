@@ -43,6 +43,8 @@ data class UserManagementUiState(
     val adoptDialog: AdoptSpeakersDialogState? = null,
     val linkDialog: LinkAccountDialogState? = null,
     val infoMessage: String? = null,
+    /** Personen ohne Konto, mit denen sich ein Konto verknüpfen lässt (vom ViewModel über den UseCase abgeleitet). */
+    val linkCandidates: List<AppUser> = emptyList(),
 ) : ListDetailState {
     override val hasDetail: Boolean get() = editor != null
 
@@ -51,9 +53,6 @@ data class UserManagementUiState(
         get() = editor?.member?.let { selected -> members.firstOrNull { it.uid == selected.uid } ?: selected }
 
     fun permissionsOf(member: AppUser): MemberPermissions = memberPermissions[member.uid] ?: MemberPermissions()
-
-    /** Personen ohne Konto, mit denen sich ein Konto verknüpfen lässt. */
-    val linkCandidates: List<AppUser> get() = linkCandidates(members)
 
     /** „Mit Person ohne Konto verknüpfen“ gibt es nur für Konten und nur, wenn es eine solche Person gibt. */
     fun canLink(member: AppUser): Boolean = canTransfer && member.hasAccount && linkCandidates.isNotEmpty()

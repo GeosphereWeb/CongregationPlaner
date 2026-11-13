@@ -18,6 +18,7 @@ import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
 import de.geosphere.congregationplaner.user.domain.usecase.AdoptVisitingSpeakersUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.CreateMemberWithoutAccountUseCase
+import de.geosphere.congregationplaner.user.domain.usecase.FindLinkCandidatesUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.LinkMemberAccountUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.MemberTransferPolicy
 import de.geosphere.congregationplaner.user.domain.usecase.ObserveMembersUseCase
@@ -111,6 +112,7 @@ class UserManagementViewModelTest {
                 transferPolicy,
             ),
             transferPolicy,
+            FindLinkCandidatesUseCase(),
         )
     }
 

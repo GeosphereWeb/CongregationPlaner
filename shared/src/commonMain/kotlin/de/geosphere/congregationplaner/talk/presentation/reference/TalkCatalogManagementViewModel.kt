@@ -7,8 +7,10 @@ import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkTitleChange
 import de.geosphere.congregationplaner.talk.domain.permission.TalkReferenceDataPolicy
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.EditTalkTitleChangesUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkCatalogUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveTalkUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.TalkTitleChangeEdit
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.Job
@@ -33,27 +35,32 @@ data class TalkEditorState(
     val original: Talk? = null,
     /** Spätere Titel mit dem Tag, ab dem sie gelten; [title] ist der ursprüngliche Titel. */
     val titleChanges: List<TalkTitleChange> = original?.titleChanges.orEmpty(),
+    /** Ob sich noch eine Änderung hinzufügen lässt; entscheidet der [EditTalkTitleChangesUseCase]. */
+    val canAddTitleChange: Boolean = false,
 ) {
     val isNew: Boolean get() = original == null
     val talk: Talk? get() = numberText.toIntOrNull()?.let { Talk(it, title, active, titleChanges) }
     val isDirty: Boolean get() = isNew || talk != original
-    val canAddTitleChange: Boolean get() = titleChanges.size < Talk.MAX_TITLE_CHANGES
+}
 
-    /**
-     * Eine neue Änderung ab [date] mit dem Titel, der bisher an diesem Tag gilt (zum Anpassen); bei
-     * [Talk.MAX_TITLE_CHANGES] Änderungen bleibt alles, wie es ist.
-     */
-    fun withTitleChangeAdded(date: LocalDate): TalkEditorState {
-        if (!canAddTitleChange) return this
-        val current = Talk(0, title, active, titleChanges).titleOn(date)
-        return copy(titleChanges = titleChanges + TalkTitleChange(date, current))
+/** Ändert die Titelhistorie des offenen Vortrags über den [EditTalkTitleChangesUseCase] (ADR-0025). */
+class TalkTitleChangesHolder(
+    private val state: MutableStateFlow<TalkCatalogUiState>,
+    private val editTitleChanges: EditTalkTitleChangesUseCase,
+) {
+    fun edit(edit: TalkTitleChangeEdit) = state.update { current ->
+        val editor = current.editor
+        if (current.isSaving || editor == null) {
+            current
+        } else {
+            val changes = editTitleChanges(Talk(0, editor.title, editor.active, editor.titleChanges), edit)
+            current.copy(editor = withFlags(editor.copy(titleChanges = changes)))
+        }
     }
 
-    fun withTitleChange(index: Int, change: TalkTitleChange): TalkEditorState =
-        copy(titleChanges = titleChanges.mapIndexed { i, current -> if (i == index) change else current })
-
-    fun withoutTitleChange(index: Int): TalkEditorState =
-        copy(titleChanges = titleChanges.filterIndexed { i, _ -> i != index })
+    /** Der Editor mit den Angaben, die der UseCase über ihn entscheidet. */
+    fun withFlags(editor: TalkEditorState): TalkEditorState =
+        editor.copy(canAddTitleChange = editTitleChanges.canAdd(editor.titleChanges))
 }
 
 data class TalkCatalogUiState(
@@ -76,9 +83,12 @@ class TalkCatalogManagementViewModel(
     private val saveTalk: SaveTalkUseCase,
     private val deleteTalk: DeleteTalkUseCase,
     private val policy: TalkReferenceDataPolicy,
+    editTitleChanges: EditTalkTitleChangesUseCase,
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(TalkCatalogUiState())
     val uiState = mutableUiState.asStateFlow()
+
+    val titleChanges = TalkTitleChangesHolder(mutableUiState, editTitleChanges)
 
     private var currentUser: AppUser? = null
     private var observeJob: Job? = null
@@ -98,12 +108,13 @@ class TalkCatalogManagementViewModel(
 
     fun newTalk() {
         if (mutableUiState.value.isSaving || !checkAllowed()) return
-        mutableUiState.update { it.copy(editor = TalkEditorState("", "", active = true), errorMessage = null) }
+        val editor = titleChanges.withFlags(TalkEditorState("", "", active = true))
+        mutableUiState.update { it.copy(editor = editor, errorMessage = null) }
     }
 
     fun editTalk(talk: Talk) {
         if (mutableUiState.value.isSaving || !checkAllowed()) return
-        val editor = TalkEditorState(talk.number.toString(), talk.title, talk.active, talk)
+        val editor = titleChanges.withFlags(TalkEditorState(talk.number.toString(), talk.title, talk.active, talk))
         mutableUiState.update { it.copy(editor = editor, errorMessage = null) }
     }
 
@@ -113,7 +124,7 @@ class TalkCatalogManagementViewModel(
             if (state.isSaving) return@update state
             val number = if (editor.isNew) editor.numberText.filter(Char::isDigit).take(NUMBER_DIGITS) else null
             val next = editor.copy(numberText = number ?: editor.original?.number.toString())
-            state.copy(editor = next)
+            state.copy(editor = titleChanges.withFlags(next))
         }
     }
 
@@ -141,7 +152,9 @@ class TalkCatalogManagementViewModel(
         viewModelScope.launch {
             saveTalk(user, talk)
                 .onSuccess { saved ->
-                    val next = TalkEditorState(saved.number.toString(), saved.title, saved.active, saved)
+                    val next = titleChanges.withFlags(
+                        TalkEditorState(saved.number.toString(), saved.title, saved.active, saved),
+                    )
                     // Show the result at once; the snapshot flow can lag behind, especially on desktop.
                     mutableUiState.update {
                         val talks = (it.talks.filterNot { t -> t.number == saved.number } + saved)
