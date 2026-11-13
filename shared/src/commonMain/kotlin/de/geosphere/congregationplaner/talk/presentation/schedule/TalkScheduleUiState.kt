@@ -11,6 +11,8 @@ import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.model.hasAssignment
 import de.geosphere.congregationplaner.talk.domain.model.planningUsageOf
+import de.geosphere.congregationplaner.user.domain.model.DEFAULT_MESSAGE_TEMPLATES
+import de.geosphere.congregationplaner.user.domain.model.MessageTemplate
 import kotlinx.datetime.LocalTime
 
 /**
@@ -45,6 +47,9 @@ data class TalkScheduleUiState(
     val planningSettings: TalkPlanningSettings = TalkPlanningSettings(),
     /** Läuft gerade das Umplanen auf einen anderen Tag, wartet die Liste auf den Zieltag. */
     val reassign: ReassignState? = null,
+    /** Die WhatsApp-Vorlagen des Nutzers (die erste ist der Standard) und sein Name für die Platzhalter. */
+    val messageTemplates: List<MessageTemplate> = DEFAULT_MESSAGE_TEMPLATES,
+    val messageSender: MessageSender = MessageSender(),
     val isLoading: Boolean = true,
     val canView: Boolean = false,
     val canPlan: Boolean = false,

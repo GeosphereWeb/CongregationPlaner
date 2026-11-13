@@ -62,6 +62,7 @@ class TalkScheduleViewModel(
                 canView = canView,
                 canPlan = canPlan,
                 canViewMembers = canView && userPolicy.canViewMembers(user),
+                messageSender = MessageSender(user.profile.firstName, user.profile.lastName),
                 editor = it.editor?.takeIf { editor -> canView && (canPlan || !editor.isNew) },
             )
         }
