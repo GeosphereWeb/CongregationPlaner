@@ -26,6 +26,13 @@ class MemberTransferPolicy(
         userPolicy.canCreateMemberWithoutAccount(user) && talkPolicy.canPlanTalks(user)
 }
 
+/** Die Personen ohne Konto, mit denen sich ein Konto verknüpfen lässt, nach Namen sortiert. */
+@Inject
+class FindLinkCandidatesUseCase {
+    operator fun invoke(members: List<AppUser>): List<AppUser> =
+        members.filter { !it.hasAccount }.sortedBy { it.label.lowercase() }
+}
+
 /** Ergebnis der Übernahme: die neuen Mitglieder und je Redner, der nicht übernommen wurde, der Grund. */
 data class SpeakerAdoption(val adopted: List<AppUser>, val failures: List<String>)
 

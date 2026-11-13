@@ -1,6 +1,8 @@
 package de.geosphere.congregationplaner.talk.presentation.schedule
 
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
+import de.geosphere.congregationplaner.talk.domain.usecase.BuildWhatsAppMessagesUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.CheckSlotTalkUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveAllTalkSlotsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalSpeakersUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkCatalogUseCase
@@ -31,6 +33,8 @@ class ScheduleReferenceUseCases(
     val talkPolicy: TalkSchedulePermissionPolicy,
     val userPolicy: UserPermissionPolicy,
     val observeMessageTemplates: ObserveMessageTemplatesUseCase,
+    val buildWhatsAppMessages: BuildWhatsAppMessagesUseCase,
+    val checkSlotTalk: CheckSlotTalkUseCase,
 )
 
 /**

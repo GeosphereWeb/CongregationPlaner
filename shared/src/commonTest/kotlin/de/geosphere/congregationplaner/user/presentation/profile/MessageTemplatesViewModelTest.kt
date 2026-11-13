@@ -3,6 +3,8 @@ package de.geosphere.congregationplaner.user.presentation.profile
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.DEFAULT_MESSAGE_TEMPLATES
 import de.geosphere.congregationplaner.user.domain.model.MessageTemplate
+import de.geosphere.congregationplaner.user.domain.usecase.EditMessageTemplatesUseCase
+import de.geosphere.congregationplaner.user.domain.usecase.MessageTemplateEdit
 import de.geosphere.congregationplaner.user.domain.usecase.ObserveMessageTemplatesUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.SaveMessageTemplatesUseCase
 import de.geosphere.congregationplaner.user.testing.FakeMessageTemplateRepository
@@ -32,6 +34,7 @@ class MessageTemplatesViewModelTest {
         viewModel = MessageTemplatesViewModel(
             ObserveMessageTemplatesUseCase(repository),
             SaveMessageTemplatesUseCase(repository),
+            EditMessageTemplatesUseCase(),
         )
         viewModel.onUserChanged(member)
     }
@@ -46,12 +49,13 @@ class MessageTemplatesViewModelTest {
     @Test
     fun `the defaults are shown until own templates are saved`() {
         assertEquals(DEFAULT_MESSAGE_TEMPLATES, state.form)
+        assertTrue(state.canAdd && state.canRemove)
         assertFalse(state.canSave)
     }
 
     @Test
-    fun `make default moves the template to the top and save stores the order`() {
-        viewModel.makeDefault(2)
+    fun `edits go through the use case and save stores the order`() {
+        viewModel.edit(MessageTemplateEdit.MakeDefault(2))
         assertEquals(DEFAULT_MESSAGE_TEMPLATES[2], state.form.first())
         assertTrue(state.canSave)
 
@@ -63,28 +67,21 @@ class MessageTemplatesViewModelTest {
     }
 
     @Test
-    fun `add stops at four and remove keeps at least one`() {
-        viewModel.addTemplate()
-        viewModel.addTemplate()
-        assertEquals(MessageTemplate.MAX_TEMPLATES, state.form.size)
+    fun `the flags follow the use case limits`() {
+        viewModel.edit(MessageTemplateEdit.Add)
         assertFalse(state.canAdd)
 
-        repeat(5) { viewModel.removeTemplate(0) }
+        repeat(5) { viewModel.edit(MessageTemplateEdit.Remove(0)) }
         assertEquals(1, state.form.size)
         assertFalse(state.canRemove)
-    }
 
-    @Test
-    fun `edits are cut to the limits and an empty text cannot be saved`() {
-        viewModel.onTemplateChange(0, MessageTemplate("x".repeat(60), ""))
-
-        assertEquals(MessageTemplate.MAX_NAME_LENGTH, state.form.first().name.length)
+        viewModel.edit(MessageTemplateEdit.Change(0, MessageTemplate("A", "")))
         assertFalse(state.canSave)
     }
 
     @Test
     fun `unsaved edits survive a new saved state and failures are shown`() {
-        viewModel.onTemplateChange(0, MessageTemplate("Neu", "Text"))
+        viewModel.edit(MessageTemplateEdit.Change(0, MessageTemplate("Neu", "Text")))
         repository.templates.value = listOf(MessageTemplate("Fremd", "Gerät"))
         assertEquals("Neu", state.form.first().name)
 

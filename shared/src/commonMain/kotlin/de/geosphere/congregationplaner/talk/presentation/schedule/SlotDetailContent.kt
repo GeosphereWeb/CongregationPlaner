@@ -41,7 +41,6 @@ internal fun SlotDetailContent(
             editor = editor,
             chip = slotChip(slotStatus(editor.slot, nextDate)),
             weekEvents = state.weekEvents,
-            talks = state.talks,
             speakers = state.speakers,
             chairmen = state.chairmen,
             externalSpeakers = state.externalSpeakers,

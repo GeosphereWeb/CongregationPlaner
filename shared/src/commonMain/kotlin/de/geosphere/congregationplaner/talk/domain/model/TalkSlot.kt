@@ -84,6 +84,13 @@ data class TalkSlot(
     }
 }
 
+/** Der Vortrag als Text: „Nr. 12 – Titel“, ohne Titel nur die Nummer, frei eingetragen nur der Titel; sonst `null`. */
+fun TalkSlot.talkLabel(): String? {
+    val title = talkTitle?.takeIf { it.isNotBlank() }
+    val number = talkNumber ?: return title
+    return title?.let { "Nr. $number – $it" } ?: "Nr. $number"
+}
+
 /**
  * Ein Vortrag aus der Vortragsliste (`talkCatalog/{Nummer}`); sie gilt für alle Versammlungen und Kreise.
  * Die Nummer bleibt stabil, und ein Vortrag kann zeitweise nicht [active] sein. Der Titel kann sich ändern:

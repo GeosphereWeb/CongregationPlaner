@@ -6,6 +6,7 @@ import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalDirectoryUseCase
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.usecase.AdoptVisitingSpeakersUseCase
+import de.geosphere.congregationplaner.user.domain.usecase.FindLinkCandidatesUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.LinkMemberAccountUseCase
 import de.geosphere.congregationplaner.user.domain.usecase.MemberTransferPolicy
 import de.geosphere.congregationplaner.user.domain.usecase.SpeakerAdoption
@@ -43,6 +44,7 @@ class MemberTransferUseCases(
     val adoptSpeakers: AdoptVisitingSpeakersUseCase,
     val linkAccount: LinkMemberAccountUseCase,
     val policy: MemberTransferPolicy,
+    val findLinkCandidates: FindLinkCandidatesUseCase,
 )
 
 /** Redner aus dem Verzeichnis als Mitglieder übernehmen und Konten mit Personen ohne Konto verknüpfen. */
@@ -169,10 +171,6 @@ internal fun speakerChoices(directory: ExternalDirectory): List<SpeakerChoice> {
         )
     }.sortedBy { it.name.lowercase() }
 }
-
-/** Personen ohne Konto, mit denen sich ein Konto verknüpfen lässt, nach Namen sortiert. */
-internal fun linkCandidates(members: List<AppUser>): List<AppUser> =
-    members.filter { !it.hasAccount }.sortedBy { it.label.lowercase() }
 
 internal fun adoptionMessage(adoption: SpeakerAdoption): String? = when (adoption.adopted.size) {
     0 -> null

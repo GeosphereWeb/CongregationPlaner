@@ -6,14 +6,18 @@ import de.geosphere.congregationplaner.talk.domain.model.Chairman
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCircuit
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCongregation
 import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
+import de.geosphere.congregationplaner.talk.domain.model.MessageSender
 import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkPlanningSettings
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
+import de.geosphere.congregationplaner.talk.domain.model.WhatsAppMessage
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
+import de.geosphere.congregationplaner.talk.domain.usecase.BuildWhatsAppMessagesUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ChangeYearSlotTimesUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.CheckSlotTalkUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ConfirmSpeakerUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.CreateYearSlotsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkSlotUseCase
@@ -175,6 +179,8 @@ class TalkScheduleViewModelTest {
                 policy,
                 UserPermissionPolicy(),
                 ObserveMessageTemplatesUseCase(templates),
+                BuildWhatsAppMessagesUseCase(),
+                CheckSlotTalkUseCase(),
             ),
             policy,
             UserPermissionPolicy(),
@@ -190,6 +196,22 @@ class TalkScheduleViewModelTest {
     private val state get() = viewModel.uiState.value
 
     @Test
+    fun `the open slot carries the check of its talk against the talk list`() {
+        viewModel.onCurrentUserChanged(planner)
+        catalog.talks.value = listOf(activeTalk, pausedTalk)
+        viewModel.selectSlot(november1.copy(talkNumber = 40, talkTitle = "Alter Titel"))
+
+        val check = state.editor!!.talkCheck
+        assertEquals("Pausierter Vortrag", check.outdatedTitle)
+        assertEquals(40, check.inactiveNumber)
+        assertEquals(listOf(12, 40), check.talksOnDate.map { it.number })
+        assertEquals(
+            "Nr. 40 ist in der Vortragsliste nicht mehr aktiv; bitte prüfen, ob er noch gehalten wird.",
+            inactiveTalkHint(40),
+        )
+    }
+
+    @Test
     fun `the own message templates and name are ready for the WhatsApp swipe`() {
         assertEquals(DEFAULT_MESSAGE_TEMPLATES, state.messageTemplates)
 
@@ -199,6 +221,22 @@ class TalkScheduleViewModelTest {
 
         assertEquals(own, state.messageTemplates)
         assertEquals(MessageSender("Paul", "Planer"), state.messageSender)
+
+        // The filled links are derived for every slot whose speaker has a mobile number.
+        externals.speakers.value = listOf(VisitingSpeaker("e1", "g1", "Extern", "Eva", mobilePhone = "0170 1234567"))
+        val planned = october25.copy(
+            externalSpeakerId = "e1",
+            speakerLastName = "Extern",
+            speakerFirstName = "Eva",
+            speakerCongregation = "Nord",
+        )
+        repository.slots.value = listOf(planned, november1)
+
+        assertEquals(
+            listOf(WhatsAppMessage("Kurz", "https://wa.me/491701234567?text=Hallo%20Eva")),
+            state.whatsAppMessages[planned.id],
+        )
+        assertEquals(emptyList(), state.whatsAppMessages[november1.id])
     }
 
     @Test
