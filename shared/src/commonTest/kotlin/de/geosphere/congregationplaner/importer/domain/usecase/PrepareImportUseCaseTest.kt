@@ -61,10 +61,7 @@ class PrepareImportUseCaseTest {
             SaveExternalCongregationUseCase(directory, planning),
             SaveVisitingSpeakerUseCase(directory, planning),
         ),
-        ImportTalkScheduleUseCase(
-            SaveVisitingSpeakerUseCase(directory, planning),
-            SaveTalkSlotUseCase(schedule, planning),
-        ),
+        ImportTalkScheduleUseCase(SaveTalkSlotUseCase(schedule, planning)),
     )
 
     private val scheduleTable = ImportTable(

@@ -90,10 +90,7 @@ class ImportViewModelTest {
                 SaveExternalCongregationUseCase(directory, planning),
                 SaveVisitingSpeakerUseCase(directory, planning),
             ),
-            ImportTalkScheduleUseCase(
-                SaveVisitingSpeakerUseCase(directory, planning),
-                SaveTalkSlotUseCase(schedule, planning),
-            ),
+            ImportTalkScheduleUseCase(SaveTalkSlotUseCase(schedule, planning)),
         )
         return ImportViewModel(source, prepare, reference, planning)
     }

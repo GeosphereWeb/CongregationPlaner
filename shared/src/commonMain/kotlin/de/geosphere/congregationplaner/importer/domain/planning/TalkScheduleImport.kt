@@ -21,12 +21,9 @@ private const val EVENT_NAME = "Ereignis"
 private const val SPEAKER_ID = "ID_Redner"
 private const val LAST_NAME = "Nachname"
 private const val FIRST_NAME = "Vorname"
-private const val EMAIL = "E-Mail"
-private const val CONGREGATION_ID = "ID_Versammlung"
 private const val CONGREGATION_NAME = "Name"
 private const val TALK_NUMBER = "Nummer"
-private const val MOBILE = "Telefon"
-private const val LANDLINE = "Telefon2"
+private const val TALK_TITLE = "Titel"
 private const val INFORMED = "rednerIstInformiert"
 
 /**
@@ -48,29 +45,24 @@ data class ScheduleImportContext(
 )
 
 /**
- * The slot plan, the speakers that only occur in the schedule (created from the row), and warnings that do not stop
- * the import (e.g. a new speaker that looks like one already in the list).
+ * The slot plan and warnings that do not stop the import: a talk or speaker that is not in its list is kept as text
+ * only (a free entry, see [TalkSlot]).
  */
-data class TalkScheduleImport(
-    val slots: ImportPlan<TalkSlot>,
-    val newSpeakers: List<VisitingSpeaker>,
-    val warnings: List<ImportError>,
-)
+data class TalkScheduleImport(val slots: ImportPlan<TalkSlot>, val warnings: List<ImportError>)
 
 private class ScheduleRun(val context: ScheduleImportContext) {
     val errors = mutableListOf<ImportError>()
     val warnings = mutableListOf<ImportError>()
-    val newSpeakers = linkedMapOf<String, VisitingSpeaker>()
     val seenDates = mutableSetOf<LocalDate>()
     val existingByDate = context.existingSlots.associateBy { it.date }
-    fun speaker(id: String): VisitingSpeaker? = newSpeakers[id] ?: context.directory.speakers.find { it.id == id }
+    fun speaker(id: String): VisitingSpeaker? = context.directory.speakers.find { it.id == id }
 }
 
 /** Maps `Export_Vortragsplanung` to slots; an existing slot that already has a talk or a speaker stays untouched. */
 fun planTalkSchedule(table: ImportTable, context: ScheduleImportContext): TalkScheduleImport {
     val run = ScheduleRun(context)
     val entries = table.rows.mapNotNull { row -> slotEntry(row, run) }
-    return TalkScheduleImport(ImportPlan(entries, run.errors), run.newSpeakers.values.toList(), run.warnings)
+    return TalkScheduleImport(ImportPlan(entries, run.errors), run.warnings)
 }
 
 private fun slotEntry(row: ImportRow, run: ScheduleRun): PlanEntry<TalkSlot>? {
@@ -84,14 +76,7 @@ private fun slotEntry(row: ImportRow, run: ScheduleRun): PlanEntry<TalkSlot>? {
         return null
     }
     val existing = run.existingByDate[date]
-    if (existing != null && (existing.talkNumber != null || existing.hasSpeaker)) {
-        // An earlier run may have saved the slot but failed to save its speaker: add the speaker again if it is missing.
-        val speakerId = row.idText(SPEAKER_ID)
-        if (speakerId != null && existing.externalSpeakerId == speakerId && run.speaker(speakerId) == null) {
-            createSpeaker(speakerId, row, run)
-        }
-        return PlanEntry(existing, ImportKind.SKIP)
-    }
+    if (existing != null && (existing.hasTalk || existing.hasSpeaker)) return PlanEntry(existing, ImportKind.SKIP)
     val imported = buildSlot(row, date, run)
     // A slot the planner already created keeps its time, chairman and note.
     val wanted = existing?.fillWith(imported) ?: imported
@@ -125,10 +110,14 @@ private fun buildSlot(row: ImportRow, date: LocalDate, run: ScheduleRun): TalkSl
     }
     row.text(TALK_NUMBER)?.toDoubleOrNull()?.toInt()?.let { number ->
         val talk = context.catalog.firstOrNull { it.number == number }
-        if (talk == null) {
-            run.errors += ImportError(row.number, "Vortrag $number ist nicht in der Vortragsliste")
-        } else {
-            slot = slot.copy(talkNumber = talk.number, talkTitle = talk.title)
+        val title = row.text(TALK_TITLE)?.take(TalkSlot.MAX_TALK_TITLE_LENGTH)
+        when {
+            talk != null -> slot = slot.copy(talkNumber = talk.number, talkTitle = talk.title)
+            title != null -> {
+                slot = slot.copy(talkTitle = title)
+                run.warnings += ImportError(row.number, "Vortrag $number ist nicht in der Vortragsliste; nur der Titel")
+            }
+            else -> run.errors += ImportError(row.number, "Vortrag $number ist nicht in der Vortragsliste")
         }
     }
     return withSpeaker(slot, row, run)
@@ -136,7 +125,7 @@ private fun buildSlot(row: ImportRow, date: LocalDate, run: ScheduleRun): TalkSl
 
 private fun withSpeaker(slot: TalkSlot, row: ImportRow, run: ScheduleRun): TalkSlot {
     val speakerId = row.idText(SPEAKER_ID) ?: return slot
-    val speaker = run.speaker(speakerId) ?: createSpeaker(speakerId, row, run) ?: return slot
+    val speaker = run.speaker(speakerId) ?: return withFreeSpeaker(slot, speakerId, row, run)
     val congregation = run.context.directory.congregations.firstOrNull { it.id == speaker.congregationId }?.name
         ?: row.text(CONGREGATION_NAME)
     return slot.copy(
@@ -147,36 +136,20 @@ private fun withSpeaker(slot: TalkSlot, row: ImportRow, run: ScheduleRun): TalkS
     )
 }
 
-// A speaker that is only in the schedule is created from the row; the talk of the row is the one he gives.
-private fun createSpeaker(id: String, row: ImportRow, run: ScheduleRun): VisitingSpeaker? {
-    val congregationId = row.idText(CONGREGATION_ID)
-    val lastName = row.text(LAST_NAME)
-    val talk = row.text(TALK_NUMBER)?.toDoubleOrNull()?.toInt()
-    if (lastName == null ||
-        congregationId == null ||
-        run.context.directory.congregations.none { it.id == congregationId }
-    ) {
-        run.errors += ImportError(row.number, "Redner $id ist nicht in der Rednerliste und kann nicht angelegt werden")
-        return null
+// A speaker that is not in the directory is kept by name only, e.g. "Berg, Lea (Musterstadt)".
+private fun withFreeSpeaker(slot: TalkSlot, id: String, row: ImportRow, run: ScheduleRun): TalkSlot {
+    val name = freeSpeakerName(row)
+    if (name == null) {
+        run.errors += ImportError(row.number, "Redner $id ist nicht in der Rednerliste und hat keinen Namen")
+        return slot
     }
-    val speaker = VisitingSpeaker(
-        id = id,
-        congregationId = congregationId,
-        lastName = lastName,
-        firstName = row.text(FIRST_NAME).orEmpty(),
-        mobilePhone = row.text(MOBILE).orEmpty(),
-        landlinePhone = row.text(LANDLINE).orEmpty(),
-        email = row.text(EMAIL).orEmpty(),
-        talkNumbers = listOfNotNull(talk).filter { number -> run.context.catalog.any { it.number == number } },
-    )
-    val duplicate = run.context.directory.speakers.firstOrNull {
-        it.congregationId == congregationId &&
-            it.lastName.equals(lastName, ignoreCase = true) &&
-            it.firstName.equals(speaker.firstName, ignoreCase = true)
-    }
-    if (duplicate != null) {
-        run.warnings += ImportError(row.number, "Redner $lastName ${speaker.firstName} gleicht ${duplicate.id}")
-    }
-    run.newSpeakers[id] = speaker
-    return speaker
+    run.warnings += ImportError(row.number, "Redner $id ist nicht in der Rednerliste; nur der Name")
+    return slot.copy(speakerLastName = name, speakerFirstName = "")
+}
+
+private fun freeSpeakerName(row: ImportRow): String? {
+    val lastName = row.text(LAST_NAME) ?: return null
+    val person = listOfNotNull(lastName, row.text(FIRST_NAME)).joinToString(", ")
+    val name = row.text(CONGREGATION_NAME)?.let { "$person ($it)" } ?: person
+    return name.take(TalkSlot.MAX_PERSON_NAME_LENGTH)
 }
