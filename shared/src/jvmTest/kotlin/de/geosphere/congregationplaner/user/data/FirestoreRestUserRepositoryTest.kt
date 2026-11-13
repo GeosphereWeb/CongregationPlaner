@@ -120,6 +120,7 @@ class FirestoreRestUserRepositoryTest {
                 "mobilePhone":{"stringValue":"0170 123"},
                 "landlinePhone":{"stringValue":"030 456"},
                 "isSpeaker":{"booleanValue":true},
+                "talkNumbers":{"arrayValue":{"values":[{"integerValue":"12"},{"integerValue":"45"}]}},
                 "street":{"stringValue":"Hauptstr. 1"},
                 "postalCode":{"stringValue":"10115"},
                 "city":{"stringValue":"Berlin"},
@@ -142,6 +143,7 @@ class FirestoreRestUserRepositoryTest {
                 mobilePhone = "0170 123",
                 landlinePhone = "030 456",
                 isSpeaker = true,
+                talkNumbers = listOf(12, 45),
                 street = "Hauptstr. 1",
                 postalCode = "10115",
                 city = "Berlin",
@@ -303,6 +305,7 @@ class FirestoreRestUserRepositoryTest {
                 category = MemberCategory.BROTHER,
                 mobilePhone = "0170",
                 isSpeaker = true,
+                talkNumbers = listOf(7, 9),
             ),
         )
 
@@ -311,8 +314,13 @@ class FirestoreRestUserRepositoryTest {
         val request = server.requests.single()
         assertEquals("PATCH", request.method)
         assertEquals("$membersPath/uid-1", request.path)
+        assertTrue(
+            request.body.contains(
+                """"talkNumbers":{"arrayValue":{"values":[{"integerValue":"7"},{"integerValue":"9"}]}}""",
+            ),
+        )
         assertEquals(
-            (ownFields + listOf("category", "baptized", "appointment", "isSpeaker"))
+            (ownFields + listOf("category", "baptized", "appointment", "isSpeaker", "talkNumbers"))
                 .joinToString("&") { "updateMask.fieldPaths=$it" } + "&currentDocument.exists=true",
             request.query,
         )

@@ -1,18 +1,23 @@
 package de.geosphere.congregationplaner.user.presentation.management
 
 import de.geosphere.congregationplaner.presentation.components.ListDetailState
+import de.geosphere.congregationplaner.talk.presentation.directory.toText
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 
-/** Die gerade bearbeiteten persönlichen Angaben; [member] ist `null`, solange eine neue Person ohne Konto entsteht. */
+/**
+ * Die gerade bearbeiteten persönlichen Angaben; [member] ist `null`, solange eine neue Person ohne Konto entsteht.
+ * [talksText] ist die Eingabe der Vortragsnummern; sie wird erst beim Speichern in Zahlen umgewandelt.
+ */
 data class MemberEditorState(
     val profile: MemberProfile = MemberProfile(),
     val member: AppUser? = null,
     val original: MemberProfile = profile,
+    val talksText: String = profile.talkNumbers.toText(),
 ) {
     val isNew: Boolean get() = member == null
-    val isDirty: Boolean get() = profile != original
+    val isDirty: Boolean get() = profile != original || talksText != original.talkNumbers.toText()
 }
 
 /** Was der angemeldete Nutzer mit einem Mitglied tun darf; standardmäßig nichts. */

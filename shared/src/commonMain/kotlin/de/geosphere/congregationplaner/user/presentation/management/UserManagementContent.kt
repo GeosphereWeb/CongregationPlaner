@@ -67,6 +67,7 @@ internal data class UserManagementActions(
     val onEditProfile: (AppUser) -> Unit = {},
     val onAddMemberWithoutAccount: () -> Unit = {},
     val onEditorChange: (MemberProfile) -> Unit = {},
+    val onTalksChange: (String) -> Unit = {},
     val onSaveProfile: () -> Unit = {},
     val onCancelEditing: () -> Unit = {},
     val onDiscardChanges: () -> Unit = {},
@@ -100,6 +101,7 @@ fun UserManagementScreen(viewModel: UserManagementViewModel, modifier: Modifier 
             onEditProfile = viewModel.editor::edit,
             onAddMemberWithoutAccount = viewModel.editor::add,
             onEditorChange = viewModel.editor::update,
+            onTalksChange = viewModel.editor::updateTalks,
             onSaveProfile = viewModel.editor::save,
             onCancelEditing = viewModel.editor::cancel,
             onDiscardChanges = viewModel.editor::discard,
@@ -258,6 +260,7 @@ internal fun UserManagementContent(
                                     onChange = actions.onEditorChange,
                                     onSave = actions.onSaveProfile,
                                     onCancel = onCancelEditing,
+                                    onTalksChange = actions.onTalksChange,
                                 )
                                 if (member != null && state.permissionsOf(member).canEdit) {
                                     SecondaryButton(

@@ -35,7 +35,8 @@ import de.geosphere.congregationplaner.talk.presentation.picker.SpeakerPickerDia
 import de.geosphere.congregationplaner.talk.presentation.picker.TalkPickerDialog
 import de.geosphere.congregationplaner.talk.presentation.picker.offeredBy
 import de.geosphere.congregationplaner.talk.presentation.picker.offering
-import de.geosphere.congregationplaner.talk.presentation.picker.selectedExternal
+import de.geosphere.congregationplaner.talk.presentation.picker.offeringMembers
+import de.geosphere.congregationplaner.talk.presentation.picker.selectedSpeakerTalks
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
@@ -245,7 +246,7 @@ internal fun TalkSlotEditor(
 
     if (showSpeakerPicker) {
         SpeakerPickerDialog(
-            members = selectableSpeakers,
+            members = selectableSpeakers.offeringMembers(slot.talkNumber),
             externalSpeakers = externalSpeakers.offering(slot.talkNumber),
             canViewMembers = canViewMembers,
             actions = speakerActions.closingPicker { showSpeakerPicker = false },
@@ -269,7 +270,7 @@ internal fun TalkSlotEditor(
     if (showTalkPicker) {
         TalkPickerDialog(
             // Die Auswahl zeigt und übernimmt den Titel, der am Termintag gilt.
-            talks = talkCheck.talksOnDate.offeredBy(slot.selectedExternal(externalSpeakers)),
+            talks = talkCheck.talksOnDate.offeredBy(slot.selectedSpeakerTalks(speakers, externalSpeakers)),
             onSelect = {
                 onSelectTalk(it)
                 showTalkPicker = false

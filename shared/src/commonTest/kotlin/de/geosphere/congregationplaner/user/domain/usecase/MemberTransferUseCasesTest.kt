@@ -41,6 +41,7 @@ class MemberTransferUseCasesTest {
         mobilePhone = "0170 1234567",
         landlinePhone = "kaputt!",
         email = "lea@example.com",
+        talkNumbers = listOf(12, 45),
     )
     private val bergSlot = TalkSlot(
         LocalDate(2026, 11, 15),
@@ -86,6 +87,7 @@ class MemberTransferUseCasesTest {
         // The broken landline number is dropped instead of blocking the adoption.
         assertEquals("", profile.landlinePhone)
         assertEquals(listOf("lea@example.com"), profile.emails)
+        assertEquals(berg.talkNumbers, profile.talkNumbers)
         assertEquals(member.uid, schedule.slots.value.first().speakerMemberId)
         assertEquals(listOf(bergSlot.date), schedule.savedSlots.map { it.date })
         assertEquals(listOf("e1"), directory.deletedIds)

@@ -129,6 +129,8 @@ class FirestoreUserRepositoryTest {
                     "mobilePhone" to "0170 123",
                     "landlinePhone" to "030 456",
                     "isSpeaker" to true,
+                    // Firestore delivers integers as Long; entries that are no number are skipped.
+                    "talkNumbers" to listOf(12L, "x", 45L),
                     "emails" to listOf("max@beispiel.de"),
                     "street" to "Hauptstr. 1",
                     "postalCode" to "10115",
@@ -157,6 +159,7 @@ class FirestoreUserRepositoryTest {
                 mobilePhone = "0170 123",
                 landlinePhone = "030 456",
                 isSpeaker = true,
+                talkNumbers = listOf(12, 45),
                 emails = listOf("max@beispiel.de"),
                 street = "Hauptstr. 1",
                 postalCode = "10115",
@@ -213,6 +216,7 @@ class FirestoreUserRepositoryTest {
             baptized = true,
             appointment = Appointment.ELDER,
             isSpeaker = true,
+            talkNumbers = listOf(12, 45),
         )
         val member = AppUser(uid = "uid-1", approved = true, profile = profile)
 
@@ -224,6 +228,7 @@ class FirestoreUserRepositoryTest {
                 "baptized" to true,
                 "appointment" to "ELDER",
                 "isSpeaker" to true,
+                "talkNumbers" to listOf(12, 45),
             ),
             fields.captured,
         )
@@ -498,6 +503,7 @@ class FirestoreUserRepositoryTest {
         every { this@mockk.get("roles") } returns roles
         every { this@mockk.get("emails") } returns profile["emails"]
         every { this@mockk.get("emergencyContacts") } returns profile["emergencyContacts"]
+        every { this@mockk.get("talkNumbers") } returns profile["talkNumbers"]
         every { getString("email") } returns "user@example.com"
         every { getString("displayName") } returns "User"
         every { getString("role") } returns role
@@ -513,6 +519,7 @@ class FirestoreUserRepositoryTest {
         "mobilePhone" to "",
         "landlinePhone" to "",
         "isSpeaker" to false,
+        "talkNumbers" to emptyList<Int>(),
         "emails" to emptyList<String>(),
         "street" to "",
         "postalCode" to "",
