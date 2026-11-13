@@ -1,5 +1,6 @@
-package de.geosphere.congregationplaner.talk.presentation.schedule
+package de.geosphere.congregationplaner.talk.domain.usecase
 
+import de.geosphere.congregationplaner.talk.domain.model.MessageSender
 import de.geosphere.congregationplaner.talk.domain.model.SpeakerContact
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.user.domain.model.DEFAULT_MESSAGE_TEMPLATES
@@ -11,7 +12,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class WhatsAppMessagesTest {
+class BuildWhatsAppMessagesUseCaseTest {
+    private val build = BuildWhatsAppMessagesUseCase()
     private val slot = TalkSlot(
         LocalDate(2026, 11, 15),
         LocalTime(9, 5),
@@ -31,23 +33,22 @@ class WhatsAppMessagesTest {
 
         assertEquals(
             "Eva|Extern|Sonntag|15.11.2026|09:05|Nr. 12 – Der Weg zum Glück|12|Der Weg zum Glück|Paul|Planer",
-            fillTemplate(text, slotMessageValues(slot, sender)),
+            build.fill(text, build.values(slot, sender)),
         )
     }
 
     @Test
     fun `unknown placeholders stay and a free talk has no number`() {
-        val free = slot.copy(talkNumber = null, talkTitle = "Sondervortrag")
-        val values = slotMessageValues(free, sender)
+        val values = build.values(slot.copy(talkNumber = null, talkTitle = "Sondervortrag"), sender)
 
-        assertEquals("{Gruß} Sondervortrag ()", fillTemplate("{Gruß} {Vortrag} ({Vortragsnummer})", values))
+        assertEquals("{Gruß} Sondervortrag ()", build.fill("{Gruß} {Vortrag} ({Vortragsnummer})", values))
     }
 
     @Test
     fun `messages follow the template order and carry the encoded text`() {
         val templates = listOf(MessageTemplate("Kurz", "Hallo {Vorname}!"), MessageTemplate("Dank", "Danke & tschüß"))
 
-        val messages = slotWhatsAppMessages(slot, contact, templates, sender)
+        val messages = build(slot, contact, templates, sender)
 
         assertEquals(listOf("Kurz", "Dank"), messages.map { it.name })
         assertEquals("https://wa.me/491701234567?text=Hallo%20Eva%21", messages[0].uri)
@@ -56,14 +57,8 @@ class WhatsAppMessagesTest {
 
     @Test
     fun `no messages without a mobile number`() {
-        assertTrue(
-            slotWhatsAppMessages(
-                slot,
-                SpeakerContact(landlinePhone = "089 123456"),
-                DEFAULT_MESSAGE_TEMPLATES,
-                sender,
-            ).isEmpty(),
-        )
-        assertTrue(slotWhatsAppMessages(slot, null, DEFAULT_MESSAGE_TEMPLATES, sender).isEmpty())
+        val landline = SpeakerContact(landlinePhone = "089 123456")
+        assertTrue(build(slot, landline, DEFAULT_MESSAGE_TEMPLATES, sender).isEmpty())
+        assertTrue(build(slot, null, DEFAULT_MESSAGE_TEMPLATES, sender).isEmpty())
     }
 }

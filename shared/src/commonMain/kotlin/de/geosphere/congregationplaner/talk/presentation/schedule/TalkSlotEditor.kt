@@ -28,7 +28,7 @@ import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
-import de.geosphere.congregationplaner.talk.domain.model.asOf
+import de.geosphere.congregationplaner.talk.domain.usecase.SlotTalkCheck
 import de.geosphere.congregationplaner.talk.presentation.picker.MemberPickerDialog
 import de.geosphere.congregationplaner.talk.presentation.picker.SpeakerActions
 import de.geosphere.congregationplaner.talk.presentation.picker.SpeakerPickerDialog
@@ -58,7 +58,6 @@ internal fun TalkSlotEditor(
     editor: TalkSlotEditorState,
     chip: SlotChip,
     weekEvents: List<WeekEvent>,
-    talks: List<Talk>,
     speakers: List<Speaker>,
     chairmen: List<Chairman>,
     externalSpeakers: List<ExternalSpeaker>,
@@ -84,9 +83,7 @@ internal fun TalkSlotEditor(
     val selectableChairmen = chairmen.filterNot { it.memberId == slot.speakerMemberId }
     val speakerText = slotSpeakerText(slot)
     val talkText = slotTalkText(slot)
-    val newerTitle = outdatedTalkTitle(slot, talks)
-    // Die Auswahl zeigt und übernimmt den Titel, der am Termintag gilt.
-    val talksOnDate = remember(talks, slot.date) { talks.asOf(slot.date) }
+    val talkCheck = editor.talkCheck
 
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SlotHeader(slot, chip)
@@ -122,7 +119,7 @@ internal fun TalkSlotEditor(
             supporting = if (slot.talkCancelled) {
                 "Der Vortrag entfällt, eine Auswahl ist nicht nötig."
             } else {
-                inactiveTalkHint(slot, talks)
+                talkCheck.inactiveNumber?.let(::inactiveTalkHint)
             },
             missing = talkText == null && !slot.talkCancelled,
             action = {
@@ -134,7 +131,7 @@ internal fun TalkSlotEditor(
                 )
             },
         )
-        newerTitle?.let { title ->
+        talkCheck.outdatedTitle?.let { title ->
             SecondaryButton(
                 text = "Titel aktualisieren: „$title“",
                 onClick = { onChange(slot.copy(talkTitle = title)) },
@@ -271,7 +268,8 @@ internal fun TalkSlotEditor(
 
     if (showTalkPicker) {
         TalkPickerDialog(
-            talks = talksOnDate.offeredBy(slot.selectedExternal(externalSpeakers)),
+            // Die Auswahl zeigt und übernimmt den Titel, der am Termintag gilt.
+            talks = talkCheck.talksOnDate.offeredBy(slot.selectedExternal(externalSpeakers)),
             onSelect = {
                 onSelectTalk(it)
                 showTalkPicker = false
@@ -358,10 +356,13 @@ private val previewWeekEvents = listOf(
 @Composable
 private fun EditorPreview(slot: TalkSlot, original: TalkSlot?, chip: SlotChip) = PreviewThemeWrapper {
     TalkSlotEditor(
-        editor = TalkSlotEditorState(slot, original),
+        editor = TalkSlotEditorState(
+            slot,
+            original,
+            talkCheck = SlotTalkCheck(talksOnDate = listOf(Talk(1, "Beispielvortrag"), Talk(2, "Weiterer Vortrag"))),
+        ),
         chip = chip,
         weekEvents = previewWeekEvents,
-        talks = listOf(Talk(1, "Beispielvortrag"), Talk(2, "Weiterer Vortrag")),
         speakers = listOf(Speaker("1", "Muster", "Max")),
         chairmen = listOf(Chairman("2", "Beispiel", "Tim")),
         externalSpeakers = listOf(ExternalSpeaker("e1", "Extern", "Eva", "Nord")),
