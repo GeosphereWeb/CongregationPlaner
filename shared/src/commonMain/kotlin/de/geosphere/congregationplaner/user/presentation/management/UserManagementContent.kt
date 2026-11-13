@@ -291,6 +291,7 @@ private fun MemberAccessCard(
 ) {
     DesignCard {
         Text("Zugang", style = MaterialTheme.typography.titleSmall, color = NightColors.OnBackground)
+        memberLoginEmail(member)?.let { Text(it, color = NightColors.OnBackgroundBody) }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 if (member.approved) "Freigegeben" else "Wartet auf Freigabe",
