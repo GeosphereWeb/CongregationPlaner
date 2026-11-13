@@ -13,7 +13,9 @@ import de.geosphere.congregationplaner.talk.domain.repository.TalkPlanningSettin
 import de.geosphere.congregationplaner.talk.domain.repository.TalkScheduleRepository
 import de.geosphere.congregationplaner.talk.domain.repository.WeekEventRepository
 import de.geosphere.congregationplaner.talk.presentation.schedule.TalkScheduleViewModel
+import de.geosphere.congregationplaner.user.data.createMessageTemplateRepository
 import de.geosphere.congregationplaner.user.data.createUserRepository
+import de.geosphere.congregationplaner.user.domain.repository.MessageTemplateRepository
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
 import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Provides
@@ -46,4 +48,8 @@ interface TalkScheduleGraph {
     // Die Redner stammen aus den Mitgliedern der Versammlung.
     @Provides
     fun provideUserRepository(): UserRepository = createUserRepository()
+
+    // Die eigenen WhatsApp-Vorlagen für das Wischen nach links.
+    @Provides
+    fun provideMessageTemplateRepository(): MessageTemplateRepository = createMessageTemplateRepository()
 }

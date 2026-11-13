@@ -285,10 +285,17 @@ internal fun TalkScheduleContent(
                                         )
                                     }
                                     items(monthSlots, key = { it.id }) { slot ->
+                                        // Telefon und WhatsApp gibt es nur auf dem Handy.
+                                        val contact = slotContact(slot, state.speakers, state.externalSpeakers)
+                                            .takeUnless { HostPlatform.isDesktop }
                                         SwipeableSlotItem(
-                                            // Telefon und WhatsApp gibt es nur auf dem Handy.
-                                            contact = slotContact(slot, state.speakers, state.externalSpeakers)
-                                                .takeUnless { HostPlatform.isDesktop },
+                                            contact = contact,
+                                            whatsAppMessages = slotWhatsAppMessages(
+                                                slot,
+                                                contact,
+                                                state.messageTemplates,
+                                                state.messageSender,
+                                            ),
                                             revealed = revealedSlotId == slot.id,
                                             onRevealedChange = { open ->
                                                 revealedSlotId = when {

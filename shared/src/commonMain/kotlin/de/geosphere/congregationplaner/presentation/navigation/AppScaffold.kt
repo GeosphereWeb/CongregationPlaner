@@ -45,6 +45,7 @@ import de.geosphere.congregationplaner.ui.common.topCutoutInset
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.GERMAN_AREA_CODES_STAND
+import de.geosphere.congregationplaner.user.presentation.profile.MessageTemplatesSection
 import de.geosphere.congregationplaner.user.presentation.profile.OwnProfileSection
 /**
  * Der Rahmen der angemeldeten App mit den vier Hauptbereichen. Die Leiste liegt auf schmalen Fenstern unten und auf
@@ -153,6 +154,7 @@ private fun SettingsContent(currentUser: AppUser, onSignOut: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             OwnProfileSection(currentUser, Modifier.padding(top = 24.dp).widthIn(max = 480.dp))
+            MessageTemplatesSection(currentUser, Modifier.padding(top = 32.dp).widthIn(max = 480.dp))
             ImportSection(currentUser, Modifier.padding(top = 32.dp).widthIn(max = 480.dp))
             DataSources(Modifier.padding(top = 32.dp).widthIn(max = 480.dp))
         }
