@@ -276,10 +276,35 @@ service cloud.firestore {
     }
 
     function isValidCatalogTalk(data) {
-      return data.keys().hasOnly(['title', 'active']) &&
-        data.keys().hasAll(['title', 'active']) &&
-        data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
-        data.active is bool;
+      return data.keys().hasOnly(['title', 'active', 'titleChanges']) &&
+        data.keys().hasAll(['title', 'active', 'titleChanges']) &&
+        isTalkTitle(data.title) &&
+        data.active is bool &&
+        isValidTitleChanges(data.titleChanges);
+    }
+
+    function isTalkTitle(title) {
+      return title is string && title.size() >= 1 && title.size() <= 200;
+    }
+
+    // Later titles of a talk, each valid from a day (yyyy-MM-dd); at most 10.
+    function isValidTitleChanges(changes) {
+      let list = changes;
+      let count = list is list ? list.size() : 99;
+      return count <= 10 &&
+        (count < 1 || isValidTitleChange(list[0])) && (count < 2 || isValidTitleChange(list[1])) &&
+        (count < 3 || isValidTitleChange(list[2])) && (count < 4 || isValidTitleChange(list[3])) &&
+        (count < 5 || isValidTitleChange(list[4])) && (count < 6 || isValidTitleChange(list[5])) &&
+        (count < 7 || isValidTitleChange(list[6])) && (count < 8 || isValidTitleChange(list[7])) &&
+        (count < 9 || isValidTitleChange(list[8])) && (count < 10 || isValidTitleChange(list[9]));
+    }
+
+    function isValidTitleChange(change) {
+      return change is map &&
+        change.keys().hasOnly(['validFrom', 'title']) &&
+        change.get('validFrom', null) is string &&
+        change.validFrom.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') &&
+        isTalkTitle(change.get('title', null));
     }
 
     // Directory of external speakers: circuit -> congregation -> speaker, kept by the planners (see header).

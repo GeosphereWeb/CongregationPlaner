@@ -7,8 +7,9 @@ sealed class TalkReferenceException(message: String) : Exception(message) {
 
     class InvalidTalk :
         TalkReferenceException(
-            "Die Vortragsnummer muss zwischen 1 und ${Talk.MAX_NUMBER} liegen, der Titel 1 bis " +
-                "${TalkSlot.MAX_TALK_TITLE_LENGTH} Zeichen haben.",
+            "Die Vortragsnummer muss zwischen 1 und ${Talk.MAX_NUMBER} liegen, jeder Titel 1 bis " +
+                "${TalkSlot.MAX_TALK_TITLE_LENGTH} Zeichen haben; höchstens ${Talk.MAX_TITLE_CHANGES} " +
+                "Titeländerungen, je Tag eine.",
         )
 
     class InvalidWeekEvent :

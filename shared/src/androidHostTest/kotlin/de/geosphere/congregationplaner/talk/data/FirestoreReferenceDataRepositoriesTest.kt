@@ -4,6 +4,7 @@ import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FirebaseFirestore
 import de.geosphere.congregationplaner.talk.domain.model.Talk
+import de.geosphere.congregationplaner.talk.domain.model.TalkTitleChange
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.testing.assertFailure
 import de.geosphere.congregationplaner.testing.failedTask
@@ -14,6 +15,7 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -30,15 +32,27 @@ class FirestoreReferenceDataRepositoriesTest {
     }
 
     @Test
-    fun `saveTalk writes title and active flag under the number`() = runBlocking {
+    fun `saveTalk writes title, active flag and title changes under the number`() = runBlocking {
         val fields = slot<Any>()
         val reference = mockk<DocumentReference>()
         every { talks.document("12") } returns reference
         every { reference.set(capture(fields)) } returns successTask<Void?>(null)
-        val talk = Talk(12, "Der Weg zum Glück", active = false)
+        val talk = Talk(
+            12,
+            "Der Weg zum Glück",
+            active = false,
+            titleChanges = listOf(TalkTitleChange(LocalDate(2027, 1, 1), "Neuer Titel")),
+        )
 
         assertEquals(talk, talkCatalog.save(talk).getOrThrow())
-        assertEquals(mapOf("title" to "Der Weg zum Glück", "active" to false), fields.captured)
+        assertEquals(
+            mapOf(
+                "title" to "Der Weg zum Glück",
+                "active" to false,
+                "titleChanges" to listOf(mapOf("validFrom" to "2027-01-01", "title" to "Neuer Titel")),
+            ),
+            fields.captured,
+        )
     }
 
     @Test

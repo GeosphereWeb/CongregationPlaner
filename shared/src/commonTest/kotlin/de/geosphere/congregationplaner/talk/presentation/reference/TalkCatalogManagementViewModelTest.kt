@@ -1,6 +1,7 @@
 package de.geosphere.congregationplaner.talk.presentation.reference
 
 import de.geosphere.congregationplaner.talk.domain.model.Talk
+import de.geosphere.congregationplaner.talk.domain.model.TalkTitleChange
 import de.geosphere.congregationplaner.talk.domain.permission.TalkReferenceDataPolicy
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkCatalogUseCase
@@ -13,6 +14,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.LocalDate
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -105,6 +107,39 @@ class TalkCatalogManagementViewModelTest {
 
         viewModel.save()
         assertEquals(listOf(Talk(1, "Anders", active = false)), catalog.savedTalks)
+    }
+
+    @Test
+    fun `title changes are added edited removed and saved`() {
+        viewModel.onCurrentUserChanged(admin)
+        viewModel.editTalk(first)
+
+        viewModel.updateEditor(state.editor!!.withTitleChangeAdded(state.today))
+        val added = state.editor!!.titleChanges.single()
+        assertEquals(state.today, added.validFrom)
+        assertEquals(first.title, added.title)
+
+        viewModel.updateEditor(state.editor!!.withTitleChange(0, TalkTitleChange(LocalDate(2027, 1, 1), "Neu")))
+        viewModel.updateEditor(state.editor!!.withTitleChangeAdded(LocalDate(2028, 1, 1)))
+        assertEquals("Neu", state.editor!!.titleChanges[1].title)
+        viewModel.updateEditor(state.editor!!.withoutTitleChange(1))
+        viewModel.save()
+
+        val saved = catalog.savedTalks.single()
+        assertEquals(listOf(TalkTitleChange(LocalDate(2027, 1, 1), "Neu")), saved.titleChanges)
+        assertEquals("Neu", saved.titleOn(LocalDate(2027, 6, 1)))
+    }
+
+    @Test
+    fun `no more title changes than allowed`() {
+        viewModel.onCurrentUserChanged(admin)
+        viewModel.editTalk(first)
+        repeat(Talk.MAX_TITLE_CHANGES + 2) { day ->
+            viewModel.updateEditor(state.editor!!.withTitleChangeAdded(LocalDate(2027, 1, day + 1)))
+        }
+
+        assertEquals(Talk.MAX_TITLE_CHANGES, state.editor!!.titleChanges.size)
+        assertFalse(state.editor!!.canAddTitleChange)
     }
 
     @Test
