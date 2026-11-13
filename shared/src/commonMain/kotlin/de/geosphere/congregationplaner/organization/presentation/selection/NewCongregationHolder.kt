@@ -1,14 +1,11 @@
 package de.geosphere.congregationplaner.organization.presentation.selection
 
 import de.geosphere.congregationplaner.auth.domain.repository.FirebaseUser
-import de.geosphere.congregationplaner.congregation.domain.model.CongregationName
-import de.geosphere.congregationplaner.congregation.domain.model.NewCongregationAdmin
 import de.geosphere.congregationplaner.congregation.domain.usecase.CreateOwnCongregationUseCase
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.organization.domain.model.OrgLevel
 import de.geosphere.congregationplaner.organization.domain.model.SelectedCongregation
 import de.geosphere.congregationplaner.presentation.state.UiStateStore
-import de.geosphere.congregationplaner.user.data.toNameProfile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -34,7 +31,7 @@ class NewCongregationHolder(
 
     fun changeName(name: String) = store.update { state ->
         state.copy(
-            newCongregation = state.newCongregation?.copy(name = name.take(CongregationName.MAX_LENGTH)),
+            newCongregation = state.newCongregation?.copy(name = createOwnCongregation.limitName(name)),
             errorMessage = null,
         )
     }
@@ -58,7 +55,7 @@ class NewCongregationHolder(
         if (draft == null || store.value.isCreating) return
         store.update { it.copy(isCreating = true, errorMessage = null) }
         scope.launch {
-            createOwnCongregation(draft.circuitIds, draft.name, user.toFirstAdmin())
+            createOwnCongregation(draft.circuitIds, draft.name, user)
                 .onSuccess { created ->
                     val ref = CongregationRef.fromIds(draft.circuitIds + created.id)
                     if (ref == null) {
@@ -76,16 +73,4 @@ class NewCongregationHolder(
     private companion object {
         const val CREATED_WITHOUT_PATH_MESSAGE = "Die Versammlung wurde angelegt, konnte aber nicht gewählt werden."
     }
-}
-
-private fun FirebaseUser.toFirstAdmin(): NewCongregationAdmin {
-    val names = displayName.toNameProfile()
-    return NewCongregationAdmin(
-        uid = uid,
-        email = email,
-        displayName = displayName,
-        firstName = names.firstName,
-        lastName = names.lastName,
-        emailVerified = emailVerified,
-    )
 }

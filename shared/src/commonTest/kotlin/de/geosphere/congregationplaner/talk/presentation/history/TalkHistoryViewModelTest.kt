@@ -3,8 +3,10 @@ package de.geosphere.congregationplaner.talk.presentation.history
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
+import de.geosphere.congregationplaner.talk.domain.usecase.BuildTalkHistoryOverviewUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkCatalogUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkHistoryUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.SearchSpeakerHistoryUseCase
 import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
@@ -56,6 +58,8 @@ class TalkHistoryViewModelTest {
             ObserveTalkCatalogUseCase(catalog),
             ObserveTalkHistoryUseCase(schedule),
             policy,
+            BuildTalkHistoryOverviewUseCase(),
+            SearchSpeakerHistoryUseCase(),
         )
     }
 
@@ -89,10 +93,10 @@ class TalkHistoryViewModelTest {
 
     @Test
     fun `the list is sorted by number and grouping is off until switched on`() {
-        val unsorted = TalkHistoryUiState(talks = listOf(Talk(3, "C"), Talk(1, "A"), Talk(2, "B")))
+        val unsorted = BuildTalkHistoryOverviewUseCase()(listOf(Talk(3, "C"), Talk(1, "A"), Talk(2, "B")), emptyList())
 
-        assertEquals(listOf(1, 2, 3), unsorted.rows.map { it.talk.number })
-        assertFalse(unsorted.groupByFrequency)
+        assertEquals(listOf(1, 2, 3), TalkHistoryUiState(overview = unsorted).rows.map { it.talk.number })
+        assertFalse(state.groupByFrequency)
 
         viewModel.setGroupByFrequency(true)
         assertTrue(state.groupByFrequency)

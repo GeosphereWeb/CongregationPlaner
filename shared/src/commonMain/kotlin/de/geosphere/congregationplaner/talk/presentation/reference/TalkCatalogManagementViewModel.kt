@@ -6,6 +6,8 @@ import de.geosphere.congregationplaner.presentation.components.ListDetailState
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkTitleChange
 import de.geosphere.congregationplaner.talk.domain.permission.TalkReferenceDataPolicy
+import de.geosphere.congregationplaner.talk.domain.usecase.CheckNewTalkNumberUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.CleanTalkNumberInputUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.EditTalkTitleChangesUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkCatalogUseCase
@@ -76,6 +78,14 @@ data class TalkCatalogUiState(
     override val hasDetail: Boolean get() = editor != null
 }
 
+/** Die UseCases für die Eingaben im Vortrags-Editor. */
+@Inject
+class TalkInputUseCases(
+    val cleanNumber: CleanTalkNumberInputUseCase,
+    val checkNewNumber: CheckNewTalkNumberUseCase,
+    val editTitleChanges: EditTalkTitleChangesUseCase,
+)
+
 /** Pflege der globalen Vortragsliste durch globale Administratoren. */
 @Inject
 class TalkCatalogManagementViewModel(
@@ -83,12 +93,12 @@ class TalkCatalogManagementViewModel(
     private val saveTalk: SaveTalkUseCase,
     private val deleteTalk: DeleteTalkUseCase,
     private val policy: TalkReferenceDataPolicy,
-    editTitleChanges: EditTalkTitleChangesUseCase,
+    private val input: TalkInputUseCases,
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(TalkCatalogUiState())
     val uiState = mutableUiState.asStateFlow()
 
-    val titleChanges = TalkTitleChangesHolder(mutableUiState, editTitleChanges)
+    val titleChanges = TalkTitleChangesHolder(mutableUiState, input.editTitleChanges)
 
     private var currentUser: AppUser? = null
     private var observeJob: Job? = null
@@ -118,11 +128,11 @@ class TalkCatalogManagementViewModel(
         mutableUiState.update { it.copy(editor = editor, errorMessage = null) }
     }
 
-    /** Die Nummer besteht aus höchstens vier Ziffern und bleibt bei einem vorhandenen Vortrag unverändert. */
+    /** Die Nummer bereinigt der UseCase; bei einem vorhandenen Vortrag bleibt sie unverändert. */
     fun updateEditor(editor: TalkEditorState) {
         mutableUiState.update { state ->
             if (state.isSaving) return@update state
-            val number = if (editor.isNew) editor.numberText.filter(Char::isDigit).take(NUMBER_DIGITS) else null
+            val number = if (editor.isNew) input.cleanNumber(editor.numberText) else null
             val next = editor.copy(numberText = number ?: editor.original?.number.toString())
             state.copy(editor = titleChanges.withFlags(next))
         }
@@ -139,13 +149,9 @@ class TalkCatalogManagementViewModel(
         if (state.isSaving || !checkAllowed()) return
         val user = currentUser ?: return
         val talk = editor.talk
-        val error = when {
-            talk == null -> "Bitte gib eine Vortragsnummer ein."
-            editor.isNew && state.talks.any { it.number == talk.number } -> "Die Nummer ${talk.number} gibt es schon."
-            else -> null
-        }
+        val error = if (editor.isNew || talk == null) input.checkNewNumber(talk?.number, state.talks) else null
         if (talk == null || error != null) {
-            mutableUiState.update { it.copy(errorMessage = error) }
+            mutableUiState.update { it.copy(errorMessage = error?.message) }
             return
         }
         mutableUiState.update { it.copy(isSaving = true, errorMessage = null) }
@@ -214,7 +220,6 @@ class TalkCatalogManagementViewModel(
     }
 
     private companion object {
-        const val NUMBER_DIGITS = 4
         const val MISSING_PERMISSION_MESSAGE = "Dafür fehlt dir die Berechtigung."
     }
 }

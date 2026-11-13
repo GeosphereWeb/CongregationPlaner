@@ -6,6 +6,7 @@ import de.geosphere.congregationplaner.organization.domain.model.OrgLevel
 import de.geosphere.congregationplaner.organization.domain.model.OrgUnit
 import de.geosphere.congregationplaner.organization.domain.permission.OrganizationPermissionPolicy
 import de.geosphere.congregationplaner.organization.domain.usecase.DeleteOrgUnitUseCase
+import de.geosphere.congregationplaner.organization.domain.usecase.LimitOrgUnitInputUseCase
 import de.geosphere.congregationplaner.organization.domain.usecase.ObserveOrgUnitsUseCase
 import de.geosphere.congregationplaner.organization.domain.usecase.SaveOrgUnitUseCase
 import de.geosphere.congregationplaner.presentation.components.ListDetailState
@@ -49,12 +50,13 @@ class OrganizationViewModel(
     private val saveUnit: SaveOrgUnitUseCase,
     private val deleteUnit: DeleteOrgUnitUseCase,
     private val policy: OrganizationPermissionPolicy,
+    limitInput: LimitOrgUnitInputUseCase,
 ) : ViewModel() {
     private val store = UiStateStore(OrganizationUiState())
     val uiState: StateFlow<OrganizationUiState> = store.state
 
     /** Anlegen und Bearbeiten einer Einheit (ADR-0025). */
-    val editor = OrgUnitEditorHolder(store)
+    val editor = OrgUnitEditorHolder(store, limitInput)
 
     private var currentUser: AppUser? = null
     private var observeJob: Job? = null

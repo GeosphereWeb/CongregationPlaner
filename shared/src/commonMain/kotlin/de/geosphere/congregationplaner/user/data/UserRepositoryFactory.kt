@@ -5,6 +5,7 @@ import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.user.domain.model.AdminContact
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
+import de.geosphere.congregationplaner.user.domain.model.toNameProfile
 import de.geosphere.congregationplaner.user.domain.repository.AdminContactRepository
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
 import kotlinx.coroutines.flow.Flow
@@ -28,23 +29,6 @@ internal fun FirebaseUser.toNewAppUser(congregation: CongregationRef): AppUser =
     congregation = congregation,
     profile = displayName.toNameProfile(),
 )
-
-/**
- * Trennt den Auth-Anzeigenamen („Vorname Nachname“) am letzten Leerzeichen: „Anna Maria Müller“ ergibt den Vornamen
- * „Anna Maria“ und den Nachnamen „Müller“. Ein einzelnes Wort ist der Vorname. Im Profil lässt sich beides korrigieren.
- */
-internal fun String?.toNameProfile(): MemberProfile {
-    val name = this?.trim().orEmpty()
-    val split = name.lastIndexOf(' ')
-    return if (split < 0) {
-        MemberProfile(firstName = name.take(MemberProfile.MAX_NAME_LENGTH))
-    } else {
-        MemberProfile(
-            firstName = name.substring(0, split).trim().take(MemberProfile.MAX_NAME_LENGTH),
-            lastName = name.substring(split + 1).trim().take(MemberProfile.MAX_NAME_LENGTH),
-        )
-    }
-}
 
 /** Personen ohne Konto haben nie Zugang zur App. */
 internal fun MemberProfile.toNewMemberWithoutAccount(uid: String, congregation: CongregationRef): AppUser = AppUser(
