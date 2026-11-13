@@ -33,7 +33,7 @@ class UserAccessViewModel(
             when (session) {
                 AuthSession.Unknown -> flowOf(UserAccessState.Loading)
                 AuthSession.SignedOut -> flowOf(UserAccessState.Unauthenticated)
-                is AuthSession.SignedIn -> observeUserAccess(session.user, session.congregation)
+                is AuthSession.SignedIn -> observeUserAccess(session.user, session.congregation, session.globalLogin)
             }
         }.stateIn(viewModelScope, SharingStarted.Eagerly, UserAccessState.Loading)
 
@@ -61,9 +61,12 @@ class UserAccessViewModel(
             }
         }.stateIn(viewModelScope, SharingStarted.Eagerly, AdminContactsState.Loading)
 
-    /** [congregation] ist die im Login gewählte Versammlung; `null`, solange noch keine gewählt wurde. */
-    fun onSignedIn(user: FirebaseUser, congregation: CongregationRef?) {
-        session.value = AuthSession.SignedIn(user, congregation, retry = 0)
+    /**
+     * [congregation] ist die im Login gewählte Versammlung; `null`, solange noch keine gewählt wurde. [globalLogin]
+     * ist gesetzt, wenn sich der Nutzer als globaler Admin angemeldet hat.
+     */
+    fun onSignedIn(user: FirebaseUser, congregation: CongregationRef?, globalLogin: Boolean = false) {
+        session.value = AuthSession.SignedIn(user, congregation, globalLogin, retry = 0)
     }
 
     fun onSignedOut() {
@@ -83,6 +86,11 @@ class UserAccessViewModel(
 
         data object SignedOut : AuthSession
 
-        data class SignedIn(val user: FirebaseUser, val congregation: CongregationRef?, val retry: Int) : AuthSession
+        data class SignedIn(
+            val user: FirebaseUser,
+            val congregation: CongregationRef?,
+            val globalLogin: Boolean,
+            val retry: Int,
+        ) : AuthSession
     }
 }

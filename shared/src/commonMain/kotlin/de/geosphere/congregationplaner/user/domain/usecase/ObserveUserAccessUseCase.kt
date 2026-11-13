@@ -23,10 +23,16 @@ import kotlinx.coroutines.flow.map
  *
  * Globale Admins brauchen weder Versammlung noch Freigabe; die App legt für sie kein Mitgliedsdokument an und sie
  * sehen keine Versammlungsdaten (ADR-0013). Nur wenn sie dort ausdrücklich Mitglied sind, gelten ihre Rollen.
+ * Wer sich mit [globalLogin] anmeldet, aber kein globaler Admin ist, wird nicht Mitglied der lokal gemerkten
+ * Versammlung, sondern bekommt [UserAccessState.NotGlobalAdmin].
  */
 @Inject
 class ObserveUserAccessUseCase(private val userRepository: UserRepository) {
-    operator fun invoke(authUser: FirebaseUser?, congregation: CongregationRef?): Flow<UserAccessState> {
+    operator fun invoke(
+        authUser: FirebaseUser?,
+        congregation: CongregationRef?,
+        globalLogin: Boolean = false,
+    ): Flow<UserAccessState> {
         if (authUser == null) return flowOf(UserAccessState.Unauthenticated)
 
         return flow {
@@ -37,6 +43,7 @@ class ObserveUserAccessUseCase(private val userRepository: UserRepository) {
             }
             when {
                 isGlobalAdmin -> emitAll(globalAdminAccess(authUser, congregation))
+                globalLogin -> emit(UserAccessState.NotGlobalAdmin(authUser.email))
                 congregation == null -> emit(UserAccessState.CongregationRequired)
                 else -> memberAccess(authUser, congregation)
             }

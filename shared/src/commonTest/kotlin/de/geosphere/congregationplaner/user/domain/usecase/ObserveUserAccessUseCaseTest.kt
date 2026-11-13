@@ -38,6 +38,32 @@ class ObserveUserAccessUseCaseTest {
     }
 
     @Test
+    fun `global login without admin entry is no member of the stored congregation`() = runBlocking {
+        val repository = FakeUserRepository(AppUser(uid = "uid-1"))
+
+        listOf(null, testCongregation).forEach { congregation ->
+            ObserveUserAccessUseCase(repository)(authUser, congregation, globalLogin = true).test {
+                assertEquals(UserAccessState.Loading, awaitItem())
+                assertEquals(UserAccessState.NotGlobalAdmin("user@example.com"), awaitItem())
+                awaitComplete()
+            }
+        }
+        assertEquals(0, repository.loadCount)
+    }
+
+    @Test
+    fun `global login of a global admin is authorized`() = runBlocking {
+        val repository = FakeUserRepository()
+        repository.globalAdminResult = Result.success(true)
+
+        ObserveUserAccessUseCase(repository)(authUser, null, globalLogin = true).test {
+            assertEquals(UserAccessState.Loading, awaitItem())
+            assertTrue((awaitItem() as UserAccessState.Authorized).user.isGlobalAdmin)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun `unapproved member needs approval and becomes authorized once approved`() = runBlocking {
         val pending = AppUser(uid = "uid-1", approved = false)
         val repository = FakeUserRepository(pending)
