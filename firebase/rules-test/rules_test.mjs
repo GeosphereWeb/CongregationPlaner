@@ -69,7 +69,7 @@ async function expect(name, pending, allowed) {
 // Vollständiges Mitgliedsdokument: die Rules verlangen alle Profilfelder, die App schreibt sie immer.
 const fullProfile = {
   lastName: '', firstName: '', gender: null, baptized: false, appointment: 'NONE', mobilePhone: '', landlinePhone: '',
-  isSpeaker: false, talkNumbers: [], emails: [], street: '', postalCode: '', city: '', emergencyContacts: [],
+  isSpeaker: false, talkNumbers: [], familyHeadId: null, relationToHead: null, emails: [], street: '', postalCode: '', city: '', emergencyContacts: [],
 };
 const memberFields = (email, roles, extra = {}) =>
   ({ email, displayName: email, approved: true, roles, hasAccount: true, ...fullProfile, ...extra });
@@ -335,6 +335,7 @@ await expect('Mitglied mit zu langem Namen', api('PATCH', ownName(plain.uid, 'la
 await expect('Mitglied ändert den Namen eines anderen', api('PATCH', ownName(planner.uid, 'lastName', 'firstName'), nameBody('Fremd', 'Name'), plain.token), false);
 await expect('Mitglied setzt zum Namen das Geschlecht', api('PATCH', ownName(plain.uid, 'lastName', 'gender'), { fields: { lastName: { stringValue: 'Muster' }, gender: { stringValue: 'MALE' } } }, plain.token), false);
 await expect('Mitglied setzt Namen und Telefonnummer zusammen', api('PATCH', ownName(plain.uid, 'lastName', 'mobilePhone'), { fields: { lastName: { stringValue: 'Muster' }, mobilePhone: { stringValue: '0171' } } }, plain.token), true);
+await expect('Mitglied ordnet sich selbst einer Familie zu', api('PATCH', ownName(plain.uid, 'familyHeadId', 'relationToHead'), { fields: { familyHeadId: { stringValue: 'head-uid' }, relationToHead: { stringValue: 'SPOUSE' } } }, plain.token), false);
 await expect('Mitglied setzt sich als Redner', api('PATCH', ownName(plain.uid, 'isSpeaker'), { fields: { isSpeaker: { booleanValue: true } } }, plain.token), false);
 await expect('Vortragsplaner ändert den eigenen Namen', api('PATCH', ownName(planner.uid, 'lastName', 'firstName'), nameBody('Planer', 'Paul'), planner.token), true);
 await expect('Admin ändert den eigenen Namen', api('PATCH', ownName(adminPlanner.uid, 'lastName', 'firstName'), nameBody('Admin', 'Anna'), adminPlanner.token), true);
@@ -626,6 +627,12 @@ await expect('Dienstamt bei einer Schwester', call('POST', `${FS}/${MEMBERS}`, f
 await expect('Dienstamt ohne Taufe', call('POST', `${FS}/${MEMBERS}`, fields({ ...speakerless, baptized: false }), congAdmin.token), false);
 await expect('Unbekanntes Geschlecht', call('POST', `${FS}/${MEMBERS}`, fields({ ...accountless, gender: 'CHILD' }), congAdmin.token), false);
 await expect('Altes Feld category', call('POST', `${FS}/${MEMBERS}`, fields({ ...accountless, category: 'BROTHER' }), congAdmin.token), false);
+// Familien (CP-159): Oberhaupt und Beziehung nur zusammen, nur der Admin pflegt sie.
+await expect('Versammlungsadmin ordnet eine Person einer Familie zu', call('POST', `${FS}/${MEMBERS}`, fields({ ...accountless, familyHeadId: 'head-uid', relationToHead: 'CHILD' }), congAdmin.token), true);
+await expect('Familienoberhaupt ohne Beziehung', call('POST', `${FS}/${MEMBERS}`, fields({ ...accountless, familyHeadId: 'head-uid' }), congAdmin.token), false);
+await expect('Beziehung ohne Familienoberhaupt', call('POST', `${FS}/${MEMBERS}`, fields({ ...accountless, relationToHead: 'SPOUSE' }), congAdmin.token), false);
+await expect('Unbekannte Beziehung', call('POST', `${FS}/${MEMBERS}`, fields({ ...accountless, familyHeadId: 'head-uid', relationToHead: 'COUSIN' }), congAdmin.token), false);
+await expect('Leeres Familienoberhaupt', call('POST', `${FS}/${MEMBERS}`, fields({ ...accountless, familyHeadId: '', relationToHead: 'SPOUSE' }), congAdmin.token), false);
 await expect('Versammlungsadmin erfasst eine getaufte Schwester', call('POST', `${FS}/${MEMBERS}`, fields({ ...accountless, gender: 'FEMALE', baptized: true }), congAdmin.token), true);
 await expect('Versammlungsadmin erfasst einen Redner mit Vorträgen', call('POST', `${FS}/${MEMBERS}`, fields({ ...speakerless, isSpeaker: true, talkNumbers: [12, 45] }), congAdmin.token), true);
 await expect('Vorträge ohne Redner', call('POST', `${FS}/${MEMBERS}`, fields({ ...speakerless, talkNumbers: [12] }), congAdmin.token), false);

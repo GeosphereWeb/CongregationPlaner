@@ -5,6 +5,8 @@ import de.geosphere.congregationplaner.talk.presentation.directory.toText
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
+import de.geosphere.congregationplaner.user.domain.model.familyHeadCandidates
+import de.geosphere.congregationplaner.user.domain.model.familyOf
 
 /**
  * Die gerade bearbeiteten persönlichen Angaben; [member] ist `null`, solange eine neue Person ohne Konto entsteht.
@@ -18,6 +20,19 @@ data class MemberEditorState(
 ) {
     val isNew: Boolean get() = member == null
     val isDirty: Boolean get() = profile != original || talksText != original.talkNumbers.toText()
+}
+
+/**
+ * Die Familie im Editor (ADR-0032): das gewählte Oberhaupt, die wählbaren Oberhäupter und, wenn das Mitglied selbst
+ * Oberhaupt ist, seine Familie. Ein Oberhaupt kann keinem anderen zugeordnet werden, [candidates] ist dann leer.
+ */
+data class EditorFamily(
+    val head: AppUser? = null,
+    val candidates: List<AppUser> = emptyList(),
+    val relatives: List<AppUser> = emptyList(),
+) {
+    val isHead: Boolean get() = relatives.isNotEmpty()
+    val relativesText: String get() = relatives.joinToString(", ") { it.label }
 }
 
 /** Was der angemeldete Nutzer mit einem Mitglied tun darf; standardmäßig nichts. */
@@ -56,6 +71,16 @@ data class UserManagementUiState(
     /** Freigabe und Rollen ändern sich sofort; deshalb gilt für das gewählte Mitglied der Stand aus der Liste. */
     val selectedMember: AppUser?
         get() = editor?.member?.let { selected -> members.firstOrNull { it.uid == selected.uid } ?: selected }
+
+    val editorFamily: EditorFamily
+        get() {
+            val uid = editor?.member?.uid
+            return EditorFamily(
+                head = editor?.profile?.familyHeadId?.let { head -> members.firstOrNull { it.uid == head } },
+                candidates = familyHeadCandidates(members, uid),
+                relatives = uid?.let { familyOf(members, it) }.orEmpty(),
+            )
+        }
 
     fun permissionsOf(member: AppUser): MemberPermissions = memberPermissions[member.uid] ?: MemberPermissions()
 
