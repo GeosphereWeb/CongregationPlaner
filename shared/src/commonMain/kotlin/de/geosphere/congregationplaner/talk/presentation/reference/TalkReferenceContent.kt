@@ -35,6 +35,10 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import de.geosphere.congregationplaner.organization.domain.model.CountryOption
+import de.geosphere.congregationplaner.organization.domain.model.CountryRef
+import de.geosphere.congregationplaner.organization.presentation.country.CountryChoiceState
+import de.geosphere.congregationplaner.organization.presentation.country.CountryPicker
 import de.geosphere.congregationplaner.presentation.components.ListDetailState
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.talk.domain.model.Talk
@@ -62,6 +66,9 @@ internal data class TalkCatalogActions(
     val onCancel: () -> Unit = {},
     val onDismissError: () -> Unit = {},
     val onTitleChangeEdit: (TalkTitleChangeEdit) -> Unit = {},
+    /** Wählt das Land für Vortragsliste und Wochenereignisse zugleich. */
+    val onSelectCountry: (CountryRef) -> Unit = {},
+    val onRetryCountries: () -> Unit = {},
 )
 
 internal data class WeekEventActions(
@@ -93,6 +100,14 @@ fun TalkReferenceScreen(
             onCancel = catalogViewModel::cancelEditing,
             onDismissError = catalogViewModel::dismissError,
             onTitleChangeEdit = catalogViewModel.titleChanges::edit,
+            onSelectCountry = { country ->
+                catalogViewModel.countries.select(country)
+                eventViewModel.countries.select(country)
+            },
+            onRetryCountries = {
+                catalogViewModel.countries.retry()
+                eventViewModel.countries.retry()
+            },
         ),
         eventState = eventState,
         eventActions = WeekEventActions(
@@ -121,6 +136,16 @@ internal fun TalkReferenceContent(
         // Den Titel zeigt schon der Bereichskopf der Globalen Verwaltung.
         if (!catalogState.canManage) {
             Text("Dafür fehlt dir die Berechtigung.")
+            return@Column
+        }
+        CountryPicker(
+            catalogState.country,
+            onSelect = catalogActions.onSelectCountry,
+            onRetry = catalogActions.onRetryCountries,
+            enabled = !catalogState.isSaving && !eventState.isSaving,
+        )
+        if (catalogState.country.selected == null) {
+            if (catalogState.country.countries.isNotEmpty()) Text("Wähle das Land, dessen Listen du pflegen willst.")
             return@Column
         }
         NightTabRow(listOf("Vorträge", "Wochenereignisse"), selectedIndex = selectedTab, onSelect = {
@@ -371,6 +396,8 @@ private fun WeekEventEditorCard(editor: WeekEventEditorState, isSaving: Boolean,
     }
 }
 
+private val previewCountry = CountryOption(CountryRef("EMEA", "europe", "central-europe", "de"), "Deutschland")
+
 @ThemePreviews
 @Composable
 private fun TalkReferenceContentPreview() = PreviewThemeWrapper {
@@ -379,6 +406,7 @@ private fun TalkReferenceContentPreview() = PreviewThemeWrapper {
             talks = listOf(Talk(1, "Beispielvortrag"), Talk(2, "Pausierter Vortrag", active = false)),
             isLoading = false,
             canManage = true,
+            country = CountryChoiceState(listOf(previewCountry), previewCountry.ref),
             editor = TalkEditorState(
                 "3",
                 "Alter Titel",

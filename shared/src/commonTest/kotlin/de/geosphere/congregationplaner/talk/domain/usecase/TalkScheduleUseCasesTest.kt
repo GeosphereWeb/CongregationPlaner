@@ -346,10 +346,22 @@ class TalkScheduleUseCasesTest {
     fun `talk catalog is sorted by number and keeps inactive talks`() = runBlocking {
         val catalog = FakeTalkCatalogRepository(listOf(Talk(30, "C"), Talk(2, "B", active = false), Talk(10, "A")))
 
-        val talks = ObserveTalkCatalogUseCase(catalog)().first()
+        val talks = ObserveTalkCatalogUseCase(catalog)(admin).first()
 
         assertEquals(listOf(2, 10, 30), talks.map { it.number })
         assertEquals(false, talks.first().active)
+        assertEquals(listOf(admin.congregation?.country), catalog.countries)
+    }
+
+    @Test
+    fun `without a congregation the talk catalog and week events are empty`() = runBlocking {
+        val catalog = FakeTalkCatalogRepository(listOf(Talk(1, "A")))
+        val events = FakeWeekEventRepository(listOf(WeekEvent("k", "Kongress")))
+        val homeless = AppUser(uid = "x", approved = true, isGlobalAdmin = true)
+
+        assertTrue(ObserveTalkCatalogUseCase(catalog)(homeless).first().isEmpty())
+        assertTrue(ObserveWeekEventsUseCase(events)(homeless).first().isEmpty())
+        assertTrue(catalog.countries.isEmpty() && events.countries.isEmpty())
     }
 
     @Test
@@ -413,9 +425,10 @@ class TalkScheduleUseCasesTest {
     fun `week events are sorted by name ignoring case`() = runBlocking {
         val events = FakeWeekEventRepository(listOf(WeekEvent("b", "kongress"), WeekEvent("a", "Besuch")))
 
-        val sorted = ObserveWeekEventsUseCase(events)().first()
+        val sorted = ObserveWeekEventsUseCase(events)(admin).first()
 
         assertEquals(listOf("a", "b"), sorted.map { it.id })
+        assertEquals(listOf(admin.congregation?.country), events.countries)
     }
 
     @Test

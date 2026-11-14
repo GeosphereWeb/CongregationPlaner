@@ -1,5 +1,8 @@
 package de.geosphere.congregationplaner.talk.presentation.reference
 
+import de.geosphere.congregationplaner.organization.domain.model.CountryOption
+import de.geosphere.congregationplaner.organization.testing.listCountries
+import de.geosphere.congregationplaner.organization.testing.testCountry
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.permission.TalkReferenceDataPolicy
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteWeekEventUseCase
@@ -43,6 +46,7 @@ class WeekEventManagementViewModelTest {
             SaveWeekEventUseCase(events, policy),
             DeleteWeekEventUseCase(events, policy),
             policy,
+            listCountries(testCountry),
         )
     }
 
@@ -171,5 +175,31 @@ class WeekEventManagementViewModelTest {
         viewModel.onCurrentUserChanged(congregationAdmin)
         assertTrue(state.events.isEmpty())
         assertNull(state.editor)
+    }
+
+    @Test
+    fun `switching the country loads its events and closes the editor`() {
+        val austria = CountryOption(testCountry.ref.copy(countryId = "at"), "Österreich")
+        val policy = TalkReferenceDataPolicy()
+        viewModel = WeekEventManagementViewModel(
+            ObserveWeekEventsUseCase(events),
+            SaveWeekEventUseCase(events, policy),
+            DeleteWeekEventUseCase(events, policy),
+            policy,
+            listCountries(testCountry, austria),
+        )
+        viewModel.onCurrentUserChanged(admin)
+        assertNull(state.country.selected)
+        viewModel.newEvent()
+        assertNull(state.editor)
+
+        viewModel.countries.select(austria.ref)
+        viewModel.editEvent(kongress)
+        viewModel.countries.select(testCountry.ref)
+
+        assertNull(state.editor)
+        assertEquals(listOf(austria.ref, testCountry.ref), events.countries)
+        viewModel.delete(besuch)
+        assertEquals(listOf("besuch"), events.deletedIds)
     }
 }

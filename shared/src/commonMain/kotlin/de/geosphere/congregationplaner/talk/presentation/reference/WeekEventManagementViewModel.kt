@@ -2,6 +2,9 @@ package de.geosphere.congregationplaner.talk.presentation.reference
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import de.geosphere.congregationplaner.organization.domain.usecase.ListCountriesUseCase
+import de.geosphere.congregationplaner.organization.presentation.country.CountryChoiceHolder
+import de.geosphere.congregationplaner.organization.presentation.country.CountryChoiceState
 import de.geosphere.congregationplaner.presentation.components.ListDetailState
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.permission.TalkReferenceDataPolicy
@@ -28,6 +31,8 @@ data class WeekEventUiState(
     val events: List<WeekEvent> = emptyList(),
     val isLoading: Boolean = true,
     val canManage: Boolean = false,
+    /** Das Land, dessen Ereignisse gepflegt werden. */
+    val country: CountryChoiceState = CountryChoiceState(),
     val editor: WeekEventEditorState? = null,
     override val errorMessage: String? = null,
     override val isSaving: Boolean = false,
@@ -35,16 +40,31 @@ data class WeekEventUiState(
     override val hasDetail: Boolean get() = editor != null
 }
 
-/** Pflege der globalen Wochenereignisse durch globale Administratoren. */
+/** Pflege der Wochenereignisse eines Landes durch globale Administratoren; das Land wird zuerst gewählt. */
 @Inject
 class WeekEventManagementViewModel(
     private val observeEvents: ObserveWeekEventsUseCase,
     private val saveEvent: SaveWeekEventUseCase,
     private val deleteEvent: DeleteWeekEventUseCase,
     private val policy: TalkReferenceDataPolicy,
+    listCountries: ListCountriesUseCase,
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(WeekEventUiState())
     val uiState = mutableUiState.asStateFlow()
+
+    val countries = CountryChoiceHolder(
+        viewModelScope,
+        listCountries,
+        read = { mutableUiState.value.country },
+        write = { country -> mutableUiState.update { it.copy(country = country) } },
+        // Another country: load its list; an open editor belonged to the old country.
+        onSelected = { country ->
+            observeJob?.cancel()
+            observeJob = null
+            mutableUiState.update { it.copy(events = emptyList(), editor = null, isLoading = country != null) }
+            observe()
+        },
+    )
 
     private var currentUser: AppUser? = null
     private var observeJob: Job? = null
@@ -54,6 +74,7 @@ class WeekEventManagementViewModel(
         val canManage = policy.canManage(user)
         mutableUiState.update { it.copy(canManage = canManage, editor = it.editor?.takeIf { canManage }) }
         if (canManage) {
+            countries.load(user.congregation)
             observe()
         } else {
             observeJob?.cancel()
@@ -63,7 +84,8 @@ class WeekEventManagementViewModel(
     }
 
     fun newEvent() {
-        if (mutableUiState.value.isSaving || !checkAllowed()) return
+        val state = mutableUiState.value
+        if (state.isSaving || !checkAllowed() || state.country.selected == null) return
         mutableUiState.update { it.copy(editor = WeekEventEditorState("", cancelsTalk = false), errorMessage = null) }
     }
 
@@ -87,9 +109,10 @@ class WeekEventManagementViewModel(
         val editor = state.editor ?: return
         if (state.isSaving || !checkAllowed()) return
         val user = currentUser ?: return
+        val country = state.country.selected ?: return
         mutableUiState.update { it.copy(isSaving = true, errorMessage = null) }
         viewModelScope.launch {
-            saveEvent(user, editor.event)
+            saveEvent(user, country, editor.event)
                 .onSuccess { saved ->
                     val next = WeekEventEditorState(saved.name, saved.cancelsTalk, saved)
                     // Show the result at once; the snapshot flow can lag behind, especially on desktop.
@@ -107,9 +130,10 @@ class WeekEventManagementViewModel(
     fun delete(event: WeekEvent) {
         if (mutableUiState.value.isSaving || !checkAllowed()) return
         val user = currentUser ?: return
+        val country = mutableUiState.value.country.selected ?: return
         mutableUiState.update { it.copy(isSaving = true, errorMessage = null) }
         viewModelScope.launch {
-            deleteEvent(user, event.id)
+            deleteEvent(user, country, event.id)
                 .onSuccess {
                     mutableUiState.update { state ->
                         state.copy(
@@ -132,9 +156,10 @@ class WeekEventManagementViewModel(
 
     private fun observe() {
         if (observeJob?.isActive == true) return
+        val country = mutableUiState.value.country.selected ?: return
         mutableUiState.update { it.copy(isLoading = true) }
         observeJob = viewModelScope.launch {
-            observeEvents()
+            observeEvents(country)
                 .catch { exception ->
                     val message = exception.message ?: "Wochenereignisse konnten nicht geladen werden."
                     mutableUiState.update { it.copy(isLoading = false, errorMessage = message) }

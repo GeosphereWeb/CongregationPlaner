@@ -31,6 +31,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class PrepareImportUseCaseTest {
@@ -101,7 +102,7 @@ class PrepareImportUseCaseTest {
                 ImportRow(3, mapOf("Nummer" to "13", "Titel" to "Dreizehn", "Aktiv" to "0")),
             ),
         )
-        val prepared = prepare()(planner, ImportSource.TALK_CATALOG, table).getOrThrow()
+        val prepared = prepare()(planner, ImportSource.TALK_CATALOG, table, testCongregation.country).getOrThrow()
         val summary = prepared.summaries.single()
         assertEquals(1, summary.create)
         assertEquals(1, summary.skip)
@@ -119,12 +120,22 @@ class PrepareImportUseCaseTest {
                 ImportRow(3, mapOf("ID_Wochenereignis" to "6", "Ereignis" to "Dienstwoche")),
             ),
         )
-        val prepared = prepare()(admin, ImportSource.WEEK_EVENTS, table).getOrThrow()
+        val prepared = prepare()(admin, ImportSource.WEEK_EVENTS, table, testCongregation.country).getOrThrow()
         assertEquals(PlanSummary("Wochenereignisse", 1, 0, 1), prepared.summaries.single())
 
         prepared.run()
 
         assertEquals(listOf("Dienstwoche"), weekEvents.savedEvents.map { it.name })
+        assertEquals(listOf(testCongregation.country), weekEvents.countries.distinct())
+    }
+
+    @Test
+    fun `reference data needs a target country`() = runBlocking {
+        val table = ImportTable(emptyList(), emptyList())
+
+        listOf(ImportSource.WEEK_EVENTS, ImportSource.TALK_CATALOG).forEach { source ->
+            assertIs<MissingImportCountryException>(prepare()(admin, source, table).exceptionOrNull())
+        }
     }
 
     @Test

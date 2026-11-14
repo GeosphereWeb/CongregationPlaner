@@ -59,7 +59,7 @@ Numbers are sequential and permanent. Never reuse or renumber an existing ADR, e
 
 - [ADR-0001: Einladungslinks mit AES-GCM verschlüsseln](0001-encrypt-invite-links-with-aes-gcm.md) — Accepted
 - [ADR-0002: Vortragsplanung – Datenmodell und Berechtigung](0002-talk-schedule-data-model-and-permission.md) — Accepted (teilweise ersetzt durch ADR-0013)
-- [ADR-0003: Globale Vortragsliste mit Titel-Momentaufnahme im Termin](0003-global-talk-catalog.md) — Accepted
+- [ADR-0003: Globale Vortragsliste mit Titel-Momentaufnahme im Termin](0003-global-talk-catalog.md) — Superseded by ADR-0034 (Speicherort)
 - [ADR-0004: Lese-Berechtigung VIEW_MEMBERS für Mitgliederdaten](0004-view-members-permission.md) — Accepted (teilweise ersetzt durch ADR-0012, ADR-0013)
 - [ADR-0005: Externe Redner je Versammlung ohne Verweis auf fremde Mitglieder](0005-external-speakers.md) — Superseded by ADR-0008
 - [ADR-0006: Pflegeoberflächen als Liste/Detail mit sofortiger Listenaktualisierung](0006-list-detail-maintenance-screens.md) — Accepted
@@ -84,3 +84,4 @@ Numbers are sequential and permanent. Never reuse or renumber an existing ADR, e
 - [ADR-0031: Geschlecht statt Gruppe im Mitgliedsprofil](0031-gender-instead-of-member-category.md) — Accepted
 - [ADR-0032: Familie als Felder im Mitgliedsdokument](0032-family-as-fields-in-member-document.md) — Accepted
 - [ADR-0033: Besondere Ereignisse mit Sichtbarkeit je Gruppe](0033-special-events-visible-by-group.md) — Accepted
+- [ADR-0034: Vortragsliste und Wochenereignisse je Land](0034-reference-data-per-country.md) — Accepted

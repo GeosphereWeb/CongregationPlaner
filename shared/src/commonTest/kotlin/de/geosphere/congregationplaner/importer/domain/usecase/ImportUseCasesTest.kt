@@ -57,6 +57,7 @@ class ImportUseCasesTest {
 
         val report = useCase(
             globalAdmin,
+            testCongregation.country,
             plan(WeekEvent("2", "Kongress", true) to ImportKind.CREATE),
             plan(
                 Talk(1, "Eins") to ImportKind.CREATE,
@@ -67,6 +68,7 @@ class ImportUseCasesTest {
 
         assertEquals(listOf(WeekEvent("2", "Kongress", true)), events.savedEvents)
         assertEquals(listOf(Talk(1, "Eins")), talks.savedTalks)
+        assertEquals(listOf(testCongregation.country), (events.countries + talks.countries).distinct())
         assertEquals(2, report.created)
         assertEquals(1, report.skipped)
         assertEquals(1, report.failures.size) // number 0 is rejected by the save use case, the run goes on
@@ -82,6 +84,7 @@ class ImportUseCasesTest {
 
         val report = useCase(
             planner,
+            testCongregation.country,
             plan(WeekEvent("2", "Kongress") to ImportKind.CREATE),
             plan(Talk(1, "Eins") to ImportKind.CREATE, Talk(2, "Zwei") to ImportKind.CREATE),
         )

@@ -1,5 +1,7 @@
 package de.geosphere.congregationplaner.talk.di
 
+import de.geosphere.congregationplaner.organization.data.createOrganizationRepository
+import de.geosphere.congregationplaner.organization.domain.repository.OrganizationRepository
 import de.geosphere.congregationplaner.talk.data.createTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.data.createWeekEventRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkCatalogRepository
@@ -19,4 +21,7 @@ interface TalkReferenceGraph {
 
     @Provides
     fun provideWeekEventRepository(): WeekEventRepository = createWeekEventRepository()
+
+    @Provides
+    fun provideOrganizationRepository(): OrganizationRepository = createOrganizationRepository()
 }

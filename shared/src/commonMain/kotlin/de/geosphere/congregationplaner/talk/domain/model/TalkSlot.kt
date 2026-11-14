@@ -7,7 +7,7 @@ import kotlinx.datetime.LocalTime
  * Ein Versammlungstag in der Vortragsplanung aus `…/congregation/{id}/talkSchedule/{yyyy-MM-dd}`.
  * Das Datum ist zugleich die Dokument-ID.
  *
- * @param weekEventId Das Wochenereignis aus der globalen Liste; der Name wird mitgespeichert, damit alte
+ * @param weekEventId Das Wochenereignis aus der Liste des Landes; der Name wird mitgespeichert, damit alte
  *   Termine lesbar bleiben, wenn die Liste sich ändert.
  * @param talkCancelled `true`, wenn an diesem Tag kein Vortrag gehalten wird; Vorbelegung ist
  *   [WeekEvent.cancelsTalk], der Planer kann sie überschreiben.
@@ -92,7 +92,7 @@ fun TalkSlot.talkLabel(): String? {
 }
 
 /**
- * Ein Vortrag aus der Vortragsliste (`talkCatalog/{Nummer}`); sie gilt für alle Versammlungen und Kreise.
+ * Ein Vortrag aus der Vortragsliste des Landes (`…/country/{id}/talkCatalog/{Nummer}`).
  * Die Nummer bleibt stabil, und ein Vortrag kann zeitweise nicht [active] sein. Der Titel kann sich ändern:
  * [title] ist der ursprüngliche Titel, [titleChanges] sind die späteren Titel mit dem Tag, ab dem sie gelten.
  */
