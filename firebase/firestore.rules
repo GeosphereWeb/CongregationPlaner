@@ -97,13 +97,14 @@ rules_version = '2';
 //   optional). Readable by planners and talk helpers of this congregation, written only by the planners; never
 //   deleted.
 //
-// Collection: weekEvents (global, identical for all congregations)
+// Collection: region/.../country/{countryId}/weekEvents (one list per country, ADR-0034)
 // Document ID: free. Fields: name: string (1..100), cancelsTalk: bool.
-//   Readable by every signed-in user; written only by global admins (in the app or the console).
+//   Readable by every signed-in user; written only by global admins and only below an existing country.
 //
-// Collection: talkCatalog (global talk list, identical for all congregations)
-// Document ID: the talk number (1..9999, no leading zero). Fields: title: string (1..200), active: bool.
-//   Readable by every signed-in user; written only by global admins (in the app or the console).
+// Collection: region/.../country/{countryId}/talkCatalog (talk list of the country, ADR-0034)
+// Document ID: the talk number (1..9999, no leading zero). Fields: title: string (1..200), active: bool,
+//   titleChanges (ADR-0030). Readable by every signed-in user; written only by global admins and only below an
+//   existing country.
 //
 // ===============================================================
 
@@ -135,6 +136,10 @@ service cloud.firestore {
 
     function congregationNamePath(regionId, subregionId, branchId, countryId, circuitId, key) {
       return /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/country/$(countryId)/circuit/$(circuitId)/uniqueCongregationNames/$(key);
+    }
+
+    function countryExists(regionId, subregionId, branchId, countryId) {
+      return exists(/databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/country/$(countryId));
     }
 
     function circuitDocPath(regionId, subregionId, branchId, countryId, circuitId) {
@@ -697,28 +702,6 @@ service cloud.firestore {
     }
 
     // ===============================================================
-    // Week events (global list)
-    // ===============================================================
-
-    match /weekEvents/{eventId} {
-      allow read: if isAuthenticated();
-      allow create, update: if isGlobalAdmin() && isValidWeekEvent(request.resource.data);
-      allow delete: if isGlobalAdmin();
-    }
-
-    // ===============================================================
-    // Talk list (global)
-    // ===============================================================
-
-    match /talkCatalog/{talkNumber} {
-      allow read: if isAuthenticated();
-      allow create, update: if isGlobalAdmin() &&
-        talkNumber.matches('^[1-9][0-9]{0,3}$') &&
-        isValidCatalogTalk(request.resource.data);
-      allow delete: if isGlobalAdmin();
-    }
-
-    // ===============================================================
     // Organization hierarchy
     // ===============================================================
 
@@ -743,6 +726,25 @@ service cloud.firestore {
             allow read: if true;
             allow create, update: if isGlobalAdmin() && isValidOrgUnit(request.resource.data);
             allow delete: if isGlobalAdmin();
+
+            // Week events and talk list of the country (ADR-0034). Written only by global admins and only below a
+            // country that exists, so that an import cannot create an orphaned list.
+            match /weekEvents/{eventId} {
+              allow read: if isAuthenticated();
+              allow create, update: if isGlobalAdmin() &&
+                countryExists(regionId, subregionId, branchId, countryId) &&
+                isValidWeekEvent(request.resource.data);
+              allow delete: if isGlobalAdmin();
+            }
+
+            match /talkCatalog/{talkNumber} {
+              allow read: if isAuthenticated();
+              allow create, update: if isGlobalAdmin() &&
+                countryExists(regionId, subregionId, branchId, countryId) &&
+                talkNumber.matches('^[1-9][0-9]{0,3}$') &&
+                isValidCatalogTalk(request.resource.data);
+              allow delete: if isGlobalAdmin();
+            }
 
             match /circuit/{circuitId} {
               allow read: if true;

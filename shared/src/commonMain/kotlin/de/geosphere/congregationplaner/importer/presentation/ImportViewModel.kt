@@ -5,8 +5,12 @@ import androidx.lifecycle.viewModelScope
 import de.geosphere.congregationplaner.importer.data.ImportFileSource
 import de.geosphere.congregationplaner.importer.domain.model.ImportReport
 import de.geosphere.congregationplaner.importer.domain.usecase.ImportSource
+import de.geosphere.congregationplaner.importer.domain.usecase.MissingImportCountryException
 import de.geosphere.congregationplaner.importer.domain.usecase.PrepareImportUseCase
 import de.geosphere.congregationplaner.importer.domain.usecase.PreparedImport
+import de.geosphere.congregationplaner.organization.domain.usecase.ListCountriesUseCase
+import de.geosphere.congregationplaner.organization.presentation.country.CountryChoiceHolder
+import de.geosphere.congregationplaner.organization.presentation.country.CountryChoiceState
 import de.geosphere.congregationplaner.talk.domain.permission.TalkReferenceDataPolicy
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.user.domain.model.AppUser
@@ -33,6 +37,8 @@ sealed interface ImportStep {
 data class ImportUiState(
     /** The sources this user may import; empty if the platform cannot import or the user has no right to. */
     val allowedSources: List<ImportSource> = emptyList(),
+    /** The target country of week events and talks; only loaded for users who may import them. */
+    val country: CountryChoiceState = CountryChoiceState(),
     val step: ImportStep = ImportStep.Idle,
     val isBusy: Boolean = false,
     val errorMessage: String? = null,
@@ -40,6 +46,9 @@ data class ImportUiState(
     val pending: PendingImport? get() = (step as? ImportStep.Preview)?.pending
     val report: ImportReport? get() = (step as? ImportStep.Done)?.report
     val reportSource: ImportSource? get() = (step as? ImportStep.Done)?.source
+
+    /** Whether the country picker belongs on screen: some allowed source goes into a country. */
+    val needsCountry: Boolean get() = allowedSources.any { it.needsGlobalAdmin }
 }
 
 /** Drives the import: choose a file, preview what will happen, confirm, show the report. */
@@ -49,9 +58,17 @@ class ImportViewModel(
     private val prepare: PrepareImportUseCase,
     private val referencePolicy: TalkReferenceDataPolicy,
     private val schedulePolicy: TalkSchedulePermissionPolicy,
+    listCountries: ListCountriesUseCase,
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(ImportUiState())
     val uiState = mutableUiState.asStateFlow()
+
+    val countries = CountryChoiceHolder(
+        viewModelScope,
+        listCountries,
+        read = { mutableUiState.value.country },
+        write = { country -> mutableUiState.update { it.copy(country = country) } },
+    )
 
     private var currentUser: AppUser? = null
 
@@ -65,6 +82,7 @@ class ImportViewModel(
                     ?: ImportStep.Idle,
             )
         }
+        if (mutableUiState.value.needsCountry) countries.load(user.congregation)
     }
 
     private fun canImport(user: AppUser, source: ImportSource) =
@@ -73,6 +91,8 @@ class ImportViewModel(
     fun choose(source: ImportSource) {
         val user = currentUser
         if (user == null || mutableUiState.value.isBusy || source !in mutableUiState.value.allowedSources) return
+        val country = mutableUiState.value.country.selected
+        if (source.needsGlobalAdmin && country == null) return fail(MissingImportCountryException().message.orEmpty())
         mutableUiState.update { it.copy(isBusy = true, errorMessage = null, step = ImportStep.Idle) }
         viewModelScope.launch {
             val table = fileSource.pickTable("${source.label}: ${source.fileHint}").getOrElse {
@@ -82,7 +102,7 @@ class ImportViewModel(
                 mutableUiState.update { it.copy(isBusy = false) }
                 return@launch
             }
-            prepare(user, source, table)
+            prepare(user, source, table, country)
                 .onSuccess { prepared ->
                     mutableUiState.update {
                         it.copy(isBusy = false, step = ImportStep.Preview(PendingImport(source, prepared)))

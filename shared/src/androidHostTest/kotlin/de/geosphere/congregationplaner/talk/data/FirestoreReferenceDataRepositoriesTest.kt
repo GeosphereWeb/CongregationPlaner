@@ -3,6 +3,7 @@ package de.geosphere.congregationplaner.talk.data
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FirebaseFirestore
+import de.geosphere.congregationplaner.organization.domain.model.CountryRef
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkTitleChange
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
@@ -20,6 +21,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class FirestoreReferenceDataRepositoriesTest {
+    private val country = CountryRef("EMEA", "europe", "central-europe", "de")
     private val firestore = mockk<FirebaseFirestore>()
     private val talks = mockk<CollectionReference>()
     private val events = mockk<CollectionReference>()
@@ -27,8 +29,8 @@ class FirestoreReferenceDataRepositoriesTest {
     private val weekEvents = FirestoreWeekEventRepository(firestore)
 
     init {
-        every { firestore.collection(TALK_CATALOG_COLLECTION_PATH) } returns talks
-        every { firestore.collection(WEEK_EVENTS_COLLECTION_PATH) } returns events
+        every { firestore.collection("${country.documentPath}/talkCatalog") } returns talks
+        every { firestore.collection("${country.documentPath}/weekEvents") } returns events
     }
 
     @Test
@@ -44,7 +46,7 @@ class FirestoreReferenceDataRepositoriesTest {
             titleChanges = listOf(TalkTitleChange(LocalDate(2027, 1, 1), "Neuer Titel")),
         )
 
-        assertEquals(talk, talkCatalog.save(talk).getOrThrow())
+        assertEquals(talk, talkCatalog.save(country, talk).getOrThrow())
         assertEquals(
             mapOf(
                 "title" to "Der Weg zum Glück",
@@ -61,7 +63,7 @@ class FirestoreReferenceDataRepositoriesTest {
         every { talks.document("12") } returns reference
         every { reference.delete() } returns successTask<Void?>(null)
 
-        assertEquals(Unit, talkCatalog.delete(12).getOrThrow())
+        assertEquals(Unit, talkCatalog.delete(country, 12).getOrThrow())
         verify { reference.delete() }
     }
 
@@ -72,7 +74,7 @@ class FirestoreReferenceDataRepositoriesTest {
         every { events.document() } returns reference
         every { reference.set(capture(fields)) } returns successTask<Void?>(null)
 
-        val saved = weekEvents.save(WeekEvent("", "Kongress", cancelsTalk = true)).getOrThrow()
+        val saved = weekEvents.save(country, WeekEvent("", "Kongress", cancelsTalk = true)).getOrThrow()
 
         assertEquals(WeekEvent("auto1", "Kongress", cancelsTalk = true), saved)
         assertEquals(mapOf("name" to "Kongress", "cancelsTalk" to true), fields.captured)
@@ -86,8 +88,8 @@ class FirestoreReferenceDataRepositoriesTest {
         every { reference.delete() } returns successTask<Void?>(null)
         val event = WeekEvent("ev1", "Besuch")
 
-        assertEquals(event, weekEvents.save(event).getOrThrow())
-        assertEquals(Unit, weekEvents.delete("ev1").getOrThrow())
+        assertEquals(event, weekEvents.save(country, event).getOrThrow())
+        assertEquals(Unit, weekEvents.delete(country, "ev1").getOrThrow())
         verify { reference.delete() }
     }
 
@@ -104,10 +106,10 @@ class FirestoreReferenceDataRepositoriesTest {
         every { eventReference.delete() } returns failedTask<Void?>(error)
 
         runBlocking {
-            assertFailure(error, talkCatalog.save(Talk(12, "Titel")))
-            assertFailure(error, talkCatalog.delete(12))
-            assertFailure(error, weekEvents.save(WeekEvent("ev1", "Besuch")))
-            assertFailure(error, weekEvents.delete("ev1"))
+            assertFailure(error, talkCatalog.save(country, Talk(12, "Titel")))
+            assertFailure(error, talkCatalog.delete(country, 12))
+            assertFailure(error, weekEvents.save(country, WeekEvent("ev1", "Besuch")))
+            assertFailure(error, weekEvents.delete(country, "ev1"))
         }
     }
 }

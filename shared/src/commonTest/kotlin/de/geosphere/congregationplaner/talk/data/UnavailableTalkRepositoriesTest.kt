@@ -39,9 +39,11 @@ class UnavailableTalkRepositoriesTest {
     fun `unavailable week event repository fails with the platform name`(): Unit = runBlocking {
         val repository = unavailableWeekEventRepository("iOS")
 
-        assertFailsWith<UnsupportedOperationException> { repository.observeWeekEvents().first() }
-        assertIs<UnsupportedOperationException>(repository.save(WeekEvent("", "Kongress")).exceptionOrNull())
-        assertIs<UnsupportedOperationException>(repository.delete("ev-1").exceptionOrNull())
+        assertFailsWith<UnsupportedOperationException> { repository.observeWeekEvents(congregation.country).first() }
+        assertIs<UnsupportedOperationException>(
+            repository.save(congregation.country, WeekEvent("", "Kongress")).exceptionOrNull(),
+        )
+        assertIs<UnsupportedOperationException>(repository.delete(congregation.country, "ev-1").exceptionOrNull())
     }
 
     @Test
@@ -79,8 +81,10 @@ class UnavailableTalkRepositoriesTest {
     fun `unavailable talk catalog repository fails with the platform name`(): Unit = runBlocking {
         val repository = unavailableTalkCatalogRepository("iOS")
 
-        assertFailsWith<UnsupportedOperationException> { repository.observeTalks().first() }
-        assertIs<UnsupportedOperationException>(repository.save(Talk(1, "Titel")).exceptionOrNull())
-        assertIs<UnsupportedOperationException>(repository.delete(1).exceptionOrNull())
+        assertFailsWith<UnsupportedOperationException> { repository.observeTalks(congregation.country).first() }
+        assertIs<UnsupportedOperationException>(
+            repository.save(congregation.country, Talk(1, "Titel")).exceptionOrNull(),
+        )
+        assertIs<UnsupportedOperationException>(repository.delete(congregation.country, 1).exceptionOrNull())
     }
 }

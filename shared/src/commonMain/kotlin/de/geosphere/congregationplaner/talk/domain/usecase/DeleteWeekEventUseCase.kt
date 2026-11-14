@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner.talk.domain.usecase
 
+import de.geosphere.congregationplaner.organization.domain.model.CountryRef
 import de.geosphere.congregationplaner.talk.domain.model.TalkReferenceException
 import de.geosphere.congregationplaner.talk.domain.permission.TalkReferenceDataPolicy
 import de.geosphere.congregationplaner.talk.domain.repository.WeekEventRepository
@@ -12,9 +13,9 @@ class DeleteWeekEventUseCase(
     private val repository: WeekEventRepository,
     private val policy: TalkReferenceDataPolicy,
 ) {
-    suspend operator fun invoke(user: AppUser, id: String): Result<Unit> {
+    suspend operator fun invoke(user: AppUser, country: CountryRef, id: String): Result<Unit> {
         if (!policy.canManage(user)) return Result.failure(TalkReferenceException.NotAllowed())
         if (id.isBlank()) return Result.failure(TalkReferenceException.InvalidWeekEvent())
-        return repository.delete(id)
+        return repository.delete(country, id)
     }
 }

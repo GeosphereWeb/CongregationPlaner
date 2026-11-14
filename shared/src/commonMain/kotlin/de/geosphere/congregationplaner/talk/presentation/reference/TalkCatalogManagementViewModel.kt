@@ -2,6 +2,9 @@ package de.geosphere.congregationplaner.talk.presentation.reference
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import de.geosphere.congregationplaner.organization.domain.usecase.ListCountriesUseCase
+import de.geosphere.congregationplaner.organization.presentation.country.CountryChoiceHolder
+import de.geosphere.congregationplaner.organization.presentation.country.CountryChoiceState
 import de.geosphere.congregationplaner.presentation.components.ListDetailState
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkTitleChange
@@ -71,6 +74,8 @@ data class TalkCatalogUiState(
     val today: LocalDate = Clock.System.todayIn(TimeZone.currentSystemDefault()),
     val isLoading: Boolean = true,
     val canManage: Boolean = false,
+    /** Das Land, dessen Liste gepflegt wird. */
+    val country: CountryChoiceState = CountryChoiceState(),
     val editor: TalkEditorState? = null,
     override val errorMessage: String? = null,
     override val isSaving: Boolean = false,
@@ -86,7 +91,7 @@ class TalkInputUseCases(
     val editTitleChanges: EditTalkTitleChangesUseCase,
 )
 
-/** Pflege der globalen Vortragsliste durch globale Administratoren. */
+/** Pflege der Vortragsliste eines Landes durch globale Administratoren; das Land wird zuerst gewählt. */
 @Inject
 class TalkCatalogManagementViewModel(
     private val observeCatalog: ObserveTalkCatalogUseCase,
@@ -94,11 +99,26 @@ class TalkCatalogManagementViewModel(
     private val deleteTalk: DeleteTalkUseCase,
     private val policy: TalkReferenceDataPolicy,
     private val input: TalkInputUseCases,
+    listCountries: ListCountriesUseCase,
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(TalkCatalogUiState())
     val uiState = mutableUiState.asStateFlow()
 
     val titleChanges = TalkTitleChangesHolder(mutableUiState, input.editTitleChanges)
+
+    val countries = CountryChoiceHolder(
+        viewModelScope,
+        listCountries,
+        read = { mutableUiState.value.country },
+        write = { country -> mutableUiState.update { it.copy(country = country) } },
+        // Another country: load its list; an open editor belonged to the old country.
+        onSelected = { country ->
+            observeJob?.cancel()
+            observeJob = null
+            mutableUiState.update { it.copy(talks = emptyList(), editor = null, isLoading = country != null) }
+            observe()
+        },
+    )
 
     private var currentUser: AppUser? = null
     private var observeJob: Job? = null
@@ -108,6 +128,7 @@ class TalkCatalogManagementViewModel(
         val canManage = policy.canManage(user)
         mutableUiState.update { it.copy(canManage = canManage, editor = it.editor?.takeIf { canManage }) }
         if (canManage) {
+            countries.load(user.congregation)
             observe()
         } else {
             observeJob?.cancel()
@@ -117,7 +138,8 @@ class TalkCatalogManagementViewModel(
     }
 
     fun newTalk() {
-        if (mutableUiState.value.isSaving || !checkAllowed()) return
+        val state = mutableUiState.value
+        if (state.isSaving || !checkAllowed() || state.country.selected == null) return
         val editor = titleChanges.withFlags(TalkEditorState("", "", active = true))
         mutableUiState.update { it.copy(editor = editor, errorMessage = null) }
     }
@@ -148,6 +170,7 @@ class TalkCatalogManagementViewModel(
         val editor = state.editor ?: return
         if (state.isSaving || !checkAllowed()) return
         val user = currentUser ?: return
+        val country = state.country.selected ?: return
         val talk = editor.talk
         val error = if (editor.isNew || talk == null) input.checkNewNumber(talk?.number, state.talks) else null
         if (talk == null || error != null) {
@@ -156,7 +179,7 @@ class TalkCatalogManagementViewModel(
         }
         mutableUiState.update { it.copy(isSaving = true, errorMessage = null) }
         viewModelScope.launch {
-            saveTalk(user, talk)
+            saveTalk(user, country, talk)
                 .onSuccess { saved ->
                     val next = titleChanges.withFlags(
                         TalkEditorState(saved.number.toString(), saved.title, saved.active, saved),
@@ -176,9 +199,10 @@ class TalkCatalogManagementViewModel(
     fun delete(talk: Talk) {
         if (mutableUiState.value.isSaving || !checkAllowed()) return
         val user = currentUser ?: return
+        val country = mutableUiState.value.country.selected ?: return
         mutableUiState.update { it.copy(isSaving = true, errorMessage = null) }
         viewModelScope.launch {
-            deleteTalk(user, talk.number)
+            deleteTalk(user, country, talk.number)
                 .onSuccess {
                     mutableUiState.update { state ->
                         state.copy(
@@ -201,9 +225,10 @@ class TalkCatalogManagementViewModel(
 
     private fun observe() {
         if (observeJob?.isActive == true) return
+        val country = mutableUiState.value.country.selected ?: return
         mutableUiState.update { it.copy(isLoading = true) }
         observeJob = viewModelScope.launch {
-            observeCatalog()
+            observeCatalog(country)
                 .catch { exception ->
                     val message = exception.message ?: "Vortragsliste konnte nicht geladen werden."
                     mutableUiState.update { it.copy(isLoading = false, errorMessage = message) }
