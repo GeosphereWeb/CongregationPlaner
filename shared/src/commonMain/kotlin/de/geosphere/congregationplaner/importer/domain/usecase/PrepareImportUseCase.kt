@@ -12,8 +12,11 @@ import de.geosphere.congregationplaner.importer.domain.planning.planSpeakerDirec
 import de.geosphere.congregationplaner.importer.domain.planning.planTalkCatalog
 import de.geosphere.congregationplaner.importer.domain.planning.planTalkSchedule
 import de.geosphere.congregationplaner.importer.domain.planning.planWeekEvents
+import de.geosphere.congregationplaner.organization.domain.model.CountryRef
 import de.geosphere.congregationplaner.talk.domain.model.ExternalDirectory
+import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkScheduleException
+import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.repository.TalkCatalogRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkScheduleRepository
 import de.geosphere.congregationplaner.talk.domain.repository.WeekEventRepository
@@ -24,7 +27,10 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.datetime.LocalTime
 
-/** The four source files of the old planning tool. */
+/**
+ * The four source files of the old planning tool. Week events and talks belong to a country (ADR-0034): a global admin
+ * imports them into a chosen country, the other files go into the own congregation.
+ */
 enum class ImportSource(val label: String, val fileHint: String, val needsGlobalAdmin: Boolean) {
     WEEK_EVENTS("Wochenereignisse", "tblWochenereignis.xlsx", needsGlobalAdmin = true),
     TALK_CATALOG("Vortragsliste", "Export_tblVortaege.xlsx", needsGlobalAdmin = true),
@@ -45,9 +51,13 @@ class PreparedImport(
     val run: suspend () -> ImportReport,
 )
 
+/** The reference data import needs a target country. */
+class MissingImportCountryException : IllegalStateException("Bitte wähle zuerst das Land, in das importiert wird.")
+
 /**
  * Reads the current data of the target (week events, catalog, directory, slots, meeting times), builds the
- * [ImportPlan]s for a parsed file and returns them as a [PreparedImport] to confirm.
+ * [ImportPlan]s for a parsed file and returns them as a [PreparedImport] to confirm. [country] is the target of week
+ * events and talks; speakers and schedule check against the lists of the own congregation's country.
  */
 @Suppress("LongParameterList")
 @Inject
@@ -61,11 +71,21 @@ class PrepareImportUseCase(
     private val importDirectory: ImportSpeakerDirectoryUseCase,
     private val importSchedule: ImportTalkScheduleUseCase,
 ) {
-    suspend operator fun invoke(user: AppUser, source: ImportSource, table: ImportTable): Result<PreparedImport> = try {
+    suspend operator fun invoke(
+        user: AppUser,
+        source: ImportSource,
+        table: ImportTable,
+        country: CountryRef? = null,
+    ): Result<PreparedImport> = try {
         Result.success(
             when (source) {
-                ImportSource.WEEK_EVENTS -> prepareWeekEvents(user, table)
-                ImportSource.TALK_CATALOG -> prepareTalkCatalog(user, table)
+                ImportSource.WEEK_EVENTS -> prepareWeekEvents(
+                    user,
+                    table,
+                    country ?: throw MissingImportCountryException(),
+                )
+                ImportSource.TALK_CATALOG ->
+                    prepareTalkCatalog(user, table, country ?: throw MissingImportCountryException())
                 ImportSource.SPEAKERS -> prepareSpeakers(user, table)
                 ImportSource.SCHEDULE -> prepareSchedule(user, table)
             },
@@ -76,22 +96,28 @@ class PrepareImportUseCase(
         Result.failure(exception)
     }
 
-    private suspend fun prepareWeekEvents(user: AppUser, table: ImportTable): PreparedImport {
-        val plan = planWeekEvents(table, weekEvents.observeWeekEvents().first()).plan
+    private suspend fun prepareWeekEvents(user: AppUser, table: ImportTable, country: CountryRef): PreparedImport {
+        val plan = planWeekEvents(table, weekEvents.observeWeekEvents(country).first()).plan
         return PreparedImport(listOf(plan.summary("Wochenereignisse")), plan.errors, emptyList()) {
-            importReference(user, plan, ImportPlan(emptyList(), emptyList()))
+            importReference(user, country, plan, ImportPlan(emptyList(), emptyList()))
         }
     }
 
-    private suspend fun prepareTalkCatalog(user: AppUser, table: ImportTable): PreparedImport {
-        val plan = planTalkCatalog(table, catalog.observeTalks().first())
+    private suspend fun prepareTalkCatalog(user: AppUser, table: ImportTable, country: CountryRef): PreparedImport {
+        val plan = planTalkCatalog(table, catalog.observeTalks(country).first())
         return PreparedImport(listOf(plan.summary("Vorträge")), plan.errors, emptyList()) {
-            importReference(user, ImportPlan(emptyList(), emptyList()), plan)
+            importReference(user, country, ImportPlan(emptyList(), emptyList()), plan)
         }
     }
+
+    private suspend fun ownTalks(user: AppUser): List<Talk> =
+        user.congregation?.let { catalog.observeTalks(it.country).first() }.orEmpty()
+
+    private suspend fun ownWeekEvents(user: AppUser): List<WeekEvent> =
+        user.congregation?.let { weekEvents.observeWeekEvents(it.country).first() }.orEmpty()
 
     private suspend fun prepareSpeakers(user: AppUser, table: ImportTable): PreparedImport {
-        val known = catalog.observeTalks().first().map { it.number }.toSet()
+        val known = ownTalks(user).map { it.number }.toSet()
         val plan = planSpeakerDirectory(table, currentDirectory(user), known)
         return PreparedImport(
             listOf(
@@ -110,10 +136,10 @@ class PrepareImportUseCase(
         }
         val years = dates.map { it.year }.distinct()
         val times = meetingTimes(user, years)
-        val events = weekEvents.observeWeekEvents().first()
+        val events = ownWeekEvents(user)
         val context = ScheduleImportContext(
             existingSlots = existingSlots(user, years),
-            catalog = catalog.observeTalks().first(),
+            catalog = ownTalks(user),
             weekEvents = events,
             weekEventIdBySourceId = eventIdsByName(table, events.associate { it.name.lowercase() to it.id }),
             directory = currentDirectory(user),

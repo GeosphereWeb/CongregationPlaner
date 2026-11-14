@@ -25,6 +25,10 @@ import de.geosphere.congregationplaner.importer.domain.model.ImportReport
 import de.geosphere.congregationplaner.importer.domain.usecase.ImportSource
 import de.geosphere.congregationplaner.importer.domain.usecase.PlanSummary
 import de.geosphere.congregationplaner.importer.domain.usecase.PreparedImport
+import de.geosphere.congregationplaner.organization.domain.model.CountryOption
+import de.geosphere.congregationplaner.organization.domain.model.CountryRef
+import de.geosphere.congregationplaner.organization.presentation.country.CountryChoiceState
+import de.geosphere.congregationplaner.organization.presentation.country.CountryPicker
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.user.domain.model.AppUser
@@ -36,6 +40,8 @@ internal data class ImportActions(
     val onCancel: () -> Unit = {},
     val onDismissReport: () -> Unit = {},
     val onDismissError: () -> Unit = {},
+    val onSelectCountry: (CountryRef) -> Unit = {},
+    val onRetryCountries: () -> Unit = {},
 )
 
 /** The import section of the settings; shows nothing where the user cannot import or the platform has no file dialog. */
@@ -53,6 +59,8 @@ fun ImportSection(currentUser: AppUser, modifier: Modifier = Modifier) {
             onCancel = viewModel::cancel,
             onDismissReport = viewModel::dismissReport,
             onDismissError = viewModel::dismissError,
+            onSelectCountry = viewModel.countries::select,
+            onRetryCountries = viewModel.countries::retry,
         ),
         modifier,
     )
@@ -67,6 +75,19 @@ internal fun ImportContent(state: ImportUiState, actions: ImportActions, modifie
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        if (state.needsCountry) {
+            Text(
+                "Wochenereignisse und Vortragsliste gehören zu einem Land; sie werden in das gewählte Land importiert.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            CountryPicker(
+                state.country,
+                onSelect = actions.onSelectCountry,
+                onRetry = actions.onRetryCountries,
+                enabled = !state.isBusy && state.pending == null,
+            )
+        }
         state.allowedSources.forEach { source ->
             OutlinedButton(
                 onClick = { actions.onChoose(source) },
@@ -133,7 +154,11 @@ private val previewPending = PendingImport(
 private fun ImportContentPreview() = PreviewThemeWrapper {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(16.dp)) {
         val sources = ImportSource.entries
-        ImportContent(ImportUiState(allowedSources = sources), ImportActions())
+        val germany = CountryOption(CountryRef("EMEA", "europe", "central-europe", "de"), "Deutschland")
+        ImportContent(
+            ImportUiState(allowedSources = sources, country = CountryChoiceState(listOf(germany), germany.ref)),
+            ImportActions(),
+        )
         ImportContent(
             ImportUiState(allowedSources = sources, step = ImportStep.Preview(previewPending)),
             ImportActions(),

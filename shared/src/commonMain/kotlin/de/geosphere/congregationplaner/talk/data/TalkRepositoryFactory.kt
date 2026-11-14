@@ -1,6 +1,7 @@
 package de.geosphere.congregationplaner.talk.data
 
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
+import de.geosphere.congregationplaner.organization.domain.model.CountryRef
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCircuit
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCongregation
 import de.geosphere.congregationplaner.talk.domain.model.Talk
@@ -43,11 +44,15 @@ internal const val EXTERNAL_CIRCUITS_SUBCOLLECTION = "externalCircuits"
 internal const val EXTERNAL_CONGREGATIONS_SUBCOLLECTION = "externalCongregations"
 internal const val VISITING_SPEAKERS_SUBCOLLECTION = "visitingSpeakers"
 
-/** Globale Liste der Wochenereignisse; sie gilt für alle Versammlungen und Kreise. */
-internal const val WEEK_EVENTS_COLLECTION_PATH = "weekEvents"
+/** Wochenereignisse eines Landes; sie gelten für alle Versammlungen des Landes (ADR-0034). */
+internal const val WEEK_EVENTS_SUBCOLLECTION = "weekEvents"
 
-/** Globale Vortragsliste; die Dokument-ID ist die Vortragsnummer. */
-internal const val TALK_CATALOG_COLLECTION_PATH = "talkCatalog"
+/** Vortragsliste eines Landes; die Dokument-ID ist die Vortragsnummer (ADR-0034). */
+internal const val TALK_CATALOG_SUBCOLLECTION = "talkCatalog"
+
+internal val CountryRef.weekEventsPath: String get() = "$documentPath/$WEEK_EVENTS_SUBCOLLECTION"
+
+internal val CountryRef.talkCatalogPath: String get() = "$documentPath/$TALK_CATALOG_SUBCOLLECTION"
 
 internal val CongregationRef.talkSchedulePath: String get() = "$documentPath/$TALK_SCHEDULE_SUBCOLLECTION"
 
@@ -96,26 +101,26 @@ fun unavailableWeekEventRepository(platform: String): WeekEventRepository = obje
     private fun <T> unavailable(): Result<T> =
         Result.failure(UnsupportedOperationException("Firestore is not configured for $platform."))
 
-    override fun observeWeekEvents(): Flow<List<WeekEvent>> = flow {
+    override fun observeWeekEvents(country: CountryRef): Flow<List<WeekEvent>> = flow {
         throw UnsupportedOperationException("Firestore is not configured for $platform.")
     }
 
-    override suspend fun save(event: WeekEvent): Result<WeekEvent> = unavailable()
+    override suspend fun save(country: CountryRef, event: WeekEvent): Result<WeekEvent> = unavailable()
 
-    override suspend fun delete(id: String): Result<Unit> = unavailable()
+    override suspend fun delete(country: CountryRef, id: String): Result<Unit> = unavailable()
 }
 
 fun unavailableTalkCatalogRepository(platform: String): TalkCatalogRepository = object : TalkCatalogRepository {
     private fun <T> unavailable(): Result<T> =
         Result.failure(UnsupportedOperationException("Firestore is not configured for $platform."))
 
-    override fun observeTalks(): Flow<List<Talk>> = flow {
+    override fun observeTalks(country: CountryRef): Flow<List<Talk>> = flow {
         throw UnsupportedOperationException("Firestore is not configured for $platform.")
     }
 
-    override suspend fun save(talk: Talk): Result<Talk> = unavailable()
+    override suspend fun save(country: CountryRef, talk: Talk): Result<Talk> = unavailable()
 
-    override suspend fun delete(number: Int): Result<Unit> = unavailable()
+    override suspend fun delete(country: CountryRef, number: Int): Result<Unit> = unavailable()
 }
 
 fun unavailableExternalSpeakerDirectoryRepository(platform: String): ExternalSpeakerDirectoryRepository =

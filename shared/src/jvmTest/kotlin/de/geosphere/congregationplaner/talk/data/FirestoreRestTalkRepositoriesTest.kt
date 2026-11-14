@@ -263,7 +263,9 @@ class FirestoreRestTalkRepositoriesTest {
                 {"name":"x/talkCatalog/0","fields":{"title":{"stringValue":"Null"}}}]}""",
         )
     }) { server ->
-        val talks = FirestoreRestTalkCatalogRepository(idTokenProvider = { "token-123" }).observeTalks().first()
+        val talks = FirestoreRestTalkCatalogRepository(idTokenProvider = {
+            "token-123"
+        }).observeTalks(congregation.country).first()
 
         assertEquals(
             listOf(
@@ -272,7 +274,10 @@ class FirestoreRestTalkRepositoriesTest {
             ),
             talks,
         )
-        assertEquals("${FakeFirestoreRestServer.DOCUMENTS_PATH}/talkCatalog", server.requests.first().path)
+        assertEquals(
+            "${FakeFirestoreRestServer.DOCUMENTS_PATH}/${congregation.country.documentPath}/talkCatalog",
+            server.requests.first().path,
+        )
     }
 
     @Test
@@ -322,7 +327,7 @@ class FirestoreRestTalkRepositoriesTest {
     }
 
     @Test
-    fun `week events are read from the global collection`() = runWithServer({
+    fun `week events are read from the collection of the country`() = runWithServer({
         FakeResponse(
             200,
             """{"documents":[{"name":"x/weekEvents/kongress","fields":{
@@ -331,10 +336,13 @@ class FirestoreRestTalkRepositoriesTest {
         )
     }) { server ->
         val events = FirestoreRestWeekEventRepository(idTokenProvider = { "token-123" })
-            .observeWeekEvents().first()
+            .observeWeekEvents(congregation.country).first()
 
         assertEquals(listOf(WeekEvent("kongress", "Kongress", true), WeekEvent("besuch", "Kreisaufseher")), events)
-        assertEquals("${FakeFirestoreRestServer.DOCUMENTS_PATH}/weekEvents", server.requests.single().path)
+        assertEquals(
+            "${FakeFirestoreRestServer.DOCUMENTS_PATH}/${congregation.country.documentPath}/weekEvents",
+            server.requests.single().path,
+        )
     }
 
     private fun document(id: String) = """{"name":"x/talkSchedule/$id","fields":{

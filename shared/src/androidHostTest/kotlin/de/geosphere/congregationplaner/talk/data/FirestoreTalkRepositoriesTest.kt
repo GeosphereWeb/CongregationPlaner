@@ -64,8 +64,8 @@ class FirestoreTalkRepositoriesTest {
 
     init {
         every { firestore.collection(congregation.talkSchedulePath) } returns collection
-        every { firestore.collection(WEEK_EVENTS_COLLECTION_PATH) } returns collection
-        every { firestore.collection(TALK_CATALOG_COLLECTION_PATH) } returns collection
+        every { firestore.collection(congregation.country.weekEventsPath) } returns collection
+        every { firestore.collection(congregation.country.talkCatalogPath) } returns collection
         every { collection.document("2026-10-25") } returns reference
     }
 
@@ -288,7 +288,7 @@ class FirestoreTalkRepositoriesTest {
         }
         emitSnapshot(collection, querySnapshot(kongress, besuch), null)
 
-        val events = FirestoreWeekEventRepository(firestore).observeWeekEvents().first()
+        val events = FirestoreWeekEventRepository(firestore).observeWeekEvents(congregation.country).first()
 
         assertEquals(listOf(WeekEvent("kongress", "Kongress", true), WeekEvent("besuch", "", false)), events)
     }
@@ -307,7 +307,7 @@ class FirestoreTalkRepositoriesTest {
         val zero = catalogDocument("0", "Null", true)
         emitSnapshot(collection, querySnapshot(active, paused, defaults, notANumber, zero), null)
 
-        val talks = runBlocking { FirestoreTalkCatalogRepository(firestore).observeTalks().first() }
+        val talks = runBlocking { FirestoreTalkCatalogRepository(firestore).observeTalks(congregation.country).first() }
 
         assertEquals(
             listOf(
