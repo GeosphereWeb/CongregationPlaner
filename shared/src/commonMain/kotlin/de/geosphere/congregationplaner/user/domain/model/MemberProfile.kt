@@ -9,6 +9,7 @@ package de.geosphere.congregationplaner.user.domain.model
  * @param appointment Nur getaufte Brüder können ein Dienstamt haben, siehe [canHaveAppointment].
  * @param isSpeaker `true` für Vortragsredner; solche Mitglieder können in der Vortragsplanung ausgewählt werden.
  *   Nur Brüder können Redner sein, siehe [canBeSpeaker].
+ * @param talkNumbers Nummern der Vorträge, die der Redner hält (leer = unbekannt); nur bei [isSpeaker].
  */
 data class MemberProfile(
     val lastName: String = "",
@@ -24,6 +25,7 @@ data class MemberProfile(
     val postalCode: String = "",
     val city: String = "",
     val emergencyContacts: List<EmergencyContact> = emptyList(),
+    val talkNumbers: List<Int> = emptyList(),
 ) {
     val fullName: String get() = listOf(firstName, lastName).filter(String::isNotBlank).joinToString(" ")
 
@@ -47,10 +49,18 @@ data class MemberProfile(
         emergencyContacts = form.emergencyContacts,
     )
 
-    /** Kinder sind nie getauft, und ohne passende Voraussetzungen gibt es kein Dienstamt und keinen Redner. */
+    /**
+     * Kinder sind nie getauft, und ohne passende Voraussetzungen gibt es kein Dienstamt und keinen Redner; wer kein
+     * Redner ist, hält keine Vorträge.
+     */
     fun normalized(): MemberProfile {
         val baptized = baptized && category != MemberCategory.CHILD
-        val profile = copy(baptized = baptized, isSpeaker = isSpeaker && canBeSpeaker)
+        val speaker = isSpeaker && canBeSpeaker
+        val profile = copy(
+            baptized = baptized,
+            isSpeaker = speaker,
+            talkNumbers = if (speaker) talkNumbers.distinct().sorted() else emptyList(),
+        )
         return if (profile.canHaveAppointment) profile else profile.copy(appointment = Appointment.NONE)
     }
 
@@ -66,6 +76,10 @@ data class MemberProfile(
         const val MAX_RELATION_LENGTH = 50
         const val MAX_EMERGENCY_CONTACTS = 5
         const val MAX_PHONES_PER_CONTACT = 3
+
+        /** Wie beim Rednerverzeichnis: höchstens 200 Vorträge mit Nummern von 1 bis 9999. */
+        const val MAX_TALKS = 200
+        const val MAX_TALK_NUMBER = 9999
 
         /** Ziffern, Leerzeichen und die üblichen Trennzeichen; entspricht der Prüfung in den Security Rules. */
         private val PHONE_PATTERN = Regex("^[0-9+ ()/-]*$")
@@ -142,6 +156,12 @@ sealed class MemberProfileException(message: String) : Exception(message) {
         MemberProfileException(
             "Telefonnummern dürfen nur Ziffern, Leerzeichen und + ( ) / - enthalten " +
                 "(max. ${MemberProfile.MAX_PHONE_LENGTH} Zeichen).",
+        )
+
+    class InvalidTalks :
+        MemberProfileException(
+            "Vortragsnummern: höchstens ${MemberProfile.MAX_TALKS} Nummern " +
+                "von 1 bis ${MemberProfile.MAX_TALK_NUMBER}, nur bei Rednern.",
         )
 
     class InvalidEmail : MemberProfileException("Bitte gib gültige E-Mail-Adressen ein (z. B. name@beispiel.de).")

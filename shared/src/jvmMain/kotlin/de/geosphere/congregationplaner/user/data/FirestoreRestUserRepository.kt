@@ -10,9 +10,11 @@ import de.geosphere.congregationplaner.firestore.booleanField
 import de.geosphere.congregationplaner.firestore.encode
 import de.geosphere.congregationplaner.firestore.firestoreBoolean
 import de.geosphere.congregationplaner.firestore.firestoreFields
+import de.geosphere.congregationplaner.firestore.firestoreIntegerArray
 import de.geosphere.congregationplaner.firestore.firestoreNullableString
 import de.geosphere.congregationplaner.firestore.firestoreString
 import de.geosphere.congregationplaner.firestore.firestoreStringArray
+import de.geosphere.congregationplaner.firestore.intArrayField
 import de.geosphere.congregationplaner.firestore.optionalBooleanField
 import de.geosphere.congregationplaner.firestore.optionalStringField
 import de.geosphere.congregationplaner.firestore.parseDocument
@@ -157,6 +159,7 @@ internal class FirestoreRestUserRepository(
             postalCode = fields.optionalStringField("postalCode").orEmpty(),
             city = fields.optionalStringField("city").orEmpty(),
             emergencyContacts = fields.emergencyContacts(),
+            talkNumbers = fields.intArrayField("talkNumbers"),
         ),
     )
 
@@ -194,7 +197,8 @@ internal class FirestoreRestUserRepository(
             "city",
             "emergencyContacts",
         )
-        val PROFILE_FIELD_NAMES = OWN_PROFILE_FIELD_NAMES + listOf("category", "baptized", "appointment", "isSpeaker")
+        val PROFILE_FIELD_NAMES =
+            OWN_PROFILE_FIELD_NAMES + listOf("category", "baptized", "appointment", "isSpeaker", "talkNumbers")
     }
 }
 
@@ -235,6 +239,7 @@ private fun MemberProfile.fields(): JsonObject = JsonObject().apply {
     add("mobilePhone", firestoreString(mobilePhone))
     add("landlinePhone", firestoreString(landlinePhone))
     add("isSpeaker", firestoreBoolean(isSpeaker))
+    add("talkNumbers", firestoreIntegerArray(talkNumbers))
     add("emails", firestoreStringArray(emails))
     add("street", firestoreString(street))
     add("postalCode", firestoreString(postalCode))

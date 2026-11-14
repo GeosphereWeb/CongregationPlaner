@@ -533,6 +533,41 @@ class UserManagementViewModelTest {
     }
 
     @Test
+    fun `the talks of a speaker are entered as text and saved as numbers`() {
+        viewModel.onCurrentUserChanged(admin)
+        val speaker =
+            MemberProfile(lastName = "Muster", firstName = "Max", category = MemberCategory.BROTHER, isSpeaker = true)
+
+        viewModel.editor.edit(pending)
+        viewModel.editor.update(speaker)
+        viewModel.editor.updateTalks("45, x")
+        viewModel.editor.save()
+        assertEquals(
+            "Vorträge: bitte nur Nummern, getrennt durch Komma oder Leerzeichen.",
+            viewModel.uiState.value.errorMessage,
+        )
+        assertTrue(repository.updatedProfiles.isEmpty())
+
+        viewModel.editor.updateTalks("45 12")
+        assertTrue(viewModel.uiState.value.editor!!.isDirty)
+        viewModel.editor.save()
+
+        assertEquals(listOf(12, 45), repository.updatedProfiles.single().profile.talkNumbers)
+        assertEquals("12, 45", viewModel.uiState.value.editor?.talksText)
+        assertFalse(viewModel.uiState.value.editor!!.isDirty)
+
+        // Without the speaker flag the entered talks are not saved.
+        viewModel.editor.update(speaker.copy(isSpeaker = false))
+        viewModel.editor.updateTalks("7")
+        viewModel.editor.save()
+        assertTrue(repository.updatedProfiles.last().profile.talkNumbers.isEmpty())
+
+        viewModel.editor.updateTalks("9")
+        viewModel.editor.discard()
+        assertEquals("", viewModel.uiState.value.editor?.talksText)
+    }
+
+    @Test
     fun `profile save failures keep the editor open`() {
         viewModel.onCurrentUserChanged(admin)
         repository.updateProfileResult = Result.failure(IllegalStateException("permission-denied"))

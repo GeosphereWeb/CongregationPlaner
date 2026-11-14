@@ -26,6 +26,6 @@ class ObserveTalkMembersUseCase(private val observeMembers: ObserveMembersUseCas
     } ?: emptyFlow()
 
     private fun List<AppUser>.toRefs(): List<MemberRef> = map {
-        with(it.profile) { MemberRef(it.uid, lastName, firstName, mobilePhone, landlinePhone) }
+        with(it.profile) { MemberRef(it.uid, lastName, firstName, mobilePhone, landlinePhone, talkNumbers) }
     }.sortedWith(compareBy({ it.lastName.lowercase() }, { it.firstName.lowercase() }))
 }

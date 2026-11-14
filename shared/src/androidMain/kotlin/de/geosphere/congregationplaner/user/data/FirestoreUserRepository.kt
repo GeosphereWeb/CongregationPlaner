@@ -168,6 +168,7 @@ private fun toDomain(document: DocumentSnapshot, congregation: CongregationRef):
                     phones = (contact["phones"] as? List<*>).orEmpty().filterIsInstance<String>(),
                 )
             },
+        talkNumbers = (document.get("talkNumbers") as? List<*>).orEmpty().mapNotNull { (it as? Number)?.toInt() },
     ),
 )
 
@@ -223,6 +224,7 @@ private fun MemberProfile.toFirestoreFields(): Map<String, Any?> = mapOf(
     "mobilePhone" to mobilePhone,
     "landlinePhone" to landlinePhone,
     "isSpeaker" to isSpeaker,
+    "talkNumbers" to talkNumbers,
     "emails" to emails,
     "street" to street,
     "postalCode" to postalCode,
