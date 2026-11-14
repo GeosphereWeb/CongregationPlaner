@@ -3,6 +3,7 @@ package de.geosphere.congregationplaner.event.data
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import de.geosphere.congregationplaner.auth.data.AndroidFirestoreProvider
+import de.geosphere.congregationplaner.event.domain.model.EventAudience
 import de.geosphere.congregationplaner.event.domain.model.SpecialEvent
 import de.geosphere.congregationplaner.event.domain.repository.SpecialEventRepository
 import de.geosphere.congregationplaner.firestore.awaitResult
@@ -20,6 +21,13 @@ internal class FirestoreSpecialEventRepository(private val firestore: FirebaseFi
         observeDocuments(firestore.collection(congregation.eventsPath), "special event", ::toSpecialEvent)
             .map { it.filterNotNull() }
 
+    override fun observeFor(congregation: CongregationRef, groups: Set<EventAudience>): Flow<List<SpecialEvent>> =
+        observeDocuments(
+            firestore.collection(congregation.eventsPath).whereArrayContainsAny(AUDIENCE_FIELD, groups.values()),
+            "special event",
+            ::toSpecialEvent,
+        ).map { it.filterNotNull() }
+
     override suspend fun save(congregation: CongregationRef, event: SpecialEvent): Result<SpecialEvent> =
         runFirestoreCatching("save special event") {
             val collection = firestore.collection(congregation.eventsPath)
@@ -31,7 +39,7 @@ internal class FirestoreSpecialEventRepository(private val firestore: FirebaseFi
                     "title" to saved.title,
                     "startDate" to saved.startDate.toString(),
                     "endDate" to saved.endDate.toString(),
-                    "audience" to saved.audienceValues(),
+                    AUDIENCE_FIELD to saved.audienceValues(),
                 ),
             ).awaitResult()
             saved
@@ -48,5 +56,5 @@ private fun toSpecialEvent(document: DocumentSnapshot): SpecialEvent? = specialE
     title = document.getString("title"),
     startDate = document.getString("startDate"),
     endDate = document.getString("endDate"),
-    audience = (document.get("audience") as? List<*>).orEmpty().map { it as? String },
+    audience = (document.get(AUDIENCE_FIELD) as? List<*>).orEmpty().map { it as? String },
 )

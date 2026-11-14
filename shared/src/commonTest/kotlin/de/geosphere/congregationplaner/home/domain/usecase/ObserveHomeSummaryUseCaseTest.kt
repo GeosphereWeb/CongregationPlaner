@@ -1,5 +1,10 @@
 package de.geosphere.congregationplaner.home.domain.usecase
 
+import de.geosphere.congregationplaner.event.domain.model.EventAudience
+import de.geosphere.congregationplaner.event.domain.model.SpecialEvent
+import de.geosphere.congregationplaner.event.domain.permission.SpecialEventPolicy
+import de.geosphere.congregationplaner.event.domain.usecase.ObserveUpcomingEventsUseCase
+import de.geosphere.congregationplaner.event.testing.FakeSpecialEventRepository
 import de.geosphere.congregationplaner.home.domain.model.HomeSummary
 import de.geosphere.congregationplaner.home.domain.model.TalkSummary
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
@@ -26,11 +31,13 @@ class ObserveHomeSummaryUseCaseTest {
 
     private val schedule = FakeTalkScheduleRepository()
     private val users = FakeUserRepository()
+    private val events = FakeSpecialEventRepository()
     private val useCase = ObserveHomeSummaryUseCase(
         TalkSchedulePermissionPolicy(),
         UserPermissionPolicy(),
         ObserveTalkYearUseCase(schedule),
         ObserveMembersUseCase(users),
+        ObserveUpcomingEventsUseCase(events, SpecialEventPolicy()),
     )
 
     private fun user(vararg roles: CongregationRole, approved: Boolean = true) =
@@ -50,6 +57,23 @@ class ObserveHomeSummaryUseCaseTest {
         schedule.observeError = IllegalStateException("must not be queried")
 
         assertEquals(HomeSummary(), summary(user()))
+    }
+
+    @Test
+    fun `an approved member gets the upcoming events of his groups`() = runTest {
+        val congress = SpecialEvent("1", "Kongress", today, LocalDate(2026, 11, 3))
+        val eldersOnly = SpecialEvent("2", "Schulung", today, audience = setOf(EventAudience.ELDERS))
+        events.events.value = listOf(congress, eldersOnly)
+
+        assertEquals(listOf(congress), summary(user()).events)
+        assertEquals(setOf(EventAudience.ALL), events.requestedGroups)
+    }
+
+    @Test
+    fun `an unapproved member gets no events and nothing is queried`() = runTest {
+        events.observeError = IllegalStateException("must not be queried")
+
+        assertTrue(summary(user(approved = false)).events.isEmpty())
     }
 
     @Test

@@ -7,6 +7,7 @@ import de.geosphere.congregationplaner.event.domain.model.eventGroups
 import de.geosphere.congregationplaner.event.domain.permission.SpecialEventPolicy
 import de.geosphere.congregationplaner.event.domain.usecase.DeleteSpecialEventUseCase
 import de.geosphere.congregationplaner.event.domain.usecase.ObserveManagedEventsUseCase
+import de.geosphere.congregationplaner.event.domain.usecase.ObserveUpcomingEventsUseCase
 import de.geosphere.congregationplaner.event.domain.usecase.SaveSpecialEventUseCase
 import de.geosphere.congregationplaner.event.testing.FakeSpecialEventRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
@@ -64,6 +65,36 @@ class SpecialEventUseCasesTest {
         assertEquals(listOf(visit, congress), observe(admin).first())
         assertTrue(observe(planner).first().isEmpty())
         assertTrue(observe(admin.copy(congregation = null)).first().isEmpty())
+    }
+
+    @Test
+    fun `members see the upcoming events of their groups sorted by start`() = runBlocking {
+        val sister = admin.copy(
+            roles = emptySet(),
+            profile = MemberProfile(gender = Gender.FEMALE, baptized = true),
+        )
+        val past = SpecialEvent("3", "Vorbei", LocalDate(2027, 1, 1), LocalDate(2027, 2, 28))
+        val running = SpecialEvent("4", "Läuft", LocalDate(2027, 2, 28), LocalDate(2027, 3, 1))
+        val elders = SpecialEvent("5", "Schulung", LocalDate(2027, 4, 1), audience = setOf(EventAudience.ELDERS))
+        val sisters = SpecialEvent("6", "Treffen", LocalDate(2027, 4, 2), audience = setOf(EventAudience.SISTERS))
+        val repository = FakeSpecialEventRepository(listOf(congress, visit, past, running, elders, sisters))
+        val observe = ObserveUpcomingEventsUseCase(repository, policy)
+        val today = LocalDate(2027, 3, 1)
+
+        assertEquals(listOf(running, visit, sisters, congress), observe(sister, today).first())
+        assertEquals(setOf(EventAudience.ALL, EventAudience.SISTERS), repository.requestedGroups)
+    }
+
+    @Test
+    fun `unapproved users and admins without member document query no events`() = runBlocking {
+        val repository = FakeSpecialEventRepository(listOf(congress))
+        repository.observeError = IllegalStateException("must not be queried")
+        val observe = ObserveUpcomingEventsUseCase(repository, policy)
+        val today = LocalDate(2027, 3, 1)
+
+        assertTrue(observe(admin.copy(approved = false), today).first().isEmpty())
+        assertTrue(observe(admin.copy(isMember = false), today).first().isEmpty())
+        assertTrue(observe(admin.copy(congregation = null), today).first().isEmpty())
     }
 
     @Test
