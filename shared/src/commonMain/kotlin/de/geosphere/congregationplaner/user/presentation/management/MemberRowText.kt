@@ -1,6 +1,7 @@
 package de.geosphere.congregationplaner.user.presentation.management
 
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 
 /** Wartet ein Nutzer mit Konto noch auf die Freigabe? Personen ohne Konto werden nie freigegeben. */
 internal val AppUser.isPending: Boolean get() = hasAccount && !approved
@@ -10,8 +11,8 @@ internal fun memberTitle(member: AppUser, isCurrentUser: Boolean): String =
     if (isCurrentUser) "${member.label} (du)" else member.label
 
 /**
- * Zweite Zeile: Bruder, Schwester oder Kind und ob getauft, dazu der Zugang („Ohne Konto“, „Wartet auf Freigabe“
- * oder die Rollen), z. B. „Bruder · getauft · Vortragsplaner“. Ohne jede Angabe „Mitglied“.
+ * Zweite Zeile: Bruder oder Schwester (ungetauft: männlich oder weiblich), dazu der Zugang („Ohne Konto“, „Wartet
+ * auf Freigabe“ oder die Rollen), z. B. „Bruder · Vortragsplaner“. Ohne jede Angabe „Mitglied“.
  */
 internal fun memberSubtitle(member: AppUser): String {
     val access = when {
@@ -19,12 +20,14 @@ internal fun memberSubtitle(member: AppUser): String {
         member.isPending -> "Wartet auf Freigabe"
         else -> member.roles.sortedBy { it.ordinal }.joinToString(" · ") { it.label }.ifEmpty { null }
     }
-    val parts = listOfNotNull(
-        member.profile.category?.label,
-        "getauft".takeIf { member.profile.baptized },
-        access,
-    )
-    return parts.joinToString(" · ").ifEmpty { "Mitglied" }
+    return listOfNotNull(member.profile.groupLabel(), access).joinToString(" · ").ifEmpty { "Mitglied" }
+}
+
+private fun MemberProfile.groupLabel(): String? = when {
+    isBrother -> "Bruder"
+    isSister -> "Schwester"
+    gender != null -> gender.label
+    else -> "getauft".takeIf { baptized }
 }
 
 /** „Anmeldung: name@beispiel.de“; `null` für Personen ohne Konto oder ohne bekannte Adresse. */

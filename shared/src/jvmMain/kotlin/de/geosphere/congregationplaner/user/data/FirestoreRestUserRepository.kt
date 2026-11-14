@@ -28,7 +28,7 @@ import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.EmergencyContact
-import de.geosphere.congregationplaner.user.domain.model.MemberCategory
+import de.geosphere.congregationplaner.user.domain.model.Gender
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
 import kotlinx.coroutines.flow.Flow
@@ -148,7 +148,7 @@ internal class FirestoreRestUserRepository(
         profile = MemberProfile(
             lastName = fields.optionalStringField("lastName").orEmpty(),
             firstName = fields.optionalStringField("firstName").orEmpty(),
-            category = MemberCategory.fromValue(fields.optionalStringField("category")),
+            gender = Gender.fromValue(fields.optionalStringField("gender")),
             baptized = fields.booleanField("baptized"),
             appointment = Appointment.fromValue(fields.optionalStringField("appointment")),
             mobilePhone = fields.optionalStringField("mobilePhone").orEmpty(),
@@ -198,7 +198,7 @@ internal class FirestoreRestUserRepository(
             "emergencyContacts",
         )
         val PROFILE_FIELD_NAMES =
-            OWN_PROFILE_FIELD_NAMES + listOf("category", "baptized", "appointment", "isSpeaker", "talkNumbers")
+            OWN_PROFILE_FIELD_NAMES + listOf("gender", "baptized", "appointment", "isSpeaker", "talkNumbers")
     }
 }
 
@@ -233,7 +233,7 @@ internal fun AppUser.accessFields(): JsonObject = JsonObject().apply {
 private fun MemberProfile.fields(): JsonObject = JsonObject().apply {
     add("lastName", firestoreString(lastName))
     add("firstName", firestoreString(firstName))
-    add("category", firestoreNullableString(category?.name))
+    add("gender", firestoreNullableString(gender?.name))
     add("baptized", firestoreBoolean(baptized))
     add("appointment", firestoreString(appointment.name))
     add("mobilePhone", firestoreString(mobilePhone))

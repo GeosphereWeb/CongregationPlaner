@@ -13,7 +13,7 @@ import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
-import de.geosphere.congregationplaner.user.domain.model.MemberCategory
+import de.geosphere.congregationplaner.user.domain.model.Gender
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
 import de.geosphere.congregationplaner.user.domain.usecase.AdoptVisitingSpeakersUseCase
@@ -441,7 +441,7 @@ class UserManagementViewModelTest {
         viewModel.onCurrentUserChanged(admin)
 
         viewModel.editor.add()
-        viewModel.editor.update(MemberProfile(lastName = "Muster", firstName = "Lena", category = MemberCategory.CHILD))
+        viewModel.editor.update(MemberProfile(lastName = "Muster", firstName = "Lena", gender = Gender.FEMALE))
         viewModel.editor.save()
 
         val created = repository.createdMembers.single()
@@ -460,19 +460,22 @@ class UserManagementViewModelTest {
         viewModel.editor.edit(pending)
 
         viewModel.editor.update(
-            MemberProfile(category = MemberCategory.BROTHER, baptized = true, appointment = Appointment.ELDER),
+            MemberProfile(gender = Gender.MALE, baptized = true, appointment = Appointment.ELDER),
         )
         assertEquals(Appointment.ELDER, viewModel.uiState.value.editor?.profile?.appointment)
 
-        viewModel.editor.update(viewModel.uiState.value.editor!!.profile.copy(category = MemberCategory.CHILD))
+        viewModel.editor.update(viewModel.uiState.value.editor!!.profile.copy(baptized = false))
         assertEquals(
-            MemberProfile(category = MemberCategory.CHILD, baptized = false, appointment = Appointment.NONE),
+            MemberProfile(gender = Gender.MALE, baptized = false, appointment = Appointment.NONE),
             viewModel.uiState.value.editor?.profile,
         )
 
-        viewModel.editor.update(MemberProfile(category = MemberCategory.BROTHER, isSpeaker = true))
+        viewModel.editor.update(
+            MemberProfile(gender = Gender.MALE, baptized = true, appointment = Appointment.ELDER, isSpeaker = true),
+        )
         assertTrue(viewModel.uiState.value.editor!!.profile.isSpeaker)
-        viewModel.editor.update(viewModel.uiState.value.editor!!.profile.copy(category = MemberCategory.SISTER))
+        // Without an appointment nobody is a speaker.
+        viewModel.editor.update(viewModel.uiState.value.editor!!.profile.copy(appointment = Appointment.NONE))
         assertFalse(viewModel.uiState.value.editor!!.profile.isSpeaker)
 
         viewModel.editor.cancel()
@@ -518,7 +521,7 @@ class UserManagementViewModelTest {
     @Test
     fun `admin edits profiles including the own one`() {
         viewModel.onCurrentUserChanged(admin)
-        val profile = MemberProfile(lastName = "Admin", firstName = "Anna", category = MemberCategory.SISTER)
+        val profile = MemberProfile(lastName = "Admin", firstName = "Anna", gender = Gender.FEMALE)
 
         viewModel.editor.edit(admin)
         viewModel.editor.update(profile)
@@ -535,8 +538,14 @@ class UserManagementViewModelTest {
     @Test
     fun `the talks of a speaker are entered as text and saved as numbers`() {
         viewModel.onCurrentUserChanged(admin)
-        val speaker =
-            MemberProfile(lastName = "Muster", firstName = "Max", category = MemberCategory.BROTHER, isSpeaker = true)
+        val speaker = MemberProfile(
+            lastName = "Muster",
+            firstName = "Max",
+            gender = Gender.MALE,
+            baptized = true,
+            appointment = Appointment.ELDER,
+            isSpeaker = true,
+        )
 
         viewModel.editor.edit(pending)
         viewModel.editor.update(speaker)

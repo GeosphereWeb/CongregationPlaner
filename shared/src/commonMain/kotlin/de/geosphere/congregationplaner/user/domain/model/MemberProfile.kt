@@ -5,16 +5,17 @@ package de.geosphere.congregationplaner.user.domain.model
  * Adresse, Notfallkontakte) pflegt das Mitglied selbst, alles pflegt der Versammlungsadmin; lesen dürfen sie das
  * Mitglied, die Admins und die Planer. Die Feldnamen entsprechen den Firestore-Feldern.
  *
- * @param category `null`, solange der Admin die Angabe noch nicht gepflegt hat (z. B. nach der Selbstregistrierung).
- * @param appointment Nur getaufte Brüder können ein Dienstamt haben, siehe [canHaveAppointment].
+ * @param gender `null`, solange der Admin die Angabe noch nicht gepflegt hat (z. B. nach der Selbstregistrierung).
+ *   Bruder und Schwester werden nicht gespeichert: Sie ergeben sich aus [gender] und [baptized] (ADR-0031).
+ * @param appointment Nur Brüder können ein Dienstamt haben, siehe [canHaveAppointment].
  * @param isSpeaker `true` für Vortragsredner; solche Mitglieder können in der Vortragsplanung ausgewählt werden.
- *   Nur Brüder können Redner sein, siehe [canBeSpeaker].
+ *   Nur Dienstamtgehilfen und Älteste können Redner sein, siehe [canBeSpeaker].
  * @param talkNumbers Nummern der Vorträge, die der Redner hält (leer = unbekannt); nur bei [isSpeaker].
  */
 data class MemberProfile(
     val lastName: String = "",
     val firstName: String = "",
-    val category: MemberCategory? = null,
+    val gender: Gender? = null,
     val baptized: Boolean = false,
     val appointment: Appointment = Appointment.NONE,
     val mobilePhone: String = "",
@@ -29,12 +30,19 @@ data class MemberProfile(
 ) {
     val fullName: String get() = listOf(firstName, lastName).filter(String::isNotBlank).joinToString(" ")
 
-    val canHaveAppointment: Boolean get() = category == MemberCategory.BROTHER && baptized
+    /** Ein getauftes männliches Mitglied. */
+    val isBrother: Boolean get() = gender == Gender.MALE && baptized
 
-    val canBeSpeaker: Boolean get() = category == MemberCategory.BROTHER
+    /** Ein getauftes weibliches Mitglied. */
+    val isSister: Boolean get() = gender == Gender.FEMALE && baptized
+
+    val canHaveAppointment: Boolean get() = isBrother
 
     /** Vorsitzende kommen aus den Ältesten und Dienstamtgehilfen, siehe [canHaveAppointment]. */
     val canBeChairman: Boolean get() = canHaveAppointment && appointment != Appointment.NONE
+
+    /** Redner kommen wie die Vorsitzenden aus den Ältesten und Dienstamtgehilfen. */
+    val canBeSpeaker: Boolean get() = canBeChairman
 
     /** Übernimmt die Felder, die das Mitglied selbst pflegt, aus [form]; die Angaben des Admins bleiben. */
     fun withOwnFieldsOf(form: MemberProfile): MemberProfile = copy(
@@ -49,19 +57,14 @@ data class MemberProfile(
         emergencyContacts = form.emergencyContacts,
     )
 
-    /**
-     * Kinder sind nie getauft, und ohne passende Voraussetzungen gibt es kein Dienstamt und keinen Redner; wer kein
-     * Redner ist, hält keine Vorträge.
-     */
+    /** Nur Brüder haben ein Dienstamt, ohne Dienstamt gibt es keinen Redner; ohne Redner keine Vorträge. */
     fun normalized(): MemberProfile {
-        val baptized = baptized && category != MemberCategory.CHILD
         val speaker = isSpeaker && canBeSpeaker
-        val profile = copy(
-            baptized = baptized,
+        return copy(
+            appointment = if (canHaveAppointment) appointment else Appointment.NONE,
             isSpeaker = speaker,
             talkNumbers = if (speaker) talkNumbers.distinct().sorted() else emptyList(),
         )
-        return if (profile.canHaveAppointment) profile else profile.copy(appointment = Appointment.NONE)
     }
 
     companion object {
@@ -110,15 +113,14 @@ fun String?.toNameProfile(): MemberProfile {
     }
 }
 
-/** Werte des Firestore-Felds `category`. */
-enum class MemberCategory(val label: String) {
-    BROTHER("Bruder"),
-    SISTER("Schwester"),
-    CHILD("Kind"),
+/** Werte des Firestore-Felds `gender`. */
+enum class Gender(val label: String) {
+    MALE("Männlich"),
+    FEMALE("Weiblich"),
     ;
 
     companion object {
-        fun fromValue(value: String?): MemberCategory? = entries.firstOrNull { it.name == value }
+        fun fromValue(value: String?): Gender? = entries.firstOrNull { it.name == value }
     }
 }
 
@@ -146,11 +148,9 @@ sealed class MemberProfileException(message: String) : Exception(message) {
             "Vor- und Familienname dürfen höchstens ${MemberProfile.MAX_NAME_LENGTH} Zeichen lang sein.",
         )
 
-    class BaptizedChild : MemberProfileException("Ein Kind kann nicht als getauft erfasst werden.")
-
     class AppointmentNotAllowed : MemberProfileException("Ein Dienstamt ist nur bei getauften Brüdern möglich.")
 
-    class SpeakerNotAllowed : MemberProfileException("Ein Redner kann nur ein Bruder sein.")
+    class SpeakerNotAllowed : MemberProfileException("Ein Redner kann nur ein Dienstamtgehilfe oder Ältester sein.")
 
     class InvalidPhone :
         MemberProfileException(

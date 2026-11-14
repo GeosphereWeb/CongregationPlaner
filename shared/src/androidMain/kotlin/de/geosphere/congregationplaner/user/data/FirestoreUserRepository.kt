@@ -15,7 +15,7 @@ import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.EmergencyContact
-import de.geosphere.congregationplaner.user.domain.model.MemberCategory
+import de.geosphere.congregationplaner.user.domain.model.Gender
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.repository.AdminContactRepository
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
@@ -148,7 +148,7 @@ private fun toDomain(document: DocumentSnapshot, congregation: CongregationRef):
     profile = MemberProfile(
         lastName = document.getString("lastName").orEmpty(),
         firstName = document.getString("firstName").orEmpty(),
-        category = MemberCategory.fromValue(document.getString("category")),
+        gender = Gender.fromValue(document.getString("gender")),
         baptized = document.getBoolean("baptized") ?: false,
         appointment = Appointment.fromValue(document.getString("appointment")),
         mobilePhone = document.getString("mobilePhone").orEmpty(),
@@ -218,7 +218,7 @@ private fun AppUser.toAccessFields(): Map<String, Any> = mapOf(
 private fun MemberProfile.toFirestoreFields(): Map<String, Any?> = mapOf(
     "lastName" to lastName,
     "firstName" to firstName,
-    "category" to category?.name,
+    "gender" to gender?.name,
     "baptized" to baptized,
     "appointment" to appointment.name,
     "mobilePhone" to mobilePhone,

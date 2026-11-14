@@ -22,7 +22,7 @@ import de.geosphere.congregationplaner.theming.nightCardColors
 import de.geosphere.congregationplaner.ui.field.AppSwitch
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
-import de.geosphere.congregationplaner.user.domain.model.MemberCategory
+import de.geosphere.congregationplaner.user.domain.model.Gender
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.presentation.contact.ContactFields
 import de.geosphere.congregationplaner.user.presentation.contact.ProfileField
@@ -54,12 +54,12 @@ internal fun MemberEditor(
                 onChange(profile.copy(lastName = it))
             })
 
-            ChipGroup("Gruppe") {
-                MemberCategory.entries.forEach { category ->
+            ChipGroup("Geschlecht") {
+                Gender.entries.forEach { gender ->
                     FilterChip(
-                        selected = profile.category == category,
-                        onClick = { onChange(profile.copy(category = category)) },
-                        label = { Text(category.label) },
+                        selected = profile.gender == gender,
+                        onClick = { onChange(profile.copy(gender = gender)) },
+                        label = { Text(gender.label) },
                     )
                 }
             }
@@ -68,10 +68,8 @@ internal fun MemberEditor(
                 AppSwitch(
                     checked = profile.baptized,
                     onCheckedChange = { onChange(profile.copy(baptized = it)) },
-                    enabled = profile.category != MemberCategory.CHILD,
                 )
             }
-            SpeakerFields(editor, enabled = !isSaving, onChange = onChange, onTalksChange = onTalksChange)
             if (profile.canHaveAppointment) {
                 ChipGroup("Dienstamt") {
                     Appointment.entries.forEach { appointment ->
@@ -83,6 +81,7 @@ internal fun MemberEditor(
                     }
                 }
             }
+            SpeakerFields(editor, enabled = !isSaving, onChange = onChange, onTalksChange = onTalksChange)
 
             ContactFields(profile, enabled = !isSaving, onChange = onChange)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -135,7 +134,7 @@ private fun MemberEditorPreview() = PreviewThemeWrapper {
             profile = MemberProfile(
                 lastName = "Muster",
                 firstName = "Max",
-                category = MemberCategory.BROTHER,
+                gender = Gender.MALE,
                 baptized = true,
                 appointment = Appointment.ELDER,
                 mobilePhone = "+49 170 1234567",
