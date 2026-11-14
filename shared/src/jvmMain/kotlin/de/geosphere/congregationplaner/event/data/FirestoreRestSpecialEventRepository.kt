@@ -1,7 +1,10 @@
 package de.geosphere.congregationplaner.event.data
 
+import com.google.gson.JsonArray
 import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import de.geosphere.congregationplaner.auth.data.FirebaseAuthManager
+import de.geosphere.congregationplaner.event.domain.model.EventAudience
 import de.geosphere.congregationplaner.event.domain.model.SpecialEvent
 import de.geosphere.congregationplaner.event.domain.repository.SpecialEventRepository
 import de.geosphere.congregationplaner.firestore.FirestoreRestClient
@@ -31,6 +34,16 @@ internal class FirestoreRestSpecialEventRepository(
         client.listAllDocuments(congregation.eventsPath).mapNotNull { it.toSpecialEvent() }
     }
 
+    override fun observeFor(congregation: CongregationRef, groups: Set<EventAudience>): Flow<List<SpecialEvent>> =
+        pollingFlow {
+            val url = "${client.collectionUrl(congregation.documentPath)}:runQuery"
+            // Each result row holds a document, except the row that only reports the read time.
+            JsonParser.parseString(client.request("POST", url, audienceQuery(groups)))
+                .asJsonArray
+                .mapNotNull { row -> row.asJsonObject.getAsJsonObject("document") }
+                .mapNotNull { parseDocument(it).toSpecialEvent() }
+        }
+
     override suspend fun save(congregation: CongregationRef, event: SpecialEvent): Result<SpecialEvent> =
         runCatchingIo {
             val body = firestoreFields(
@@ -38,7 +51,7 @@ internal class FirestoreRestSpecialEventRepository(
                     add("title", firestoreString(event.title))
                     add("startDate", firestoreString(event.startDate.toString()))
                     add("endDate", firestoreString(event.endDate.toString()))
-                    add("audience", firestoreStringArray(event.audienceValues()))
+                    add(AUDIENCE_FIELD, firestoreStringArray(event.audienceValues()))
                 },
             )
             if (event.id.isBlank()) {
@@ -57,10 +70,24 @@ internal class FirestoreRestSpecialEventRepository(
     }.map {}
 }
 
+/** Strukturierte Abfrage: Ereignisse der Collection, deren `audience` eine der [groups] enthält. */
+private fun audienceQuery(groups: Set<EventAudience>): String {
+    val filter = JsonObject().apply {
+        add("field", JsonObject().apply { addProperty("fieldPath", AUDIENCE_FIELD) })
+        addProperty("op", "ARRAY_CONTAINS_ANY")
+        add("value", firestoreStringArray(groups.values()))
+    }
+    val query = JsonObject().apply {
+        add("from", JsonArray().apply { add(JsonObject().apply { addProperty("collectionId", EVENTS_SUBCOLLECTION) }) })
+        add("where", JsonObject().apply { add("fieldFilter", filter) })
+    }
+    return JsonObject().apply { add("structuredQuery", query) }.toString()
+}
+
 private fun FirestoreRestDocument.toSpecialEvent(): SpecialEvent? = specialEventOf(
     id = id,
     title = fields.optionalStringField("title"),
     startDate = fields.optionalStringField("startDate"),
     endDate = fields.optionalStringField("endDate"),
-    audience = fields.stringArrayField("audience"),
+    audience = fields.stringArrayField(AUDIENCE_FIELD),
 )

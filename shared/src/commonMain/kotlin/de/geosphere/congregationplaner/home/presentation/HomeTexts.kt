@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner.home.presentation
 
+import de.geosphere.congregationplaner.event.domain.model.SpecialEvent
 import de.geosphere.congregationplaner.presentation.navigation.germanDayAndMonth
 import de.geosphere.congregationplaner.presentation.navigation.germanMonthName
 import de.geosphere.congregationplaner.presentation.navigation.germanWeekdayName
@@ -39,6 +40,23 @@ internal fun approvalsTitle(count: Int): String = when (count) {
 
 /** Marke an der Userverwaltung; ohne offene Freigaben gibt es keine. */
 internal fun approvalsBadge(count: Int?): String? = count?.takeIf { it > 0 }?.let { "$it offen" }
+
+/**
+ * Zeitraum eines Ereignisses auf der Startseite: „Fr, 11. Juni“ für einen Tag, „11.–13. Juni“ im selben Monat,
+ * sonst „30. Mai – 2. Juni“. shortcut: ohne Jahr, weil nur kommende Ereignisse erscheinen; bei Ereignissen mehr als
+ * ein Jahr im Voraus das Jahr ergänzen.
+ */
+internal fun eventDatesText(event: SpecialEvent): String {
+    val start = event.startDate
+    val end = event.endDate
+    return when {
+        event.isSingleDay -> "${germanWeekdayName(
+            start,
+        ).take(WEEKDAY_SHORT_LENGTH)}, ${start.day}. ${germanMonthName(start)}"
+        start.month == end.month && start.year == end.year -> "${start.day}.–${end.day}. ${germanMonthName(end)}"
+        else -> "${start.day}. ${germanMonthName(start)} – ${end.day}. ${germanMonthName(end)}"
+    }
+}
 
 internal fun talkSectionLabel(asHelper: Boolean): String =
     if (asHelper) "Als Vortragsplanungs-Helfer" else "Als Vortragsplaner"
