@@ -135,7 +135,7 @@ internal fun TalkReferenceContent(
 }
 
 @Composable
-private fun ErrorRow(message: String?, onDismiss: () -> Unit) {
+internal fun ErrorRow(message: String?, onDismiss: () -> Unit) {
     message?.let {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
@@ -147,7 +147,7 @@ private fun ErrorRow(message: String?, onDismiss: () -> Unit) {
 /** Liste links, Detail rechts; auf kleinen Bildschirmen nacheinander (siehe [rememberListDetailNavigation]). */
 @Composable
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
-private fun ReferenceListDetail(
+internal fun ReferenceListDetail(
     state: ListDetailState,
     onClose: () -> Unit,
     createLabel: String,

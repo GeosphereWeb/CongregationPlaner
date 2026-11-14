@@ -729,6 +729,48 @@ await expect('Admin vergibt die Helfer-Rolle', api('PATCH', rolesMask(roleTarget
 await expect('Helfer-Rolle zusammen mit der Planerrolle', api('PATCH', rolesMask(roleTarget.uid), rolesBody('TALK_HELPER', 'TALK_PLANNER'), congAdmin.token), true);
 await expect('Selbstregistrierung mit Helfer-Rolle', api('PATCH', registerPath(helperNewcomer), registerBody('helpernewcomer@test.de', { roles: ['TALK_HELPER'] }), helperNewcomer.token), false);
 
+// ---------- Besondere Ereignisse (CP-160) ----------
+const EVENTS = `${CONG}/events`;
+const event = (audience, extra = {}) => fields({ title: 'Kongress', startDate: '2027-06-11', endDate: '2027-06-13', audience, ...extra });
+const putEvent = (id, data, token = congAdmin.token) => api('PATCH', `${EVENTS}/${id}`, data, token);
+// Abfrage wie die App: nur Ereignisse für die eigenen Gruppen.
+const queryEvents = (groups, token, cong = CONG) => call('POST', `${FS}/${cong}:runQuery`, {
+  structuredQuery: {
+    from: [{ collectionId: 'events' }],
+    where: { fieldFilter: { field: { fieldPath: 'audience' }, op: 'ARRAY_CONTAINS_ANY', value: enc(groups) } },
+  },
+}, token);
+const elder = await signUp('elder@test.de');
+await api('PATCH', `${MEMBERS}/${elder.uid}`, memberDoc('elder@test.de', [], { gender: 'MALE', baptized: true, appointment: 'ELDER' }), owner);
+const sister = await signUp('sister@test.de');
+await api('PATCH', `${MEMBERS}/${sister.uid}`, memberDoc('sister@test.de', [], { gender: 'FEMALE', baptized: true }), owner);
+
+await expect('Admin legt ein Ereignis für alle an', putEvent('all', event(['ALL'])), true);
+await expect('Admin legt ein Ereignis für Älteste an', putEvent('elders', event(['ELDERS'])), true);
+await expect('Eintägiges Ereignis', putEvent('day', event(['SISTERS', 'BROTHERS'], { endDate: '2027-06-11' })), true);
+await expect('Ende vor Beginn', putEvent('bad', event(['ALL'], { endDate: '2027-06-10' })), false);
+await expect('Ohne Zielgruppe', putEvent('bad', event([])), false);
+await expect('Unbekannte Zielgruppe', putEvent('bad', event(['CHILDREN'])), false);
+await expect('Doppelte Zielgruppe', putEvent('bad', event(['ALL', 'ALL'])), false);
+await expect('Leerer Titel', putEvent('bad', event(['ALL'], { title: '' })), false);
+await expect('Ungültiges Datum', putEvent('bad', event(['ALL'], { startDate: '11.06.2027' })), false);
+await expect('Zusätzliches Feld', putEvent('bad', event(['ALL'], { note: 'x' })), false);
+await expect('Planer legt kein Ereignis an', putEvent('p', event(['ALL']), planner.token), false);
+await expect('Mitglied legt kein Ereignis an', putEvent('p', event(['ALL']), plain.token), false);
+await expect('Mitglied löscht kein Ereignis', api('DELETE', `${EVENTS}/all`, undefined, plain.token), false);
+
+await expect('Admin listet alle Ereignisse', api('GET', EVENTS, undefined, congAdmin.token), true);
+await expect('Ältester fragt seine Ereignisse ab', queryEvents(['ALL', 'BROTHERS', 'ELDERS'], elder.token), true);
+await expect('Ältester liest das Ereignis für Älteste', api('GET', `${EVENTS}/elders`, undefined, elder.token), true);
+await expect('Schwester fragt ihre Ereignisse ab', queryEvents(['ALL', 'SISTERS'], sister.token), true);
+await expect('Schwester liest das Ereignis für alle', api('GET', `${EVENTS}/all`, undefined, sister.token), true);
+await expect('Schwester liest das Ereignis für Älteste nicht', api('GET', `${EVENTS}/elders`, undefined, sister.token), false);
+await expect('Schwester fragt Ereignisse für Älteste ab', queryEvents(['ELDERS'], sister.token), false);
+await expect('Schwester listet alle Ereignisse', api('GET', EVENTS, undefined, sister.token), false);
+await expect('Nicht freigegebenes Mitglied fragt nicht ab', queryEvents(['ALL'], pending.token), false);
+await expect('Fremde Versammlung fragt nicht ab', queryEvents(['ALL'], sister.token, OTHER_CONG), false);
+await expect('Admin löscht ein Ereignis', api('DELETE', `${EVENTS}/day`, undefined, congAdmin.token), true);
+
 console.log(`${count} checks, ${failures.length} failures`);
 failures.forEach((failure) => console.log(`FAILURE: ${failure}`));
 process.exitCode = failures.length === 0 ? 0 : 1;
