@@ -7,61 +7,68 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class MemberProfileTest {
+    private val elder = MemberProfile(gender = Gender.MALE, baptized = true, appointment = Appointment.ELDER)
+
     @Test
     fun `only baptized brothers can have an appointment`() {
-        assertTrue(MemberProfile(category = MemberCategory.BROTHER, baptized = true).canHaveAppointment)
-        assertFalse(MemberProfile(category = MemberCategory.BROTHER, baptized = false).canHaveAppointment)
-        assertFalse(MemberProfile(category = MemberCategory.SISTER, baptized = true).canHaveAppointment)
-        assertFalse(MemberProfile(category = null, baptized = true).canHaveAppointment)
+        assertTrue(MemberProfile(gender = Gender.MALE, baptized = true).canHaveAppointment)
+        assertFalse(MemberProfile(gender = Gender.MALE, baptized = false).canHaveAppointment)
+        assertFalse(MemberProfile(gender = Gender.FEMALE, baptized = true).canHaveAppointment)
+        assertFalse(MemberProfile(gender = null, baptized = true).canHaveAppointment)
     }
 
     @Test
-    fun `only brothers can be speakers and normalizing drops the flag for everyone else`() {
-        assertFalse(MemberProfile().isSpeaker)
-        assertTrue(MemberProfile(category = MemberCategory.BROTHER).canBeSpeaker)
-        assertFalse(MemberProfile(category = MemberCategory.SISTER).canBeSpeaker)
-        assertFalse(MemberProfile(category = MemberCategory.CHILD).canBeSpeaker)
-        assertFalse(MemberProfile(category = null).canBeSpeaker)
+    fun `brother and sister follow from gender and baptism`() {
+        assertTrue(MemberProfile(gender = Gender.MALE, baptized = true).isBrother)
+        assertFalse(MemberProfile(gender = Gender.MALE).isBrother)
+        assertFalse(MemberProfile(gender = Gender.FEMALE, baptized = true).isBrother)
+        assertTrue(MemberProfile(gender = Gender.FEMALE, baptized = true).isSister)
+        assertFalse(MemberProfile(gender = Gender.FEMALE).isSister)
+        assertFalse(MemberProfile(baptized = true).isSister)
+    }
 
-        val speaker = MemberProfile(category = MemberCategory.BROTHER, isSpeaker = true)
+    @Test
+    fun `only elders and ministerial servants can be speakers and normalizing drops the flag for everyone else`() {
+        val speaker = elder.copy(isSpeaker = true)
+
+        assertFalse(MemberProfile().isSpeaker)
+        assertTrue(elder.canBeSpeaker)
+        assertTrue(elder.copy(appointment = Appointment.MINISTERIAL_SERVANT).canBeSpeaker)
+        assertFalse(elder.copy(appointment = Appointment.NONE).canBeSpeaker)
+        assertFalse(elder.copy(gender = Gender.FEMALE).canBeSpeaker)
+        assertFalse(elder.copy(baptized = false).canBeSpeaker)
+
         assertTrue(speaker.normalized().isSpeaker)
-        assertFalse(speaker.copy(category = MemberCategory.SISTER).normalized().isSpeaker)
-        assertFalse(speaker.copy(category = null).normalized().isSpeaker)
+        assertFalse(speaker.copy(appointment = Appointment.NONE).normalized().isSpeaker)
+        assertFalse(speaker.copy(gender = Gender.FEMALE).normalized().isSpeaker)
+        assertFalse(speaker.copy(gender = null).normalized().isSpeaker)
+        assertFalse(speaker.copy(baptized = false).normalized().isSpeaker)
     }
 
     @Test
     fun `normalizing sorts the talks of a speaker and drops them for everyone else`() {
-        val speaker =
-            MemberProfile(category = MemberCategory.BROTHER, isSpeaker = true, talkNumbers = listOf(45, 12, 45))
+        val speaker = elder.copy(isSpeaker = true, talkNumbers = listOf(45, 12, 45))
 
         assertEquals(listOf(12, 45), speaker.normalized().talkNumbers)
         assertTrue(speaker.copy(isSpeaker = false).normalized().talkNumbers.isEmpty())
-        assertTrue(speaker.copy(category = MemberCategory.SISTER).normalized().talkNumbers.isEmpty())
+        assertTrue(speaker.copy(gender = Gender.FEMALE).normalized().talkNumbers.isEmpty())
     }
 
     @Test
     fun `only baptized brothers with an appointment can be chairmen`() {
-        val elder = MemberProfile(category = MemberCategory.BROTHER, baptized = true, appointment = Appointment.ELDER)
-
         assertTrue(elder.canBeChairman)
         assertTrue(elder.copy(appointment = Appointment.MINISTERIAL_SERVANT).canBeChairman)
         assertFalse(elder.copy(appointment = Appointment.NONE).canBeChairman)
-        assertFalse(elder.copy(category = MemberCategory.SISTER).canBeChairman)
+        assertFalse(elder.copy(gender = Gender.FEMALE).canBeChairman)
         assertFalse(elder.copy(baptized = false).canBeChairman)
     }
 
     @Test
-    fun `normalized drops baptism of children and appointments without prerequisites`() {
-        val elder = MemberProfile(category = MemberCategory.BROTHER, baptized = true, appointment = Appointment.ELDER)
-
+    fun `normalized drops appointments without prerequisites and keeps the baptism`() {
         assertEquals(elder, elder.normalized())
         assertEquals(
-            MemberProfile(category = MemberCategory.CHILD, baptized = false, appointment = Appointment.NONE),
-            elder.copy(category = MemberCategory.CHILD).normalized(),
-        )
-        assertEquals(
-            MemberProfile(category = MemberCategory.SISTER, baptized = true, appointment = Appointment.NONE),
-            elder.copy(category = MemberCategory.SISTER).normalized(),
+            MemberProfile(gender = Gender.FEMALE, baptized = true, appointment = Appointment.NONE),
+            elder.copy(gender = Gender.FEMALE).normalized(),
         )
         assertEquals(Appointment.NONE, elder.copy(baptized = false).normalized().appointment)
     }
@@ -86,10 +93,10 @@ class MemberProfileTest {
     }
 
     @Test
-    fun `unknown category and appointment values fall back to safe defaults`() {
-        assertEquals(MemberCategory.SISTER, MemberCategory.fromValue("SISTER"))
-        assertNull(MemberCategory.fromValue("UNCLE"))
-        assertNull(MemberCategory.fromValue(null))
+    fun `unknown gender and appointment values fall back to safe defaults`() {
+        assertEquals(Gender.FEMALE, Gender.fromValue("FEMALE"))
+        assertNull(Gender.fromValue("SISTER"))
+        assertNull(Gender.fromValue(null))
         assertEquals(Appointment.ELDER, Appointment.fromValue("ELDER"))
         assertEquals(Appointment.NONE, Appointment.fromValue("PIONEER"))
         assertEquals(Appointment.NONE, Appointment.fromValue(null))

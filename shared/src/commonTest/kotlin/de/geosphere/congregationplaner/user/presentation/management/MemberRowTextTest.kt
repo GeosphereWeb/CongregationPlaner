@@ -2,7 +2,7 @@ package de.geosphere.congregationplaner.user.presentation.management
 
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
-import de.geosphere.congregationplaner.user.domain.model.MemberCategory
+import de.geosphere.congregationplaner.user.domain.model.Gender
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -16,10 +16,10 @@ class MemberRowTextTest {
         assertNull(memberLoginEmail(AppUser(uid = "3")))
         assertNull(memberLoginEmail(AppUser(uid = "4", email = "kind@example.com", hasAccount = false)))
     }
-    private val brother = MemberProfile(lastName = "Muster", firstName = "Max", category = MemberCategory.BROTHER)
+    private val brother = MemberProfile(lastName = "Muster", firstName = "Max", gender = Gender.MALE)
 
     @Test
-    fun `the subtitle shows category baptism and roles`() {
+    fun `the subtitle shows the brother and his roles`() {
         val member = AppUser(
             uid = "1",
             approved = true,
@@ -27,7 +27,7 @@ class MemberRowTextTest {
             profile = brother.copy(baptized = true),
         )
 
-        assertEquals("Bruder · getauft · Versammlungsadmin · Vortragsplaner", memberSubtitle(member))
+        assertEquals("Bruder · Versammlungsadmin · Vortragsplaner", memberSubtitle(member))
     }
 
     @Test
@@ -39,15 +39,15 @@ class MemberRowTextTest {
     }
 
     @Test
-    fun `a child without account is shown as such and never pending`() {
-        val child = AppUser(
+    fun `an unbaptized person without account shows the gender and is never pending`() {
+        val person = AppUser(
             uid = "1",
             hasAccount = false,
-            profile = MemberProfile(lastName = "Muster", firstName = "Lena", category = MemberCategory.CHILD),
+            profile = MemberProfile(lastName = "Muster", firstName = "Lena", gender = Gender.FEMALE),
         )
 
-        assertEquals("Kind · Ohne Konto", memberSubtitle(child))
-        assertNull(memberBadge(child))
+        assertEquals("Weiblich · Ohne Konto", memberSubtitle(person))
+        assertNull(memberBadge(person))
     }
 
     @Test
@@ -59,14 +59,16 @@ class MemberRowTextTest {
     }
 
     @Test
-    fun `an approved sister without role shows only category and baptism`() {
+    fun `an approved sister without role is shown as sister`() {
         val sister = AppUser(
             uid = "1",
             approved = true,
-            profile = MemberProfile(category = MemberCategory.SISTER, baptized = true),
+            profile = MemberProfile(gender = Gender.FEMALE, baptized = true),
         )
 
-        assertEquals("Schwester · getauft", memberSubtitle(sister))
+        assertEquals("Schwester", memberSubtitle(sister))
+        // Without a gender only the baptism is known.
+        assertEquals("getauft", memberSubtitle(sister.copy(profile = MemberProfile(baptized = true))))
     }
 
     @Test

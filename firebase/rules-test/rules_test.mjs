@@ -68,7 +68,7 @@ async function expect(name, pending, allowed) {
 
 // Vollständiges Mitgliedsdokument: die Rules verlangen alle Profilfelder, die App schreibt sie immer.
 const fullProfile = {
-  lastName: '', firstName: '', category: null, baptized: false, appointment: 'NONE', mobilePhone: '', landlinePhone: '',
+  lastName: '', firstName: '', gender: null, baptized: false, appointment: 'NONE', mobilePhone: '', landlinePhone: '',
   isSpeaker: false, talkNumbers: [], emails: [], street: '', postalCode: '', city: '', emergencyContacts: [],
 };
 const memberFields = (email, roles, extra = {}) =>
@@ -333,7 +333,7 @@ await expect('Mitglied ändert nur den eigenen Nachnamen', api('PATCH', ownName(
 await expect('Mitglied mit leerem Namen', api('PATCH', ownName(plain.uid, 'lastName', 'firstName'), nameBody('', ''), plain.token), true);
 await expect('Mitglied mit zu langem Namen', api('PATCH', ownName(plain.uid, 'lastName', 'firstName'), nameBody('x'.repeat(101), 'Max'), plain.token), false);
 await expect('Mitglied ändert den Namen eines anderen', api('PATCH', ownName(planner.uid, 'lastName', 'firstName'), nameBody('Fremd', 'Name'), plain.token), false);
-await expect('Mitglied setzt zum Namen die Kategorie', api('PATCH', ownName(plain.uid, 'lastName', 'category'), { fields: { lastName: { stringValue: 'Muster' }, category: { stringValue: 'BROTHER' } } }, plain.token), false);
+await expect('Mitglied setzt zum Namen das Geschlecht', api('PATCH', ownName(plain.uid, 'lastName', 'gender'), { fields: { lastName: { stringValue: 'Muster' }, gender: { stringValue: 'MALE' } } }, plain.token), false);
 await expect('Mitglied setzt Namen und Telefonnummer zusammen', api('PATCH', ownName(plain.uid, 'lastName', 'mobilePhone'), { fields: { lastName: { stringValue: 'Muster' }, mobilePhone: { stringValue: '0171' } } }, plain.token), true);
 await expect('Mitglied setzt sich als Redner', api('PATCH', ownName(plain.uid, 'isSpeaker'), { fields: { isSpeaker: { booleanValue: true } } }, plain.token), false);
 await expect('Vortragsplaner ändert den eigenen Namen', api('PATCH', ownName(planner.uid, 'lastName', 'firstName'), nameBody('Planer', 'Paul'), planner.token), true);
@@ -620,7 +620,13 @@ await expect('Person ohne Konto ohne Namen', call('POST', `${FS}/${MEMBERS}`, fi
 await expect('Vortragsplaner erfasst keine Person ohne Konto', call('POST', `${FS}/${MEMBERS}`, fields(accountless), planner.token), false);
 
 // Vorträge heimischer Redner (CP-157): nur bei Rednern, höchstens 200 Nummern, das Mitglied pflegt sie nicht selbst.
-const speakerless = { ...accountless, category: 'BROTHER', baptized: true };
+const speakerless = { ...accountless, gender: 'MALE', baptized: true, appointment: 'ELDER' };
+await expect('Redner ohne Dienstamt', call('POST', `${FS}/${MEMBERS}`, fields({ ...speakerless, appointment: 'NONE', isSpeaker: true }), congAdmin.token), false);
+await expect('Dienstamt bei einer Schwester', call('POST', `${FS}/${MEMBERS}`, fields({ ...speakerless, gender: 'FEMALE' }), congAdmin.token), false);
+await expect('Dienstamt ohne Taufe', call('POST', `${FS}/${MEMBERS}`, fields({ ...speakerless, baptized: false }), congAdmin.token), false);
+await expect('Unbekanntes Geschlecht', call('POST', `${FS}/${MEMBERS}`, fields({ ...accountless, gender: 'CHILD' }), congAdmin.token), false);
+await expect('Altes Feld category', call('POST', `${FS}/${MEMBERS}`, fields({ ...accountless, category: 'BROTHER' }), congAdmin.token), false);
+await expect('Versammlungsadmin erfasst eine getaufte Schwester', call('POST', `${FS}/${MEMBERS}`, fields({ ...accountless, gender: 'FEMALE', baptized: true }), congAdmin.token), true);
 await expect('Versammlungsadmin erfasst einen Redner mit Vorträgen', call('POST', `${FS}/${MEMBERS}`, fields({ ...speakerless, isSpeaker: true, talkNumbers: [12, 45] }), congAdmin.token), true);
 await expect('Vorträge ohne Redner', call('POST', `${FS}/${MEMBERS}`, fields({ ...speakerless, talkNumbers: [12] }), congAdmin.token), false);
 await expect('Mehr als 200 Vorträge', call('POST', `${FS}/${MEMBERS}`, fields({ ...speakerless, isSpeaker: true, talkNumbers: Array.from({ length: 201 }, (_, i) => i + 1) }), congAdmin.token), false);

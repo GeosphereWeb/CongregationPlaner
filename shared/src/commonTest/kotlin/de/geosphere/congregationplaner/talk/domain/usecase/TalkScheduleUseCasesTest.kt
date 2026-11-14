@@ -14,7 +14,7 @@ import de.geosphere.congregationplaner.talk.testing.FakeWeekEventRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
-import de.geosphere.congregationplaner.user.domain.model.MemberCategory
+import de.geosphere.congregationplaner.user.domain.model.Gender
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.usecase.ObserveMembersUseCase
 import de.geosphere.congregationplaner.user.testing.FakeUserRepository
@@ -294,23 +294,23 @@ class TalkScheduleUseCasesTest {
 
     @Test
     fun `chairmen are the sorted brothers with an appointment and a last name`() = runBlocking {
-        fun member(uid: String, last: String, category: MemberCategory?, appointment: Appointment) = AppUser(
+        fun member(uid: String, last: String, gender: Gender?, appointment: Appointment) = AppUser(
             uid = uid,
             profile = MemberProfile(
                 lastName = last,
                 firstName = "X",
-                category = category,
+                gender = gender,
                 baptized = true,
                 appointment = appointment,
             ),
         )
         val users = FakeUserRepository(
             members = listOf(
-                member("1", "Zander", MemberCategory.BROTHER, Appointment.ELDER),
-                member("2", "Berg", MemberCategory.BROTHER, Appointment.MINISTERIAL_SERVANT),
-                member("3", "Alt", MemberCategory.BROTHER, Appointment.NONE),
-                member("4", "Schwester", MemberCategory.SISTER, Appointment.ELDER),
-                member("5", "", MemberCategory.BROTHER, Appointment.ELDER),
+                member("1", "Zander", Gender.MALE, Appointment.ELDER),
+                member("2", "Berg", Gender.MALE, Appointment.MINISTERIAL_SERVANT),
+                member("3", "Alt", Gender.MALE, Appointment.NONE),
+                member("4", "Schwester", Gender.FEMALE, Appointment.ELDER),
+                member("5", "", Gender.MALE, Appointment.ELDER),
             ),
         )
 
