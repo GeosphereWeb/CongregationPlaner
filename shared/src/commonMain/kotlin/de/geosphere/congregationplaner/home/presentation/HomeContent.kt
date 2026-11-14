@@ -11,6 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import de.geosphere.congregationplaner.event.domain.model.SpecialEvent
 import de.geosphere.congregationplaner.home.domain.model.HomeSummary
 import de.geosphere.congregationplaner.home.domain.model.TalkSummary
 import de.geosphere.congregationplaner.organization.domain.model.SelectedCongregation
@@ -54,6 +55,10 @@ internal fun HomeContent(
         TeleprompterHeader(header.stepLabel, header.current, previous = header.previous, compact = true)
         NightPanel(Modifier.weight(1f)) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (summary.events.isNotEmpty()) {
+                    val canManage = CongregationSection.SPECIAL_EVENTS in visible.congregationSections
+                    EventsBlock(summary.events, canManage, actions)
+                }
                 summary.talk?.let { TalkBlock(it, actions) }
                 summary.pendingApprovals?.let { ApprovalsBlock(it, actions) }
                 if (CongregationSection.MIDWEEK_PLANNING in visible.congregationSections) {
@@ -76,6 +81,16 @@ internal fun HomeContent(
                 )
             }
         }
+    }
+}
+
+/** Die kommenden Ereignisse; der Versammlungsadmin öffnet mit einem Tipp ihre Pflege. */
+@Composable
+private fun EventsBlock(events: List<SpecialEvent>, canManage: Boolean, actions: AppNavigationActions) {
+    SectionLabel("Besondere Ereignisse", Modifier.padding(top = 8.dp), StatusTone.Sky)
+    val open = { if (canManage) actions.onOpenCongregationSection(CongregationSection.SPECIAL_EVENTS) }
+    events.forEach { event ->
+        NavCardRow(title = event.title, onClick = open, supportingText = eventDatesText(event))
     }
 }
 
@@ -147,6 +162,10 @@ private val previewState = HomeUiState(
     HomeSummary(
         talk = TalkSummary(previewNext, listOf(LocalDate(2026, 11, 15), LocalDate(2026, 11, 22))),
         pendingApprovals = 2,
+        events = listOf(
+            SpecialEvent("1", "Kreiskongress", LocalDate(2026, 11, 14), LocalDate(2026, 11, 15)),
+            SpecialEvent("2", "Besuch des Kreisaufsehers", LocalDate(2026, 12, 1)),
+        ),
     ),
 )
 
@@ -169,3 +188,10 @@ private fun HomeGlobalAdminPreview() = HomePreview(HomeUiState(), VisibleNavigat
 @Preview(name = "Ohne Rolle", widthDp = 360, heightDp = 780)
 @Composable
 private fun HomeWithoutRolePreview() = HomePreview(HomeUiState(), VisibleNavigation())
+
+@Preview(name = "Ohne Rolle mit Ereignis", widthDp = 360, heightDp = 780)
+@Composable
+private fun HomeWithoutRoleWithEventPreview() = HomePreview(
+    HomeUiState(HomeSummary(events = listOf(SpecialEvent("1", "Kongress", LocalDate(2026, 11, 20))))),
+    VisibleNavigation(),
+)

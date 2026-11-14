@@ -6,6 +6,7 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.EventListener
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
 import de.geosphere.congregationplaner.event.domain.model.EventAudience
 import de.geosphere.congregationplaner.event.domain.model.SpecialEvent
@@ -58,6 +59,24 @@ class FirestoreSpecialEventRepositoryTest {
             repository.observeAll(congregation).first(),
         )
         verify { registration.remove() }
+    }
+
+    @Test
+    fun `observeFor queries the events of the groups`() = runBlocking {
+        val query = mockk<Query>()
+        every { collection.whereArrayContainsAny("audience", listOf("ALL", "SISTERS")) } returns query
+        val listener = slot<EventListener<QuerySnapshot>>()
+        val document = document("ev1", "Kongress", "2027-06-11", "2027-06-13", listOf("BROTHERS", "SISTERS"))
+        val snapshot = mockk<QuerySnapshot> { every { documents } returns listOf(document) }
+        every { query.addSnapshotListener(capture(listener)) } answers {
+            listener.captured.onEvent(snapshot, null)
+            registration
+        }
+
+        assertEquals(
+            listOf(congress),
+            repository.observeFor(congregation, setOf(EventAudience.SISTERS, EventAudience.ALL)).first(),
+        )
     }
 
     @Test

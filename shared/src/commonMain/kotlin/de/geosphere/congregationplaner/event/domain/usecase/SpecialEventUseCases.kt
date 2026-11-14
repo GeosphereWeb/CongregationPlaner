@@ -3,6 +3,7 @@ package de.geosphere.congregationplaner.event.domain.usecase
 import de.geosphere.congregationplaner.event.domain.model.EventAudience
 import de.geosphere.congregationplaner.event.domain.model.SpecialEvent
 import de.geosphere.congregationplaner.event.domain.model.SpecialEventException
+import de.geosphere.congregationplaner.event.domain.model.eventGroups
 import de.geosphere.congregationplaner.event.domain.permission.SpecialEventPolicy
 import de.geosphere.congregationplaner.event.domain.repository.SpecialEventRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
@@ -10,6 +11,7 @@ import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.datetime.LocalDate
 
 /** Alle Ereignisse der Versammlung für die Pflege, nach Beginn und Titel sortiert; ohne Berechtigung leer. */
 @Inject
@@ -21,10 +23,30 @@ class ObserveManagedEventsUseCase(
         val congregation = user.congregation
         if (congregation == null || !policy.canManage(user)) return flowOf(emptyList())
         return repository.observeAll(congregation).map { events ->
-            events.sortedWith(compareBy<SpecialEvent> { it.startDate }.thenBy { it.title.lowercase() })
+            events.sortedWith(byStartAndTitle)
         }
     }
 }
+
+/**
+ * Die kommenden Ereignisse für die Gruppen des Mitglieds (ADR-0033), nach Beginn sortiert: alles, was heute oder
+ * später endet. Ohne Freigabe leer, ohne dass etwas abgefragt wird (die Rules würden es ablehnen).
+ */
+@Inject
+class ObserveUpcomingEventsUseCase(
+    private val repository: SpecialEventRepository,
+    private val policy: SpecialEventPolicy,
+) {
+    operator fun invoke(user: AppUser, today: LocalDate): Flow<List<SpecialEvent>> {
+        val congregation = user.congregation
+        if (congregation == null || !policy.canSeeEvents(user)) return flowOf(emptyList())
+        return repository.observeFor(congregation, user.profile.eventGroups()).map { events ->
+            events.filter { it.endDate >= today }.sortedWith(byStartAndTitle)
+        }
+    }
+}
+
+private val byStartAndTitle = compareBy<SpecialEvent> { it.startDate }.thenBy { it.title.lowercase() }
 
 /**
  * Legt ein Ereignis an oder ändert es: Der Titel wird zugeschnitten und ist Pflicht, das Ende liegt nicht vor dem
