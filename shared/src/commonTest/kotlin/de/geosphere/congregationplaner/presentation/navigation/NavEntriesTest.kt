@@ -15,7 +15,13 @@ class NavEntriesTest {
         val entries = congregationEntries(all, CongregationSection.EXTERNAL_SPEAKERS, isWide = false) {}
 
         assertEquals(
-            listOf("Allgemeine Versammlungsdaten", "Userverwaltung", "Planung unter der Woche", "Vortragsplanung"),
+            listOf(
+                "Allgemeine Versammlungsdaten",
+                "Userverwaltung",
+                "Besondere Ereignisse",
+                "Planung unter der Woche",
+                "Vortragsplanung",
+            ),
             entries.map { it.label },
         )
         val talk = entries.last()
@@ -69,6 +75,7 @@ class NavEntriesTest {
 
         assertEquals("Name, Zusammenkunftszeiten", entries.getValue("Allgemeine Versammlungsdaten").supportingText)
         assertEquals("Mitglieder, Rollen, Freigaben", entries.getValue("Userverwaltung").supportingText)
+        assertEquals("Termine auf der Startseite", entries.getValue("Besondere Ereignisse").supportingText)
         assertEquals(StatusTone.Sky, entries.getValue("Planung unter der Woche").tone)
         assertEquals("Aufgabenplaner", entries.getValue("Planung unter der Woche").supportingText)
         assertFalse(entries.getValue("Allgemeine Versammlungsdaten").nested)

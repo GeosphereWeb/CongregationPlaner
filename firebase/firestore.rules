@@ -262,6 +262,39 @@ service cloud.firestore {
         (hasRole(get(memberPath).data, 'TALK_PLANNER') || hasRole(get(memberPath).data, 'TALK_HELPER'));
     }
 
+    // The groups of a member that special events may address (ADR-0033): every member is in 'ALL'; brothers and
+    // sisters follow from gender and baptism, elders and ministerial servants from the appointment.
+    function eventGroups(member) {
+      let brother = member.gender == 'MALE' && member.baptized == true;
+      return ['ALL']
+        .concat(brother ? ['BROTHERS'] : [])
+        .concat(member.gender == 'FEMALE' && member.baptized == true ? ['SISTERS'] : [])
+        .concat(brother && member.appointment == 'ELDER' ? ['ELDERS'] : [])
+        .concat(brother && member.appointment == 'MINISTERIAL_SERVANT' ? ['MINISTERIAL_SERVANTS'] : []);
+    }
+
+    // Approved members of exactly this congregation see the special events addressed to one of their groups.
+    function canSeeEvent(regionId, subregionId, branchId, countryId, circuitId, congId, data) {
+      let memberPath = /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/country/$(countryId)/circuit/$(circuitId)/congregation/$(congId)/members/$(request.auth.uid);
+      return isAuthenticated() &&
+        exists(memberPath) &&
+        get(memberPath).data.approved == true &&
+        data.audience.hasAny(eventGroups(get(memberPath).data));
+    }
+
+    // Special event of a congregation: title (1..100), startDate <= endDate ('yyyy-MM-dd') and the addressed
+    // groups (1..5, no duplicates).
+    function isValidSpecialEvent(data) {
+      return data.keys().hasOnly(['title', 'startDate', 'endDate', 'audience']) &&
+        data.keys().hasAll(['title', 'startDate', 'endDate', 'audience']) &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 100 &&
+        isValidDateId(data.startDate) && isValidDateId(data.endDate) &&
+        data.startDate <= data.endDate &&
+        data.audience is list && data.audience.size() >= 1 &&
+        data.audience.toSet().size() == data.audience.size() &&
+        data.audience.toSet().hasOnly(['ALL', 'BROTHERS', 'SISTERS', 'ELDERS', 'MINISTERIAL_SERVANTS']);
+    }
+
     function isValidWeekEvent(data) {
       return data.keys().hasOnly(['name', 'cancelsTalk']) &&
         data.keys().hasAll(['name', 'cancelsTalk']) &&
@@ -832,6 +865,17 @@ service cloud.firestore {
                     (canViewTalkPlanning(regionId, subregionId, branchId, countryId, circuitId, congId) &&
                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['confirmed']) &&
                       request.resource.data.confirmed is bool);
+                }
+
+                // ---------------------------------------------------------
+                // Special events of a congregation (CP-160): maintained by admins, read by the addressed groups
+                // ---------------------------------------------------------
+                match /events/{eventId} {
+                  allow read: if isCongregationAdmin(regionId, subregionId, branchId, countryId, circuitId, congId) ||
+                    canSeeEvent(regionId, subregionId, branchId, countryId, circuitId, congId, resource.data);
+                  allow create, update: if isCongregationAdmin(regionId, subregionId, branchId, countryId, circuitId, congId) &&
+                    isValidSpecialEvent(request.resource.data);
+                  allow delete: if isCongregationAdmin(regionId, subregionId, branchId, countryId, circuitId, congId);
                 }
 
                 // ---------------------------------------------------------
