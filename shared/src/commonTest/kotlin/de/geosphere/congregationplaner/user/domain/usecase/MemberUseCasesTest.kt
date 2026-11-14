@@ -4,7 +4,7 @@ import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.EmergencyContact
-import de.geosphere.congregationplaner.user.domain.model.MemberCategory
+import de.geosphere.congregationplaner.user.domain.model.Gender
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.MemberProfileException
 import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
@@ -156,16 +156,19 @@ class MemberUseCasesTest {
         suspend fun errorFor(profile: MemberProfile, hasAccount: Boolean = true) =
             useCase(admin, member.copy(hasAccount = hasAccount, profile = profile)).exceptionOrNull()
 
-        assertIs<MemberProfileException.BaptizedChild>(errorFor(profile(MemberCategory.CHILD, baptized = true)))
         assertIs<MemberProfileException.AppointmentNotAllowed>(
-            errorFor(profile(MemberCategory.SISTER, baptized = true, elder = true)),
+            errorFor(profile(Gender.FEMALE, baptized = true, elder = true)),
         )
-        assertIs<MemberProfileException.AppointmentNotAllowed>(errorFor(profile(MemberCategory.BROTHER, elder = true)))
+        assertIs<MemberProfileException.AppointmentNotAllowed>(errorFor(profile(Gender.MALE, elder = true)))
         assertIs<MemberProfileException.SpeakerNotAllowed>(
-            errorFor(MemberProfile(category = MemberCategory.SISTER, isSpeaker = true)),
+            errorFor(MemberProfile(gender = Gender.FEMALE, isSpeaker = true)),
         )
-        assertIs<MemberProfileException.SpeakerNotAllowed>(errorFor(MemberProfile(category = null, isSpeaker = true)))
-        val brother = MemberProfile(category = MemberCategory.BROTHER, isSpeaker = true)
+        assertIs<MemberProfileException.SpeakerNotAllowed>(errorFor(MemberProfile(gender = null, isSpeaker = true)))
+        // A brother without an appointment is no speaker.
+        assertIs<MemberProfileException.SpeakerNotAllowed>(
+            errorFor(profile(Gender.MALE, baptized = true).copy(isSpeaker = true)),
+        )
+        val brother = profile(Gender.MALE, baptized = true, elder = true).copy(isSpeaker = true)
         assertIs<MemberProfileException.InvalidTalks>(
             errorFor(brother.copy(isSpeaker = false, talkNumbers = listOf(1))),
         )
@@ -179,9 +182,9 @@ class MemberUseCasesTest {
         assertTrue(repository.updatedProfiles.isEmpty())
 
         useCase(admin, member).getOrThrow()
-        val elder = member.copy(profile = profile(MemberCategory.BROTHER, baptized = true, elder = true))
+        val elder = member.copy(profile = profile(Gender.MALE, baptized = true, elder = true))
         useCase(admin, elder).getOrThrow()
-        val speaker = member.copy(profile = MemberProfile(category = MemberCategory.BROTHER, isSpeaker = true))
+        val speaker = member.copy(profile = brother)
         useCase(admin, speaker).getOrThrow()
         val withTalks = speaker.copy(profile = speaker.profile.copy(talkNumbers = listOf(45, 12, 12)))
         useCase(admin, withTalks).getOrThrow()
@@ -201,11 +204,11 @@ class MemberUseCasesTest {
 
         val created = useCase(
             admin,
-            MemberProfile(lastName = " Muster", firstName = "Lena ", category = MemberCategory.CHILD),
+            MemberProfile(lastName = " Muster", firstName = "Lena ", gender = Gender.FEMALE),
         ).getOrThrow()
 
         assertEquals(
-            MemberProfile(lastName = "Muster", firstName = "Lena", category = MemberCategory.CHILD),
+            MemberProfile(lastName = "Muster", firstName = "Lena", gender = Gender.FEMALE),
             created.profile,
         )
         assertEquals(listOf(created), repository.createdMembers)
@@ -327,10 +330,10 @@ class MemberUseCasesTest {
     @Test
     fun `own profile is trimmed and keeps the fields of the admin`() = runBlocking {
         val repository = FakeUserRepository()
-        val profile = MemberProfile(category = MemberCategory.BROTHER, mobilePhone = "0170", isSpeaker = true)
+        val profile = profile(Gender.MALE, baptized = true, elder = true).copy(mobilePhone = "0170", isSpeaker = true)
         val member = AppUser(uid = "1", approved = true, congregation = testCongregation, profile = profile)
         // The form must not be able to change the fields of the admin.
-        val form = profile.copy(lastName = " Muster ", firstName = " Max ", category = MemberCategory.SISTER)
+        val form = profile.copy(lastName = " Muster ", firstName = " Max ", gender = Gender.FEMALE)
 
         val saved = UpdateOwnProfileUseCase(repository)(member, form.copy(isSpeaker = false)).getOrThrow()
 
@@ -424,8 +427,8 @@ class MemberUseCasesTest {
         city = city,
         emergencyContacts = emergencyContacts,
     )
-    private fun profile(category: MemberCategory, baptized: Boolean = false, elder: Boolean = false) = MemberProfile(
-        category = category,
+    private fun profile(gender: Gender, baptized: Boolean = false, elder: Boolean = false) = MemberProfile(
+        gender = gender,
         baptized = baptized,
         appointment = if (elder) Appointment.ELDER else Appointment.NONE,
     )

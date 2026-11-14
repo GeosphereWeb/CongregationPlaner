@@ -19,7 +19,7 @@ import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.EmergencyContact
-import de.geosphere.congregationplaner.user.domain.model.MemberCategory
+import de.geosphere.congregationplaner.user.domain.model.Gender
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import io.mockk.every
 import io.mockk.mockk
@@ -123,7 +123,7 @@ class FirestoreUserRepositoryTest {
                 profile = mapOf(
                     "lastName" to "Muster",
                     "firstName" to "Max",
-                    "category" to "BROTHER",
+                    "gender" to "MALE",
                     "baptized" to true,
                     "appointment" to "MINISTERIAL_SERVANT",
                     "mobilePhone" to "0170 123",
@@ -153,7 +153,7 @@ class FirestoreUserRepositoryTest {
             MemberProfile(
                 lastName = "Muster",
                 firstName = "Max",
-                category = MemberCategory.BROTHER,
+                gender = Gender.MALE,
                 baptized = true,
                 appointment = Appointment.MINISTERIAL_SERVANT,
                 mobilePhone = "0170 123",
@@ -180,7 +180,7 @@ class FirestoreUserRepositoryTest {
         every { collection.document() } returns generated
         every { generated.id } returns "generated-1"
         every { generated.set(capture(fields)) } returns successTask<Void?>(null)
-        val profile = MemberProfile(lastName = "Muster", firstName = "Lena", category = MemberCategory.CHILD)
+        val profile = MemberProfile(lastName = "Muster", firstName = "Lena", gender = Gender.FEMALE)
 
         val member = repository.createMemberWithoutAccount(congregation, profile).getOrThrow()
 
@@ -201,7 +201,7 @@ class FirestoreUserRepositoryTest {
                 "approved" to false,
                 "roles" to emptyList<String>(),
                 "hasAccount" to false,
-            ) + defaultProfileFields + mapOf("lastName" to "Muster", "firstName" to "Lena", "category" to "CHILD"),
+            ) + defaultProfileFields + mapOf("lastName" to "Muster", "firstName" to "Lena", "gender" to "FEMALE"),
             fields.captured,
         )
     }
@@ -212,7 +212,7 @@ class FirestoreUserRepositoryTest {
         every { document.update(capture(fields)) } returns successTask<Void?>(null)
         val profile = MemberProfile(
             lastName = "Muster",
-            category = MemberCategory.BROTHER,
+            gender = Gender.MALE,
             baptized = true,
             appointment = Appointment.ELDER,
             isSpeaker = true,
@@ -224,7 +224,7 @@ class FirestoreUserRepositoryTest {
         assertEquals(
             defaultProfileFields + mapOf(
                 "lastName" to "Muster",
-                "category" to "BROTHER",
+                "gender" to "MALE",
                 "baptized" to true,
                 "appointment" to "ELDER",
                 "isSpeaker" to true,
@@ -245,7 +245,7 @@ class FirestoreUserRepositoryTest {
         val profile = MemberProfile(
             lastName = "Muster",
             firstName = "Max",
-            category = MemberCategory.BROTHER,
+            gender = Gender.MALE,
             mobilePhone = "0170",
             landlinePhone = "030 1",
             city = "Berlin",
@@ -513,7 +513,7 @@ class FirestoreUserRepositoryTest {
     private val defaultProfileFields = mapOf(
         "lastName" to "",
         "firstName" to "",
-        "category" to null,
+        "gender" to null,
         "baptized" to false,
         "appointment" to "NONE",
         "mobilePhone" to "",

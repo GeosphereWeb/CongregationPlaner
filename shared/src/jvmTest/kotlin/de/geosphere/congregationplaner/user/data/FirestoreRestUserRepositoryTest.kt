@@ -10,7 +10,7 @@ import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.EmergencyContact
-import de.geosphere.congregationplaner.user.domain.model.MemberCategory
+import de.geosphere.congregationplaner.user.domain.model.Gender
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -100,7 +100,7 @@ class FirestoreRestUserRepositoryTest {
             assertFalse(create.body.contains("permissions"))
             assertTrue(create.body.contains(""""displayName":{"nullValue":null}"""))
             assertTrue(create.body.contains(""""hasAccount":{"booleanValue":true}"""))
-            assertTrue(create.body.contains(""""category":{"nullValue":null}"""))
+            assertTrue(create.body.contains(""""gender":{"nullValue":null}"""))
             assertTrue(create.body.contains(""""appointment":{"stringValue":"NONE"}"""))
             assertTrue(create.body.contains(""""lastName":{"stringValue":""}"""))
             assertTrue(create.body.contains(""""isSpeaker":{"booleanValue":false}"""))
@@ -114,7 +114,7 @@ class FirestoreRestUserRepositoryTest {
                 "hasAccount":{"booleanValue":false},
                 "lastName":{"stringValue":"Muster"},
                 "firstName":{"stringValue":"Max"},
-                "category":{"stringValue":"BROTHER"},
+                "gender":{"stringValue":"MALE"},
                 "baptized":{"booleanValue":true},
                 "appointment":{"stringValue":"ELDER"},
                 "mobilePhone":{"stringValue":"0170 123"},
@@ -137,7 +137,7 @@ class FirestoreRestUserRepositoryTest {
             MemberProfile(
                 lastName = "Muster",
                 firstName = "Max",
-                category = MemberCategory.BROTHER,
+                gender = Gender.MALE,
                 baptized = true,
                 appointment = Appointment.ELDER,
                 mobilePhone = "0170 123",
@@ -162,7 +162,7 @@ class FirestoreRestUserRepositoryTest {
         val fields = request.body.substringAfter("\"fields\":")
         FakeResponse(200, """{"name":"x/members/generated-1","fields":$fields""")
     }) { server, repository ->
-        val profile = MemberProfile(lastName = "Muster", firstName = "Lena", category = MemberCategory.CHILD)
+        val profile = MemberProfile(lastName = "Muster", firstName = "Lena", gender = Gender.FEMALE)
 
         val member = repository.createMemberWithoutAccount(congregation, profile).getOrThrow()
 
@@ -302,7 +302,7 @@ class FirestoreRestUserRepositoryTest {
             approved = true,
             profile = MemberProfile(
                 lastName = "Muster",
-                category = MemberCategory.BROTHER,
+                gender = Gender.MALE,
                 mobilePhone = "0170",
                 isSpeaker = true,
                 talkNumbers = listOf(7, 9),
@@ -320,12 +320,12 @@ class FirestoreRestUserRepositoryTest {
             ),
         )
         assertEquals(
-            (ownFields + listOf("category", "baptized", "appointment", "isSpeaker", "talkNumbers"))
+            (ownFields + listOf("gender", "baptized", "appointment", "isSpeaker", "talkNumbers"))
                 .joinToString("&") { "updateMask.fieldPaths=$it" } + "&currentDocument.exists=true",
             request.query,
         )
         assertFalse(request.body.contains("approved"))
-        assertTrue(request.body.contains(""""category":{"stringValue":"BROTHER"}"""))
+        assertTrue(request.body.contains(""""gender":{"stringValue":"MALE"}"""))
         assertTrue(request.body.contains(""""mobilePhone":{"stringValue":"0170"}"""))
         assertTrue(request.body.contains(""""isSpeaker":{"booleanValue":true}"""))
     }

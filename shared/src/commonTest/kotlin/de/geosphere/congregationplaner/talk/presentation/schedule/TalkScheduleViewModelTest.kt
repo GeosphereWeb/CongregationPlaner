@@ -43,7 +43,7 @@ import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.DEFAULT_MESSAGE_TEMPLATES
-import de.geosphere.congregationplaner.user.domain.model.MemberCategory
+import de.geosphere.congregationplaner.user.domain.model.Gender
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.MessageTemplate
 import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
@@ -99,7 +99,7 @@ class TalkScheduleViewModelTest {
         profile = MemberProfile(
             lastName = "Muster",
             firstName = "Max",
-            category = MemberCategory.BROTHER,
+            gender = Gender.MALE,
             isSpeaker = true,
         ),
     )
@@ -115,7 +115,7 @@ class TalkScheduleViewModelTest {
         profile = MemberProfile(
             lastName = "Alt",
             firstName = "Anton",
-            category = MemberCategory.BROTHER,
+            gender = Gender.MALE,
             baptized = true,
             appointment = Appointment.ELDER,
         ),

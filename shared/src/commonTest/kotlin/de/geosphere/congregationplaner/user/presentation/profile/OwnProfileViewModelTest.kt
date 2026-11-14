@@ -2,7 +2,7 @@ package de.geosphere.congregationplaner.user.presentation.profile
 
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.EmergencyContact
-import de.geosphere.congregationplaner.user.domain.model.MemberCategory
+import de.geosphere.congregationplaner.user.domain.model.Gender
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.usecase.UpdateOwnProfileUseCase
 import de.geosphere.congregationplaner.user.presentation.contact.canAddContact
@@ -136,12 +136,12 @@ class OwnProfileViewModelTest {
         viewModel.onFormChange(form.copy(city = "Potsdam"))
 
         viewModel.onUserChanged(
-            user.copy(profile = user.profile.copy(street = "Neu 1", category = MemberCategory.BROTHER)),
+            user.copy(profile = user.profile.copy(street = "Neu 1", gender = Gender.MALE)),
         )
 
         assertEquals("Potsdam", form.city)
         assertEquals("Hauptstr. 1", form.street)
-        assertEquals(MemberCategory.BROTHER, form.category)
+        assertEquals(Gender.MALE, form.gender)
         assertEquals("Neu 1", state.saved.street)
     }
 

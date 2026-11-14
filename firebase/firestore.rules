@@ -42,12 +42,13 @@ rules_version = '2';
 // Profile fields (all required, a fresh member carries the defaults). Admins maintain all of them; a member
 // maintains the own contact fields (see ownFields()). Admins and planners read every member (ADR-0016):
 //   - lastName, firstName: string (<= 100 chars)
-//   - category: string | null ('BROTHER' | 'SISTER' | 'CHILD')
-//   - baptized: bool (never true for 'CHILD')
+//   - gender: string | null ('MALE' | 'FEMALE'); brother and sister are not stored, they follow from gender and
+//     baptized (ADR-0031)
+//   - baptized: bool
 //   - appointment: string ('NONE' | 'MINISTERIAL_SERVANT' | 'ELDER';
-//     anything but 'NONE' only for baptized brothers)
+//     anything but 'NONE' only for brothers: baptized and 'MALE')
 //   - mobilePhone, landlinePhone: string (<= 30 chars, digits and + ( ) / - space)
-//   - isSpeaker: bool (marks talk speakers, only for category 'BROTHER')
+//   - isSpeaker: bool (marks talk speakers, only with an appointment)
 //   - talkNumbers: list<int> (<= 200 entries, the talks a speaker gives; empty unless isSpeaker; the app checks
 //     the numbers 1..9999)
 //   - emails: list (<= 3) of string (an e-mail address, <= 254 chars): further addresses besides the sign-in `email`
@@ -542,20 +543,19 @@ service cloud.firestore {
     }
 
     function profileFields() {
-      return ownFields().concat(['category', 'baptized', 'appointment', 'isSpeaker', 'talkNumbers']);
+      return ownFields().concat(['gender', 'baptized', 'appointment', 'isSpeaker', 'talkNumbers']);
     }
 
     // Every profile field is present (the app writes them all).
     function isValidProfile(data) {
-      let category = data.category;
+      let gender = data.gender;
       let appointment = data.appointment;
       return isShortString(data.lastName, 100) &&
         isShortString(data.firstName, 100) &&
-        (category == null || category in ['BROTHER', 'SISTER', 'CHILD']) &&
+        (gender == null || gender in ['MALE', 'FEMALE']) &&
         data.baptized is bool &&
-        !(category == 'CHILD' && data.baptized) &&
         appointment in ['NONE', 'MINISTERIAL_SERVANT', 'ELDER'] &&
-        (appointment == 'NONE' || (category == 'BROTHER' && data.baptized)) &&
+        (appointment == 'NONE' || (gender == 'MALE' && data.baptized)) &&
         isValidPhone(data.mobilePhone) &&
         isValidPhone(data.landlinePhone) &&
         isValidEmails(data.emails) &&
@@ -564,13 +564,13 @@ service cloud.firestore {
         isShortString(data.city, 100) &&
         isValidEmergencyContacts(data.emergencyContacts) &&
         data.isSpeaker is bool &&
-        (data.isSpeaker == false || category == 'BROTHER') &&
+        (data.isSpeaker == false || appointment != 'NONE') &&
         data.talkNumbers is list && data.talkNumbers.size() <= (data.isSpeaker ? 200 : 0);
     }
 
     // The names may be filled: they come from the display name of the sign-up.
     function hasDefaultProfile(data) {
-      return data.category == null &&
+      return data.gender == null &&
         data.baptized == false &&
         data.appointment == 'NONE' &&
         data.mobilePhone == '' &&
