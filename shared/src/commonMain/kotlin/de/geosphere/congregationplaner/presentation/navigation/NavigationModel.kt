@@ -35,6 +35,11 @@ enum class CongregationSection(
         CongregationGroup.ADMINISTRATION,
         supportingText = "Mitglieder, Rollen, Freigaben",
     ),
+    SPECIAL_EVENTS(
+        "Besondere Ereignisse",
+        CongregationGroup.ADMINISTRATION,
+        supportingText = "Termine auf der Startseite",
+    ),
     MIDWEEK_PLANNING("Planung unter der Woche", CongregationGroup.PLANNING, supportingText = "Aufgabenplaner"),
     WEEKEND_TALKS("Planung am Wochenende", CongregationGroup.PLANNING, nested = true, tabLabel = "Wochenplanung"),
     EXTERNAL_SPEAKERS("Externe Redner", CongregationGroup.PLANNING, nested = true, tabLabel = "Rednerliste"),

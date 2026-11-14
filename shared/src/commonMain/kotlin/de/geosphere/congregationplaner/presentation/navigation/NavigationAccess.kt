@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner.presentation.navigation
 
+import de.geosphere.congregationplaner.event.domain.permission.SpecialEventPolicy
 import de.geosphere.congregationplaner.midweek.domain.permission.MidweekPermissionPolicy
 import de.geosphere.congregationplaner.organization.domain.permission.OrganizationPermissionPolicy
 import de.geosphere.congregationplaner.talk.domain.permission.TalkReferenceDataPolicy
@@ -19,6 +20,7 @@ class NavigationAccess(
     private val midweekPolicy: MidweekPermissionPolicy,
     private val organizationPolicy: OrganizationPermissionPolicy,
     private val talkReferencePolicy: TalkReferenceDataPolicy,
+    private val specialEventPolicy: SpecialEventPolicy,
 ) {
     fun visibleFor(user: AppUser): VisibleNavigation = VisibleNavigation(
         congregationSections = CongregationSection.entries.filter { canSee(user, it) },
@@ -29,6 +31,8 @@ class NavigationAccess(
         CongregationSection.GENERAL_DATA,
         CongregationSection.USER_MANAGEMENT,
         -> userPolicy.canManageUsers(user)
+
+        CongregationSection.SPECIAL_EVENTS -> specialEventPolicy.canManage(user)
 
         CongregationSection.MIDWEEK_PLANNING -> midweekPolicy.canPlanMidweek(user)
 

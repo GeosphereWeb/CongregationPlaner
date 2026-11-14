@@ -88,6 +88,8 @@ val sonarExclusions = listOf(
     // Reiner Compose-Löschdialog und Callback-Bündel mit leeren Standard-Lambdas; Löschen ist im ViewModel getestet
     "**/DeleteCongregationDialog.kt",
     "**/CongregationMetadataActions.kt",
+    // Callback-Bündel der Ereignis-Pflege mit leeren Standard-Lambdas; die Aktionen sind im ViewModel getestet
+    "**/SpecialEventActions.kt",
     // Import: Swing-Dateidialog braucht ein Display, ImportGraph ist reine DI-Verdrahtung, Android hat nur den Stub
     "**/SwingImportFileSource.kt",
     "**/ImportGraph.kt",
