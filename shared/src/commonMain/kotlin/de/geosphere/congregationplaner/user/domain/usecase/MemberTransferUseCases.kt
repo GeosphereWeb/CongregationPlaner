@@ -98,7 +98,10 @@ private fun AppUser.toMemberRef() = MemberRef(uid, profile.lastName, profile.fir
 
 private fun VisitingSpeaker.label(): String = listOf(lastName, firstName).filter(String::isNotBlank).joinToString(", ")
 
-/** Ein übernommener Redner ist ein getaufter Bruder; ungültige Nummern und Adressen bleiben leer. */
+/**
+ * Ein übernommener Redner ist ein getaufter Bruder und behält seine Vorträge; ungültige Telefonnummern und Adressen
+ * bleiben leer.
+ */
 internal fun VisitingSpeaker.toMemberProfile(): MemberProfile = MemberProfile(
     lastName = lastName,
     firstName = firstName,
@@ -108,4 +111,5 @@ internal fun VisitingSpeaker.toMemberProfile(): MemberProfile = MemberProfile(
     mobilePhone = mobilePhone.takeIf(MemberProfile::isValidPhone).orEmpty(),
     landlinePhone = landlinePhone.takeIf(MemberProfile::isValidPhone).orEmpty(),
     emails = listOf(email).filter { it.isNotBlank() && MemberProfile.isValidEmail(it) },
+    talkNumbers = talkNumbers,
 )

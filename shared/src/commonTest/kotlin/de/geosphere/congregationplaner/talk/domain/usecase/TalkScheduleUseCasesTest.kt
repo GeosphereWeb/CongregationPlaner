@@ -178,6 +178,7 @@ class TalkScheduleUseCasesTest {
                         isSpeaker = true,
                         mobilePhone = "0170 1234567",
                         landlinePhone = "089 123456",
+                        talkNumbers = listOf(12, 45),
                     ),
                 ),
             ),
@@ -187,6 +188,7 @@ class TalkScheduleUseCasesTest {
 
         assertEquals("0170 1234567", speaker.mobilePhone)
         assertEquals("089 123456", speaker.landlinePhone)
+        assertEquals(listOf(12, 45), speaker.talkNumbers)
     }
 
     @Test

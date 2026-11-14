@@ -165,6 +165,13 @@ class MemberUseCasesTest {
             errorFor(MemberProfile(category = MemberCategory.SISTER, isSpeaker = true)),
         )
         assertIs<MemberProfileException.SpeakerNotAllowed>(errorFor(MemberProfile(category = null, isSpeaker = true)))
+        val brother = MemberProfile(category = MemberCategory.BROTHER, isSpeaker = true)
+        assertIs<MemberProfileException.InvalidTalks>(
+            errorFor(brother.copy(isSpeaker = false, talkNumbers = listOf(1))),
+        )
+        assertIs<MemberProfileException.InvalidTalks>(errorFor(brother.copy(talkNumbers = listOf(0))))
+        assertIs<MemberProfileException.InvalidTalks>(errorFor(brother.copy(talkNumbers = listOf(10_000))))
+        assertIs<MemberProfileException.InvalidTalks>(errorFor(brother.copy(talkNumbers = (1..201).toList())))
         assertIs<MemberProfileException.InvalidPhone>(errorFor(MemberProfile(landlinePhone = "030-abc")))
         assertIs<MemberProfileException.NameTooLong>(errorFor(MemberProfile(lastName = "x".repeat(101))))
         // Mitglieder mit Konto sind über ihr Login erkennbar; ohne Konto ist der Name Pflicht.
@@ -176,7 +183,10 @@ class MemberUseCasesTest {
         useCase(admin, elder).getOrThrow()
         val speaker = member.copy(profile = MemberProfile(category = MemberCategory.BROTHER, isSpeaker = true))
         useCase(admin, speaker).getOrThrow()
-        assertEquals(listOf(member, elder, speaker), repository.updatedProfiles)
+        val withTalks = speaker.copy(profile = speaker.profile.copy(talkNumbers = listOf(45, 12, 12)))
+        useCase(admin, withTalks).getOrThrow()
+        assertEquals(listOf(12, 45), repository.updatedProfiles.last().profile.talkNumbers)
+        assertEquals(listOf(member, elder, speaker), repository.updatedProfiles.dropLast(1))
     }
 
     @Test

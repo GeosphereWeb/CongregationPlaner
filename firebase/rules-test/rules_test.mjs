@@ -69,7 +69,7 @@ async function expect(name, pending, allowed) {
 // Vollständiges Mitgliedsdokument: die Rules verlangen alle Profilfelder, die App schreibt sie immer.
 const fullProfile = {
   lastName: '', firstName: '', category: null, baptized: false, appointment: 'NONE', mobilePhone: '', landlinePhone: '',
-  isSpeaker: false, emails: [], street: '', postalCode: '', city: '', emergencyContacts: [],
+  isSpeaker: false, talkNumbers: [], emails: [], street: '', postalCode: '', city: '', emergencyContacts: [],
 };
 const memberFields = (email, roles, extra = {}) =>
   ({ email, displayName: email, approved: true, roles, hasAccount: true, ...fullProfile, ...extra });
@@ -380,6 +380,7 @@ const emergency = (name, phone, relation, more = []) => ({ mapValue: { fields: {
 const addressBody = (contacts, extra = {}) => ({ fields: { street: { stringValue: 'Hauptstr. 1' }, postalCode: { stringValue: '10115' }, city: { stringValue: 'Berlin' }, emergencyContacts: { arrayValue: { values: contacts } }, ...extra } });
 const putAddress = (uid, body, token, fields = ADDRESS_FIELDS) => api('PATCH', ownName(uid, ...fields), body, token);
 await expect('Mitglied speichert eigene Adresse und Notfallkontakte', putAddress(plain.uid, addressBody([emergency('Anna Muster', '0170 1', 'Ehefrau'), emergency('Ben Muster', '030 2')]), plain.token), true);
+await expect('Notfallkontakt ist kein Eintrag mit Feldern', putAddress(plain.uid, addressBody([emergency('Anna Muster', '0170 1'), { stringValue: 'Ben Muster' }]), plain.token), false);
 // Worst case for the limit of 1000 expressions per request: everything at its maximum.
 const fullContacts = [1, 2, 3, 4, 5].map((i) => emergency(`Kontakt ${i}`, `0170 ${i}`, 'Ehefrau', [`030 ${i}`, `0201 ${i}`]));
 const fullExtras = { emails: { arrayValue: { values: ['a@b.de', 'c@d.de', 'e@f.de'].map((stringValue) => ({ stringValue })) } }, mobilePhone: { stringValue: '0170 123456' }, landlinePhone: { stringValue: '030 123456' } };
@@ -617,6 +618,14 @@ await expect('Person ohne Konto mit Freigabe', call('POST', `${FS}/${MEMBERS}`, 
 await expect('Person ohne Konto mit Rolle', call('POST', `${FS}/${MEMBERS}`, fields({ ...accountless, roles: ['TALK_PLANNER'] }), congAdmin.token), false);
 await expect('Person ohne Konto ohne Namen', call('POST', `${FS}/${MEMBERS}`, fields({ ...accountless, lastName: '', firstName: '' }), congAdmin.token), false);
 await expect('Vortragsplaner erfasst keine Person ohne Konto', call('POST', `${FS}/${MEMBERS}`, fields(accountless), planner.token), false);
+
+// Vorträge heimischer Redner (CP-157): nur bei Rednern, höchstens 200 Nummern, das Mitglied pflegt sie nicht selbst.
+const speakerless = { ...accountless, category: 'BROTHER', baptized: true };
+await expect('Versammlungsadmin erfasst einen Redner mit Vorträgen', call('POST', `${FS}/${MEMBERS}`, fields({ ...speakerless, isSpeaker: true, talkNumbers: [12, 45] }), congAdmin.token), true);
+await expect('Vorträge ohne Redner', call('POST', `${FS}/${MEMBERS}`, fields({ ...speakerless, talkNumbers: [12] }), congAdmin.token), false);
+await expect('Mehr als 200 Vorträge', call('POST', `${FS}/${MEMBERS}`, fields({ ...speakerless, isSpeaker: true, talkNumbers: Array.from({ length: 201 }, (_, i) => i + 1) }), congAdmin.token), false);
+await expect('Vorträge keine Liste', call('POST', `${FS}/${MEMBERS}`, fields({ ...speakerless, isSpeaker: true, talkNumbers: 12 }), congAdmin.token), false);
+await expect('Mitglied setzt die eigenen Vorträge', api('PATCH', ownName(plain.uid, 'talkNumbers'), { fields: { talkNumbers: { arrayValue: { values: [{ integerValue: '12' }] } } } }, plain.token), false);
 
 // Löschen: ein Mitglied darf gehen, ein Admin nicht das eigene Dokument löschen (sonst bleibt die Versammlung ohne Admin).
 const leaver = await signUp('leaver@test.de');
