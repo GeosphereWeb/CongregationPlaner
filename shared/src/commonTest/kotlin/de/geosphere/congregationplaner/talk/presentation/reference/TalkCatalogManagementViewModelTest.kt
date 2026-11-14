@@ -1,5 +1,9 @@
 package de.geosphere.congregationplaner.talk.presentation.reference
 
+import de.geosphere.congregationplaner.organization.domain.model.CountryOption
+import de.geosphere.congregationplaner.organization.testing.FakeCountryRepository
+import de.geosphere.congregationplaner.organization.testing.listCountries
+import de.geosphere.congregationplaner.organization.testing.testCountry
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkTitleChange
 import de.geosphere.congregationplaner.talk.domain.permission.TalkReferenceDataPolicy
@@ -36,6 +40,8 @@ class TalkCatalogManagementViewModelTest {
     private val first = Talk(1, "Erster Vortrag")
     private val second = Talk(2, "Zweiter Vortrag", active = false)
 
+    private val austria = CountryOption(testCountry.ref.copy(countryId = "at"), "Österreich")
+    private lateinit var countries: FakeCountryRepository
     private lateinit var catalog: FakeTalkCatalogRepository
     private lateinit var viewModel: TalkCatalogManagementViewModel
 
@@ -43,6 +49,7 @@ class TalkCatalogManagementViewModelTest {
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         catalog = FakeTalkCatalogRepository(listOf(second, first))
+        countries = FakeCountryRepository(listOf(testCountry))
         val policy = TalkReferenceDataPolicy()
         viewModel = TalkCatalogManagementViewModel(
             ObserveTalkCatalogUseCase(catalog),
@@ -54,6 +61,7 @@ class TalkCatalogManagementViewModelTest {
                 CheckNewTalkNumberUseCase(),
                 EditTalkTitleChangesUseCase(),
             ),
+            listCountries(countries),
         )
     }
 
@@ -71,6 +79,76 @@ class TalkCatalogManagementViewModelTest {
         assertTrue(state.canManage)
         assertFalse(state.isLoading)
         assertEquals(listOf(first, second), state.talks)
+        assertEquals(testCountry.ref, state.country.selected)
+        assertEquals(listOf(testCountry.ref), catalog.countries)
+    }
+
+    @Test
+    fun `with several countries the admin chooses one before the list loads`() {
+        countries = FakeCountryRepository(listOf(testCountry, austria))
+        setUpWithCountries()
+        viewModel.onCurrentUserChanged(admin)
+
+        assertNull(state.country.selected)
+        assertEquals(listOf(testCountry, austria), state.country.countries) // sorted by name
+        assertFalse(state.isLoading)
+        assertTrue(state.talks.isEmpty())
+        viewModel.newTalk()
+        assertNull(state.editor)
+
+        viewModel.countries.select(austria.ref)
+        assertEquals(listOf(first, second), state.talks)
+        viewModel.editTalk(first)
+        viewModel.countries.select(testCountry.ref)
+
+        assertNull(state.editor) // the open talk belonged to the other country
+        assertEquals(listOf(austria.ref, testCountry.ref), catalog.countries)
+        viewModel.newTalk()
+        viewModel.updateEditor(state.editor!!.copy(numberText = "5", title = "Neu"))
+        viewModel.save()
+        assertEquals(testCountry.ref, catalog.countries.last())
+    }
+
+    @Test
+    fun `a failed country list is shown and can be retried`() {
+        countries.failure = IllegalStateException("offline")
+        viewModel.onCurrentUserChanged(admin)
+
+        assertEquals("offline", state.country.errorMessage)
+        assertNull(state.country.selected)
+
+        countries.failure = null
+        viewModel.countries.retry()
+        assertNull(state.country.errorMessage)
+        assertEquals(testCountry.ref, state.country.selected)
+        assertEquals(listOf(first, second), state.talks)
+    }
+
+    @Test
+    fun `countries are loaded once and unknown countries are ignored`() {
+        viewModel.onCurrentUserChanged(admin)
+        val reads = countries.reads
+        viewModel.onCurrentUserChanged(admin)
+        viewModel.countries.select(austria.ref)
+
+        assertEquals(reads, countries.reads)
+        assertEquals(testCountry.ref, state.country.selected)
+    }
+
+    private fun setUpWithCountries() {
+        val policy = TalkReferenceDataPolicy()
+        viewModel = TalkCatalogManagementViewModel(
+            ObserveTalkCatalogUseCase(catalog),
+            SaveTalkUseCase(catalog, policy),
+            DeleteTalkUseCase(catalog, policy),
+            policy,
+            TalkInputUseCases(
+                CleanTalkNumberInputUseCase(),
+                CheckNewTalkNumberUseCase(),
+                EditTalkTitleChangesUseCase(),
+            ),
+            listCountries(countries),
+        )
     }
 
     @Test

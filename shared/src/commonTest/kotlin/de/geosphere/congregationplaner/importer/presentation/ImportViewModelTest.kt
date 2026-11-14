@@ -10,6 +10,9 @@ import de.geosphere.congregationplaner.importer.domain.usecase.ImportSource
 import de.geosphere.congregationplaner.importer.domain.usecase.ImportSpeakerDirectoryUseCase
 import de.geosphere.congregationplaner.importer.domain.usecase.ImportTalkScheduleUseCase
 import de.geosphere.congregationplaner.importer.domain.usecase.PrepareImportUseCase
+import de.geosphere.congregationplaner.organization.domain.model.CountryOption
+import de.geosphere.congregationplaner.organization.testing.listCountries
+import de.geosphere.congregationplaner.organization.testing.testCountry
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.permission.TalkReferenceDataPolicy
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
@@ -76,7 +79,10 @@ class ImportViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel(source: ImportFileSource): ImportViewModel {
+    private fun viewModel(
+        source: ImportFileSource,
+        countries: List<CountryOption> = listOf(testCountry),
+    ): ImportViewModel {
         val events = FakeWeekEventRepository()
         val prepare = PrepareImportUseCase(
             events,
@@ -92,7 +98,7 @@ class ImportViewModelTest {
             ),
             ImportTalkScheduleUseCase(SaveTalkSlotUseCase(schedule, planning)),
         )
-        return ImportViewModel(source, prepare, reference, planning)
+        return ImportViewModel(source, prepare, reference, planning, listCountries(*countries.toTypedArray()))
     }
 
     @Test
@@ -128,6 +134,7 @@ class ImportViewModelTest {
 
         model.confirm()
         assertEquals(listOf(Talk(1, "Eins")), catalog.savedTalks)
+        assertEquals(listOf(testCountry.ref), catalog.countries.distinct())
         assertEquals(1, model.uiState.value.report?.created)
         assertNull(model.uiState.value.pending)
     }
@@ -179,5 +186,27 @@ class ImportViewModelTest {
         model.choose(ImportSource.SCHEDULE) // the global admin may not plan talks
         assertNull(model.uiState.value.pending)
         assertNull(model.uiState.value.errorMessage)
+    }
+
+    @Test
+    fun `reference data needs a chosen country and planners get no country picker`() {
+        val austria = CountryOption(testCountry.ref.copy(countryId = "at"), "Österreich")
+        val model = viewModel(FakeFileSource(Result.success(talkTable)), listOf(testCountry, austria))
+        model.onCurrentUserChanged(globalAdmin)
+        assertTrue(model.uiState.value.needsCountry)
+
+        model.choose(ImportSource.TALK_CATALOG)
+        assertEquals("Bitte wähle zuerst das Land, in das importiert wird.", model.uiState.value.errorMessage)
+        assertNull(model.uiState.value.pending)
+
+        model.dismissError()
+        model.countries.select(austria.ref)
+        model.choose(ImportSource.TALK_CATALOG)
+        model.confirm()
+        assertEquals(listOf(austria.ref), catalog.countries.distinct())
+
+        val plannerModel = viewModel(FakeFileSource(Result.success(null)))
+        plannerModel.onCurrentUserChanged(planner)
+        assertTrue(!plannerModel.uiState.value.needsCountry && plannerModel.uiState.value.country.countries.isEmpty())
     }
 }

@@ -125,7 +125,7 @@ class TalkHistoryViewModel(
         if (observeJob?.isActive == true) return
         update { it.copy(isLoading = true) }
         observeJob = viewModelScope.launch {
-            combine(observeCatalog(), observeHistory(user)) { talks, history -> talks to history }
+            combine(observeCatalog(user), observeHistory(user)) { talks, history -> talks to history }
                 .catch { exception ->
                     val message = exception.message ?: "Vortragshistorie konnte nicht geladen werden."
                     update { it.copy(isLoading = false, errorMessage = message) }

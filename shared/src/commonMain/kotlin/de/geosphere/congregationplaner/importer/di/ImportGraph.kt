@@ -5,6 +5,8 @@ import de.geosphere.congregationplaner.congregation.domain.repository.Congregati
 import de.geosphere.congregationplaner.importer.data.ImportFileSource
 import de.geosphere.congregationplaner.importer.data.createImportFileSource
 import de.geosphere.congregationplaner.importer.presentation.ImportViewModel
+import de.geosphere.congregationplaner.organization.data.createOrganizationRepository
+import de.geosphere.congregationplaner.organization.domain.repository.OrganizationRepository
 import de.geosphere.congregationplaner.talk.data.createExternalSpeakerDirectoryRepository
 import de.geosphere.congregationplaner.talk.data.createTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.data.createTalkScheduleRepository
@@ -38,4 +40,7 @@ interface ImportGraph {
 
     @Provides
     fun provideCongregationMetadataRepository(): CongregationMetadataRepository = createCongregationMetadataRepository()
+
+    @Provides
+    fun provideOrganizationRepository(): OrganizationRepository = createOrganizationRepository()
 }

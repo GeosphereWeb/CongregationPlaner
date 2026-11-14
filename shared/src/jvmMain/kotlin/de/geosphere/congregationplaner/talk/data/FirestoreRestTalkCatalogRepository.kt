@@ -12,6 +12,7 @@ import de.geosphere.congregationplaner.firestore.optionalBooleanField
 import de.geosphere.congregationplaner.firestore.optionalStringField
 import de.geosphere.congregationplaner.firestore.pollingFlow
 import de.geosphere.congregationplaner.firestore.runCatchingIo
+import de.geosphere.congregationplaner.organization.domain.model.CountryRef
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkTitleChange
 import de.geosphere.congregationplaner.talk.domain.repository.TalkCatalogRepository
@@ -25,8 +26,8 @@ internal class FirestoreRestTalkCatalogRepository(
     private val client = FirestoreRestClient(httpClient, idTokenProvider, "Sign in before accessing the talk list.")
 
     // Ein Dokument ohne gültige Nummer als ID wird übersprungen, damit es nicht die ganze Liste blockiert.
-    override fun observeTalks(): Flow<List<Talk>> = pollingFlow {
-        client.listAllDocuments(TALK_CATALOG_COLLECTION_PATH).mapNotNull { document ->
+    override fun observeTalks(country: CountryRef): Flow<List<Talk>> = pollingFlow {
+        client.listAllDocuments(country.talkCatalogPath).mapNotNull { document ->
             document.id.toIntOrNull()?.takeIf { it >= 1 }?.let { number ->
                 Talk(
                     number = number,
@@ -38,7 +39,7 @@ internal class FirestoreRestTalkCatalogRepository(
         }
     }
 
-    override suspend fun save(talk: Talk): Result<Talk> = runCatchingIo {
+    override suspend fun save(country: CountryRef, talk: Talk): Result<Talk> = runCatchingIo {
         val changes = JsonArray().apply {
             talk.titleChanges.forEach { change ->
                 val fields = JsonObject().apply {
@@ -60,12 +61,12 @@ internal class FirestoreRestTalkCatalogRepository(
                 )
             },
         )
-        client.request("PATCH", client.documentUrl(TALK_CATALOG_COLLECTION_PATH, talk.number.toString()), body)
+        client.request("PATCH", client.documentUrl(country.talkCatalogPath, talk.number.toString()), body)
         talk
     }
 
-    override suspend fun delete(number: Int): Result<Unit> = runCatchingIo {
-        client.request("DELETE", client.documentUrl(TALK_CATALOG_COLLECTION_PATH, number.toString()))
+    override suspend fun delete(country: CountryRef, number: Int): Result<Unit> = runCatchingIo {
+        client.request("DELETE", client.documentUrl(country.talkCatalogPath, number.toString()))
     }.map {}
 }
 

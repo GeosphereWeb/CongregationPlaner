@@ -60,10 +60,10 @@ class ScheduleReferenceDataLoader(
     fun observe(user: AppUser) {
         val canPlan = useCases.talkPolicy.canPlanTalks(user)
         val canView = useCases.talkPolicy.canViewTalkPlanning(user)
-        keep(Source.WEEK_EVENTS, canPlan, { useCases.observeWeekEvents() }) { state, events ->
+        keep(Source.WEEK_EVENTS, canPlan, { useCases.observeWeekEvents(user) }) { state, events ->
             state.copy(weekEvents = events)
         }
-        keep(Source.TALKS, canPlan, { useCases.observeTalkCatalog() }) { state, talks -> state.copy(talks = talks) }
+        keep(Source.TALKS, canPlan, { useCases.observeTalkCatalog(user) }) { state, talks -> state.copy(talks = talks) }
         keep(Source.EXTERNAL_SPEAKERS, canView, { useCases.observeExternalSpeakers(user) }) { state, speakers ->
             state.copy(externalSpeakers = speakers)
         }
@@ -91,7 +91,7 @@ class ScheduleReferenceDataLoader(
     }
 
     // Läuft die Quelle schon, bleibt sie; ohne Recht endet sie. Ereignisse und Vortragsliste bleiben dann im Zustand,
-    // weil sie global sind; Redner und externe Redner werden geleert.
+    // weil sie für das ganze Land gelten; Redner und externe Redner werden geleert.
     private fun <T> keep(
         source: Source,
         allowed: Boolean,
