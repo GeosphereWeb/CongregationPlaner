@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner.home.domain.model
 
+import de.geosphere.congregationplaner.event.domain.model.SpecialEvent
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import kotlinx.datetime.LocalDate
 
@@ -9,8 +10,13 @@ import kotlinx.datetime.LocalDate
  *
  * @param talk Block für Vortragsplaner.
  * @param pendingApprovals Anzahl der Mitglieder mit Konto, die auf ihre Freigabe warten (Block für Versammlungsadmins).
+ * @param events Die kommenden besonderen Ereignisse für die Gruppen des Mitglieds, nach Beginn sortiert.
  */
-data class HomeSummary(val talk: TalkSummary? = null, val pendingApprovals: Int? = null)
+data class HomeSummary(
+    val talk: TalkSummary? = null,
+    val pendingApprovals: Int? = null,
+    val events: List<SpecialEvent> = emptyList(),
+)
 
 /**
  * @param nextSlot Der erste Termin ab heute, an dem ein Vortrag stattfindet; `null`, wenn es keinen gibt.

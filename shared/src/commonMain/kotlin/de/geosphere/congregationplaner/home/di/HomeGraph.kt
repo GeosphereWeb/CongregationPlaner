@@ -1,5 +1,7 @@
 package de.geosphere.congregationplaner.home.di
 
+import de.geosphere.congregationplaner.event.data.createSpecialEventRepository
+import de.geosphere.congregationplaner.event.domain.repository.SpecialEventRepository
 import de.geosphere.congregationplaner.home.presentation.HomeViewModel
 import de.geosphere.congregationplaner.talk.data.createTalkScheduleRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkScheduleRepository
@@ -17,4 +19,7 @@ interface HomeGraph {
 
     @Provides
     fun provideUserRepository(): UserRepository = createUserRepository()
+
+    @Provides
+    fun provideSpecialEventRepository(): SpecialEventRepository = createSpecialEventRepository()
 }

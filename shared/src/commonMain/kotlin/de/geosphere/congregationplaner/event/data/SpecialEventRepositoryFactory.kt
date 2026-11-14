@@ -11,6 +11,7 @@ import kotlinx.datetime.LocalDate
 expect fun createSpecialEventRepository(): SpecialEventRepository
 
 internal const val EVENTS_SUBCOLLECTION = "events"
+internal const val AUDIENCE_FIELD = "audience"
 
 internal val CongregationRef.eventsPath: String get() = "$documentPath/$EVENTS_SUBCOLLECTION"
 
@@ -38,7 +39,9 @@ internal fun specialEventOf(
 private fun parseEventDate(value: String?): LocalDate? = value?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
 
 /** Die Felder des Dokuments; die Gruppen in fester Reihenfolge, damit gleiche Ereignisse gleich gespeichert werden. */
-internal fun SpecialEvent.audienceValues(): List<String> = audience.sortedBy { it.ordinal }.map { it.name }
+internal fun SpecialEvent.audienceValues(): List<String> = audience.values()
+
+internal fun Set<EventAudience>.values(): List<String> = sortedBy { it.ordinal }.map { it.name }
 
 fun unavailableSpecialEventRepository(platform: String): SpecialEventRepository = object : SpecialEventRepository {
     private fun <T> unavailable(): Result<T> =
@@ -47,6 +50,9 @@ fun unavailableSpecialEventRepository(platform: String): SpecialEventRepository 
     override fun observeAll(congregation: CongregationRef): Flow<List<SpecialEvent>> = flow {
         throw UnsupportedOperationException("Firestore is not configured for $platform.")
     }
+
+    override fun observeFor(congregation: CongregationRef, groups: Set<EventAudience>): Flow<List<SpecialEvent>> =
+        observeAll(congregation)
 
     override suspend fun save(congregation: CongregationRef, event: SpecialEvent): Result<SpecialEvent> = unavailable()
 

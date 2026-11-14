@@ -52,6 +52,31 @@ class FirestoreRestSpecialEventRepositoryTest {
     }
 
     @Test
+    fun `observeFor runs a query for the groups and skips the read time row`() = runWithServer({
+        FakeResponse(
+            200,
+            """[{"document":{"name":"x/events/ev1","fields":{"title":{"stringValue":"Kongress"},
+                    "startDate":{"stringValue":"2027-06-11"},"endDate":{"stringValue":"2027-06-13"},
+                    "audience":{"arrayValue":{"values":[{"stringValue":"BROTHERS"},{"stringValue":"SISTERS"}]}}}},
+                "readTime":"t"},
+                {"readTime":"t"}]""",
+        )
+    }) { server ->
+        assertEquals(
+            listOf(congress),
+            repository.observeFor(congregation, setOf(EventAudience.SISTERS, EventAudience.ALL)).first(),
+        )
+        val request = server.requests.single()
+        assertEquals("POST", request.method)
+        assertEquals("${FakeFirestoreRestServer.DOCUMENTS_PATH}/${congregation.documentPath}:runQuery", request.path)
+        assertTrue(request.body.contains(""""collectionId":"events""""))
+        assertTrue(request.body.contains(""""op":"ARRAY_CONTAINS_ANY""""))
+        assertTrue(
+            request.body.contains(""""values":[{"stringValue":"ALL"},{"stringValue":"SISTERS"}]"""),
+        )
+    }
+
+    @Test
     fun `save posts a new event and patches an existing one`() = runWithServer({ request ->
         if (request.method ==
             "POST"

@@ -11,4 +11,7 @@ import dev.zacsweers.metro.Inject
 @Inject
 class SpecialEventPolicy {
     fun canManage(user: AppUser): Boolean = user.hasRole(CongregationRole.CONGREGATION_ADMIN)
+
+    /** Freigegebene Mitglieder sehen die Ereignisse ihrer Gruppen; globale Admins ohne Mitgliedsdokument nicht. */
+    fun canSeeEvents(user: AppUser): Boolean = user.approved && user.isMember && user.congregation != null
 }
