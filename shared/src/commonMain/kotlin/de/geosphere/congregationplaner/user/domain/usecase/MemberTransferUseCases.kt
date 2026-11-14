@@ -7,7 +7,8 @@ import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermis
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteVisitingSpeakerUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.MoveSlotsToMemberUseCase
 import de.geosphere.congregationplaner.user.domain.model.AppUser
-import de.geosphere.congregationplaner.user.domain.model.MemberCategory
+import de.geosphere.congregationplaner.user.domain.model.Appointment
+import de.geosphere.congregationplaner.user.domain.model.Gender
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.MemberProfileException
 import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
@@ -99,14 +100,16 @@ private fun AppUser.toMemberRef() = MemberRef(uid, profile.lastName, profile.fir
 private fun VisitingSpeaker.label(): String = listOf(lastName, firstName).filter(String::isNotBlank).joinToString(", ")
 
 /**
- * Ein übernommener Redner ist ein getaufter Bruder und behält seine Vorträge; ungültige Telefonnummern und Adressen
+ * Ein übernommener Redner behält seine Vorträge. Redner brauchen ein Dienstamt, das Rednerverzeichnis kennt aber
+ * keines: Er wird als Ältester angelegt, der Admin korrigiert es bei Bedarf. Ungültige Telefonnummern und Adressen
  * bleiben leer.
  */
 internal fun VisitingSpeaker.toMemberProfile(): MemberProfile = MemberProfile(
     lastName = lastName,
     firstName = firstName,
-    category = MemberCategory.BROTHER,
+    gender = Gender.MALE,
     baptized = true,
+    appointment = Appointment.ELDER,
     isSpeaker = true,
     mobilePhone = mobilePhone.takeIf(MemberProfile::isValidPhone).orEmpty(),
     landlinePhone = landlinePhone.takeIf(MemberProfile::isValidPhone).orEmpty(),

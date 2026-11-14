@@ -3,7 +3,6 @@ package de.geosphere.congregationplaner.user.domain.usecase
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.EmergencyContact
-import de.geosphere.congregationplaner.user.domain.model.MemberCategory
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.MemberProfileException
 import de.geosphere.congregationplaner.user.domain.model.formatPhoneNumber
@@ -39,7 +38,6 @@ internal fun MemberProfile.validated(requireName: Boolean): Result<MemberProfile
             MemberProfileException.MissingName()
         maxOf(cleaned.lastName.length, cleaned.firstName.length) > MemberProfile.MAX_NAME_LENGTH ->
             MemberProfileException.NameTooLong()
-        cleaned.category == MemberCategory.CHILD && cleaned.baptized -> MemberProfileException.BaptizedChild()
         cleaned.appointment != Appointment.NONE && !cleaned.canHaveAppointment ->
             MemberProfileException.AppointmentNotAllowed()
         cleaned.isSpeaker && !cleaned.canBeSpeaker -> MemberProfileException.SpeakerNotAllowed()

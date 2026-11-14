@@ -55,7 +55,7 @@ import de.geosphere.congregationplaner.ui.pane.ListPaneHeader
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
-import de.geosphere.congregationplaner.user.domain.model.MemberCategory
+import de.geosphere.congregationplaner.user.domain.model.Gender
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import kotlinx.coroutines.delay
 
@@ -411,7 +411,7 @@ private fun UserManagementPreview() = PreviewThemeWrapper {
                     profile = MemberProfile(
                         lastName = "Muster",
                         firstName = "Max",
-                        category = MemberCategory.BROTHER,
+                        gender = Gender.MALE,
                         baptized = true,
                         appointment = Appointment.ELDER,
                         mobilePhone = "+49 170 1234567",
@@ -420,7 +420,7 @@ private fun UserManagementPreview() = PreviewThemeWrapper {
                 AppUser(
                     uid = "3",
                     hasAccount = false,
-                    profile = MemberProfile(lastName = "Muster", firstName = "Lena", category = MemberCategory.CHILD),
+                    profile = MemberProfile(lastName = "Muster", firstName = "Lena", gender = Gender.FEMALE),
                 ),
             ),
             currentUserId = "2",

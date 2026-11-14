@@ -11,8 +11,9 @@ import de.geosphere.congregationplaner.talk.domain.usecase.MoveSlotsToMemberUseC
 import de.geosphere.congregationplaner.talk.testing.FakeExternalSpeakerDirectoryRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
-import de.geosphere.congregationplaner.user.domain.model.MemberCategory
+import de.geosphere.congregationplaner.user.domain.model.Gender
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.MemberProfileException
 import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
@@ -81,7 +82,9 @@ class MemberTransferUseCasesTest {
         val member = adoption.adopted.single()
         val profile = users.createdMembers.single().profile
         assertEquals("Berg" to "Lea", profile.lastName to profile.firstName)
-        assertEquals(MemberCategory.BROTHER, profile.category)
+        assertEquals(Gender.MALE, profile.gender)
+        // Speakers need an appointment and the directory knows none: adopted speakers start as elders.
+        assertEquals(Appointment.ELDER, profile.appointment)
         assertTrue(profile.baptized && profile.isSpeaker)
         assertTrue(profile.mobilePhone.isNotEmpty())
         // The broken landline number is dropped instead of blocking the adoption.
@@ -132,7 +135,7 @@ class MemberTransferUseCasesTest {
         uid = "p1",
         hasAccount = false,
         congregation = testCongregation,
-        profile = MemberProfile(lastName = "Muster", firstName = "Max", category = MemberCategory.BROTHER),
+        profile = MemberProfile(lastName = "Muster", firstName = "Max", gender = Gender.MALE),
     )
     private val slotPerson = SlotPerson.Member("p1")
     private val ref = MemberRef("acc", "Muster", "Max")
