@@ -4,6 +4,7 @@ import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.EmergencyContact
+import de.geosphere.congregationplaner.user.domain.model.FamilyRelation
 import de.geosphere.congregationplaner.user.domain.model.Gender
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.MemberProfileException
@@ -212,6 +213,67 @@ class MemberUseCasesTest {
             created.profile,
         )
         assertEquals(listOf(created), repository.createdMembers)
+    }
+
+    @Test
+    fun `the family head must be another member without a head of his own`(): Unit = runBlocking {
+        val head = AppUser(uid = "head", profile = MemberProfile(lastName = "Muster"))
+        val spouse = AppUser(
+            uid = "spouse",
+            profile = MemberProfile(familyHeadId = "head", relationToHead = FamilyRelation.SPOUSE),
+        )
+        val other = AppUser(uid = "other")
+        val repository = FakeUserRepository(members = listOf(head, spouse, other))
+        val update = UpdateMemberProfileUseCase(repository, policy)
+        val create = CreateMemberWithoutAccountUseCase(repository, policy)
+        fun AppUser.inFamilyOf(headUid: String) =
+            copy(profile = profile.copy(familyHeadId = headUid, relationToHead = FamilyRelation.CHILD))
+
+        update(admin, other.inFamilyOf("head")).getOrThrow()
+        update(admin, spouse).getOrThrow()
+        assertIs<MemberProfileException.InvalidFamily>(update(admin, other.inFamilyOf("other")).exceptionOrNull())
+        assertIs<MemberProfileException.InvalidFamily>(update(admin, other.inFamilyOf("spouse")).exceptionOrNull())
+        assertIs<MemberProfileException.InvalidFamily>(update(admin, other.inFamilyOf("gone")).exceptionOrNull())
+        // A head cannot join another family: no chains.
+        assertIs<MemberProfileException.InvalidFamily>(update(admin, head.inFamilyOf("other")).exceptionOrNull())
+        assertEquals(listOf("other", "spouse"), repository.updatedProfiles.map { it.uid })
+
+        val child = MemberProfile(lastName = "Muster", firstName = "Tim", familyHeadId = "head")
+        assertEquals(FamilyRelation.OTHER, create(admin, child.normalized()).getOrThrow().profile.relationToHead)
+        assertIs<MemberProfileException.InvalidFamily>(
+            create(admin, child.copy(familyHeadId = "spouse").normalized()).exceptionOrNull(),
+        )
+    }
+
+    @Test
+    fun `removing a family head dissolves the family or hands it to a new head`() = runBlocking {
+        val head = AppUser(uid = "head")
+        val spouse = AppUser(
+            uid = "spouse",
+            profile = MemberProfile(familyHeadId = "head", relationToHead = FamilyRelation.SPOUSE),
+        )
+        val repository = FakeUserRepository(members = listOf(head, spouse))
+        val remove = RemoveMemberUseCase(repository, policy)
+
+        remove(admin, head).getOrThrow()
+        assertEquals(MemberProfile(), repository.updatedProfiles.single().profile)
+        assertEquals(listOf("head"), repository.removedUids)
+
+        remove(admin, head, newFamilyHead = "account").getOrThrow()
+        assertEquals(
+            MemberProfile(familyHeadId = "account", relationToHead = FamilyRelation.SPOUSE),
+            repository.updatedProfiles.last().profile,
+        )
+    }
+
+    @Test
+    fun `a failed family update keeps the head`() = runBlocking {
+        val spouse = AppUser(uid = "spouse", profile = MemberProfile(familyHeadId = "head").normalized())
+        val repository = FakeUserRepository(members = listOf(AppUser(uid = "head"), spouse))
+        repository.updateProfileResult = Result.failure(IllegalStateException("offline"))
+
+        assertTrue(RemoveMemberUseCase(repository, policy)(admin, AppUser(uid = "head")).isFailure)
+        assertTrue(repository.removedUids.isEmpty())
     }
 
     @Test

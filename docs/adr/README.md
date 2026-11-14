@@ -82,3 +82,4 @@ Numbers are sequential and permanent. Never reuse or renumber an existing ADR, e
 - [ADR-0029: WhatsApp-Vorlagen in einem eigenen Einstellungs-Dokument des Mitglieds](0029-message-templates-in-member-settings-document.md) — Accepted
 - [ADR-0030: Titelhistorie der Vortragsliste](0030-talk-title-history.md) — Accepted
 - [ADR-0031: Geschlecht statt Gruppe im Mitgliedsprofil](0031-gender-instead-of-member-category.md) — Accepted
+- [ADR-0032: Familie als Felder im Mitgliedsdokument](0032-family-as-fields-in-member-document.md) — Accepted

@@ -15,6 +15,7 @@ import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.EmergencyContact
+import de.geosphere.congregationplaner.user.domain.model.FamilyRelation
 import de.geosphere.congregationplaner.user.domain.model.Gender
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.repository.AdminContactRepository
@@ -169,6 +170,8 @@ private fun toDomain(document: DocumentSnapshot, congregation: CongregationRef):
                 )
             },
         talkNumbers = (document.get("talkNumbers") as? List<*>).orEmpty().mapNotNull { (it as? Number)?.toInt() },
+        familyHeadId = document.getString("familyHeadId"),
+        relationToHead = FamilyRelation.fromValue(document.getString("relationToHead")),
     ),
 )
 
@@ -225,6 +228,8 @@ private fun MemberProfile.toFirestoreFields(): Map<String, Any?> = mapOf(
     "landlinePhone" to landlinePhone,
     "isSpeaker" to isSpeaker,
     "talkNumbers" to talkNumbers,
+    "familyHeadId" to familyHeadId,
+    "relationToHead" to relationToHead?.name,
     "emails" to emails,
     "street" to street,
     "postalCode" to postalCode,

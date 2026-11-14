@@ -18,9 +18,11 @@ class CreateMemberWithoutAccountUseCase(
         if (congregation == null || !policy.canCreateMemberWithoutAccount(user)) {
             return Result.failure(MemberProfileException.NotAllowed())
         }
-        return profile.validated(requireName = true).fold(
-            onSuccess = { repository.createMemberWithoutAccount(congregation, it) },
-            onFailure = { Result.failure(it) },
-        )
+        return profile.validated(requireName = true)
+            .mapCatching { repository.checkedFamily(congregation, uid = null, profile = it).getOrThrow() }
+            .fold(
+                onSuccess = { repository.createMemberWithoutAccount(congregation, it) },
+                onFailure = { Result.failure(it) },
+            )
     }
 }
