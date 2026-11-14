@@ -81,3 +81,4 @@ Numbers are sequential and permanent. Never reuse or renumber an existing ADR, e
 - [ADR-0028: Stichtage des Planungsassistenten pro Versammlung](0028-talk-planning-settings-per-congregation.md) — Accepted
 - [ADR-0029: WhatsApp-Vorlagen in einem eigenen Einstellungs-Dokument des Mitglieds](0029-message-templates-in-member-settings-document.md) — Accepted
 - [ADR-0030: Titelhistorie der Vortragsliste](0030-talk-title-history.md) — Accepted
+- [ADR-0031: Geschlecht statt Gruppe im Mitgliedsprofil](0031-gender-instead-of-member-category.md) — Accepted
