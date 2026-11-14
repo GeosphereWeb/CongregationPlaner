@@ -13,6 +13,7 @@ import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
+import de.geosphere.congregationplaner.user.domain.model.FamilyRelation
 import de.geosphere.congregationplaner.user.domain.model.Gender
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.MemberProfileException
@@ -150,6 +151,23 @@ class MemberTransferUseCasesTest {
         assertEquals(person.profile, linked.profile)
         assertEquals("acc", users.updatedProfiles.single().uid)
         assertEquals("acc", schedule.slots.value.single().chairmanMemberId)
+        assertEquals(listOf("p1"), users.removedUids)
+    }
+
+    @Test
+    fun `linking hands the family of the person to the account`() = runBlocking {
+        val child = AppUser(
+            uid = "c1",
+            hasAccount = false,
+            profile = MemberProfile(lastName = "Muster", familyHeadId = "p1", relationToHead = FamilyRelation.CHILD),
+        )
+        users.members.value = listOf(account, person, child)
+
+        link(adminPlanner, account, person).getOrThrow()
+
+        val moved = users.updatedProfiles.single { it.uid == "c1" }
+        assertEquals("acc", moved.profile.familyHeadId)
+        assertEquals(FamilyRelation.CHILD, moved.profile.relationToHead)
         assertEquals(listOf("p1"), users.removedUids)
     }
 

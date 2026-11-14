@@ -36,6 +36,7 @@ internal fun MemberEditor(
     onSave: () -> Unit,
     onCancel: () -> Unit,
     onTalksChange: (String) -> Unit = {},
+    family: EditorFamily = EditorFamily(),
 ) {
     val profile = editor.profile
     Card(colors = nightCardColors()) {
@@ -82,6 +83,7 @@ internal fun MemberEditor(
                 }
             }
             SpeakerFields(editor, enabled = !isSaving, onChange = onChange, onTalksChange = onTalksChange)
+            MemberFamilyFields(profile, family, enabled = !isSaving, onChange = onChange)
 
             ContactFields(profile, enabled = !isSaving, onChange = onChange)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

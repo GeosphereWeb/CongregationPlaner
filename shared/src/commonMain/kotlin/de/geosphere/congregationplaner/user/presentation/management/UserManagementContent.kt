@@ -261,6 +261,7 @@ internal fun UserManagementContent(
                                     onSave = actions.onSaveProfile,
                                     onCancel = onCancelEditing,
                                     onTalksChange = actions.onTalksChange,
+                                    family = state.editorFamily,
                                 )
                                 if (member != null && state.permissionsOf(member).canEdit) {
                                     SecondaryButton(

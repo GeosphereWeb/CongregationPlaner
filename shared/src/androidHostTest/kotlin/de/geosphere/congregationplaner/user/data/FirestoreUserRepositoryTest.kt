@@ -19,6 +19,7 @@ import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.EmergencyContact
+import de.geosphere.congregationplaner.user.domain.model.FamilyRelation
 import de.geosphere.congregationplaner.user.domain.model.Gender
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import io.mockk.every
@@ -131,6 +132,8 @@ class FirestoreUserRepositoryTest {
                     "isSpeaker" to true,
                     // Firestore delivers integers as Long; entries that are no number are skipped.
                     "talkNumbers" to listOf(12L, "x", 45L),
+                    "familyHeadId" to "head-1",
+                    "relationToHead" to "CHILD",
                     "emails" to listOf("max@beispiel.de"),
                     "street" to "Hauptstr. 1",
                     "postalCode" to "10115",
@@ -160,6 +163,8 @@ class FirestoreUserRepositoryTest {
                 landlinePhone = "030 456",
                 isSpeaker = true,
                 talkNumbers = listOf(12, 45),
+                familyHeadId = "head-1",
+                relationToHead = FamilyRelation.CHILD,
                 emails = listOf("max@beispiel.de"),
                 street = "Hauptstr. 1",
                 postalCode = "10115",
@@ -217,6 +222,8 @@ class FirestoreUserRepositoryTest {
             appointment = Appointment.ELDER,
             isSpeaker = true,
             talkNumbers = listOf(12, 45),
+            familyHeadId = "head-1",
+            relationToHead = FamilyRelation.SPOUSE,
         )
         val member = AppUser(uid = "uid-1", approved = true, profile = profile)
 
@@ -229,6 +236,8 @@ class FirestoreUserRepositoryTest {
                 "appointment" to "ELDER",
                 "isSpeaker" to true,
                 "talkNumbers" to listOf(12, 45),
+                "familyHeadId" to "head-1",
+                "relationToHead" to "SPOUSE",
             ),
             fields.captured,
         )
@@ -520,6 +529,8 @@ class FirestoreUserRepositoryTest {
         "landlinePhone" to "",
         "isSpeaker" to false,
         "talkNumbers" to emptyList<Int>(),
+        "familyHeadId" to null,
+        "relationToHead" to null,
         "emails" to emptyList<String>(),
         "street" to "",
         "postalCode" to "",

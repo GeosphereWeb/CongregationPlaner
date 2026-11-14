@@ -10,6 +10,7 @@ import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.EmergencyContact
+import de.geosphere.congregationplaner.user.domain.model.FamilyRelation
 import de.geosphere.congregationplaner.user.domain.model.Gender
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import kotlinx.coroutines.flow.first
@@ -104,6 +105,8 @@ class FirestoreRestUserRepositoryTest {
             assertTrue(create.body.contains(""""appointment":{"stringValue":"NONE"}"""))
             assertTrue(create.body.contains(""""lastName":{"stringValue":""}"""))
             assertTrue(create.body.contains(""""isSpeaker":{"booleanValue":false}"""))
+            assertTrue(create.body.contains(""""familyHeadId":{"nullValue":null}"""))
+            assertTrue(create.body.contains(""""relationToHead":{"nullValue":null}"""))
         }
 
     @Test
@@ -121,6 +124,8 @@ class FirestoreRestUserRepositoryTest {
                 "landlinePhone":{"stringValue":"030 456"},
                 "isSpeaker":{"booleanValue":true},
                 "talkNumbers":{"arrayValue":{"values":[{"integerValue":"12"},{"integerValue":"45"}]}},
+                "familyHeadId":{"stringValue":"head-1"},
+                "relationToHead":{"stringValue":"SPOUSE"},
                 "street":{"stringValue":"Hauptstr. 1"},
                 "postalCode":{"stringValue":"10115"},
                 "city":{"stringValue":"Berlin"},
@@ -144,6 +149,8 @@ class FirestoreRestUserRepositoryTest {
                 landlinePhone = "030 456",
                 isSpeaker = true,
                 talkNumbers = listOf(12, 45),
+                familyHeadId = "head-1",
+                relationToHead = FamilyRelation.SPOUSE,
                 street = "Hauptstr. 1",
                 postalCode = "10115",
                 city = "Berlin",
@@ -306,6 +313,8 @@ class FirestoreRestUserRepositoryTest {
                 mobilePhone = "0170",
                 isSpeaker = true,
                 talkNumbers = listOf(7, 9),
+                familyHeadId = "head-1",
+                relationToHead = FamilyRelation.CHILD,
             ),
         )
 
@@ -320,7 +329,18 @@ class FirestoreRestUserRepositoryTest {
             ),
         )
         assertEquals(
-            (ownFields + listOf("gender", "baptized", "appointment", "isSpeaker", "talkNumbers"))
+            (
+                ownFields +
+                    listOf(
+                        "gender",
+                        "baptized",
+                        "appointment",
+                        "isSpeaker",
+                        "talkNumbers",
+                        "familyHeadId",
+                        "relationToHead",
+                    )
+                )
                 .joinToString("&") { "updateMask.fieldPaths=$it" } + "&currentDocument.exists=true",
             request.query,
         )
@@ -328,6 +348,8 @@ class FirestoreRestUserRepositoryTest {
         assertTrue(request.body.contains(""""gender":{"stringValue":"MALE"}"""))
         assertTrue(request.body.contains(""""mobilePhone":{"stringValue":"0170"}"""))
         assertTrue(request.body.contains(""""isSpeaker":{"booleanValue":true}"""))
+        assertTrue(request.body.contains(""""familyHeadId":{"stringValue":"head-1"}"""))
+        assertTrue(request.body.contains(""""relationToHead":{"stringValue":"CHILD"}"""))
     }
 
     @Test
