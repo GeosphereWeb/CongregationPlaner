@@ -1,7 +1,7 @@
 # ADR-0003: Globale Vortragsliste mit Titel-Momentaufnahme im Termin
 
 ## Status
-Accepted
+Superseded by [ADR-0034](0034-reference-data-per-country.md) (nur der globale Speicherort; die Titel-Momentaufnahme im Termin gilt weiter)
 
 ## Context
 Alle Versammlungen und Kreise nutzen dieselbe Vortragsliste. Die Nummer eines Vortrags bleibt stabil, der Titel ändert sich gelegentlich, und ein Vortrag kann zeitweise nicht aktiv sein. Bereits geplante Termine dürfen sich durch eine Titeländerung nicht verändern.
