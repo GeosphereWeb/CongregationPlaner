@@ -83,3 +83,4 @@ Numbers are sequential and permanent. Never reuse or renumber an existing ADR, e
 - [ADR-0030: Titelhistorie der Vortragsliste](0030-talk-title-history.md) — Accepted
 - [ADR-0031: Geschlecht statt Gruppe im Mitgliedsprofil](0031-gender-instead-of-member-category.md) — Accepted
 - [ADR-0032: Familie als Felder im Mitgliedsdokument](0032-family-as-fields-in-member-document.md) — Accepted
+- [ADR-0033: Besondere Ereignisse mit Sichtbarkeit je Gruppe](0033-special-events-visible-by-group.md) — Accepted

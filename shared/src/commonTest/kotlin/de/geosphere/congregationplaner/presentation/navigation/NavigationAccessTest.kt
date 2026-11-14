@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner.presentation.navigation
 
+import de.geosphere.congregationplaner.event.domain.permission.SpecialEventPolicy
 import de.geosphere.congregationplaner.midweek.domain.permission.MidweekPermissionPolicy
 import de.geosphere.congregationplaner.organization.domain.permission.OrganizationPermissionPolicy
 import de.geosphere.congregationplaner.talk.domain.permission.TalkReferenceDataPolicy
@@ -16,6 +17,7 @@ internal fun navigationAccess() = NavigationAccess(
     MidweekPermissionPolicy(),
     OrganizationPermissionPolicy(),
     TalkReferenceDataPolicy(),
+    SpecialEventPolicy(),
 )
 
 class NavigationAccessTest {
@@ -62,7 +64,11 @@ class NavigationAccessTest {
         val visible = access.visibleFor(member(CongregationRole.CONGREGATION_ADMIN))
 
         assertEquals(
-            listOf(CongregationSection.GENERAL_DATA, CongregationSection.USER_MANAGEMENT),
+            listOf(
+                CongregationSection.GENERAL_DATA,
+                CongregationSection.USER_MANAGEMENT,
+                CongregationSection.SPECIAL_EVENTS,
+            ),
             visible.congregationSections,
         )
         assertEquals(emptyList(), visible.globalSections)
@@ -75,7 +81,11 @@ class NavigationAccessTest {
         )
 
         assertEquals(
-            listOf(CongregationSection.GENERAL_DATA, CongregationSection.USER_MANAGEMENT) +
+            listOf(
+                CongregationSection.GENERAL_DATA,
+                CongregationSection.USER_MANAGEMENT,
+                CongregationSection.SPECIAL_EVENTS,
+            ) +
                 CongregationSection.talkPlanning,
             visible.congregationSections,
         )
