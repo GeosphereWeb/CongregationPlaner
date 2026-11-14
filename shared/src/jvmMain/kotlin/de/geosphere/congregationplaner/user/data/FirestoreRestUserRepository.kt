@@ -28,6 +28,7 @@ import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.EmergencyContact
+import de.geosphere.congregationplaner.user.domain.model.FamilyRelation
 import de.geosphere.congregationplaner.user.domain.model.Gender
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
@@ -160,6 +161,8 @@ internal class FirestoreRestUserRepository(
             city = fields.optionalStringField("city").orEmpty(),
             emergencyContacts = fields.emergencyContacts(),
             talkNumbers = fields.intArrayField("talkNumbers"),
+            familyHeadId = fields.optionalStringField("familyHeadId"),
+            relationToHead = FamilyRelation.fromValue(fields.optionalStringField("relationToHead")),
         ),
     )
 
@@ -198,7 +201,15 @@ internal class FirestoreRestUserRepository(
             "emergencyContacts",
         )
         val PROFILE_FIELD_NAMES =
-            OWN_PROFILE_FIELD_NAMES + listOf("gender", "baptized", "appointment", "isSpeaker", "talkNumbers")
+            OWN_PROFILE_FIELD_NAMES + listOf(
+                "gender",
+                "baptized",
+                "appointment",
+                "isSpeaker",
+                "talkNumbers",
+                "familyHeadId",
+                "relationToHead",
+            )
     }
 }
 
@@ -240,6 +251,8 @@ private fun MemberProfile.fields(): JsonObject = JsonObject().apply {
     add("landlinePhone", firestoreString(landlinePhone))
     add("isSpeaker", firestoreBoolean(isSpeaker))
     add("talkNumbers", firestoreIntegerArray(talkNumbers))
+    add("familyHeadId", firestoreNullableString(familyHeadId))
+    add("relationToHead", firestoreNullableString(relationToHead?.name))
     add("emails", firestoreStringArray(emails))
     add("street", firestoreString(street))
     add("postalCode", firestoreString(postalCode))

@@ -89,7 +89,8 @@ class LinkMemberAccountUseCase(
             Result.failure(IllegalArgumentException("Bitte ein Mitglied mit Konto und eine Person ohne Konto wählen."))
         else -> updateProfile(user, account.copy(profile = person.profile)).mapCatching { linked ->
             moveSlots(user, SlotPerson.Member(person.uid), linked.toMemberRef()).getOrThrow()
-            removeMember(user, person).getOrThrow()
+            // The family of the person moves to the account like the rest of the profile.
+            removeMember(user, person, newFamilyHead = linked.uid).getOrThrow()
             linked
         }
     }

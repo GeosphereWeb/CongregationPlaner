@@ -1,14 +1,17 @@
 package de.geosphere.congregationplaner.user.domain.usecase
 
+import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.EmergencyContact
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.domain.model.MemberProfileException
+import de.geosphere.congregationplaner.user.domain.model.familyHeadCandidates
 import de.geosphere.congregationplaner.user.domain.model.formatPhoneNumber
 import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
 import dev.zacsweers.metro.Inject
+import kotlinx.coroutines.flow.first
 
 /** Der Versammlungsadmin [user] speichert alle persönlichen Angaben von [member]. */
 @Inject
@@ -20,10 +23,30 @@ class UpdateMemberProfileUseCase(private val repository: UserRepository, private
             return Result.failure(MemberProfileException.NotAllowed())
         }
         // Bei Personen ohne Konto ist der Name die einzige Möglichkeit, sie zu erkennen.
-        return member.profile.validated(requireName = !member.hasAccount).fold(
-            onSuccess = { profile -> repository.updateMemberProfile(congregation, member.copy(profile = profile)) },
-            onFailure = { Result.failure(it) },
-        )
+        return member.profile.validated(requireName = !member.hasAccount)
+            .mapCatching { profile -> repository.checkedFamily(congregation, member.uid, profile).getOrThrow() }
+            .fold(
+                onSuccess = { profile -> repository.updateMemberProfile(congregation, member.copy(profile = profile)) },
+                onFailure = { Result.failure(it) },
+            )
+    }
+}
+
+/**
+ * Prüft das gewählte Familienoberhaupt gegen die aktuellen Mitglieder (siehe [familyHeadCandidates]); [uid] ist
+ * `null` für eine neue Person. Ohne Oberhaupt wird nichts gelesen.
+ */
+internal suspend fun UserRepository.checkedFamily(
+    congregation: CongregationRef,
+    uid: String?,
+    profile: MemberProfile,
+): Result<MemberProfile> {
+    val head = profile.familyHeadId ?: return Result.success(profile)
+    val members = observeMembers(congregation).first()
+    return if (familyHeadCandidates(members, uid).any { it.uid == head }) {
+        Result.success(profile)
+    } else {
+        Result.failure(MemberProfileException.InvalidFamily())
     }
 }
 

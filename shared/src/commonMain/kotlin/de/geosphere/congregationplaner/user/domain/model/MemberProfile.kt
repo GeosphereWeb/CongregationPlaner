@@ -11,6 +11,9 @@ package de.geosphere.congregationplaner.user.domain.model
  * @param isSpeaker `true` für Vortragsredner; solche Mitglieder können in der Vortragsplanung ausgewählt werden.
  *   Nur Dienstamtgehilfen und Älteste können Redner sein, siehe [canBeSpeaker].
  * @param talkNumbers Nummern der Vorträge, die der Redner hält (leer = unbekannt); nur bei [isSpeaker].
+ * @param familyHeadId Das Familienoberhaupt, zu dem das Mitglied gehört (ADR-0032); `null` ohne Familie und beim
+ *   Oberhaupt selbst. Familienoberhaupt ist, wer von anderen Mitgliedern hier genannt wird.
+ * @param relationToHead Die Beziehung zum Oberhaupt; nur mit [familyHeadId].
  */
 data class MemberProfile(
     val lastName: String = "",
@@ -27,6 +30,8 @@ data class MemberProfile(
     val city: String = "",
     val emergencyContacts: List<EmergencyContact> = emptyList(),
     val talkNumbers: List<Int> = emptyList(),
+    val familyHeadId: String? = null,
+    val relationToHead: FamilyRelation? = null,
 ) {
     val fullName: String get() = listOf(firstName, lastName).filter(String::isNotBlank).joinToString(" ")
 
@@ -57,13 +62,19 @@ data class MemberProfile(
         emergencyContacts = form.emergencyContacts,
     )
 
-    /** Nur Brüder haben ein Dienstamt, ohne Dienstamt gibt es keinen Redner; ohne Redner keine Vorträge. */
+    /**
+     * Nur Brüder haben ein Dienstamt, ohne Dienstamt gibt es keinen Redner; ohne Redner keine Vorträge. Eine Beziehung
+     * gibt es nur zu einem Oberhaupt; wer einem zugeordnet wird, ist zunächst „Sonstige“.
+     */
     fun normalized(): MemberProfile {
         val speaker = isSpeaker && canBeSpeaker
+        val head = familyHeadId?.takeIf(String::isNotBlank)
         return copy(
             appointment = if (canHaveAppointment) appointment else Appointment.NONE,
             isSpeaker = speaker,
             talkNumbers = if (speaker) talkNumbers.distinct().sorted() else emptyList(),
+            familyHeadId = head,
+            relationToHead = head?.let { relationToHead ?: FamilyRelation.OTHER },
         )
     }
 
@@ -162,6 +173,12 @@ sealed class MemberProfileException(message: String) : Exception(message) {
         MemberProfileException(
             "Vortragsnummern: höchstens ${MemberProfile.MAX_TALKS} Nummern " +
                 "von 1 bis ${MemberProfile.MAX_TALK_NUMBER}, nur bei Rednern.",
+        )
+
+    class InvalidFamily :
+        MemberProfileException(
+            "Familienoberhaupt kann nur ein anderes Mitglied ohne eigenes Oberhaupt sein; " +
+                "ein Familienoberhaupt hat selbst keines.",
         )
 
     class InvalidEmail : MemberProfileException("Bitte gib gültige E-Mail-Adressen ein (z. B. name@beispiel.de).")

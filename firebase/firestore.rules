@@ -49,6 +49,9 @@ rules_version = '2';
 //     anything but 'NONE' only for brothers: baptized and 'MALE')
 //   - mobilePhone, landlinePhone: string (<= 30 chars, digits and + ( ) / - space)
 //   - isSpeaker: bool (marks talk speakers, only with an appointment)
+//   - familyHeadId: string | null (1..128 chars, the uid of the family head; null without family and for the head
+//     itself, the app checks that the head has no head of its own, ADR-0032)
+//   - relationToHead: string | null ('SPOUSE' | 'CHILD' | 'OTHER'; set exactly when familyHeadId is set)
 //   - talkNumbers: list<int> (<= 200 entries, the talks a speaker gives; empty unless isSpeaker; the app checks
 //     the numbers 1..9999)
 //   - emails: list (<= 3) of string (an e-mail address, <= 254 chars): further addresses besides the sign-in `email`
@@ -543,7 +546,8 @@ service cloud.firestore {
     }
 
     function profileFields() {
-      return ownFields().concat(['gender', 'baptized', 'appointment', 'isSpeaker', 'talkNumbers']);
+      return ownFields().concat(['gender', 'baptized', 'appointment', 'isSpeaker', 'talkNumbers', 'familyHeadId',
+        'relationToHead']);
     }
 
     // Every profile field is present (the app writes them all).
@@ -565,7 +569,15 @@ service cloud.firestore {
         isValidEmergencyContacts(data.emergencyContacts) &&
         data.isSpeaker is bool &&
         (data.isSpeaker == false || appointment != 'NONE') &&
-        data.talkNumbers is list && data.talkNumbers.size() <= (data.isSpeaker ? 200 : 0);
+        data.talkNumbers is list && data.talkNumbers.size() <= (data.isSpeaker ? 200 : 0) &&
+        isValidFamily(data);
+    }
+
+    function isValidFamily(data) {
+      return data.familyHeadId == null
+        ? data.relationToHead == null
+        : isShortString(data.familyHeadId, 128) && data.familyHeadId.size() >= 1 &&
+          data.relationToHead in ['SPOUSE', 'CHILD', 'OTHER'];
     }
 
     // The names may be filled: they come from the display name of the sign-up.
@@ -576,7 +588,8 @@ service cloud.firestore {
         data.mobilePhone == '' &&
         data.landlinePhone == '' &&
         data.isSpeaker == false &&
-        data.talkNumbers.size() == 0;
+        data.talkNumbers.size() == 0 &&
+        data.familyHeadId == null;
     }
 
     // Persons without an account never get access to the app.
