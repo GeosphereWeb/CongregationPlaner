@@ -8,8 +8,9 @@ import de.geosphere.congregationplaner.user.domain.model.AppUser
 import dev.zacsweers.metro.createGraph
 
 @Composable
-internal fun ExternalDirectoryRoute(currentUser: AppUser) {
+internal fun ExternalDirectoryRoute(currentUser: AppUser, initialSpeakerId: String? = null) {
     val viewModel = remember { createGraph<ExternalDirectoryGraph>().externalDirectoryViewModel }
     LaunchedEffect(viewModel, currentUser) { viewModel.onCurrentUserChanged(currentUser) }
+    LaunchedEffect(viewModel, initialSpeakerId) { initialSpeakerId?.let(viewModel::openSpeaker) }
     ExternalDirectoryScreen(viewModel)
 }

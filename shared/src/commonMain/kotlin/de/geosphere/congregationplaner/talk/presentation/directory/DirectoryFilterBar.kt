@@ -24,13 +24,29 @@ import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 
 /**
- * Filter nach Kreisen und Versammlungen (je mehrere wählbar); jede Auswahl gilt sofort. Ohne Kreis stehen alle
- * Versammlungen zur Wahl; die Suche grenzt sie ab dem zweiten Buchstaben ein.
+ * Rednersuche wie in „Redner wählen“ (Familien-, Vorname oder Versammlung) und Filter nach Kreisen und Versammlungen
+ * (je mehrere wählbar); jede Eingabe gilt sofort. Ohne Kreis stehen alle Versammlungen zur Wahl; die Suche im Menü
+ * grenzt sie ab dem zweiten Buchstaben ein.
  */
 @Composable
 internal fun DirectoryFilterBar(state: ExternalDirectoryUiState, actions: ExternalDirectoryActions) {
     val directory = state.directory
     if (directory.circuits.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(
+            value = state.speakerQuery,
+            onValueChange = actions.onSearchSpeakers,
+            label = { Text("Name suchen") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        CircuitAndCongregationFilter(state, actions)
+    }
+}
+
+@Composable
+private fun CircuitAndCongregationFilter(state: ExternalDirectoryUiState, actions: ExternalDirectoryActions) {
+    val directory = state.directory
     val circuits = directory.circuitOptions(state.filter)
     val congregations = directory.congregationOptions(state.filter, state.congregationQuery)
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -106,6 +122,7 @@ private fun DirectoryFilterBarPreview() = PreviewThemeWrapper {
         DirectoryFilterBar(
             previewDirectoryState.copy(
                 filter = DirectoryFilter(circuitIds = setOf("c1"), congregationIds = setOf("g1")),
+                speakerQuery = "Bei",
             ),
             ExternalDirectoryActions(),
         )

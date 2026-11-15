@@ -76,4 +76,13 @@ class ReadOnlyViewTest {
             view.lines,
         )
     }
+
+    @Test
+    fun `an excluded speaker says so`() {
+        val speaker = VisitingSpeaker(id = "s1", congregationId = "g1", lastName = "Berg", excludedFromPlanning = true)
+
+        val view = readOnlyView(ExternalDirectoryEditor.Speaker(speaker, "", speaker), directory)
+
+        assertEquals(listOf("Berg", "Versammlung: Altdorf", "Von der Planung ausgeschlossen"), view.lines)
+    }
 }

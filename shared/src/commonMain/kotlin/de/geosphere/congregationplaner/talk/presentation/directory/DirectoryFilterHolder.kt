@@ -16,6 +16,9 @@ class DirectoryFilterHolder(private val store: UiStateStore<ExternalDirectoryUiS
     fun clearCongregations() =
         store.update { it.copy(filter = it.filter.copy(congregationIds = emptySet()), congregationQuery = "") }
 
+    /** Die Suche nach Rednern wie in „Redner wählen“: Familien-, Vorname oder Versammlung. */
+    fun searchSpeakers(query: String) = store.update { it.copy(speakerQuery = query) }
+
     /** Die Suche nach dem Namen einer Versammlung; sie grenzt die Auswahl ab dem zweiten Buchstaben ein. */
     fun searchCongregations(query: String) = store.update { it.copy(congregationQuery = query) }
 }

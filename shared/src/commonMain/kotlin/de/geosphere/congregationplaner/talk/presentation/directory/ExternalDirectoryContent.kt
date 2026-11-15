@@ -63,6 +63,7 @@ internal data class ExternalDirectoryActions(
     val onToggleCongregation: (String) -> Unit = {},
     val onClearCongregations: () -> Unit = {},
     val onSearchCongregations: (String) -> Unit = {},
+    val onSearchSpeakers: (String) -> Unit = {},
 )
 
 @Composable
@@ -90,6 +91,7 @@ fun ExternalDirectoryScreen(viewModel: ExternalDirectoryViewModel, modifier: Mod
             onToggleCongregation = viewModel.filter::toggleCongregation,
             onClearCongregations = viewModel.filter::clearCongregations,
             onSearchCongregations = viewModel.filter::searchCongregations,
+            onSearchSpeakers = viewModel.filter::searchSpeakers,
         ),
         modifier = modifier,
     )
@@ -143,6 +145,8 @@ internal fun ExternalDirectoryContent(
                         CollapsingHeaderColumn(
                             listState = listState,
                             header = { DirectoryFilterBar(state, actions) },
+                            // Während der Suche bleibt das Suchfeld sichtbar, auch wenn die Liste gescrollt ist.
+                            forceVisible = state.speakerQuery.isNotBlank(),
                             spacing = 8.dp,
                         ) {
                             ExternalDirectoryTree(state, actions, isBusy, listState)

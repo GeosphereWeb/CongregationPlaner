@@ -74,12 +74,16 @@ data class ExternalDirectoryUiState(
     val isDeleting: Boolean = false,
     val filter: DirectoryFilter = DirectoryFilter(),
     val congregationQuery: String = "",
+    /** Die Suche nach Rednern (Familien-, Vorname oder Versammlung), zusätzlich zum Filter. */
+    val speakerQuery: String = "",
     override val errorMessage: String? = null,
 ) : ListDetailState {
     override val hasDetail: Boolean get() = editor != null
 
-    /** Das Verzeichnis, wie es die Liste zeigt: auf den gewählten Kreis und die Versammlung eingegrenzt. */
-    val visibleDirectory: ExternalDirectory get() = directory.filtered(filter)
+    /** Das Verzeichnis, wie es die Liste zeigt: auf Kreis, Versammlung und die Rednersuche eingegrenzt. */
+    val visibleDirectory: ExternalDirectory get() = directory.filtered(filter).searched(speakerQuery)
+
+    val isFiltered: Boolean get() = filter.isActive || speakerQuery.isNotBlank()
 }
 
 internal fun <T> List<T>.upsert(item: T, id: (T) -> String): List<T> =

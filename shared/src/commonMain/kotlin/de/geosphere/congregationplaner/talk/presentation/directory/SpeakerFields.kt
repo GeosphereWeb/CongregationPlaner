@@ -19,6 +19,7 @@ import de.geosphere.congregationplaner.talk.presentation.picker.label
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.ui.field.FormTextField
+import de.geosphere.congregationplaner.ui.form.SwitchRow
 import de.geosphere.congregationplaner.ui.rating.StarRating
 
 @Composable
@@ -48,7 +49,16 @@ internal fun SpeakerFields(
     StarRating(rankingStars(speaker.ranking)) {
         onChange(editor.copy(speaker = speaker.copy(ranking = nextRanking(speaker.ranking, it))))
     }
+    SwitchRow(EXCLUDED_FROM_PLANNING_SWITCH, speaker.excludedFromPlanning) {
+        onChange(editor.copy(speaker = speaker.copy(excludedFromPlanning = it)))
+    }
+    Text(
+        "Ausgeschlossene Redner stehen bei „Redner wählen“ nicht mehr zur Auswahl; bestehende Termine bleiben.",
+        style = MaterialTheme.typography.bodySmall,
+    )
 }
+
+private const val EXCLUDED_FROM_PLANNING_SWITCH = "Von der Planung ausschließen"
 
 /** Bewertung des Redners in Sternen; ein Tipp auf den aktuellen Stern löscht sie. */
 
@@ -80,5 +90,7 @@ internal fun SpeakerCongregationPicker(directory: ExternalDirectory, selectedId:
 private fun SpeakerFieldsPreview() = PreviewThemeWrapper {
     Column {
         SpeakerFields(ExternalDirectoryEditor.Speaker(previewSpeaker, "12, 45", previewSpeaker), previewDirectory) {}
+        val excluded = previewSpeaker.copy(excludedFromPlanning = true)
+        SpeakerFields(ExternalDirectoryEditor.Speaker(excluded, "12, 45", excluded), previewDirectory) {}
     }
 }

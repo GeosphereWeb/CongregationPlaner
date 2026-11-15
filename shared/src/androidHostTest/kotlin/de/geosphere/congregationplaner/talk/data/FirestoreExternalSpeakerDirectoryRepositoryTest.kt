@@ -83,7 +83,7 @@ class FirestoreExternalSpeakerDirectoryRepositoryTest {
     }
 
     @Test
-    fun `speakers are mapped including phones, email, talk numbers and ranking`() = runBlocking {
+    fun `speakers are mapped including phones, email, talk numbers, ranking and exclusion`() = runBlocking {
         speakers.emit(
             mockk {
                 every { id } returns "s1"
@@ -93,6 +93,7 @@ class FirestoreExternalSpeakerDirectoryRepositoryTest {
                 every { getString("mobilePhone") } returns "0170"
                 every { getString("landlinePhone") } returns "08092"
                 every { getLong("ranking") } returns 4L
+                every { getBoolean("excludedFromPlanning") } returns true
                 every { getString("email") } returns "lea@example.org"
                 every { this@mockk.get("talkNumbers") } returns listOf(12L, 45L, "x")
             },
@@ -100,13 +101,14 @@ class FirestoreExternalSpeakerDirectoryRepositoryTest {
                 every { id } returns "s2"
                 every { getString(any()) } returns null
                 every { getLong(any()) } returns null
+                every { getBoolean(any()) } returns null
                 every { this@mockk.get("talkNumbers") } returns null
             },
         )
 
         assertEquals(
             listOf(
-                VisitingSpeaker("s1", "g1", "Berg", "Lea", "0170", "08092", "lea@example.org", listOf(12, 45), 4),
+                VisitingSpeaker("s1", "g1", "Berg", "Lea", "0170", "08092", "lea@example.org", listOf(12, 45), 4, true),
                 VisitingSpeaker("s2", "", ""),
             ),
             repository.observeSpeakers(congregation).first(),
@@ -136,6 +138,7 @@ class FirestoreExternalSpeakerDirectoryRepositoryTest {
                 "email" to "",
                 "talkNumbers" to listOf(7, 9),
                 "ranking" to 0,
+                "excludedFromPlanning" to false,
             ),
             fields.captured,
         )

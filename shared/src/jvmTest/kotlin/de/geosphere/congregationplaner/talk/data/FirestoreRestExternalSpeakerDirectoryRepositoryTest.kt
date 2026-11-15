@@ -81,7 +81,7 @@ class FirestoreRestExternalSpeakerDirectoryRepositoryTest {
     }
 
     @Test
-    fun `speakers are read and written with phones, email, talk numbers and ranking`() = runWithRepository(
+    fun `speakers are read and written with phones, email, talk numbers, ranking and exclusion`() = runWithRepository(
         responder = { request ->
             when (request.method) {
                 "GET" -> FakeResponse(
@@ -91,6 +91,7 @@ class FirestoreRestExternalSpeakerDirectoryRepositoryTest {
                             "congregationId":{"stringValue":"g1"},"lastName":{"stringValue":"Berg"},
                             "firstName":{"stringValue":"Lea"},"mobilePhone":{"stringValue":"0170"},
                             "landlinePhone":{"stringValue":"08092"},"ranking":{"integerValue":"4"},
+                            "excludedFromPlanning":{"booleanValue":true},
                             "email":{"stringValue":"lea@example.org"},
                             "talkNumbers":{"arrayValue":{"values":[{"integerValue":"12"},{"integerValue":"45"}]}}}},
                         {"name":"x/visitingSpeakers/s2","fields":{}}]}""",
@@ -103,7 +104,7 @@ class FirestoreRestExternalSpeakerDirectoryRepositoryTest {
         val listed = repository.observeSpeakers(congregation).first()
         assertEquals(
             listOf(
-                VisitingSpeaker("s1", "g1", "Berg", "Lea", "0170", "08092", "lea@example.org", listOf(12, 45), 4),
+                VisitingSpeaker("s1", "g1", "Berg", "Lea", "0170", "08092", "lea@example.org", listOf(12, 45), 4, true),
                 VisitingSpeaker("s2", "", ""),
             ),
             listed,
@@ -122,6 +123,7 @@ class FirestoreRestExternalSpeakerDirectoryRepositoryTest {
         assertTrue(body.contains(""""mobilePhone":{"stringValue":""}"""))
         assertTrue(body.contains(""""landlinePhone":{"stringValue":""}"""))
         assertTrue(body.contains(""""ranking":{"integerValue":"0"}"""))
+        assertTrue(body.contains(""""excludedFromPlanning":{"booleanValue":false}"""))
 
         assertTrue(repository.deleteSpeaker(congregation, "s1").isSuccess)
         assertEquals("$speakersPath/s1", server.requests.last().path)

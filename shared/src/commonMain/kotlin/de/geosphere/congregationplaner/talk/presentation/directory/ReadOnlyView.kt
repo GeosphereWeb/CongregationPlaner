@@ -2,6 +2,9 @@ package de.geosphere.congregationplaner.talk.presentation.directory
 
 import de.geosphere.congregationplaner.talk.domain.model.ExternalDirectory
 
+/** Hinweis an einem Redner, den der Planer nicht mehr zur Auswahl anbietet. */
+internal const val EXCLUDED_FROM_PLANNING_LABEL = "Von der Planung ausgeschlossen"
+
 /** Die Angaben eines Eintrags der Rednerliste für die Nur-Lesen-Ansicht. */
 internal data class ReadOnlyView(val title: String, val lines: List<String>)
 
@@ -26,6 +29,7 @@ internal fun readOnlyView(editor: ExternalDirectoryEditor, directory: ExternalDi
                 speaker.email.takeIf(String::isNotBlank)?.let { "E-Mail: $it" },
                 speaker.talkNumbers.takeIf { it.isNotEmpty() }?.let { "Vorträge: ${it.toText()}" },
                 speaker.ranking.takeIf { it > 0 }?.let { "Bewertung: $it von 5" },
+                EXCLUDED_FROM_PLANNING_LABEL.takeIf { speaker.excludedFromPlanning },
             ),
         )
     }
