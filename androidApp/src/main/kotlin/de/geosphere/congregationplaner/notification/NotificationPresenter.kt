@@ -13,6 +13,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
 import de.geosphere.congregationplaner.MainActivity
 import de.geosphere.congregationplaner.R
+import de.geosphere.congregationplaner.notification.domain.model.NotificationCategory
 import de.geosphere.congregationplaner.notification.domain.model.ReceivedNotification
 
 /**
@@ -20,13 +21,43 @@ import de.geosphere.congregationplaner.notification.domain.model.ReceivedNotific
  * das App-Icon. Je Kategorie gibt es einen Kanal, den der Nutzer in den Android-Einstellungen stummschalten kann.
  */
 internal object NotificationPresenter {
+    // Eine einzige Erinnerung „Redner informieren“, die sich täglich ersetzt und verschwindet, sobald alles erledigt ist.
+    private const val SPEAKER_REMINDER_TAG = "speaker-reminder"
+
     fun show(context: Context, notification: ReceivedNotification) {
+        // Die Dokument-ID als Tag: Wird dieselbe Benachrichtigung doppelt abgefragt, ersetzt sie sich selbst.
+        post(
+            context,
+            notification.id,
+            notification.category,
+            notification.title,
+            notification.body,
+            notification.createdAt.toEpochMilliseconds(),
+        )
+    }
+
+    fun showSpeakerReminder(context: Context, title: String, body: String) {
+        post(context, SPEAKER_REMINDER_TAG, NotificationCategory.TALK_PLANNING, title, body, System.currentTimeMillis())
+    }
+
+    fun cancelSpeakerReminder(context: Context) {
+        NotificationManagerCompat.from(context).cancel(SPEAKER_REMINDER_TAG, 0)
+    }
+
+    @Suppress("LongParameterList") // alles Bestandteile genau einer Benachrichtigung
+    private fun post(
+        context: Context,
+        tag: String,
+        category: NotificationCategory,
+        title: String,
+        body: String,
+        whenMillis: Long,
+    ) {
         val allowed = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
             PackageManager.PERMISSION_GRANTED
         if (!allowed) return
         val manager = NotificationManagerCompat.from(context)
-        val category = notification.category
         manager.createNotificationChannel(
             NotificationChannelCompat.Builder(category.name, NotificationManagerCompat.IMPORTANCE_DEFAULT)
                 .setName(category.label)
@@ -43,14 +74,15 @@ internal object NotificationPresenter {
             // Das App-Icon ist ein Adaptive Icon; BitmapFactory könnte es nicht lesen.
             .setLargeIcon(ContextCompat.getDrawable(context, R.mipmap.ic_launcher)?.toBitmap())
             .setColor(ContextCompat.getColor(context, R.color.cp_primary))
-            .setContentTitle(notification.title)
-            .setContentText(notification.body)
-            .setWhen(notification.createdAt.toEpochMilliseconds())
+            .setContentTitle(title)
+            .setContentText(body)
+            // Mehrere offene Termine stehen je in einer Zeile; die Kurzansicht zeigt nur die erste.
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setWhen(whenMillis)
             .setShowWhen(true)
             .setContentIntent(openApp)
             .setAutoCancel(true)
             .build()
-        // Die Dokument-ID als Tag: Wird dieselbe Benachrichtigung doppelt abgefragt, ersetzt sie sich selbst.
-        manager.notify(notification.id, 0, built)
+        manager.notify(tag, 0, built)
     }
 }

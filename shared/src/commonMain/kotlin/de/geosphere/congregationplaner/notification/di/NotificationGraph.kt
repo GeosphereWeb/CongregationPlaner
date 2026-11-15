@@ -5,9 +5,12 @@ import de.geosphere.congregationplaner.auth.domain.repository.FirebaseAuthReposi
 import de.geosphere.congregationplaner.notification.data.createNotificationRepository
 import de.geosphere.congregationplaner.notification.domain.repository.NotificationRepository
 import de.geosphere.congregationplaner.notification.domain.usecase.CheckNewNotificationsUseCase
+import de.geosphere.congregationplaner.notification.domain.usecase.CheckSpeakerRemindersUseCase
 import de.geosphere.congregationplaner.notification.presentation.AnnouncementViewModel
 import de.geosphere.congregationplaner.organization.data.createCongregationSelectionStore
 import de.geosphere.congregationplaner.organization.domain.repository.CongregationSelectionStore
+import de.geosphere.congregationplaner.talk.data.createTalkScheduleRepository
+import de.geosphere.congregationplaner.talk.domain.repository.TalkScheduleRepository
 import de.geosphere.congregationplaner.user.data.createUserRepository
 import de.geosphere.congregationplaner.user.domain.repository.UserRepository
 import dev.zacsweers.metro.DependencyGraph
@@ -18,6 +21,7 @@ import dev.zacsweers.metro.createGraph
 @DependencyGraph
 interface NotificationGraph {
     val checkNewNotifications: CheckNewNotificationsUseCase
+    val checkSpeakerReminders: CheckSpeakerRemindersUseCase
     val announcementViewModel: AnnouncementViewModel
 
     @Provides
@@ -31,8 +35,11 @@ interface NotificationGraph {
 
     @Provides
     fun provideNotificationRepository(): NotificationRepository = createNotificationRepository()
+
+    // Termine der Woche für die Erinnerung „Redner informieren“ (CP-167).
+    @Provides
+    fun provideTalkScheduleRepository(): TalkScheduleRepository = createTalkScheduleRepository()
 }
 
 /** Für Plattformmodule ohne Metro-Compiler-Plugin (Android-Worker). */
-fun createCheckNewNotificationsUseCase(): CheckNewNotificationsUseCase =
-    createGraph<NotificationGraph>().checkNewNotifications
+fun createNotificationGraph(): NotificationGraph = createGraph<NotificationGraph>()
