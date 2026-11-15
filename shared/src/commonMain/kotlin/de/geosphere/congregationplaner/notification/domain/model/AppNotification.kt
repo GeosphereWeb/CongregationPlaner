@@ -2,14 +2,15 @@ package de.geosphere.congregationplaner.notification.domain.model
 
 import de.geosphere.congregationplaner.event.domain.model.EventAudience
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
+import kotlin.time.Instant
 
 /**
  * Art einer Benachrichtigung (ADR-0035). Sie bestimmt, wer sie senden darf, und auf Android den
  * Benachrichtigungskanal.
  */
-enum class NotificationCategory {
+enum class NotificationCategory(val label: String) {
     /** Änderungen an der Vortragsplanung, z. B. „Redner informiert“; an Vortragsplaner und Helfer. */
-    TALK_PLANNING,
+    TALK_PLANNING("Vortragsplanung"),
 }
 
 /**
@@ -28,6 +29,19 @@ data class AppNotification(
         const val MAX_BODY_LENGTH = 500
     }
 }
+
+/** Eine gespeicherte Benachrichtigung, wie sie ein Empfänger liest. */
+data class ReceivedNotification(
+    val id: String,
+    val category: NotificationCategory,
+    val title: String,
+    val body: String,
+    val senderUid: String,
+    val createdAt: Instant,
+)
+
+/** Ergebnis einer Abfrage: die anzuzeigenden Benachrichtigungen und der neue Stand für die nächste Abfrage. */
+data class NotificationCheck(val notifications: List<ReceivedNotification>, val seenUntil: Instant)
 
 /** Fachliche Fehler beim Senden einer Benachrichtigung. */
 sealed class NotificationException(message: String) : Exception(message) {
