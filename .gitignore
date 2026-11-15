@@ -29,5 +29,8 @@ node_modules/
 # Firebase emulator data (local accounts and documents)
 /firebase/emulator-data/
 
+# Implementation plans: local working documents, never versioned
+/docs/plans/
+
 # Graphify knowledge graph output (local, regenerable)
 /graphify-out/

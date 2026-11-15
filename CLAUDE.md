@@ -88,6 +88,10 @@ Bei Repository-/DB-Anbindung sind Interface + UseCase-Schicht Pflicht. Repositor
 
 Die App läuft bis zum Go-live nur in einer Testumgebung (gilt bis auf Widerruf). Code und Firestore-Regeln berücksichtigen keine Altdaten: keine Migration, keine Kompatibilitätslogik für alte Felder oder Formate, keine Rücksicht auf ältere deployte Regeln. Das Datenmodell wird direkt auf den Soll-Zustand geändert. Bereits vorhandene Altdaten-Behandlung wird entfernt, sobald sie auffällt.
 
+## Umsetzungspläne
+
+Pläne, Befundlisten und andere Arbeitsdokumente für eine Umsetzung liegen nur lokal in `docs/plans/` (per `.gitignore` ausgeschlossen) und werden nie versioniert, auch nicht vorübergehend. Nach dem Job werden sie nicht mehr gebraucht. Dauerhafte Entscheidungen gehören in ADRs, nicht in Pläne.
+
 ## ADRs
 
 Architekturrelevante Entscheidungen (neues Pattern, Modulgrenze, Datenfluss, nicht offensichtlicher Trade-off) als ADR in `docs/adr/` festhalten, im selben PR wie die Entscheidung. Format und Regeln: `docs/adr/README.md`. Nummern nie wiederverwenden.
