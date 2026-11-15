@@ -97,6 +97,12 @@ rules_version = '2';
 //   optional). Readable by planners and talk helpers of this congregation, written only by the planners; never
 //   deleted.
 //
+// Collection: region/.../congregation/{congId}/notifications (ADR-0035)
+// Document ID: free (auto id). Fields: category: string, title: string (1..100), body: string (<= 500),
+//   audience: list<string> (groups of ADR-0033 and roles, 1..20), senderUid: string (the sender), createdAt: timestamp
+//   (server time). Created only; readable by the addressed approved members and the sender. TALK_PLANNING may be sent
+//   by planners and talk helpers, only to ['TALK_PLANNER', 'TALK_HELPER'].
+//
 // Collection: region/.../country/{countryId}/weekEvents (one list per country, ADR-0034)
 // Document ID: free. Fields: name: string (1..100), cancelsTalk: bool.
 //   Readable by every signed-in user; written only by global admins and only below an existing country.
@@ -285,6 +291,38 @@ service cloud.firestore {
         exists(memberPath) &&
         get(memberPath).data.approved == true &&
         data.audience.hasAny(eventGroups(get(memberPath).data));
+    }
+
+    // Approved members of exactly this congregation read the notifications addressed to one of their groups or roles
+    // (ADR-0035).
+    function canSeeNotification(regionId, subregionId, branchId, countryId, circuitId, congId, data) {
+      let memberPath = /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/country/$(countryId)/circuit/$(circuitId)/congregation/$(congId)/members/$(request.auth.uid);
+      return isAuthenticated() &&
+        exists(memberPath) &&
+        get(memberPath).data.approved == true &&
+        data.audience.hasAny(eventGroups(get(memberPath).data).concat(get(memberPath).data.get('roles', [])));
+    }
+
+    // Who may send which category (ADR-0035). TALK_PLANNING: whoever may change `confirmed` of a slot, and only to
+    // the planners and talk helpers.
+    function canSendNotification(regionId, subregionId, branchId, countryId, circuitId, congId, data) {
+      return data.category == 'TALK_PLANNING' &&
+        data.audience.toSet() == ['TALK_PLANNER', 'TALK_HELPER'].toSet() &&
+        canViewTalkPlanning(regionId, subregionId, branchId, countryId, circuitId, congId);
+    }
+
+    // Notification: category, title (1..100), body (<= 500), the addressed groups and roles (1..20, no duplicates),
+    // the sender (the signed-in user) and the server time of the request.
+    function isValidNotification(data) {
+      return data.keys().hasOnly(['category', 'title', 'body', 'audience', 'senderUid', 'createdAt']) &&
+        data.keys().hasAll(['category', 'title', 'body', 'audience', 'senderUid', 'createdAt']) &&
+        data.category is string &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 100 &&
+        data.body is string && data.body.size() <= 500 &&
+        data.audience is list && data.audience.size() >= 1 && data.audience.size() <= 20 &&
+        data.audience.toSet().size() == data.audience.size() &&
+        data.senderUid == request.auth.uid &&
+        data.createdAt == request.time;
     }
 
     // Special event of a congregation: title (1..100), startDate <= endDate ('yyyy-MM-dd') and the addressed
@@ -878,6 +916,17 @@ service cloud.firestore {
                   allow create, update: if isCongregationAdmin(regionId, subregionId, branchId, countryId, circuitId, congId) &&
                     isValidSpecialEvent(request.resource.data);
                   allow delete: if isCongregationAdmin(regionId, subregionId, branchId, countryId, circuitId, congId);
+                }
+
+                // ---------------------------------------------------------
+                // Notifications of a congregation (CP-163, ADR-0035): created by permitted senders, read by the
+                // addressed groups and roles and by the sender; never changed or deleted
+                // ---------------------------------------------------------
+                match /notifications/{notificationId} {
+                  allow read: if canSeeNotification(regionId, subregionId, branchId, countryId, circuitId, congId, resource.data) ||
+                    (isAuthenticated() && resource.data.senderUid == request.auth.uid);
+                  allow create: if isValidNotification(request.resource.data) &&
+                    canSendNotification(regionId, subregionId, branchId, countryId, circuitId, congId, request.resource.data);
                 }
 
                 // ---------------------------------------------------------

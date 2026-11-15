@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner.talk.presentation.schedule
 
+import de.geosphere.congregationplaner.notification.domain.usecase.NotifyConfirmedChangedUseCase
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.usecase.ConfirmSpeakerUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkSlotUseCase
@@ -18,6 +19,7 @@ class SlotChangeUseCases(
     val confirmSpeaker: ConfirmSpeakerUseCase,
     val reassignTalk: ReassignTalkUseCase,
     val isSlotDateTaken: IsSlotDateTakenUseCase,
+    val notifyConfirmedChanged: NotifyConfirmedChangedUseCase,
 )
 
 /** Speichert und löscht Termine; [onYearChange] zeigt das Jahr des Termins. */
@@ -56,6 +58,7 @@ class SlotChangesHolder(
                     store.update { it.copy(editor = TalkSlotEditorState(saved, saved), isSaving = false) }
                     // Ein Termin in einem anderen Jahr wäre sonst nicht in der Liste zu sehen.
                     onYearChange(saved.date.year)
+                    notifyConfirmedChanged(user, editor.original, saved)
                 }.onFailure { session.fail(it, "Termin konnte nicht gespeichert werden.") }
         }
     }
@@ -89,7 +92,13 @@ class SlotChangesHolder(
                 .onSuccess {
                     val saved = original.copy(confirmed = editor.slot.confirmed)
                     store.update { it.copy(editor = TalkSlotEditorState(saved, saved), isSaving = false) }
+                    notifyConfirmedChanged(user, original, saved)
                 }.onFailure { session.fail(it, "Der Termin konnte nicht gespeichert werden.") }
         }
+    }
+
+    // Die Änderung ist gespeichert; scheitert nur die Meldung an Planer und Helfer, bleibt sie still (ADR-0035).
+    private fun notifyConfirmedChanged(user: AppUser, previous: TalkSlot?, saved: TalkSlot) {
+        session.scope.launch { useCases.notifyConfirmedChanged(user, previous, saved) }
     }
 }
