@@ -22,6 +22,8 @@ dependencies {
     implementation("com.google.firebase:firebase-auth-ktx:23.1.0")
 
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.work.runtime)
 
     implementation(libs.compose.uiToolingPreview)
     debugImplementation(libs.compose.uiTooling)

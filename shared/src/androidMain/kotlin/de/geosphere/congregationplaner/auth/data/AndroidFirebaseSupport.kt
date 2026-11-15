@@ -28,9 +28,10 @@ object FirebaseAndroidContextHolder {
     var authEmulatorHost: String = "10.0.2.2"
         private set
 
+    /** [activity] ist `null`, wenn die App ohne Oberfläche startet, z. B. für die Abfrage im Hintergrund. */
     fun configure(
         context: Context,
-        activity: Activity,
+        activity: Activity?,
         useAuthEmulator: Boolean,
         authEmulatorHost: String = "10.0.2.2",
     ) {
