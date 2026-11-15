@@ -3,15 +3,19 @@ package de.geosphere.congregationplaner.notification.data
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import de.geosphere.congregationplaner.auth.data.FirebaseAuthManager
+import de.geosphere.congregationplaner.event.domain.model.EventAudience
 import de.geosphere.congregationplaner.firestore.FirestoreRestClient
 import de.geosphere.congregationplaner.firestore.firestoreString
 import de.geosphere.congregationplaner.firestore.firestoreStringArray
 import de.geosphere.congregationplaner.firestore.newDocumentId
 import de.geosphere.congregationplaner.firestore.runCatchingIo
 import de.geosphere.congregationplaner.notification.domain.model.AppNotification
+import de.geosphere.congregationplaner.notification.domain.model.ReceivedNotification
 import de.geosphere.congregationplaner.notification.domain.repository.NotificationRepository
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
+import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import java.net.http.HttpClient
+import kotlin.time.Instant
 
 actual fun createNotificationRepository(): NotificationRepository = FirestoreRestNotificationRepository()
 
@@ -49,4 +53,13 @@ internal class FirestoreRestNotificationRepository(
         }
         client.commit(listOf(write))
     }
+
+    // Der Desktop sendet nur und zeigt keine Benachrichtigungen an (ADR-0035).
+    override suspend fun fetchSince(
+        congregation: CongregationRef,
+        groups: Set<EventAudience>,
+        roles: Set<CongregationRole>,
+        since: Instant,
+    ): Result<List<ReceivedNotification>> =
+        Result.failure(UnsupportedOperationException("The desktop app does not show notifications."))
 }

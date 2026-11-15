@@ -94,6 +94,13 @@ val sonarExclusions = listOf(
     "**/SwingImportFileSource.kt",
     "**/ImportGraph.kt",
     "**/AndroidImportFileSource.kt",
+    // Benachrichtigungen (ADR-0035): androidApp hat keine Tests in der Pipeline, die Dateien rufen nur Android-APIs
+    // auf (Firebase-Start, WorkManager, NotificationCompat); die Abfrage ist in CheckNewNotificationsUseCase getestet.
+    // NotificationGraph ist reine DI-Verdrahtung.
+    "**/CongregationPlanerApplication.kt",
+    "**/NotificationCheckWorker.kt",
+    "**/NotificationPresenter.kt",
+    "**/NotificationGraph.kt",
     // Exclude theming and ui modules from coverage
     "theming/**",
     "ui/**"

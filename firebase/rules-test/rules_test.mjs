@@ -819,6 +819,18 @@ await expect('Helfer ändert keine Benachrichtigung', api('PATCH', `${NOTES}/n1`
 await expect('Helfer löscht keine Benachrichtigung', api('DELETE', `${NOTES}/n1`, undefined, helper.token), false);
 
 await expect('Helfer fragt seine Benachrichtigungen ab', queryNotes(['ALL', 'TALK_HELPER'], helper.token), true);
+// Genau wie die Android-App (CP-164): nach Zeit gefiltert und sortiert, höchstens 20.
+await expect('Helfer fragt neue Benachrichtigungen ab', call('POST', `${FS}/${CONG}:runQuery`, {
+  structuredQuery: {
+    from: [{ collectionId: 'notifications' }],
+    where: { compositeFilter: { op: 'AND', filters: [
+      { fieldFilter: { field: { fieldPath: 'audience' }, op: 'ARRAY_CONTAINS_ANY', value: enc(['ALL', 'TALK_HELPER']) } },
+      { fieldFilter: { field: { fieldPath: 'createdAt' }, op: 'GREATER_THAN', value: { timestampValue: '2020-01-01T00:00:00Z' } } },
+    ] } },
+    orderBy: [{ field: { fieldPath: 'createdAt' }, direction: 'ASCENDING' }],
+    limit: 20,
+  },
+}, helper.token), true);
 await expect('Planer liest eine Meldung des Helfers', api('GET', `${NOTES}/n1`, undefined, planner.token), true);
 await expect('Schwester fragt ihre Benachrichtigungen ab', queryNotes(['ALL', 'SISTERS'], sister.token), true);
 await expect('Schwester liest keine Meldung an Planer', api('GET', `${NOTES}/n1`, undefined, sister.token), false);
