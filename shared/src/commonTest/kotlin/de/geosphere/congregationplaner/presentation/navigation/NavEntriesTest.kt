@@ -19,6 +19,7 @@ class NavEntriesTest {
                 "Allgemeine Versammlungsdaten",
                 "Userverwaltung",
                 "Besondere Ereignisse",
+                "Mitteilungen",
                 "Planung unter der Woche",
                 "Vortragsplanung",
             ),
