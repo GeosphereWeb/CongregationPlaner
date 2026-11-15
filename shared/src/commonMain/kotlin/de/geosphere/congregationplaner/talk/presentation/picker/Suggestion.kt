@@ -43,9 +43,12 @@ internal fun List<ExternalSpeaker>.suggestedExternal(
 ): List<Suggestion<ExternalSpeaker>> =
     suggested({ usage.externalLastPlanned[it.id] }, { usage.isExternalBlocked(it.id) }, showBlocked)
 
-/** Externe Redner, die den Vortrag [talkNumber] halten; wer keine Vorträge hinterlegt hat, bleibt immer wählbar. */
+/**
+ * Externe Redner, die den Vortrag [talkNumber] halten; wer keine Vorträge hinterlegt hat, bleibt immer wählbar.
+ * Von der Planung ausgeschlossene Redner bietet die Auswahl nie an.
+ */
 internal fun List<ExternalSpeaker>.offering(talkNumber: Int?): List<ExternalSpeaker> =
-    filter { talkNumber.isOfferedIn(it.talkNumbers) }
+    filter { !it.excludedFromPlanning && talkNumber.isOfferedIn(it.talkNumbers) }
 
 /** Heimische Redner, die den Vortrag [talkNumber] halten; wer keine Vorträge hinterlegt hat, bleibt immer wählbar. */
 internal fun List<MemberRef>.offeringMembers(talkNumber: Int?): List<MemberRef> =

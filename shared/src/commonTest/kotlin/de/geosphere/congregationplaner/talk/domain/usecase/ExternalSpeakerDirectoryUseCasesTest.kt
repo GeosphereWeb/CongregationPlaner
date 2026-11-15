@@ -82,6 +82,16 @@ class ExternalSpeakerDirectoryUseCasesTest {
     }
 
     @Test
+    fun `excluded speakers stay in the list with their exclusion so that slots keep their contact`() = runBlocking {
+        repository.speakers.value = listOf(VisitingSpeaker("s1", "g1", "Berg", "Lea", excludedFromPlanning = true))
+
+        val speaker = ObserveExternalSpeakersUseCase(ObserveExternalDirectoryUseCase(repository))(admin)
+            .first().single()
+
+        assertTrue(speaker.excludedFromPlanning)
+    }
+
+    @Test
     fun `circuit is saved trimmed and validated`() = runBlocking {
         val save = SaveExternalCircuitUseCase(repository, policy)
 

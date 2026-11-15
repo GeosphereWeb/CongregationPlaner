@@ -12,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
@@ -33,7 +34,7 @@ internal fun ExternalDirectoryTree(
     ) {
         if (directory.circuits.isEmpty()) {
             item {
-                Text(if (state.filter.isActive) "Keine Einträge für diesen Filter." else "Noch keine Kreise angelegt.")
+                Text(if (state.isFiltered) "Keine Einträge für diesen Filter." else "Noch keine Kreise angelegt.")
             }
         }
         directory.circuits.forEach { circuit ->
@@ -66,19 +67,37 @@ internal fun ExternalDirectoryTree(
                 }
                 directory.speakersIn(congregation.id).forEach { speaker ->
                     item(key = "speaker-${speaker.id}") {
-                        SelectableListCard(
+                        SpeakerRow(
+                            speaker = speaker,
                             selected = editor is ExternalDirectoryEditor.Speaker && editor.id == speaker.id,
+                            isBusy = isBusy,
                             onSelect = { actions.onSelectSpeaker(speaker) },
-                            onDelete = {},
-                            actionsEnabled = !isBusy,
-                            canDelete = false,
-                            accent = NightColors.Mint,
-                        ) {
-                            Text(speaker.displayName())
-                        }
+                        )
                     }
                 }
             }
+        }
+    }
+}
+
+/** Ein Redner der Liste; ein von der Planung ausgeschlossener trägt einen Hinweis. */
+@Composable
+private fun SpeakerRow(speaker: VisitingSpeaker, selected: Boolean, isBusy: Boolean, onSelect: () -> Unit) {
+    SelectableListCard(
+        selected = selected,
+        onSelect = onSelect,
+        onDelete = {},
+        actionsEnabled = !isBusy,
+        canDelete = false,
+        accent = NightColors.Mint,
+    ) {
+        Text(speaker.displayName())
+        if (speaker.excludedFromPlanning) {
+            Text(
+                EXCLUDED_FROM_PLANNING_LABEL,
+                style = MaterialTheme.typography.bodySmall,
+                color = NightColors.OnBackgroundMuted,
+            )
         }
     }
 }

@@ -20,6 +20,8 @@ data class AppNavigationUiState(
      * Der Vortrag, der in der Vortragshistorie vorausgewählt ist, solange man von der Planung dorthin gewechselt ist.
      */
     val historyTalkNumber: Int? = null,
+    /** Der externe Redner, der in der Rednerliste geöffnet wird, solange man von der Planung dorthin gewechselt ist. */
+    val directorySpeakerId: String? = null,
 ) {
     /** Zurück führt vom Unterbereich zur Übersicht und von dort zu Home; auf Home gibt es nichts mehr. */
     val canGoBack: Boolean get() = destination != TopLevelDestination.HOME
@@ -60,6 +62,7 @@ class AppNavigationViewModel(private val access: NavigationAccess) : ViewModel()
                     congregationSection = null,
                     globalSection = null,
                     historyTalkNumber = null,
+                    directorySpeakerId = null,
                 )
             }
         }
@@ -93,6 +96,7 @@ class AppNavigationViewModel(private val access: NavigationAccess) : ViewModel()
                     destination = TopLevelDestination.CONGREGATION,
                     congregationSection = section,
                     historyTalkNumber = null,
+                    directorySpeakerId = null,
                 )
             }
         }
@@ -108,6 +112,23 @@ class AppNavigationViewModel(private val access: NavigationAccess) : ViewModel()
                     destination = TopLevelDestination.CONGREGATION,
                     congregationSection = CongregationSection.TALK_HISTORY,
                     historyTalkNumber = number,
+                    directorySpeakerId = null,
+                )
+            }
+        }
+    }
+
+    /** Öffnet die Rednerliste mit dem externen Redner [speakerId] (aus der Planung am Wochenende). */
+    fun openExternalSpeaker(speakerId: String) {
+        mutableState.update { state ->
+            if (CongregationSection.EXTERNAL_SPEAKERS !in state.visible.congregationSections) {
+                state
+            } else {
+                state.copy(
+                    destination = TopLevelDestination.CONGREGATION,
+                    congregationSection = CongregationSection.EXTERNAL_SPEAKERS,
+                    historyTalkNumber = null,
+                    directorySpeakerId = speakerId,
                 )
             }
         }
@@ -122,6 +143,7 @@ class AppNavigationViewModel(private val access: NavigationAccess) : ViewModel()
                     destination = TopLevelDestination.GLOBAL_ADMIN,
                     globalSection = section,
                     historyTalkNumber = null,
+                    directorySpeakerId = null,
                 )
             }
         }

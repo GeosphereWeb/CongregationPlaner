@@ -52,6 +52,22 @@ class PlanningSuggestionsTest {
     }
 
     @Test
+    fun `speakers excluded from planning are never offered`() {
+        val excluded = ExternalSpeaker(
+            "e1",
+            "Extern",
+            "Eva",
+            "Nord",
+            talkNumbers = listOf(3),
+            excludedFromPlanning = true,
+        )
+        val free = ExternalSpeaker("e2", "Alt", "Al", "Süd")
+
+        assertEquals(listOf(free), listOf(excluded, free).offering(null))
+        assertEquals(listOf(free), listOf(excluded, free).offering(3))
+    }
+
+    @Test
     fun `external speakers are limited to the chosen talk and talks to the chosen speaker`() {
         val known = ExternalSpeaker("e1", "Extern", "Eva", "Nord", talkNumbers = listOf(2, 3))
         val unknown = ExternalSpeaker("e2", "Alt", "Al", "Süd")

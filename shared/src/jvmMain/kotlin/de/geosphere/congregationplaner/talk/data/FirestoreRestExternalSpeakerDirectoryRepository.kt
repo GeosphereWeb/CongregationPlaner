@@ -4,6 +4,8 @@ import com.google.gson.JsonObject
 import de.geosphere.congregationplaner.auth.data.FirebaseAuthManager
 import de.geosphere.congregationplaner.firestore.FirestoreRestClient
 import de.geosphere.congregationplaner.firestore.FirestoreRestDocument
+import de.geosphere.congregationplaner.firestore.booleanField
+import de.geosphere.congregationplaner.firestore.firestoreBoolean
 import de.geosphere.congregationplaner.firestore.firestoreFields
 import de.geosphere.congregationplaner.firestore.firestoreIntegerArray
 import de.geosphere.congregationplaner.firestore.firestoreNullableInteger
@@ -78,6 +80,7 @@ internal class FirestoreRestExternalSpeakerDirectoryRepository(
             add("email", firestoreString(speaker.email))
             add("talkNumbers", firestoreIntegerArray(speaker.talkNumbers))
             add("ranking", firestoreNullableInteger(speaker.ranking))
+            add("excludedFromPlanning", firestoreBoolean(speaker.excludedFromPlanning))
         },
     ) { speaker.copy(id = it) }
 
@@ -115,5 +118,6 @@ internal class FirestoreRestExternalSpeakerDirectoryRepository(
         email = fields.optionalStringField("email").orEmpty(),
         talkNumbers = fields.intArrayField("talkNumbers"),
         ranking = fields.optionalIntField("ranking") ?: 0,
+        excludedFromPlanning = fields.booleanField("excludedFromPlanning"),
     )
 }

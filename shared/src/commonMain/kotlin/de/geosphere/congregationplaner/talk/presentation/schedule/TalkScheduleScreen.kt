@@ -92,6 +92,7 @@ internal data class TalkScheduleActions(
     val speaker: SpeakerActions = SpeakerActions(),
     val onSelectChairman: (Chairman?) -> Unit = {},
     val onOpenHistory: (Int) -> Unit = {},
+    val onOpenSpeaker: (String) -> Unit = {},
     val onSave: () -> Unit = {},
     val onDelete: (TalkSlot) -> Unit = {},
     val onCancelEditing: () -> Unit = {},
@@ -119,6 +120,7 @@ fun TalkScheduleScreen(
     viewModel: TalkScheduleViewModel,
     modifier: Modifier = Modifier,
     onOpenHistory: (Int) -> Unit = {},
+    onOpenSpeaker: (String) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsState()
     TalkScheduleContent(
@@ -139,6 +141,7 @@ fun TalkScheduleScreen(
             ),
             onSelectChairman = viewModel.picker::selectChairman,
             onOpenHistory = onOpenHistory,
+            onOpenSpeaker = onOpenSpeaker,
             onSave = viewModel.changes::save,
             onDelete = viewModel.changes::delete,
             onCancelEditing = viewModel.editor::cancel,

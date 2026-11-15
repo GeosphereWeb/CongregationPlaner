@@ -4,6 +4,7 @@ package de.geosphere.congregationplaner.ui.card
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -40,7 +41,8 @@ fun Modifier.dashedBorder(color: Color, cornerRadius: Dp, width: Dp = 1.dp): Mod
 
 /**
  * Feldkarte im Detailbereich: links Beschriftung, Wert und Zusatz, rechts eine Aktion. Mit [missing] zeigt sie
- * einen gestrichelten Koralle-Rand und den Wert gedämpft, weil die Angabe noch fehlt.
+ * einen gestrichelten Koralle-Rand und den Wert gedämpft, weil die Angabe noch fehlt. Mit [onClick] lässt sich die
+ * ganze Karte antippen (die Aktion rechts behält ihren eigenen Klick).
  */
 @Composable
 fun FieldCard(
@@ -50,11 +52,13 @@ fun FieldCard(
     supporting: String? = null,
     missing: Boolean = false,
     action: (@Composable () -> Unit)? = null,
+    onClick: (() -> Unit)? = null,
 ) {
     val shape = RoundedCornerShape(CARD_RADIUS)
     Row(
         modifier = modifier.fillMaxWidth()
             .clip(shape)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .background(NightColors.Surface)
             .then(
                 if (missing) {
@@ -98,7 +102,9 @@ private fun FieldCardPreview() = NightPreviewWrapper {
         FieldCard(
             label = "Vortrag",
             value = "Nr. 12 – Beispielvortrag",
+            supporting = "Antippen: zur Vortragshistorie",
             action = { SecondaryButton("Ändern", {}, outlined = false) },
+            onClick = {},
         )
         FieldCard(
             label = "Redner",

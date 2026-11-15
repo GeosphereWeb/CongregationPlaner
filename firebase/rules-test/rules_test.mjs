@@ -193,6 +193,7 @@ const validSpeaker = {
   email: 'eva@example.org',
   talkNumbers: [12, 45],
   ranking: 3,
+  excludedFromPlanning: false,
 };
 await expect('externen Kreis anlegen', post(EXT_CIRCUITS, validCircuit), true);
 await expect('externer Kreis ohne Namen', post(EXT_CIRCUITS, { name: '' }), false);
@@ -211,6 +212,9 @@ await expect('externer Redner mit Bewertung 6', post(EXT_SPEAKERS, { ...validSpe
 await expect('externer Redner mit negativer Bewertung', post(EXT_SPEAKERS, { ...validSpeaker, ranking: -1 }), false);
 await expect('externer Redner mit Bewertung als Text', post(EXT_SPEAKERS, { ...validSpeaker, ranking: '3' }), false);
 await expect('externer Redner ohne Bewertung', post(EXT_SPEAKERS, Object.fromEntries(Object.entries(validSpeaker).filter(([key]) => key !== 'ranking'))), false);
+await expect('externer Redner von der Planung ausgeschlossen', post(EXT_SPEAKERS, { ...validSpeaker, excludedFromPlanning: true }), true);
+await expect('externer Redner mit Ausschluss als Text', post(EXT_SPEAKERS, { ...validSpeaker, excludedFromPlanning: 'ja' }), false);
+await expect('externer Redner ohne Ausschluss-Feld', post(EXT_SPEAKERS, Object.fromEntries(Object.entries(validSpeaker).filter(([key]) => key !== 'excludedFromPlanning'))), false);
 await expect('externer Redner mit Zusatzfeld', post(EXT_SPEAKERS, { ...validSpeaker, x: 'y' }), false);
 await expect('externes Verzeichnis lesen als Planer', api('GET', EXT_SPEAKERS, undefined, planner.token), true);
 await expect('externe Kreise lesen ohne Planerrolle', api('GET', EXT_CIRCUITS, undefined, plain.token), false);

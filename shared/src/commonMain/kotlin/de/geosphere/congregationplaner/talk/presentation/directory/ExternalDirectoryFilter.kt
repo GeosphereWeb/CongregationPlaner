@@ -37,6 +37,24 @@ internal fun ExternalDirectory.filtered(filter: DirectoryFilter): ExternalDirect
     )
 }
 
+/**
+ * The directory reduced to the speakers whose last name, first name or congregation contains [query] (ignoring case,
+ * like the speaker picker of the talk planning), with their congregations and circuits. A blank query shows all.
+ */
+internal fun ExternalDirectory.searched(query: String): ExternalDirectory {
+    val text = query.trim()
+    if (text.isEmpty()) return this
+    val congregationNames = congregations.associate { it.id to it.name }
+    val shownSpeakers = speakers.filter { speaker ->
+        listOf(speaker.lastName, speaker.firstName, congregationNames[speaker.congregationId].orEmpty())
+            .any { it.contains(text, ignoreCase = true) }
+    }
+    val shownCongregationIds = shownSpeakers.map { it.congregationId }.toSet()
+    val shownCongregations = congregations.filter { it.id in shownCongregationIds }
+    val shownCircuitIds = shownCongregations.map { it.circuitId }.toSet()
+    return ExternalDirectory(circuits.filter { it.id in shownCircuitIds }, shownCongregations, shownSpeakers)
+}
+
 /** Every circuit, marked if chosen. */
 internal fun ExternalDirectory.circuitOptions(filter: DirectoryFilter): List<FilterOption> =
     circuits.map { FilterOption(it.id, it.name, it.id in filter.circuitIds) }

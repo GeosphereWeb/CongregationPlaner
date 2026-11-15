@@ -302,4 +302,65 @@ class ExternalDirectoryViewModelTest {
         assertNull(parseTalkNumbers("12, x"))
         assertEquals("12, 45", listOf(12, 45).toText())
     }
+
+    @Test
+    fun `the speaker search narrows the list and counts as a filter`() {
+        val zell = ExternalCongregation("g2", "c1", "Zell")
+        val tim = VisitingSpeaker("s2", "g2", "Zorn", "Tim")
+        repository.congregations.value += zell
+        repository.speakers.value += tim
+        viewModel.onCurrentUserChanged(planner)
+
+        viewModel.filter.searchSpeakers("tim")
+
+        assertEquals(listOf(tim), state.visibleDirectory.speakers)
+        assertEquals(listOf(zell), state.visibleDirectory.congregations)
+        assertTrue(state.isFiltered)
+    }
+
+    @Test
+    fun `a speaker opened from the planning is selected once the directory is loaded`() {
+        viewModel.openSpeaker("s1")
+        assertNull(state.editor)
+
+        viewModel.onCurrentUserChanged(planner)
+
+        val editor = assertIs<ExternalDirectoryEditor.Speaker>(state.editor)
+        assertEquals(berg, editor.original)
+        assertFalse(state.isFiltered)
+    }
+
+    @Test
+    fun `opening a speaker of a loaded directory resets filter and search`() {
+        viewModel.onCurrentUserChanged(planner)
+        viewModel.filter.searchSpeakers("nobody")
+        viewModel.filter.toggleCircuit("c1")
+
+        viewModel.openSpeaker("s1")
+
+        assertEquals(berg, assertIs<ExternalDirectoryEditor.Speaker>(state.editor).original)
+        assertEquals("", state.speakerQuery)
+        assertFalse(state.filter.isActive)
+    }
+
+    @Test
+    fun `an unknown speaker opens nothing`() {
+        viewModel.onCurrentUserChanged(planner)
+
+        viewModel.openSpeaker("gone")
+
+        assertNull(state.editor)
+    }
+
+    @Test
+    fun `the exclusion from planning is saved with the speaker`() {
+        viewModel.onCurrentUserChanged(planner)
+        viewModel.editor.select(berg)
+        val editor = assertIs<ExternalDirectoryEditor.Speaker>(state.editor)
+
+        viewModel.editor.update(editor.copy(speaker = berg.copy(excludedFromPlanning = true)))
+        viewModel.changes.save()
+
+        assertTrue(repository.speakers.value.single().excludedFromPlanning)
+    }
 }

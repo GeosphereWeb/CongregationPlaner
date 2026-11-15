@@ -139,6 +139,7 @@ fun App() {
                 onOpenCongregationSection = navigationViewModel::openCongregationSection,
                 onOpenGlobalSection = navigationViewModel::openGlobalSection,
                 onOpenTalkHistory = navigationViewModel::openTalkHistory,
+                onOpenExternalSpeaker = navigationViewModel::openExternalSpeaker,
                 onSignOut = signOut,
                 onBack = { navigationViewModel.back() },
             ),

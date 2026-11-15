@@ -140,7 +140,7 @@ data class MemberRef(
  * Ein Redner aus einer anderen Versammlung, den ein Planer in der Liste seiner Versammlung (`externalSpeakers/{id}`)
  * pflegt.
  * [id] ist leer, solange er noch nicht gespeichert ist; [talkNumbers] sind die Vorträge, die er hält (leer =
- * unbekannt).
+ * unbekannt). [excludedFromPlanning]: der Planer bietet ihn nicht mehr zur Auswahl an.
  */
 data class ExternalSpeaker(
     val id: String,
@@ -150,6 +150,7 @@ data class ExternalSpeaker(
     val mobilePhone: String = "",
     val landlinePhone: String = "",
     val talkNumbers: List<Int> = emptyList(),
+    val excludedFromPlanning: Boolean = false,
 ) {
     val displayName: String
         get() = listOf(lastName, firstName).filter(String::isNotBlank).joinToString(", ") + " ($congregationName)"

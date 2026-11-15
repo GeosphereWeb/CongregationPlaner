@@ -50,6 +50,7 @@ internal class FirestoreExternalSpeakerDirectoryRepository(private val firestore
                 (number as? Number)?.toInt()
             },
             ranking = it.getLong("ranking")?.toInt() ?: 0,
+            excludedFromPlanning = it.getBoolean("excludedFromPlanning") == true,
         )
     }
 
@@ -79,6 +80,7 @@ internal class FirestoreExternalSpeakerDirectoryRepository(private val firestore
             "email" to speaker.email,
             "talkNumbers" to speaker.talkNumbers,
             "ranking" to speaker.ranking,
+            "excludedFromPlanning" to speaker.excludedFromPlanning,
         ),
     ) { speaker.copy(id = it) }
 

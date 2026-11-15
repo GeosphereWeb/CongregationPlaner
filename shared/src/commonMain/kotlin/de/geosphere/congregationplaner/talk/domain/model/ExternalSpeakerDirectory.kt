@@ -15,6 +15,7 @@ data class ExternalCongregation(val id: String = "", val circuitId: String, val 
  *
  * @param talkNumbers Nummern der Vorträge aus der Vortragsliste, die der Redner hält.
  * @param ranking Bewertung des Redners in Sternen, 0 (nicht bewertet) bis [MAX_RANKING].
+ * @param excludedFromPlanning Der Planer bietet den Redner nicht mehr zur Auswahl an; bestehende Termine bleiben.
  */
 data class VisitingSpeaker(
     val id: String = "",
@@ -26,6 +27,7 @@ data class VisitingSpeaker(
     val email: String = "",
     val talkNumbers: List<Int> = emptyList(),
     val ranking: Int = 0,
+    val excludedFromPlanning: Boolean = false,
 ) {
     companion object {
         const val MAX_NAME_LENGTH = 100

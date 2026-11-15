@@ -29,6 +29,9 @@ class ExternalDirectoryViewModel(
     private var currentUser: AppUser? = null
     private var observeJob: Job? = null
 
+    /** Der Redner, der geöffnet wird, sobald das Verzeichnis geladen ist (Sprung aus der Planung). */
+    private var pendingSpeakerId: String? = null
+
     val filter = DirectoryFilterHolder(store)
     val editor = DirectoryEditorHolder(store)
     val changes = DirectoryChangesHolder(store, viewModelScope, changeUseCases) { currentUser }
@@ -53,6 +56,24 @@ class ExternalDirectoryViewModel(
         }
     }
 
+    /**
+     * Öffnet den Redner [speakerId], sobald das Verzeichnis geladen ist. Filter und Suche werden zurückgesetzt, damit
+     * er in der Liste steht; einen Redner, den es nicht mehr gibt, ignoriert die Liste.
+     */
+    fun openSpeaker(speakerId: String) {
+        pendingSpeakerId = speakerId
+        openPendingSpeaker()
+    }
+
+    private fun openPendingSpeaker() {
+        val id = pendingSpeakerId ?: return
+        if (store.value.isLoading) return
+        pendingSpeakerId = null
+        val speaker = store.value.directory.speakers.firstOrNull { it.id == id } ?: return
+        store.update { it.copy(filter = DirectoryFilter(), congregationQuery = "", speakerQuery = "") }
+        editor.select(speaker)
+    }
+
     fun dismissError() {
         store.update { it.copy(errorMessage = null) }
         // Nach einem Ladefehler erneut laden.
@@ -69,6 +90,7 @@ class ExternalDirectoryViewModel(
                     store.update { it.copy(isLoading = false, errorMessage = message) }
                 }.collect { directory ->
                     store.update { it.copy(directory = directory, isLoading = false) }
+                    openPendingSpeaker()
                 }
         }
     }

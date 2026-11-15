@@ -143,4 +143,34 @@ class ExternalDirectoryFilterTest {
         assertEquals(setOf("g2"), on.congregationIds)
         assertEquals(emptySet(), on.toggleCongregation("g2").congregationIds)
     }
+
+    @Test
+    fun `a blank speaker search shows everything`() {
+        assertEquals(directory, directory.searched(""))
+        assertEquals(directory, directory.searched("  "))
+    }
+
+    @Test
+    fun `the speaker search matches last or first name ignoring case and keeps congregation and circuit`() {
+        val byLastName = directory.searched("zor")
+        assertEquals(listOf(tim), byLastName.speakers)
+        assertEquals(listOf(berg), byLastName.congregations)
+        assertEquals(listOf(north), byLastName.circuits)
+
+        assertEquals(listOf(ida), directory.searched(" IDA ").speakers)
+    }
+
+    @Test
+    fun `the speaker search matches the congregation name like the speaker picker`() {
+        val shown = directory.searched("altdorf")
+
+        assertEquals(listOf(lea, eva), shown.speakers)
+        assertEquals(listOf(altdorf, zell), shown.congregations)
+        assertEquals(listOf(north, south), shown.circuits)
+    }
+
+    @Test
+    fun `a speaker search without a match shows nothing`() {
+        assertEquals(ExternalDirectory(), directory.searched("xyz"))
+    }
 }

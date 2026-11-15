@@ -8,8 +8,12 @@ import de.geosphere.congregationplaner.user.domain.model.AppUser
 import dev.zacsweers.metro.createGraph
 
 @Composable
-internal fun TalkScheduleRoute(currentUser: AppUser, onOpenHistory: (Int) -> Unit = {}) {
+internal fun TalkScheduleRoute(
+    currentUser: AppUser,
+    onOpenHistory: (Int) -> Unit = {},
+    onOpenSpeaker: (String) -> Unit = {},
+) {
     val viewModel = remember { createGraph<TalkScheduleGraph>().talkScheduleViewModel }
     LaunchedEffect(viewModel, currentUser) { viewModel.onCurrentUserChanged(currentUser) }
-    TalkScheduleScreen(viewModel, onOpenHistory = onOpenHistory)
+    TalkScheduleScreen(viewModel, onOpenHistory = onOpenHistory, onOpenSpeaker = onOpenSpeaker)
 }

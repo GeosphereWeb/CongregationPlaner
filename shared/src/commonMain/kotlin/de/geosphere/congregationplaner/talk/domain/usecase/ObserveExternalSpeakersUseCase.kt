@@ -24,6 +24,7 @@ class ObserveExternalSpeakersUseCase(private val observeDirectory: ObserveExtern
                     speaker.mobilePhone,
                     speaker.landlinePhone,
                     speaker.talkNumbers,
+                    speaker.excludedFromPlanning,
                 )
             }
         }

@@ -197,4 +197,37 @@ class AppNavigationViewModelTest {
         assertEquals(TopLevelDestination.HOME, state.destination)
         assertNull(state.historyTalkNumber)
     }
+
+    @Test
+    fun `opening an external speaker shows the speaker list with the speaker`() {
+        viewModel.onUserChanged(planner)
+        viewModel.openTalkHistory(12)
+
+        viewModel.openExternalSpeaker("e1")
+
+        assertEquals(TopLevelDestination.CONGREGATION, state.destination)
+        assertEquals(CongregationSection.EXTERNAL_SPEAKERS, state.congregationSection)
+        assertEquals("e1", state.directorySpeakerId)
+        assertNull(state.historyTalkNumber)
+    }
+
+    @Test
+    fun `the opened speaker is dropped when another section is opened`() {
+        viewModel.onUserChanged(planner)
+        viewModel.openExternalSpeaker("e1")
+
+        viewModel.openCongregationSection(CongregationSection.WEEKEND_TALKS)
+
+        assertNull(state.directorySpeakerId)
+    }
+
+    @Test
+    fun `without the right to see the speaker list nothing is opened`() {
+        viewModel.onUserChanged(admin)
+
+        viewModel.openExternalSpeaker("e1")
+
+        assertEquals(TopLevelDestination.HOME, state.destination)
+        assertNull(state.directorySpeakerId)
+    }
 }
