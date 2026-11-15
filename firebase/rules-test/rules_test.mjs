@@ -838,6 +838,34 @@ await expect('Schwester fragt Meldungen an Helfer ab', queryNotes(['TALK_HELPER'
 await expect('Mitglied listet alle Benachrichtigungen', api('GET', NOTES, undefined, plain.token), false);
 await expect('Nicht freigegebener Helfer fragt nicht ab', queryNotes(['TALK_HELPER'], pendingHelper.token), false);
 
+// ---------- Mitteilungen und Rolle „Benachrichtigungen senden“ (CP-165) ----------
+const announcer = await signUp('announcer@test.de');
+await api('PATCH', `${MEMBERS}/${announcer.uid}`, memberDoc('announcer@test.de', ['NOTIFICATION_SENDER']), owner);
+const pendingAnnouncer = await signUp('pendingannouncer@test.de');
+await api('PATCH', `${MEMBERS}/${pendingAnnouncer.uid}`, memberDoc('pendingannouncer@test.de', ['NOTIFICATION_SENDER'], { approved: false }), owner);
+const announce = (sender, audience, extra = {}) =>
+  note(sender, { category: 'ANNOUNCEMENT', title: 'Kongress', body: 'Bitte anmelden', audience, ...extra });
+
+await expect('Admin vergibt die Rolle Benachrichtigungen senden', api('PATCH', rolesMask(roleTarget.uid), rolesBody('NOTIFICATION_SENDER'), congAdmin.token), true);
+await expect('Selbstregistrierung mit der Rolle Benachrichtigungen senden', api('PATCH', registerPath(helperNewcomer), registerBody('helpernewcomer@test.de', { roles: ['NOTIFICATION_SENDER'] }), helperNewcomer.token), false);
+await expect('Mitteilung an alle', sendNote('a1', announce(announcer, ['ALL']), announcer.token), true);
+await expect('Mitteilung an Schwestern und Älteste', sendNote('a2', announce(announcer, ['SISTERS', 'ELDERS']), announcer.token), true);
+await expect('Mitteilung an Aufgabenplaner', sendNote('a3', announce(announcer, ['TASK_PLANNER']), announcer.token), true);
+await expect('Mitteilung an unbekannte Gruppe', sendNote('bad', announce(announcer, ['CHILDREN']), announcer.token), false);
+await expect('Mitteilung ohne Empfänger', sendNote('bad', announce(announcer, []), announcer.token), false);
+await expect('Mitteilung ohne Serverzeit', sendNote('bad', announce(announcer, ['ALL']), announcer.token, { withTime: false }), false);
+await expect('Planer sendet keine Mitteilung', sendNote('bad', announce(planner, ['ALL']), planner.token), false);
+await expect('Helfer sendet keine Mitteilung', sendNote('bad', announce(helper, ['ALL']), helper.token), false);
+await expect('Admin ohne Rolle sendet keine Mitteilung', sendNote('bad', announce(congAdmin, ['ALL']), congAdmin.token), false);
+await expect('Nicht freigegebener Sender sendet nicht', sendNote('bad', announce(pendingAnnouncer, ['ALL']), pendingAnnouncer.token), false);
+await expect('Sender sendet nicht in einer fremden Versammlung', sendNote('bad', announce(announcer, ['ALL']), announcer.token, { cong: OTHER_CONG }), false);
+await expect('Sender meldet nicht „informiert“', sendNote('bad', note(announcer), announcer.token), false);
+await expect('Schwester liest die Mitteilung an alle', api('GET', `${NOTES}/a1`, undefined, sister.token), true);
+await expect('Schwester liest die Mitteilung an Schwestern', api('GET', `${NOTES}/a2`, undefined, sister.token), true);
+await expect('Mitglied liest keine Mitteilung an Aufgabenplaner', api('GET', `${NOTES}/a3`, undefined, plain.token), false);
+await expect('Aufgabenplaner fragt mit seiner Rolle ab', queryNotes(['ALL', 'TASK_PLANNER'], taskPlanner.token), true);
+await expect('Mitglied fragt mit fremder Rolle ab', queryNotes(['TASK_PLANNER'], plain.token), false);
+
 console.log(`${count} checks, ${failures.length} failures`);
 failures.forEach((failure) => console.log(`FAILURE: ${failure}`));
 process.exitCode = failures.length === 0 ? 0 : 1;

@@ -11,6 +11,9 @@ import kotlin.time.Instant
 enum class NotificationCategory(val label: String) {
     /** Änderungen an der Vortragsplanung, z. B. „Redner informiert“; an Vortragsplaner und Helfer. */
     TALK_PLANNING("Vortragsplanung"),
+
+    /** Freie Mitteilung an Gruppen und Rollen; nur mit der Rolle „Benachrichtigungen senden“. */
+    ANNOUNCEMENT("Mitteilungen"),
 }
 
 /**
