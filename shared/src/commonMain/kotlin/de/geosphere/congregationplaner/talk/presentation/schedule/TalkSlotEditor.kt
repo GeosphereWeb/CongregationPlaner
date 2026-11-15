@@ -2,12 +2,10 @@ package de.geosphere.congregationplaner.talk.presentation.schedule
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -40,18 +38,13 @@ import de.geosphere.congregationplaner.talk.presentation.picker.selectedSpeakerT
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
-import de.geosphere.congregationplaner.ui.button.PrimaryButton
 import de.geosphere.congregationplaner.ui.button.SecondaryButton
-import de.geosphere.congregationplaner.ui.card.FieldCard
 import de.geosphere.congregationplaner.ui.chip.StatusChip
 import de.geosphere.congregationplaner.ui.chip.StatusTone
 import de.geosphere.congregationplaner.ui.form.EditorActions
-import de.geosphere.congregationplaner.ui.form.FieldActions
 import de.geosphere.congregationplaner.ui.form.SwitchRow
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
-
-private val ACTION_HEIGHT = 44.dp
 
 @Composable
 @Suppress("LongParameterList", "LongMethod")
@@ -70,6 +63,7 @@ internal fun TalkSlotEditor(
     speakerActions: SpeakerActions,
     onSelectChairman: (Chairman?) -> Unit,
     onOpenHistory: (Int) -> Unit,
+    onOpenSpeaker: (String) -> Unit,
     onSave: () -> Unit,
     onCancel: () -> Unit,
     onDelete: () -> Unit,
@@ -85,52 +79,27 @@ internal fun TalkSlotEditor(
     val speakerText = slotSpeakerText(slot)
     val talkText = slotTalkText(slot)
     val talkCheck = editor.talkCheck
+    val historyTalk = editor.historyTalkNumber(isSaving)
+    val directorySpeaker = editor.directorySpeakerId(isSaving)
 
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SlotHeader(slot, chip)
         TalkDateInput(slot.date, onDateChange = { onChange(slot.copy(date = it)) })
         MeetingTimeInput("Uhrzeit", slot.time, onTimeChange = { onChange(slot.copy(time = it)) })
 
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("Wochenereignis", style = MaterialTheme.typography.labelLarge)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(
-                    selected = slot.weekEventId == null,
-                    onClick = { onSelectWeekEvent(null) },
-                    label = { Text("Kein Ereignis") },
-                )
-                weekEvents.forEach { event ->
-                    FilterChip(
-                        selected = slot.weekEventId == event.id,
-                        onClick = { onSelectWeekEvent(event) },
-                        label = { Text(event.name) },
-                    )
-                }
-                // Ein inzwischen entferntes Ereignis bleibt am Termin sichtbar.
-                if (slot.weekEventId != null && weekEvents.none { it.id == slot.weekEventId }) {
-                    FilterChip(selected = true, onClick = {}, label = { Text(slot.weekEventName.orEmpty()) })
-                }
-            }
-        }
+        WeekEventChips(slot, weekEvents, onSelectWeekEvent)
         SwitchRow("Vortrag entfällt", slot.talkCancelled) { onChange(slot.copy(talkCancelled = it)) }
 
-        FieldCard(
-            label = "Vortrag",
-            value = talkText ?: "Noch kein Vortrag gewählt",
-            supporting = if (slot.talkCancelled) {
-                "Der Vortrag entfällt, eine Auswahl ist nicht nötig."
-            } else {
-                talkCheck.inactiveNumber?.let(::inactiveTalkHint)
-            },
-            missing = talkText == null && !slot.talkCancelled,
-            action = {
-                FieldActions(
-                    changeLabel = if (talkText == null) "Wählen" else "Ändern",
-                    enabled = !slot.talkCancelled,
-                    onChange = { showTalkPicker = true },
-                    onRemove = if (talkText != null) ({ onSelectTalk(null) }) else null,
-                )
-            },
+        TalkCard(
+            slot = slot,
+            talkText = talkText,
+            inactiveNumber = talkCheck.inactiveNumber,
+            historyTalk = historyTalk,
+            actions = CardActions(
+                onPick = { showTalkPicker = true },
+                onRemove = { onSelectTalk(null) },
+                onOpen = { historyTalk?.let(onOpenHistory) },
+            ),
         )
         talkCheck.outdatedTitle?.let { title ->
             SecondaryButton(
@@ -139,63 +108,29 @@ internal fun TalkSlotEditor(
                 enabled = !isSaving,
             )
         }
-        slot.talkNumber?.let { number ->
-            // Ungespeicherte Änderungen gingen beim Wechsel verloren.
-            SecondaryButton(
-                text = "Historie zu Nr. $number ansehen",
-                onClick = { onOpenHistory(number) },
-                enabled = !editor.isDirty && !isSaving,
-                outlined = false,
-            )
-        }
 
-        val speakerMissing = speakerText == null && !slot.talkCancelled
-        FieldCard(
-            label = "Redner",
-            value = speakerText ?: "Noch kein Redner",
-            supporting = when {
-                !canViewMembers ->
-                    "Ohne die Berechtigung „Mitglieder einsehen“ stehen nur externe Redner zur Auswahl."
-                speakers.isEmpty() && externalSpeakers.isEmpty() ->
-                    "Noch kein Mitglied ist als Redner markiert (Userverwaltung)."
-                speakerMissing -> "Aus der eigenen Versammlung oder aus „Externe Redner“"
-                else -> null
-            },
-            missing = speakerMissing,
-            action = {
-                if (speakerMissing) {
-                    PrimaryButton("Redner wählen", { showSpeakerPicker = true }, height = ACTION_HEIGHT)
-                } else {
-                    FieldActions(
-                        changeLabel = if (speakerText == null) "Wählen" else "Ändern",
-                        enabled = !slot.talkCancelled,
-                        onChange = { showSpeakerPicker = true },
-                        onRemove = if (speakerText != null) ({ speakerActions.onSelectMember(null) }) else null,
-                    )
-                }
-            },
+        SpeakerCard(
+            slot = slot,
+            speakerText = speakerText,
+            supporting = speakerSupporting(
+                canViewMembers = canViewMembers,
+                noSpeakers = speakers.isEmpty() && externalSpeakers.isEmpty(),
+                speakerMissing = speakerText == null && !slot.talkCancelled,
+            ),
+            directorySpeaker = directorySpeaker,
+            actions = CardActions(
+                onPick = { showSpeakerPicker = true },
+                onRemove = { speakerActions.onSelectMember(null) },
+                onOpen = { directorySpeaker?.let(onOpenSpeaker) },
+            ),
         )
 
-        FieldCard(
-            label = "Vorsitz",
-            value = slot.chairman?.displayName ?: "Noch kein Vorsitzender",
-            supporting = when {
-                !canViewMembers ->
-                    "Dir fehlt die Berechtigung „Mitglieder einsehen“, " +
-                        "deshalb können keine Vorsitzenden geladen werden."
-                chairmen.isEmpty() ->
-                    "Kein Bruder mit Dienstamt (Ältester oder Dienstamtgehilfe) mit Namen gefunden."
-                selectableChairmen.isEmpty() -> "Alle Brüder mit Dienstamt sind schon als Redner eingeteilt."
-                else -> null
-            },
-            action = {
-                FieldActions(
-                    changeLabel = if (slot.chairman == null) "Wählen" else "Ändern",
-                    enabled = canViewMembers && selectableChairmen.isNotEmpty(),
-                    onChange = { showChairmanPicker = true },
-                    onRemove = if (slot.chairman != null) ({ onSelectChairman(null) }) else null,
-                )
-            },
+        ChairmanCard(
+            slot = slot,
+            supporting = chairmanSupporting(canViewMembers, chairmen.isEmpty(), selectableChairmen.isEmpty()),
+            canPick = canViewMembers && selectableChairmen.isNotEmpty(),
+            onPick = { showChairmanPicker = true },
+            onRemove = { onSelectChairman(null) },
         )
 
         SwitchRow(
@@ -375,6 +310,7 @@ private fun EditorPreview(slot: TalkSlot, original: TalkSlot?, chip: SlotChip) =
         speakerActions = SpeakerActions(),
         onSelectChairman = {},
         onOpenHistory = {},
+        onOpenSpeaker = {},
         onSave = {},
         onCancel = {},
         onDelete = {},
@@ -429,6 +365,22 @@ private fun TalkSlotEditorCompletePreview() {
         confirmed = true,
     )
     EditorPreview(slot, slot, SlotChip("Informiert", StatusTone.Mint))
+}
+
+@ThemePreviews
+@Composable
+private fun TalkSlotEditorExternalSpeakerPreview() {
+    val slot = TalkSlot(
+        LocalDate(2026, 11, 22),
+        LocalTime(17, 30),
+        talkNumber = 12,
+        talkTitle = "Der Weg zum Glück",
+        externalSpeakerId = "e1",
+        speakerLastName = "Extern",
+        speakerFirstName = "Eva",
+        speakerCongregation = "Nord",
+    )
+    EditorPreview(slot, slot, SlotChip("Geplant", StatusTone.Gold))
 }
 
 @ThemePreviews

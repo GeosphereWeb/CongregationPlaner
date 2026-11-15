@@ -52,6 +52,7 @@ internal fun SlotDetailContent(
             speakerActions = actions.speaker,
             onSelectChairman = actions.onSelectChairman,
             onOpenHistory = actions.onOpenHistory,
+            onOpenSpeaker = actions.onOpenSpeaker,
             onSave = actions.onSave,
             onCancel = onCancelEditing,
             onDelete = { editor.original?.let(actions.onDelete) },
