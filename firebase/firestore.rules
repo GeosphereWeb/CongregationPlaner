@@ -36,7 +36,7 @@ rules_version = '2';
 //   - displayName: string | null (required, immutable, <= 200 chars)
 //   - approved: bool (required) - set by the congregation admin
 //   - roles: list<string> (required, <= 10 distinct values from ['CONGREGATION_ADMIN', 'TALK_PLANNER', 'TALK_HELPER',
-//     'TASK_PLANNER']; empty for a plain member, see ADR-0012 and ADR-0023)
+//     'TASK_PLANNER', 'NOTIFICATION_SENDER']; empty for a plain member, see ADR-0012, ADR-0023 and ADR-0035)
 //   - hasAccount: bool (required, immutable) - false for persons
 //     without an account; they are never approved and have no role
 // Profile fields (all required, a fresh member carries the defaults). Admins maintain all of them; a member
@@ -101,7 +101,8 @@ rules_version = '2';
 // Document ID: free (auto id). Fields: category: string, title: string (1..100), body: string (<= 500),
 //   audience: list<string> (groups of ADR-0033 and roles, 1..20), senderUid: string (the sender), createdAt: timestamp
 //   (server time). Created only; readable by the addressed approved members and the sender. TALK_PLANNING may be sent
-//   by planners and talk helpers, only to ['TALK_PLANNER', 'TALK_HELPER'].
+//   by planners and talk helpers, only to ['TALK_PLANNER', 'TALK_HELPER']; ANNOUNCEMENT by members with the role
+//   'NOTIFICATION_SENDER', to any groups and roles.
 //
 // Collection: region/.../country/{countryId}/weekEvents (one list per country, ADR-0034)
 // Document ID: free. Fields: name: string (1..100), cancelsTalk: bool.
@@ -236,7 +237,7 @@ service cloud.firestore {
       return roles is list &&
         roles.size() <= 10 &&
         roles.toSet().size() == roles.size() &&
-        roles.toSet().hasOnly(['CONGREGATION_ADMIN', 'TALK_PLANNER', 'TALK_HELPER', 'TASK_PLANNER']);
+        roles.toSet().hasOnly(['CONGREGATION_ADMIN', 'TALK_PLANNER', 'TALK_HELPER', 'TASK_PLANNER', 'NOTIFICATION_SENDER']);
     }
 
     // May read (never write) the members of exactly this congregation: admins and approved planners (talk or task) and
@@ -304,11 +305,24 @@ service cloud.firestore {
     }
 
     // Who may send which category (ADR-0035). TALK_PLANNING: whoever may change `confirmed` of a slot, and only to
-    // the planners and talk helpers.
+    // the planners and talk helpers. ANNOUNCEMENT: approved members with the role NOTIFICATION_SENDER, to any groups
+    // (ADR-0033) and roles.
     function canSendNotification(regionId, subregionId, branchId, countryId, circuitId, congId, data) {
-      return data.category == 'TALK_PLANNING' &&
-        data.audience.toSet() == ['TALK_PLANNER', 'TALK_HELPER'].toSet() &&
-        canViewTalkPlanning(regionId, subregionId, branchId, countryId, circuitId, congId);
+      return (data.category == 'TALK_PLANNING' &&
+          data.audience.toSet() == ['TALK_PLANNER', 'TALK_HELPER'].toSet() &&
+          canViewTalkPlanning(regionId, subregionId, branchId, countryId, circuitId, congId)) ||
+        (data.category == 'ANNOUNCEMENT' &&
+          data.audience.toSet().hasOnly(['ALL', 'BROTHERS', 'SISTERS', 'ELDERS', 'MINISTERIAL_SERVANTS',
+            'CONGREGATION_ADMIN', 'TALK_PLANNER', 'TALK_HELPER', 'TASK_PLANNER', 'NOTIFICATION_SENDER']) &&
+          canSendAnnouncements(regionId, subregionId, branchId, countryId, circuitId, congId));
+    }
+
+    function canSendAnnouncements(regionId, subregionId, branchId, countryId, circuitId, congId) {
+      let memberPath = /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/country/$(countryId)/circuit/$(circuitId)/congregation/$(congId)/members/$(request.auth.uid);
+      return isAuthenticated() &&
+        exists(memberPath) &&
+        get(memberPath).data.approved == true &&
+        hasRole(get(memberPath).data, 'NOTIFICATION_SENDER');
     }
 
     // Notification: category, title (1..100), body (<= 500), the addressed groups and roles (1..20, no duplicates),

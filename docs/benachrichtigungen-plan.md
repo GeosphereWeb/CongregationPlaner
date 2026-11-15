@@ -1,7 +1,7 @@
 # Umsetzungsplan: Benachrichtigungen
 
 Stand: 2026-11-15. Gewählt ist Variante B: ohne Server, ohne Kosten (Spark-Tarif). Schritt 1 umgesetzt (CP-163,
-ADR-0035), Schritt 2 umgesetzt (CP-164). Abweichung in Schritt 2: Die App fragt die Benachrichtigungs-Erlaubnis
+ADR-0035), Schritt 2 umgesetzt (CP-164), Schritt 3 umgesetzt (CP-165). Abweichung in Schritt 2: Die App fragt die Benachrichtigungs-Erlaubnis
 beim Start statt erst nach der Freigabe; Android fragt ohnehin höchstens zweimal.
 
 ## Ziel
