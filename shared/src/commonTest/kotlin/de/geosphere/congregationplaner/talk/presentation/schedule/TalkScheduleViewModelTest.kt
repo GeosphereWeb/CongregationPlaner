@@ -2,6 +2,10 @@ package de.geosphere.congregationplaner.talk.presentation.schedule
 
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
 import de.geosphere.congregationplaner.congregation.testing.FakeCongregationMetadataRepository
+import de.geosphere.congregationplaner.notification.domain.permission.NotificationPermissionPolicy
+import de.geosphere.congregationplaner.notification.domain.usecase.NotifyConfirmedChangedUseCase
+import de.geosphere.congregationplaner.notification.domain.usecase.SendNotificationUseCase
+import de.geosphere.congregationplaner.notification.testing.FakeNotificationRepository
 import de.geosphere.congregationplaner.talk.domain.model.Chairman
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCircuit
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCongregation
@@ -135,6 +139,7 @@ class TalkScheduleViewModelTest {
     private lateinit var congregations: FakeCongregationMetadataRepository
     private lateinit var settings: FakeTalkPlanningSettingsRepository
     private lateinit var templates: FakeMessageTemplateRepository
+    private lateinit var notifications: FakeNotificationRepository
     private lateinit var viewModel: TalkScheduleViewModel
 
     @BeforeTest
@@ -154,6 +159,7 @@ class TalkScheduleViewModelTest {
         )
         settings = FakeTalkPlanningSettingsRepository()
         templates = FakeMessageTemplateRepository()
+        notifications = FakeNotificationRepository()
         val policy = TalkSchedulePermissionPolicy()
         val save = SaveTalkSlotUseCase(repository, policy)
         val delete = DeleteTalkSlotUseCase(repository, policy)
@@ -165,6 +171,9 @@ class TalkScheduleViewModelTest {
                 ConfirmSpeakerUseCase(repository, policy),
                 ReassignTalkUseCase(repository, policy),
                 IsSlotDateTakenUseCase(),
+                NotifyConfirmedChangedUseCase(
+                    SendNotificationUseCase(notifications, NotificationPermissionPolicy(policy)),
+                ),
             ),
             YearSetupUseCases(
                 CreateYearSlotsUseCase(repository, congregations, policy),
@@ -620,6 +629,31 @@ class TalkScheduleViewModelTest {
         assertTrue(state.editor!!.slot.confirmed)
         assertFalse(state.isSaving)
         assertNull(state.errorMessage)
+        val (sender, notification) = notifications.sent.single()
+        assertEquals("helper", sender)
+        assertEquals("Redner informiert", notification.title)
+    }
+
+    @Test
+    fun `planner taking back informed notifies and a failed notification keeps the saved slot`() {
+        val confirmedSlot = plannedSlot.copy(confirmed = true)
+        repository.slots.value = listOf(confirmedSlot)
+        notifications.result = Result.failure(IllegalStateException("offline"))
+        viewModel.onCurrentUserChanged(planner)
+
+        viewModel.editor.edit(confirmedSlot)
+        viewModel.editor.setSpeakerInformed(false)
+        viewModel.changes.save()
+
+        assertFalse(repository.savedSlots.single().confirmed)
+        assertNull(state.errorMessage)
+        assertFalse(state.editor!!.isDirty)
+
+        notifications.result = Result.success(Unit)
+        viewModel.editor.update(state.editor!!.slot.copy(note = "Neu"))
+        viewModel.changes.save()
+        assertEquals("Neu", repository.savedSlots.last().note)
+        assertTrue(notifications.sent.isEmpty())
     }
 
     @Test
