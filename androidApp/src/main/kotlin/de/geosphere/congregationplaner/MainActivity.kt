@@ -1,7 +1,9 @@
 package de.geosphere.congregationplaner
 
+import android.Manifest
 import android.content.Intent
-import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,25 +14,20 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import de.geosphere.congregationplaner.auth.data.FirebaseAndroidContextHolder
-import de.geosphere.congregationplaner.auth.data.FirebaseSupport
 import de.geosphere.congregationplaner.auth.presentation.AppPreview
+import de.geosphere.congregationplaner.notification.NotificationCheckWorker
 import de.geosphere.congregationplaner.organization.presentation.selection.InviteLinkInbox
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
-        FirebaseAndroidContextHolder.configure(
-            context = applicationContext,
-            activity = this,
-            useAuthEmulator = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0,
-            authEmulatorHost = applicationInfo.metaData
-                ?.getString("firebase_auth_emulator_host")
-                ?.takeIf { it.isNotBlank() }
-                ?: "10.0.2.2",
-        )
-        FirebaseSupport.initialize()
+        // Firebase konfiguriert CongregationPlanerApplication; die Google-Anmeldung braucht zusätzlich die Activity.
+        FirebaseAndroidContextHolder.activity = this
         InviteLinkInbox.deliver(intent?.dataString)
+        requestNotificationPermission()
+        NotificationCheckWorker.checkNow(this)
 
         setContent {
             App()
@@ -46,6 +43,15 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         InviteLinkInbox.deliver(intent.dataString)
+    }
+
+    // Ab Android 13 braucht das Anzeigen von Benachrichtigungen die Zustimmung; Android fragt höchstens zweimal.
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 0)
+        }
     }
 }
 

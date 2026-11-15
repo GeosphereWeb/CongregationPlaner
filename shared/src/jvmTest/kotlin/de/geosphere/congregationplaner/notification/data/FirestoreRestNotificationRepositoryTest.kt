@@ -13,6 +13,7 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.time.Instant
 
 class FirestoreRestNotificationRepositoryTest {
     private val congregation = CongregationRef("EMEA", "europe", "central-europe", "de", "609a", "berlin")
@@ -49,6 +50,13 @@ class FirestoreRestNotificationRepositoryTest {
         assertTrue(request.body.contains(""""fieldPath":"createdAt","setToServerValue":"REQUEST_TIME""""))
 
         assertTrue(repository.send(congregation, "fail", notification).isFailure)
+    }
+
+    @Test
+    fun `the desktop does not fetch notifications`() = runBlocking {
+        val result = repository.fetchSince(congregation, setOf(EventAudience.ALL), emptySet(), Instant.DISTANT_PAST)
+
+        assertTrue(result.exceptionOrNull() is UnsupportedOperationException)
     }
 
     private fun runWithServer(
