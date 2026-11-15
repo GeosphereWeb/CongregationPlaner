@@ -5,6 +5,7 @@ import de.geosphere.congregationplaner.auth.domain.repository.FirebaseAuthReposi
 import de.geosphere.congregationplaner.notification.data.createNotificationRepository
 import de.geosphere.congregationplaner.notification.domain.repository.NotificationRepository
 import de.geosphere.congregationplaner.notification.domain.usecase.CheckNewNotificationsUseCase
+import de.geosphere.congregationplaner.notification.presentation.AnnouncementViewModel
 import de.geosphere.congregationplaner.organization.data.createCongregationSelectionStore
 import de.geosphere.congregationplaner.organization.domain.repository.CongregationSelectionStore
 import de.geosphere.congregationplaner.user.data.createUserRepository
@@ -13,10 +14,11 @@ import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.createGraph
 
-/** Für die Abfrage im Hintergrund, ohne geöffnete Oberfläche (ADR-0035). */
+/** Abfrage im Hintergrund (ohne geöffnete Oberfläche) und Verfassen von Mitteilungen (ADR-0035). */
 @DependencyGraph
 interface NotificationGraph {
     val checkNewNotifications: CheckNewNotificationsUseCase
+    val announcementViewModel: AnnouncementViewModel
 
     @Provides
     fun provideAuthRepository(): FirebaseAuthRepository = FirebaseAuthManager
