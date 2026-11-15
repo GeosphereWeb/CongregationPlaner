@@ -3,6 +3,7 @@ package de.geosphere.congregationplaner.notification.domain.permission
 import de.geosphere.congregationplaner.notification.domain.model.NotificationCategory
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import dev.zacsweers.metro.Inject
 
 /**
@@ -15,5 +16,6 @@ class NotificationPermissionPolicy(private val talkPolicy: TalkSchedulePermissio
     fun canSend(user: AppUser, category: NotificationCategory): Boolean = when (category) {
         // Wer „Informiert“ ändern darf, meldet die Änderung.
         NotificationCategory.TALK_PLANNING -> talkPolicy.canConfirmSpeaker(user)
+        NotificationCategory.ANNOUNCEMENT -> user.hasRole(CongregationRole.NOTIFICATION_SENDER)
     }
 }

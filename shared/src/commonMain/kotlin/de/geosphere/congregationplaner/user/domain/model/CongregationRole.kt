@@ -19,6 +19,9 @@ enum class CongregationRole(val label: String) {
 
     /** Plant die Zusammenkunft unter der Woche. */
     TASK_PLANNER("Aufgabenplaner"),
+
+    /** Sendet Mitteilungen an die ganze Versammlung oder an Gruppen und Rollen (ADR-0035). */
+    NOTIFICATION_SENDER("Benachrichtigungen senden"),
     ;
 
     companion object {

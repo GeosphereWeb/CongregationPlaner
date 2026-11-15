@@ -78,6 +78,22 @@ class NotificationUseCasesTest {
     }
 
     @Test
+    fun `announcements need the sender role and may address groups and roles`() = runTest {
+        val announcement = AppNotification(
+            category = NotificationCategory.ANNOUNCEMENT,
+            title = "Kongress",
+            groups = setOf(EventAudience.SISTERS),
+            roles = setOf(CongregationRole.TASK_PLANNER),
+        )
+        val sender = helper.copy(uid = "sender", roles = setOf(CongregationRole.NOTIFICATION_SENDER))
+
+        assertIs<NotificationException.NotAllowed>(send(helper, announcement).exceptionOrNull())
+        assertIs<NotificationException.NotAllowed>(send(sender, talkNotification).exceptionOrNull())
+        assertTrue(send(sender, announcement).isSuccess)
+        assertEquals("sender" to announcement, repository.sent.single())
+    }
+
+    @Test
     fun `a changed informed status is sent to planners and helpers`() = runTest {
         assertTrue(notify(helper, slot, slot.copy(confirmed = true)).isSuccess)
         assertTrue(notify(helper, slot.copy(confirmed = true), slot).isSuccess)

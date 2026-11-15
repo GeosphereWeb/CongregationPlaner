@@ -2,6 +2,8 @@ package de.geosphere.congregationplaner.user.domain.permission
 
 import de.geosphere.congregationplaner.congregation.domain.permission.CongregationPermissionPolicy
 import de.geosphere.congregationplaner.midweek.domain.permission.MidweekPermissionPolicy
+import de.geosphere.congregationplaner.notification.domain.model.NotificationCategory
+import de.geosphere.congregationplaner.notification.domain.permission.NotificationPermissionPolicy
 import de.geosphere.congregationplaner.organization.domain.permission.OrganizationPermissionPolicy
 import de.geosphere.congregationplaner.talk.domain.permission.TalkReferenceDataPolicy
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
@@ -21,6 +23,7 @@ class RolePermissionMatrixTest {
     private val midweek = MidweekPermissionPolicy()
     private val organization = OrganizationPermissionPolicy()
     private val congregation = CongregationPermissionPolicy()
+    private val notification = NotificationPermissionPolicy(talk)
 
     private enum class Permission {
         MANAGE_USERS,
@@ -32,6 +35,8 @@ class RolePermissionMatrixTest {
         MANAGE_TALK_REFERENCE,
         MANAGE_ORGANIZATION,
         MANAGE_CONGREGATIONS,
+        SEND_TALK_PLANNING_NOTIFICATION,
+        SEND_ANNOUNCEMENT,
     }
 
     private fun granted(person: AppUser): Set<Permission> = Permission.entries.filterTo(mutableSetOf()) {
@@ -45,6 +50,9 @@ class RolePermissionMatrixTest {
             Permission.MANAGE_TALK_REFERENCE -> reference.canManage(person)
             Permission.MANAGE_ORGANIZATION -> organization.canManage(person)
             Permission.MANAGE_CONGREGATIONS -> congregation.canManageGeneral(person)
+            Permission.SEND_TALK_PLANNING_NOTIFICATION ->
+                notification.canSend(person, NotificationCategory.TALK_PLANNING)
+            Permission.SEND_ANNOUNCEMENT -> notification.canSend(person, NotificationCategory.ANNOUNCEMENT)
         }
     }
 
@@ -52,7 +60,12 @@ class RolePermissionMatrixTest {
 
     @Test
     fun `every person gets exactly the permissions of the own roles`() {
-        val talkReading = setOf(Permission.VIEW_MEMBERS, Permission.VIEW_TALK_PLANNING, Permission.CONFIRM_SPEAKER)
+        val talkReading = setOf(
+            Permission.VIEW_MEMBERS,
+            Permission.VIEW_TALK_PLANNING,
+            Permission.CONFIRM_SPEAKER,
+            Permission.SEND_TALK_PLANNING_NOTIFICATION,
+        )
         val matrix = listOf(
             "member without role" to AppUser(uid = "u", approved = true) to emptySet(),
             "unapproved admin" to AppUser(uid = "u", roles = CongregationRole.entries.toSet()) to emptySet(),
@@ -62,6 +75,8 @@ class RolePermissionMatrixTest {
             "talk helper" to approved(CongregationRole.TALK_HELPER) to talkReading,
             "task planner" to approved(CongregationRole.TASK_PLANNER) to
                 setOf(Permission.VIEW_MEMBERS, Permission.PLAN_MIDWEEK),
+            "notification sender" to approved(CongregationRole.NOTIFICATION_SENDER) to
+                setOf(Permission.SEND_ANNOUNCEMENT),
             "global admin" to AppUser(uid = "u", isGlobalAdmin = true) to setOf(
                 Permission.MANAGE_TALK_REFERENCE,
                 Permission.MANAGE_ORGANIZATION,
