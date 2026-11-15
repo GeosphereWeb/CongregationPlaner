@@ -2,6 +2,8 @@ package de.geosphere.congregationplaner.talk.di
 
 import de.geosphere.congregationplaner.congregation.data.createCongregationMetadataRepository
 import de.geosphere.congregationplaner.congregation.domain.repository.CongregationMetadataRepository
+import de.geosphere.congregationplaner.notification.data.createNotificationRepository
+import de.geosphere.congregationplaner.notification.domain.repository.NotificationRepository
 import de.geosphere.congregationplaner.talk.data.createExternalSpeakerDirectoryRepository
 import de.geosphere.congregationplaner.talk.data.createTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.data.createTalkPlanningSettingsRepository
@@ -52,4 +54,8 @@ interface TalkScheduleGraph {
     // Die eigenen WhatsApp-Vorlagen für das Wischen nach links.
     @Provides
     fun provideMessageTemplateRepository(): MessageTemplateRepository = createMessageTemplateRepository()
+
+    // Meldung an Planer und Helfer, wenn sich „Informiert“ ändert (ADR-0035).
+    @Provides
+    fun provideNotificationRepository(): NotificationRepository = createNotificationRepository()
 }

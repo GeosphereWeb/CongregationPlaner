@@ -778,6 +778,54 @@ await expect('Nicht freigegebenes Mitglied fragt nicht ab', queryEvents(['ALL'],
 await expect('Fremde Versammlung fragt nicht ab', queryEvents(['ALL'], sister.token, OTHER_CONG), false);
 await expect('Admin löscht ein Ereignis', api('DELETE', `${EVENTS}/day`, undefined, congAdmin.token), true);
 
+// ---------- Benachrichtigungen (CP-163, ADR-0035) ----------
+const NOTES = `${CONG}/notifications`;
+const note = (sender, extra = {}) => ({
+  category: 'TALK_PLANNING', title: 'Redner informiert', body: 'Vortrag am 22.11.2026',
+  audience: ['TALK_PLANNER', 'TALK_HELPER'], senderUid: sender.uid, ...extra,
+});
+// Wie die App: ein neues Dokument, `createdAt` als Serverzeit über eine Transformation.
+const sendNote = (id, data, token, { withTime = true, cong = CONG } = {}) => commit([{
+  ...setDoc(`${cong}/notifications/${id}`, data),
+  currentDocument: { exists: false },
+  ...(withTime ? { updateTransforms: [{ fieldPath: 'createdAt', setToServerValue: 'REQUEST_TIME' }] } : {}),
+}], token);
+// Abfrage wie die App: nur Benachrichtigungen für die eigenen Gruppen und Rollen.
+const queryNotes = (audience, token) => call('POST', `${FS}/${CONG}:runQuery`, {
+  structuredQuery: {
+    from: [{ collectionId: 'notifications' }],
+    where: { fieldFilter: { field: { fieldPath: 'audience' }, op: 'ARRAY_CONTAINS_ANY', value: enc(audience) } },
+  },
+}, token);
+
+await expect('Helfer meldet „informiert“', sendNote('n1', note(helper), helper.token), true);
+await expect('Planer meldet „informiert“', sendNote('n2', note(planner), planner.token), true);
+await expect('Empfänger in anderer Reihenfolge', sendNote('n3', note(helper, { audience: ['TALK_HELPER', 'TALK_PLANNER'] }), helper.token), true);
+await expect('Ohne Serverzeit', sendNote('bad', note(helper), helper.token, { withTime: false }), false);
+await expect('Mit eigener Zeit', sendNote('bad', note(helper, { createdAt: '2026-11-22' }), helper.token, { withTime: false }), false);
+await expect('Fremder Absender', sendNote('bad', note(planner), helper.token), false);
+await expect('An alle statt an Planer und Helfer', sendNote('bad', note(helper, { audience: ['ALL'] }), helper.token), false);
+await expect('Nur an die Planer', sendNote('bad', note(helper, { audience: ['TALK_PLANNER'] }), helper.token), false);
+await expect('Doppelter Empfänger', sendNote('bad', note(helper, { audience: ['TALK_PLANNER', 'TALK_HELPER', 'TALK_HELPER'] }), helper.token), false);
+await expect('Unbekannte Kategorie', sendNote('bad', note(helper, { category: 'ANNOUNCEMENT' }), helper.token), false);
+await expect('Leerer Titel', sendNote('bad', note(helper, { title: '' }), helper.token), false);
+await expect('Text zu lang', sendNote('bad', note(helper, { body: 'x'.repeat(501) }), helper.token), false);
+await expect('Zusätzliches Feld', sendNote('bad', note(helper, { slot: '2026-11-22' }), helper.token), false);
+await expect('Mitglied ohne Rolle meldet nicht', sendNote('bad', note(plain), plain.token), false);
+await expect('Aufgabenplaner meldet nicht', sendNote('bad', note(taskPlanner), taskPlanner.token), false);
+await expect('Nicht freigegebener Helfer meldet nicht', sendNote('bad', note(pendingHelper), pendingHelper.token), false);
+await expect('Helfer meldet nicht in einer fremden Versammlung', sendNote('bad', note(helper), helper.token, { cong: OTHER_CONG }), false);
+await expect('Helfer ändert keine Benachrichtigung', api('PATCH', `${NOTES}/n1`, fields(note(helper, { title: 'Anders' })), helper.token), false);
+await expect('Helfer löscht keine Benachrichtigung', api('DELETE', `${NOTES}/n1`, undefined, helper.token), false);
+
+await expect('Helfer fragt seine Benachrichtigungen ab', queryNotes(['ALL', 'TALK_HELPER'], helper.token), true);
+await expect('Planer liest eine Meldung des Helfers', api('GET', `${NOTES}/n1`, undefined, planner.token), true);
+await expect('Schwester fragt ihre Benachrichtigungen ab', queryNotes(['ALL', 'SISTERS'], sister.token), true);
+await expect('Schwester liest keine Meldung an Planer', api('GET', `${NOTES}/n1`, undefined, sister.token), false);
+await expect('Schwester fragt Meldungen an Helfer ab', queryNotes(['TALK_HELPER'], sister.token), false);
+await expect('Mitglied listet alle Benachrichtigungen', api('GET', NOTES, undefined, plain.token), false);
+await expect('Nicht freigegebener Helfer fragt nicht ab', queryNotes(['TALK_HELPER'], pendingHelper.token), false);
+
 console.log(`${count} checks, ${failures.length} failures`);
 failures.forEach((failure) => console.log(`FAILURE: ${failure}`));
 process.exitCode = failures.length === 0 ? 0 : 1;
