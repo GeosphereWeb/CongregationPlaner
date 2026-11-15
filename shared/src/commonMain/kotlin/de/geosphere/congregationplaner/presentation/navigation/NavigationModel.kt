@@ -40,6 +40,11 @@ enum class CongregationSection(
         CongregationGroup.ADMINISTRATION,
         supportingText = "Termine auf der Startseite",
     ),
+    ANNOUNCEMENTS(
+        "Mitteilungen",
+        CongregationGroup.ADMINISTRATION,
+        supportingText = "Benachrichtigung an Gruppen senden",
+    ),
     MIDWEEK_PLANNING("Planung unter der Woche", CongregationGroup.PLANNING, supportingText = "Aufgabenplaner"),
     WEEKEND_TALKS("Planung am Wochenende", CongregationGroup.PLANNING, nested = true, tabLabel = "Wochenplanung"),
     EXTERNAL_SPEAKERS("Externe Redner", CongregationGroup.PLANNING, nested = true, tabLabel = "Rednerliste"),

@@ -60,6 +60,13 @@ class NavigationAccessTest {
     }
 
     @Test
+    fun `a notification sender sees only the announcements`() {
+        val visible = access.visibleFor(member(CongregationRole.NOTIFICATION_SENDER))
+
+        assertEquals(listOf(CongregationSection.ANNOUNCEMENTS), visible.congregationSections)
+    }
+
+    @Test
     fun `an admin sees the administration but no planning`() {
         val visible = access.visibleFor(member(CongregationRole.CONGREGATION_ADMIN))
 
