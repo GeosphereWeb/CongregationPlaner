@@ -35,4 +35,16 @@ class HomeTextsTest {
         assertNull(nextTalkInformedBadge(slot))
         assertEquals("Informiert", nextTalkInformedBadge(slot.copy(confirmed = true)))
     }
+
+    @Test
+    fun `the next talk shows its number with the title on the next line`() {
+        val slot = TalkSlot(LocalDate(2026, 11, 22), LocalTime(17, 30))
+
+        assertEquals("Noch nicht geplant", nextTalkText(slot))
+        assertEquals("Vortrag Nr. 73", nextTalkText(slot.copy(talkNumber = 73)))
+        assertEquals(
+            "Vortrag Nr. 73\nEin weises Herz",
+            nextTalkText(slot.copy(talkNumber = 73, talkTitle = "Ein weises Herz")),
+        )
+    }
 }

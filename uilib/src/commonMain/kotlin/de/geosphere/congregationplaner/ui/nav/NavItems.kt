@@ -62,7 +62,8 @@ fun SectionLabel(
 /**
  * Karte der Übersicht auf dem Handy. [nested] rückt sie ein und setzt links eine Kante in [accent]; [badge] ist eine
  * kurze Marke wie „1 offen“, [secondBadge] eine zweite darunter; beide stehen oben rechts neben dem Titel, damit der
- * Untertext die ganze Breite hat. [supportingTone] färbt den Untertext; [indicator] setzt einen Statuspunkt vor den Titel.
+ * Untertext die ganze Breite hat. [bodyText] steht etwas größer zwischen Titel und Untertext. [supportingTone] färbt den
+ * Untertext; [indicator] setzt einen Statuspunkt vor den Titel.
  */
 @Composable
 @Suppress("LongParameterList")
@@ -70,6 +71,7 @@ fun NavCardRow(
     title: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    bodyText: String? = null,
     supportingText: String? = null,
     supportingTone: StatusTone? = null,
     selected: Boolean = false,
@@ -112,6 +114,9 @@ fun NavCardRow(
                         if (secondBadge != null) StatusChip(secondBadge, secondBadgeTone)
                     }
                 }
+            }
+            if (bodyText != null) {
+                Text(bodyText, style = MaterialTheme.typography.bodyMedium, color = NightColors.OnBackgroundBody)
             }
             if (supportingText != null) {
                 Text(
