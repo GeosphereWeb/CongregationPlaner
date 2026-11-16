@@ -51,7 +51,7 @@ fun StatusChip(text: String, tone: StatusTone, modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(6.dp).background(tone.content, CircleShape))
-        Text(text, style = nightTextStyle(13.sp, FontWeight.Medium, tone.content))
+        Text(text, style = nightTextStyle(9.sp, FontWeight.Medium, tone.content))
     }
 }
 
@@ -68,9 +68,9 @@ fun VerticalStatusTag(text: String, tone: StatusTone, modifier: Modifier = Modif
         RotatedUp {
             Text(
                 text,
-                style = nightTextStyle(11.sp, FontWeight.Medium, tone.content),
+                style = nightTextStyle(9.sp, FontWeight.Medium, tone.content),
                 maxLines = 1,
-                modifier = Modifier.padding(vertical = 8.dp),
+                modifier = Modifier.padding(vertical = 0.dp, horizontal = 4.dp),
             )
         }
     }
@@ -123,7 +123,7 @@ private fun StatusChipPreview() = NightPreviewWrapper {
 @ThemePreviews
 @Composable
 private fun VerticalStatusTagPreview() = NightPreviewWrapper {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.height(72.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.height(72.dp)) {
         VerticalStatusTag("Informiert", StatusTone.Mint, Modifier.fillMaxHeight())
         VerticalStatusTag("Nächster", StatusTone.Gold, Modifier.fillMaxHeight())
         VerticalStatusTag("Entfällt", StatusTone.Sky, Modifier.fillMaxHeight())

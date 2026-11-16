@@ -6,7 +6,6 @@ import de.geosphere.congregationplaner.presentation.navigation.germanMonthName
 import de.geosphere.congregationplaner.presentation.navigation.germanWeekdayName
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.presentation.schedule.SlotStatus
-import de.geosphere.congregationplaner.talk.presentation.schedule.slotSpeakerLine
 import de.geosphere.congregationplaner.talk.presentation.schedule.statusLabel
 import kotlinx.datetime.LocalDate
 
@@ -17,11 +16,10 @@ internal const val NO_NEXT_TALK_DETAILS = "Lege in der Planung am Wochenende ein
 
 internal fun nextTalkTitle(slot: TalkSlot): String = germanDayAndMonth(slot.date)
 
-/** Vortrag mit Titel und darunter der Redner mit Herkunft. */
-internal fun nextTalkDetails(slot: TalkSlot): String {
-    val talk = slot.talkNumber?.let { "Vortrag Nr. $it – ${slot.talkTitle.orEmpty()}" } ?: "Noch nicht geplant"
-    return "$talk\n${slotSpeakerLine(slot)}"
-}
+/** Vortragsnummer und darunter der Titel; ohne Vortrag „Noch nicht geplant“. Der Redner steht darunter. */
+internal fun nextTalkText(slot: TalkSlot): String =
+    slot.talkNumber?.let { number -> listOfNotNull("Vortrag Nr. $number", slot.talkTitle).joinToString("\n") }
+        ?: "Noch nicht geplant"
 
 /** Zweite Marke neben „Nächster“: „Informiert“, sobald der Redner informiert ist. */
 internal fun nextTalkInformedBadge(slot: TalkSlot): String? = statusLabel(SlotStatus.INFORMED).takeIf { slot.confirmed }

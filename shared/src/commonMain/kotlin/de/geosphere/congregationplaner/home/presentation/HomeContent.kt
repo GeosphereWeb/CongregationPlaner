@@ -21,6 +21,7 @@ import de.geosphere.congregationplaner.presentation.navigation.GlobalSection
 import de.geosphere.congregationplaner.presentation.navigation.VisibleNavigation
 import de.geosphere.congregationplaner.presentation.navigation.homeHeader
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
+import de.geosphere.congregationplaner.talk.presentation.schedule.slotSpeakerLine
 import de.geosphere.congregationplaner.theming.AppTheme
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.ui.chip.StatusTone
@@ -103,7 +104,8 @@ private fun TalkBlock(talk: TalkSummary, actions: AppNavigationActions) {
         NavCardRow(
             title = nextTalkTitle(next),
             onClick = open,
-            supportingText = nextTalkDetails(next),
+            bodyText = nextTalkText(next),
+            supportingText = slotSpeakerLine(next),
             badge = "Nächster",
             badgeTone = StatusTone.Gold,
             secondBadge = nextTalkInformedBadge(next),
