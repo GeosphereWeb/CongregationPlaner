@@ -5,7 +5,9 @@ import de.geosphere.congregationplaner.presentation.navigation.germanDayAndMonth
 import de.geosphere.congregationplaner.presentation.navigation.germanMonthName
 import de.geosphere.congregationplaner.presentation.navigation.germanWeekdayName
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
+import de.geosphere.congregationplaner.talk.presentation.schedule.SlotStatus
 import de.geosphere.congregationplaner.talk.presentation.schedule.slotSpeakerLine
+import de.geosphere.congregationplaner.talk.presentation.schedule.statusLabel
 import kotlinx.datetime.LocalDate
 
 private const val WEEKDAY_SHORT_LENGTH = 2
@@ -20,6 +22,9 @@ internal fun nextTalkDetails(slot: TalkSlot): String {
     val talk = slot.talkNumber?.let { "Vortrag Nr. $it – ${slot.talkTitle.orEmpty()}" } ?: "Noch nicht geplant"
     return "$talk\n${slotSpeakerLine(slot)}"
 }
+
+/** Zweite Marke neben „Nächster“: „Informiert“, sobald der Redner informiert ist. */
+internal fun nextTalkInformedBadge(slot: TalkSlot): String? = statusLabel(SlotStatus.INFORMED).takeIf { slot.confirmed }
 
 internal fun openWeekendsTitle(count: Int): String = when (count) {
     0 -> "Alles geplant"

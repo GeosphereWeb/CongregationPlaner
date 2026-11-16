@@ -1,9 +1,12 @@
 package de.geosphere.congregationplaner.home.presentation
 
 import de.geosphere.congregationplaner.event.domain.model.SpecialEvent
+import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class HomeTextsTest {
     @Test
@@ -23,5 +26,13 @@ class HomeTextsTest {
             "30. Dezember – 2. Januar",
             eventDatesText(event(LocalDate(2027, 12, 30), LocalDate(2028, 1, 2))),
         )
+    }
+
+    @Test
+    fun `the next talk gets the informed badge only once the speaker is informed`() {
+        val slot = TalkSlot(LocalDate(2026, 11, 22), LocalTime(17, 30))
+
+        assertNull(nextTalkInformedBadge(slot))
+        assertEquals("Informiert", nextTalkInformedBadge(slot.copy(confirmed = true)))
     }
 }

@@ -11,10 +11,14 @@ internal data class SlotChip(val text: String, val tone: StatusTone)
 
 /**
  * Marke eines Termins in der Liste: ein geplanter Termin ist der Normalfall und ein nicht geplanter zeigt schon die
- * rote Hervorhebung ([slotHighlight]); beide bekommen keine Marke.
+ * rote Hervorhebung ([slotHighlight]); beide bekommen keine Marke. Der nächste Termin trägt zusätzlich „Informiert“,
+ * sobald der Redner informiert ist.
  */
-internal fun listSlotChip(slot: TalkSlot, status: SlotStatus): SlotChip? =
-    if (status == SlotStatus.PLANNED || status == SlotStatus.NOT_PLANNED) null else slotChip(status)
+internal fun listSlotChips(slot: TalkSlot, status: SlotStatus): List<SlotChip> = when (status) {
+    SlotStatus.PLANNED, SlotStatus.NOT_PLANNED -> emptyList()
+    SlotStatus.NEXT -> listOfNotNull(slotChip(status), slotChip(SlotStatus.INFORMED).takeIf { slot.confirmed })
+    else -> listOf(slotChip(status))
+}
 
 /**
  * Hervorhebung eines Termins in der Liste: der Termin der aktuellen Woche (Info) hat Vorrang vor einem noch nicht

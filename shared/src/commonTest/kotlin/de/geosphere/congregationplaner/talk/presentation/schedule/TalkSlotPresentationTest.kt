@@ -163,7 +163,7 @@ class TalkSlotPresentationTest {
     fun `a cancelled slot keeps the cancelled chip and has the week event name only in the event line`() {
         val s = slot { it.copy(weekEventId = "kongress", weekEventName = "Kongress", talkCancelled = true) }
 
-        assertEquals(SlotChip("Entfällt", StatusTone.Sky), listSlotChip(s, SlotStatus.CANCELLED))
+        assertEquals(listOf(SlotChip("Entfällt", StatusTone.Sky)), listSlotChips(s, SlotStatus.CANCELLED))
         assertEquals("Kongress", slotEventLine(s))
     }
 
@@ -252,10 +252,20 @@ class TalkSlotPresentationTest {
     fun `the list shows no chip for a planned or unplanned slot but keeps the others`() {
         val s = slot()
 
-        assertNull(listSlotChip(s, SlotStatus.PLANNED))
-        assertEquals(SlotChip("Informiert", StatusTone.Mint), listSlotChip(s, SlotStatus.INFORMED))
-        assertNull(listSlotChip(s, SlotStatus.NOT_PLANNED))
-        assertEquals(SlotChip("Nächster", StatusTone.Gold), listSlotChip(s, SlotStatus.NEXT))
+        assertEquals(emptyList(), listSlotChips(s, SlotStatus.PLANNED))
+        assertEquals(listOf(SlotChip("Informiert", StatusTone.Mint)), listSlotChips(s, SlotStatus.INFORMED))
+        assertEquals(emptyList(), listSlotChips(s, SlotStatus.NOT_PLANNED))
+        assertEquals(listOf(SlotChip("Nächster", StatusTone.Gold)), listSlotChips(s, SlotStatus.NEXT))
+    }
+
+    @Test
+    fun `the next slot also shows informed once the speaker is informed`() {
+        val informed = slot { it.copy(confirmed = true) }
+
+        assertEquals(
+            listOf(SlotChip("Nächster", StatusTone.Gold), SlotChip("Informiert", StatusTone.Mint)),
+            listSlotChips(informed, SlotStatus.NEXT),
+        )
     }
 
     @Test
