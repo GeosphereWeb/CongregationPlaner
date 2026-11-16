@@ -61,7 +61,7 @@ fun SectionLabel(
 
 /**
  * Karte der Übersicht auf dem Handy. [nested] rückt sie ein und setzt links eine Kante in [accent]; [badge] ist eine
- * kurze Marke wie „1 offen“; [supportingTone] färbt den Untertext; [indicator] setzt einen Statuspunkt vor den Titel.
+ * kurze Marke wie „1 offen“, [secondBadge] eine zweite dahinter; [supportingTone] färbt den Untertext; [indicator] setzt einen Statuspunkt vor den Titel.
  */
 @Composable
 @Suppress("LongParameterList")
@@ -76,6 +76,8 @@ fun NavCardRow(
     accent: Color = NightColors.Border,
     badge: String? = null,
     badgeTone: StatusTone = StatusTone.Gold,
+    secondBadge: String? = null,
+    secondBadgeTone: StatusTone = StatusTone.Mint,
     indicator: StatusTone? = null,
 ) {
     val shape = if (nested) NESTED_CARD_SHAPE else CARD_SHAPE
@@ -106,6 +108,7 @@ fun NavCardRow(
             }
         }
         if (badge != null) StatusChip(badge, badgeTone)
+        if (secondBadge != null) StatusChip(secondBadge, secondBadgeTone)
         Chevron()
     }
 }
@@ -168,6 +171,7 @@ private fun NavCardRowPreview() = NightPreviewWrapper {
             nested = true,
             accent = NightColors.Gold,
             badge = "1 offen",
+            secondBadge = "neu",
         )
         SectionLabel("Planung")
         NavCardRow("Planung unter der Woche", {}, supportingText = "Aufgabenplaner", supportingTone = StatusTone.Sky)

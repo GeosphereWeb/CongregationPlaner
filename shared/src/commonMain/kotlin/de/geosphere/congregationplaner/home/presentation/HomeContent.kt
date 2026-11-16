@@ -106,6 +106,7 @@ private fun TalkBlock(talk: TalkSummary, actions: AppNavigationActions) {
             supportingText = nextTalkDetails(next),
             badge = "Nächster",
             badgeTone = StatusTone.Gold,
+            secondBadge = nextTalkInformedBadge(next),
         )
     } else {
         NavCardRow(NO_NEXT_TALK_TITLE, open, supportingText = NO_NEXT_TALK_DETAILS)
@@ -156,6 +157,7 @@ private val previewNext = TalkSlot(
     speakerMemberId = "m1",
     speakerLastName = "Muster",
     speakerFirstName = "Max",
+    confirmed = true,
 )
 
 private val previewState = HomeUiState(

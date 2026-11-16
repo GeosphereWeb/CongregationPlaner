@@ -310,7 +310,7 @@ internal fun TalkScheduleContent(
                                                 canDelete = false,
                                                 highlight = slotHighlight(slot, today),
                                             ) {
-                                                SlotSummary(slot, listSlotChip(slot, slotStatus(slot, nextDate)))
+                                                SlotSummary(slot, listSlotChips(slot, slotStatus(slot, nextDate)))
                                             }
                                         }
                                     }
@@ -460,7 +460,7 @@ private fun Modifier.monthHeader(): Modifier =
  * die senkrechte Statusmarke.
  */
 @Composable
-private fun SlotSummary(slot: TalkSlot, chip: SlotChip?) {
+private fun SlotSummary(slot: TalkSlot, chips: List<SlotChip>) {
     Row(
         modifier = Modifier.heightIn(min = SLOT_MIN_HEIGHT).height(IntrinsicSize.Min),
         verticalAlignment = Alignment.CenterVertically,
@@ -498,7 +498,7 @@ private fun SlotSummary(slot: TalkSlot, chip: SlotChip?) {
                 )
             }
         }
-        chip?.let { VerticalStatusTag(it.text, it.tone, Modifier.fillMaxHeight()) }
+        chips.forEach { VerticalStatusTag(it.text, it.tone, Modifier.fillMaxHeight().padding(start = 4.dp)) }
     }
 }
 
@@ -525,7 +525,17 @@ private val checkIcon = ImageVector.Builder(
 private val previewToday = LocalDate(2026, 10, 20)
 
 private val previewSlots = listOf(
-    TalkSlot(LocalDate(2026, 10, 25), LocalTime(17, 30)),
+    // Der nächste Termin, Redner informiert: zeigt „Nächster“ und „Informiert“.
+    TalkSlot(
+        LocalDate(2026, 10, 25),
+        LocalTime(17, 30),
+        talkNumber = 7,
+        talkTitle = "Hoffnung für alle",
+        speakerMemberId = "2",
+        speakerLastName = "Beispiel",
+        speakerFirstName = "Tim",
+        confirmed = true,
+    ),
     TalkSlot(
         LocalDate(2026, 11, 1),
         LocalTime(17, 30),

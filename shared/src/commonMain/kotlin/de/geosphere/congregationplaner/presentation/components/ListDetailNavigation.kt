@@ -1,8 +1,11 @@
 package de.geosphere.congregationplaner.presentation.components
 
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
+import androidx.compose.material3.adaptive.layout.PaneScaffoldDirective
 import androidx.compose.material3.adaptive.layout.ThreePaneScaffoldDestinationItem
+import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
 import androidx.compose.material3.adaptive.navigation.ThreePaneScaffoldNavigator
 import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
 import androidx.compose.runtime.Composable
@@ -35,6 +38,7 @@ internal fun rememberListDetailNavigation(
     val isSaving = state.isSaving
     val hasError = state.errorMessage != null
     val navigator = rememberListDetailPaneScaffoldNavigator<Nothing>(
+        scaffoldDirective = calculatePaneScaffoldDirective(currentWindowAdaptiveInfo()).withoutAutoFocus(),
         initialDestinationHistory = listOf(ThreePaneScaffoldDestinationItem(ListDetailPaneScaffoldRole.List)),
     )
     val singlePane = navigator.scaffoldDirective.maxHorizontalPartitions == 1
@@ -60,3 +64,19 @@ internal fun rememberListDetailNavigation(
     }
     return navigator
 }
+
+/**
+ * Ohne das würde der Scaffold bei jedem Panewechsel das neue Pane fokussieren; Compose gibt den Fokus dann an das erste
+ * Textfeld weiter (Suchfeld der Liste, erstes Feld im Detail) und die Tastatur geht auf.
+ */
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
+private fun PaneScaffoldDirective.withoutAutoFocus() = PaneScaffoldDirective(
+    maxHorizontalPartitions = maxHorizontalPartitions,
+    horizontalPartitionSpacerSize = horizontalPartitionSpacerSize,
+    maxVerticalPartitions = maxVerticalPartitions,
+    verticalPartitionSpacerSize = verticalPartitionSpacerSize,
+    defaultPanePreferredWidth = defaultPanePreferredWidth,
+    defaultPanePreferredHeight = defaultPanePreferredHeight,
+    excludedBounds = excludedBounds,
+    shouldAutoFocusCurrentDestination = false,
+)
