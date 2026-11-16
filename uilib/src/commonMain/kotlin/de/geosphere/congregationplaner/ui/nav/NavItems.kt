@@ -61,7 +61,8 @@ fun SectionLabel(
 
 /**
  * Karte der Übersicht auf dem Handy. [nested] rückt sie ein und setzt links eine Kante in [accent]; [badge] ist eine
- * kurze Marke wie „1 offen“, [secondBadge] eine zweite dahinter; [supportingTone] färbt den Untertext; [indicator] setzt einen Statuspunkt vor den Titel.
+ * kurze Marke wie „1 offen“, [secondBadge] eine zweite darunter; beide stehen oben rechts neben dem Titel, damit der
+ * Untertext die ganze Breite hat. [supportingTone] färbt den Untertext; [indicator] setzt einen Statuspunkt vor den Titel.
  */
 @Composable
 @Suppress("LongParameterList")
@@ -98,7 +99,20 @@ fun NavCardRow(
         if (indicator != null) Box(Modifier.size(8.dp).background(indicator.content, CircleShape))
         // Der Textblock hat rundum 4 dp Luft; mit dem Kartenrand ergibt das 8/16/8 wie in der Design-Leinwand.
         Column(Modifier.weight(1f).padding(4.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = NightColors.OnBackground)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = NightColors.OnBackground,
+                    modifier = Modifier.weight(1f),
+                )
+                if (badge != null || secondBadge != null) {
+                    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        if (badge != null) StatusChip(badge, badgeTone)
+                        if (secondBadge != null) StatusChip(secondBadge, secondBadgeTone)
+                    }
+                }
+            }
             if (supportingText != null) {
                 Text(
                     supportingText,
@@ -107,8 +121,6 @@ fun NavCardRow(
                 )
             }
         }
-        if (badge != null) StatusChip(badge, badgeTone)
-        if (secondBadge != null) StatusChip(secondBadge, secondBadgeTone)
         Chevron()
     }
 }
