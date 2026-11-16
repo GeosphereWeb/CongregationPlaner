@@ -32,4 +32,11 @@ class TalkHistoryTextsTest {
 
         assertEquals(2, TalkHistoryUiState(overview = overview).neverHeldCount)
     }
+
+    @Test
+    fun `an inactive talk is dimmed in the history`() {
+        assertEquals(1f, historyRowAlpha(Talk(1, "Eins")))
+        assertEquals(1f, historyRowAlpha(null))
+        assertEquals(0.5f, historyRowAlpha(Talk(2, "Zwei", active = false)))
+    }
 }

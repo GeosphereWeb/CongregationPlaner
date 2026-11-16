@@ -29,6 +29,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.talk.domain.model.Talk
@@ -185,9 +186,11 @@ private fun TalkRowCard(row: TalkHistoryRow, state: TalkHistoryUiState, actions:
         actionsEnabled = true,
         canDelete = false,
     ) {
-        Text("${row.talk.number} – ${row.talk.title}", style = MaterialTheme.typography.titleMedium)
-        val last = row.entry?.lastHeldOn
-        Text(if (last == null) "noch nie gehalten" else "zuletzt ${last.toDisplayText()}")
+        Column(Modifier.alpha(historyRowAlpha(row.talk))) {
+            Text("${row.talk.number} – ${row.talk.title}", style = MaterialTheme.typography.titleMedium)
+            val last = row.entry?.lastHeldOn
+            Text(if (last == null) "noch nie gehalten" else "zuletzt ${last.toDisplayText()}")
+        }
     }
 }
 
@@ -207,11 +210,13 @@ private fun LazyListScope.speakerResults(state: TalkHistoryUiState, actions: Tal
                 actionsEnabled = true,
                 canDelete = false,
             ) {
-                Text(
-                    "${held.talkNumber} – ${held.talk?.title.orEmpty()}",
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Text(held.daysText())
+                Column(Modifier.alpha(historyRowAlpha(held.talk))) {
+                    Text(
+                        "${held.talkNumber} – ${held.talk?.title.orEmpty()}",
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(held.daysText())
+                }
             }
         }
     }
@@ -241,7 +246,7 @@ private fun TalkHistoryDetail(row: TalkHistoryRow?) {
 @ThemePreviews
 @Composable
 private fun TalkHistoryContentPreview() = PreviewThemeWrapper {
-    val talks = listOf(Talk(1, "Beispielvortrag"), Talk(2, "Noch nie gehalten"))
+    val talks = listOf(Talk(1, "Beispielvortrag"), Talk(2, "Noch nie gehalten"), Talk(3, "Pausiert", active = false))
     TalkHistoryContent(
         state = previewState(
             talks = talks,
@@ -263,7 +268,11 @@ private fun TalkHistoryContentPreview() = PreviewThemeWrapper {
 @ThemePreviews
 @Composable
 private fun TalkHistorySearchPreview() = PreviewThemeWrapper {
-    val talks = listOf(Talk(1, "Beispielvortrag"), Talk(2, "Zweiter Vortrag"), Talk(3, "Noch nie gehalten"))
+    val talks = listOf(
+        Talk(1, "Beispielvortrag"),
+        Talk(2, "Zweiter Vortrag", active = false),
+        Talk(3, "Noch nie gehalten"),
+    )
     TalkHistoryContent(
         state = previewState(
             talks = talks,
