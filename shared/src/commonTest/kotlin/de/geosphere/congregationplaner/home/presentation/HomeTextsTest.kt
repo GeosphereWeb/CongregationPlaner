@@ -37,6 +37,14 @@ class HomeTextsTest {
     }
 
     @Test
+    fun `the next badge disappears once the speaker is informed`() {
+        val slot = TalkSlot(LocalDate(2026, 11, 22), LocalTime(17, 30))
+
+        assertEquals("Nächster", nextTalkBadge(slot))
+        assertNull(nextTalkBadge(slot.copy(confirmed = true)))
+    }
+
+    @Test
     fun `the next talk shows its number with the title on the next line`() {
         val slot = TalkSlot(LocalDate(2026, 11, 22), LocalTime(17, 30))
 
