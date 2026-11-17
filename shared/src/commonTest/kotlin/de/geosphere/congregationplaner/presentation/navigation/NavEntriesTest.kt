@@ -1,5 +1,8 @@
 package de.geosphere.congregationplaner.presentation.navigation
 
+import congregationplaner.uilib.generated.resources.Res
+import congregationplaner.uilib.generated.resources.ic_cp_assembly_hall_duo
+import congregationplaner.uilib.generated.resources.ic_cp_speaker_audience_duo
 import de.geosphere.congregationplaner.ui.chip.StatusTone
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -83,6 +86,12 @@ class NavEntriesTest {
         assertFalse(entries.getValue("Userverwaltung").nested)
         assertEquals(StatusTone.Gold, CongregationGroup.ADMINISTRATION.tone)
         assertNull(CongregationGroup.PLANNING.tone)
+    }
+
+    @Test
+    fun `group headings get their icons`() {
+        assertEquals(Res.drawable.ic_cp_assembly_hall_duo, CongregationGroup.ADMINISTRATION.icon)
+        assertEquals(Res.drawable.ic_cp_speaker_audience_duo, CongregationGroup.PLANNING.icon)
     }
 
     @Test
