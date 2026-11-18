@@ -60,6 +60,7 @@ internal fun EntryList(entries: List<NavEntry>, isWide: Boolean, header: AreaHea
                     entry.group.label,
                     tone = entry.group.tone,
                     modifier = Modifier.padding(top = 20.dp, bottom = 8.dp),
+                    icon = entry.group.icon,
                 )
             }
             lastGroup = entry.group

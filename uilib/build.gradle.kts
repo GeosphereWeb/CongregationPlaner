@@ -8,6 +8,11 @@ plugins {
     alias(libs.plugins.kover)
 }
 
+// The icon set (ic_cp_*) is used from shared, so the generated Res class must be public.
+compose.resources {
+    publicResClass = true
+}
+
 kotlin {
     listOf(
         iosArm64(),
@@ -49,6 +54,7 @@ kotlin {
             implementation(libs.compose.ui)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
+            api(libs.compose.components.resources)
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.kotlinx.coroutinesCore)
         }

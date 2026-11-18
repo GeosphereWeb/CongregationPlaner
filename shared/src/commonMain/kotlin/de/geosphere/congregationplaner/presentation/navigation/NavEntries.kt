@@ -1,7 +1,11 @@
 package de.geosphere.congregationplaner.presentation.navigation
 
+import congregationplaner.uilib.generated.resources.Res
+import congregationplaner.uilib.generated.resources.ic_cp_assembly_hall_duo
+import congregationplaner.uilib.generated.resources.ic_cp_speaker_audience_duo
 import de.geosphere.congregationplaner.home.presentation.approvalsBadge
 import de.geosphere.congregationplaner.ui.chip.StatusTone
+import org.jetbrains.compose.resources.DrawableResource
 
 internal const val TALK_PLANNING_LABEL = "Vortragsplanung"
 private const val TALK_PLANNING_SUPPORTING_TEXT = "Vortragsplaner · Wochenende, Redner, Historie"
@@ -25,6 +29,13 @@ internal data class NavEntry(
 /** Farbe der Gruppen-Überschrift und der Kante eingerückter Einträge; „Planung“ bleibt gedämpft. */
 internal val CongregationGroup.tone: StatusTone?
     get() = if (this == CongregationGroup.ADMINISTRATION) StatusTone.Gold else null
+
+/** Icon vor der Gruppen-Überschrift. */
+internal val CongregationGroup.icon: DrawableResource
+    get() = when (this) {
+        CongregationGroup.ADMINISTRATION -> Res.drawable.ic_cp_assembly_hall_duo
+        CongregationGroup.PLANNING -> Res.drawable.ic_cp_speaker_audience_duo
+    }
 
 /**
  * Die Einträge von „Versammlung“. Die Vortragsplanung ist auf dem Handy ein einzelner Eintrag, dessen Teile Tabs

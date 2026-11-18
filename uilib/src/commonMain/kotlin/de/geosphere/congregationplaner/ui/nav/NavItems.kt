@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,31 +33,39 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import congregationplaner.uilib.generated.resources.Res
+import congregationplaner.uilib.generated.resources.ic_cp_assembly_hall_duo
+import congregationplaner.uilib.generated.resources.ic_cp_speaker_audience_duo
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.NightPreviewWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.ui.chip.StatusChip
 import de.geosphere.congregationplaner.ui.chip.StatusTone
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.painterResource
 
 private val CARD_SHAPE = RoundedCornerShape(8.dp)
 private val NESTED_CARD_SHAPE = RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp)
 private val ITEM_SHAPE = RoundedCornerShape(10.dp)
 private val EDGE_WIDTH = 2.dp
 
-/** Gruppen-Überschrift einer Liste; [tone] färbt sie, ohne Angabe ist sie gedämpft. */
+/**
+ * Gruppen-Überschrift einer Liste; [tone] färbt sie, ohne Angabe ist sie gedämpft. [icon] steht in derselben Farbe vor
+ * dem Text; bei Duotone-Icons bleibt die halbtransparente Fläche dabei heller.
+ */
 @Composable
 fun SectionLabel(
     text: String,
     modifier: Modifier = Modifier,
     tone: StatusTone? = null,
     style: TextStyle = MaterialTheme.typography.labelSmall,
+    icon: DrawableResource? = null,
 ) {
-    Text(
-        text = text.uppercase(),
-        style = style,
-        color = tone?.content ?: NightColors.OnBackgroundMuted,
-        modifier = modifier,
-    )
+    val color = tone?.content ?: NightColors.OnBackgroundMuted
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (icon != null) Icon(painterResource(icon), contentDescription = null, Modifier.size(16.dp), tint = color)
+        Text(text = text.uppercase(), style = style, color = color)
+    }
 }
 
 /**
@@ -179,7 +188,7 @@ private fun Chevron() {
 @Composable
 private fun NavCardRowPreview() = NightPreviewWrapper {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionLabel("Verwaltung", tone = StatusTone.Gold)
+        SectionLabel("Verwaltung", tone = StatusTone.Gold, icon = Res.drawable.ic_cp_assembly_hall_duo)
         NavCardRow("Allgemeine Versammlungsdaten", {}, supportingText = "Name, Zusammenkunftszeiten")
         NavCardRow(
             "Userverwaltung",
@@ -190,7 +199,8 @@ private fun NavCardRowPreview() = NightPreviewWrapper {
             badge = "1 offen",
             secondBadge = "neu",
         )
-        SectionLabel("Planung")
+        SectionLabel("Planung", icon = Res.drawable.ic_cp_speaker_audience_duo)
+        SectionLabel("Ohne Icon")
         NavCardRow("Planung unter der Woche", {}, supportingText = "Aufgabenplaner", supportingTone = StatusTone.Sky)
         NavCardRow(
             "Vortragsplanung",

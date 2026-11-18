@@ -11,6 +11,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import congregationplaner.uilib.generated.resources.Res
+import congregationplaner.uilib.generated.resources.ic_cp_assembly_hall_duo
+import congregationplaner.uilib.generated.resources.ic_cp_calendar_check_duo
+import congregationplaner.uilib.generated.resources.ic_cp_globe_lands_fill
+import congregationplaner.uilib.generated.resources.ic_cp_speaker_audience_duo
 import de.geosphere.congregationplaner.event.domain.model.SpecialEvent
 import de.geosphere.congregationplaner.home.domain.model.HomeSummary
 import de.geosphere.congregationplaner.home.domain.model.TalkSummary
@@ -88,7 +93,12 @@ internal fun HomeContent(
 /** Die kommenden Ereignisse; der Versammlungsadmin öffnet mit einem Tipp ihre Pflege. */
 @Composable
 private fun EventsBlock(events: List<SpecialEvent>, canManage: Boolean, actions: AppNavigationActions) {
-    SectionLabel("Besondere Ereignisse", Modifier.padding(top = 8.dp), StatusTone.Sky)
+    SectionLabel(
+        "Besondere Ereignisse",
+        Modifier.padding(top = 8.dp),
+        StatusTone.Sky,
+        icon = Res.drawable.ic_cp_calendar_check_duo,
+    )
     val open = { if (canManage) actions.onOpenCongregationSection(CongregationSection.SPECIAL_EVENTS) }
     events.forEach { event ->
         NavCardRow(title = event.title, onClick = open, supportingText = eventDatesText(event))
@@ -98,7 +108,12 @@ private fun EventsBlock(events: List<SpecialEvent>, canManage: Boolean, actions:
 @Composable
 private fun TalkBlock(talk: TalkSummary, actions: AppNavigationActions) {
     val open = { actions.onOpenCongregationSection(CongregationSection.WEEKEND_TALKS) }
-    SectionLabel(talkSectionLabel(talk.asHelper), Modifier.padding(top = 8.dp), StatusTone.Mint)
+    SectionLabel(
+        talkSectionLabel(talk.asHelper),
+        Modifier.padding(top = 8.dp),
+        StatusTone.Mint,
+        icon = Res.drawable.ic_cp_speaker_audience_duo,
+    )
     val next = talk.nextSlot
     if (next != null) {
         NavCardRow(
@@ -124,7 +139,12 @@ private fun TalkBlock(talk: TalkSummary, actions: AppNavigationActions) {
 
 @Composable
 private fun ApprovalsBlock(pending: Int, actions: AppNavigationActions) {
-    SectionLabel("Als Versammlungsadmin", Modifier.padding(top = 8.dp), StatusTone.Gold)
+    SectionLabel(
+        "Als Versammlungsadmin",
+        Modifier.padding(top = 8.dp),
+        StatusTone.Gold,
+        icon = Res.drawable.ic_cp_assembly_hall_duo,
+    )
     NavCardRow(
         title = approvalsTitle(pending),
         onClick = { actions.onOpenCongregationSection(CongregationSection.USER_MANAGEMENT) },
@@ -134,7 +154,12 @@ private fun ApprovalsBlock(pending: Int, actions: AppNavigationActions) {
 
 @Composable
 private fun MidweekBlock(actions: AppNavigationActions) {
-    SectionLabel("Als Aufgabenplaner", Modifier.padding(top = 8.dp), StatusTone.Sky)
+    SectionLabel(
+        "Als Aufgabenplaner",
+        Modifier.padding(top = 8.dp),
+        StatusTone.Sky,
+        icon = Res.drawable.ic_cp_speaker_audience_duo,
+    )
     NavCardRow(
         title = CongregationSection.MIDWEEK_PLANNING.label,
         onClick = { actions.onOpenCongregationSection(CongregationSection.MIDWEEK_PLANNING) },
@@ -143,7 +168,12 @@ private fun MidweekBlock(actions: AppNavigationActions) {
 
 @Composable
 private fun GlobalBlock(sections: List<GlobalSection>, actions: AppNavigationActions) {
-    SectionLabel("Globale Verwaltung", Modifier.padding(top = 8.dp), StatusTone.Gold)
+    SectionLabel(
+        "Globale Verwaltung",
+        Modifier.padding(top = 8.dp),
+        StatusTone.Gold,
+        icon = Res.drawable.ic_cp_globe_lands_fill,
+    )
     sections.forEach { section ->
         NavCardRow(title = section.label, onClick = { actions.onOpenGlobalSection(section) })
     }
