@@ -34,6 +34,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import congregationplaner.uilib.generated.resources.Res
+import congregationplaner.uilib.generated.resources.ic_cp_arena_duo
 import congregationplaner.uilib.generated.resources.ic_cp_assembly_hall_duo
 import congregationplaner.uilib.generated.resources.ic_cp_speaker_audience_duo
 import de.geosphere.congregationplaner.theming.NightColors
@@ -72,7 +73,7 @@ fun SectionLabel(
  * Karte der Übersicht auf dem Handy. [nested] rückt sie ein und setzt links eine Kante in [accent]; [badge] ist eine
  * kurze Marke wie „1 offen“, [secondBadge] eine zweite darunter; beide stehen oben rechts neben dem Titel, damit der
  * Untertext die ganze Breite hat. [bodyText] steht etwas größer zwischen Titel und Untertext. [supportingTone] färbt den
- * Untertext; [indicator] setzt einen Statuspunkt vor den Titel.
+ * Untertext; [indicator] setzt einen Statuspunkt vor den Titel, [titleIcon] ein Icon direkt vor den Titeltext.
  */
 @Composable
 @Suppress("LongParameterList")
@@ -91,6 +92,7 @@ fun NavCardRow(
     secondBadge: String? = null,
     secondBadgeTone: StatusTone = StatusTone.Mint,
     indicator: StatusTone? = null,
+    titleIcon: DrawableResource? = null,
 ) {
     val shape = if (nested) NESTED_CARD_SHAPE else CARD_SHAPE
     Row(
@@ -111,6 +113,14 @@ fun NavCardRow(
         // Der Textblock hat rundum 4 dp Luft; mit dem Kartenrand ergibt das 8/16/8 wie in der Design-Leinwand.
         Column(Modifier.weight(1f).padding(4.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (titleIcon != null) {
+                    Icon(
+                        painterResource(titleIcon),
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp).align(Alignment.CenterVertically),
+                        tint = NightColors.OnBackground,
+                    )
+                }
                 Text(
                     title,
                     style = MaterialTheme.typography.titleMedium,
@@ -201,6 +211,7 @@ private fun NavCardRowPreview() = NightPreviewWrapper {
         )
         SectionLabel("Planung", icon = Res.drawable.ic_cp_speaker_audience_duo)
         SectionLabel("Ohne Icon")
+        NavCardRow("Kreiskongress", {}, supportingText = "Sa, 14. März", titleIcon = Res.drawable.ic_cp_arena_duo)
         NavCardRow("Planung unter der Woche", {}, supportingText = "Aufgabenplaner", supportingTone = StatusTone.Sky)
         NavCardRow(
             "Vortragsplanung",

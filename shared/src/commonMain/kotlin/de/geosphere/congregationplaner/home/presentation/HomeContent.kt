@@ -16,7 +16,9 @@ import congregationplaner.uilib.generated.resources.ic_cp_assembly_hall_duo
 import congregationplaner.uilib.generated.resources.ic_cp_calendar_check_duo
 import congregationplaner.uilib.generated.resources.ic_cp_globe_lands_fill
 import congregationplaner.uilib.generated.resources.ic_cp_speaker_audience_duo
+import congregationplaner.uilib.generated.resources.ic_cp_speaker_duo
 import de.geosphere.congregationplaner.event.domain.model.SpecialEvent
+import de.geosphere.congregationplaner.event.presentation.specialEventIcon
 import de.geosphere.congregationplaner.home.domain.model.HomeSummary
 import de.geosphere.congregationplaner.home.domain.model.TalkSummary
 import de.geosphere.congregationplaner.organization.domain.model.SelectedCongregation
@@ -101,7 +103,12 @@ private fun EventsBlock(events: List<SpecialEvent>, canManage: Boolean, actions:
     )
     val open = { if (canManage) actions.onOpenCongregationSection(CongregationSection.SPECIAL_EVENTS) }
     events.forEach { event ->
-        NavCardRow(title = event.title, onClick = open, supportingText = eventDatesText(event))
+        NavCardRow(
+            title = event.title,
+            onClick = open,
+            supportingText = eventDatesText(event),
+            titleIcon = specialEventIcon(event.title),
+        )
     }
 }
 
@@ -112,7 +119,7 @@ private fun TalkBlock(talk: TalkSummary, actions: AppNavigationActions) {
         talkSectionLabel(talk.asHelper),
         Modifier.padding(top = 8.dp),
         StatusTone.Mint,
-        icon = Res.drawable.ic_cp_speaker_audience_duo,
+        icon = Res.drawable.ic_cp_speaker_duo,
     )
     val next = talk.nextSlot
     if (next != null) {

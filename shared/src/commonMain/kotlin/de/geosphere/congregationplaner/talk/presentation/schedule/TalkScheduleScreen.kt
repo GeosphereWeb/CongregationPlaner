@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.geosphere.congregationplaner.HostPlatform
 import de.geosphere.congregationplaner.congregation.presentation.MeetingTimeInput
+import de.geosphere.congregationplaner.event.presentation.specialEventIcon
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.talk.domain.model.Chairman
 import de.geosphere.congregationplaner.talk.domain.model.Talk
@@ -78,6 +79,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
+import org.jetbrains.compose.resources.painterResource
 import kotlin.time.Clock
 
 /** Callbacks der Vortragsplanung; gebündelt, damit die Composables überschaubare Signaturen behalten. */
@@ -468,13 +470,24 @@ private fun SlotSummary(slot: TalkSlot, chips: List<SlotChip>) {
         DateBadge(slot.date.weekdayShortName(), slot.date.day.toString())
         Column(Modifier.weight(1f)) {
             slotEventLine(slot)?.let { event ->
-                Text(
-                    event,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = StatusTone.Sky.content,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        painterResource(specialEventIcon(event)),
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = StatusTone.Sky.content,
+                    )
+                    Text(
+                        event,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = StatusTone.Sky.content,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
             slotListTitle(slot)?.let { title ->
                 Text(
