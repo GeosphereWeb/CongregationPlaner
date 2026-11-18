@@ -21,7 +21,10 @@ internal fun nextTalkText(slot: TalkSlot): String =
     slot.talkNumber?.let { number -> listOfNotNull("Vortrag Nr. $number", slot.talkTitle).joinToString("\n") }
         ?: "Noch nicht geplant"
 
-/** Zweite Marke neben „Nächster“: „Informiert“, sobald der Redner informiert ist. */
+/** „Nächster“ nur, solange der Redner noch nicht informiert ist; danach steht nur noch „Informiert“. */
+internal fun nextTalkBadge(slot: TalkSlot): String? = statusLabel(SlotStatus.NEXT).takeUnless { slot.confirmed }
+
+/** Zweite Marke: „Informiert“, sobald der Redner informiert ist. */
 internal fun nextTalkInformedBadge(slot: TalkSlot): String? = statusLabel(SlotStatus.INFORMED).takeIf { slot.confirmed }
 
 internal fun openWeekendsTitle(count: Int): String = when (count) {

@@ -106,7 +106,7 @@ private fun TalkBlock(talk: TalkSummary, actions: AppNavigationActions) {
             onClick = open,
             bodyText = nextTalkText(next),
             supportingText = slotSpeakerLine(next),
-            badge = "Nächster",
+            badge = nextTalkBadge(next),
             badgeTone = StatusTone.Gold,
             secondBadge = nextTalkInformedBadge(next),
         )
