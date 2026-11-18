@@ -40,6 +40,11 @@ enum class CongregationSection(
         CongregationGroup.ADMINISTRATION,
         supportingText = "Termine auf der Startseite",
     ),
+    EVENT_TYPES(
+        "Ereignisarten",
+        CongregationGroup.ADMINISTRATION,
+        supportingText = "Kongress, Dienstwoche … mit Icon",
+    ),
     ANNOUNCEMENTS(
         "Mitteilungen",
         CongregationGroup.ADMINISTRATION,

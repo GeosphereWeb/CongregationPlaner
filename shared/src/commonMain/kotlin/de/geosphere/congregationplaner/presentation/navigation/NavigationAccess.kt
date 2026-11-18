@@ -37,7 +37,9 @@ class NavigationAccess(
         CongregationSection.USER_MANAGEMENT,
         -> userPolicy.canManageUsers(user)
 
-        CongregationSection.SPECIAL_EVENTS -> specialEventPolicy.canManage(user)
+        CongregationSection.SPECIAL_EVENTS,
+        CongregationSection.EVENT_TYPES,
+        -> specialEventPolicy.canManage(user)
 
         CongregationSection.ANNOUNCEMENTS -> notificationPolicy.canSend(user, NotificationCategory.ANNOUNCEMENT)
 
