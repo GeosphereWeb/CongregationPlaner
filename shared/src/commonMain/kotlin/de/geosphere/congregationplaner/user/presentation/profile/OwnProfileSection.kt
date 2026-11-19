@@ -18,26 +18,43 @@ import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.ui.button.PrimaryButton
 import de.geosphere.congregationplaner.user.di.OwnProfileGraph
 import de.geosphere.congregationplaner.user.domain.model.AppUser
+import de.geosphere.congregationplaner.user.domain.model.EmergencyContact
 import de.geosphere.congregationplaner.user.domain.model.MemberProfile
 import de.geosphere.congregationplaner.user.presentation.contact.ContactFields
+import de.geosphere.congregationplaner.user.presentation.contact.EmergencyContactFields
 import de.geosphere.congregationplaner.user.presentation.contact.ProfileField
 import dev.zacsweers.metro.createGraph
 
+/** Welcher Teil des eigenen Profils ein Reiter der Einstellungen zeigt. */
+internal enum class OwnProfilePart { CONTACT, EMERGENCY_CONTACTS }
+
 /**
- * „Mein Profil“ unter „Einstellungen“: Namen, Telefon, E-Mail, Adresse und Notfallkontakte selbst pflegen. Nur für
- * Mitglieder mit eigenem Mitgliedsdokument und globale Admins, die ihre Angaben in ihrem Admin-Dokument pflegen
- * (ohne Versammlung, auch wenn lokal eine gemerkt ist). Globale Admins pflegen weder Adresse noch Notfallkontakte.
+ * Das ViewModel des eigenen Profils, einmal für beide Reiter, damit ungespeicherte Eingaben den Wechsel überstehen.
  */
 @Composable
-internal fun OwnProfileSection(user: AppUser, modifier: Modifier = Modifier) {
-    if (!user.hasAccount || (user.congregation == null && !user.isGlobalAdmin)) return
+internal fun rememberOwnProfileViewModel(user: AppUser): OwnProfileViewModel {
     val viewModel = remember { createGraph<OwnProfileGraph>().ownProfileViewModel }
     LaunchedEffect(viewModel, user) { viewModel.onUserChanged(user) }
+    return viewModel
+}
+
+/**
+ * „Mein Profil“ bzw. „Notfallkontakte“ unter „Einstellungen“: Namen, Telefon, E-Mail und Adresse oder die
+ * Notfallkontakte selbst pflegen; beide Teile speichern dasselbe Profil. Globale Admins pflegen keine Adresse.
+ */
+@Composable
+internal fun OwnProfileSection(
+    user: AppUser,
+    part: OwnProfilePart,
+    viewModel: OwnProfileViewModel,
+    modifier: Modifier = Modifier,
+) {
     val state by viewModel.uiState.collectAsState()
     OwnProfileForm(
         state = state,
         actions = OwnProfileActions(onFormChange = viewModel::onFormChange, onSave = viewModel::save),
-        showAddressAndEmergencyContacts = !user.isGlobalAdmin,
+        part = part,
+        showAddress = !user.isGlobalAdmin,
         modifier = modifier,
     )
 }
@@ -49,20 +66,25 @@ internal data class OwnProfileActions(val onFormChange: (MemberProfile) -> Unit 
 private fun OwnProfileForm(
     state: OwnProfileUiState,
     actions: OwnProfileActions,
-    showAddressAndEmergencyContacts: Boolean,
+    part: OwnProfilePart,
+    showAddress: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val form = state.form
     val enabled = !state.isSaving
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Mein Profil", style = MaterialTheme.typography.titleMedium)
-        ProfileField(form.firstName, "Vorname", enabled, {
-            actions.onFormChange(form.copy(firstName = it))
-        })
-        ProfileField(form.lastName, "Nachname", enabled, {
-            actions.onFormChange(form.copy(lastName = it))
-        })
-        ContactFields(form, enabled, actions.onFormChange, showAddressAndEmergencyContacts)
+        when (part) {
+            OwnProfilePart.CONTACT -> {
+                ProfileField(form.firstName, "Vorname", enabled, {
+                    actions.onFormChange(form.copy(firstName = it))
+                })
+                ProfileField(form.lastName, "Nachname", enabled, {
+                    actions.onFormChange(form.copy(lastName = it))
+                })
+                ContactFields(form, enabled, actions.onFormChange, showAddress, showEmergencyContacts = false)
+            }
+            OwnProfilePart.EMERGENCY_CONTACTS -> EmergencyContactFields(form, enabled, actions.onFormChange)
+        }
 
         state.message?.let { message ->
             Text(
@@ -88,12 +110,25 @@ private fun OwnProfileFormPreview() = PreviewThemeWrapper {
         OwnProfileForm(
             state = OwnProfileUiState(form = saved.copy(city = "Berlin"), saved = saved),
             actions = OwnProfileActions(),
-            showAddressAndEmergencyContacts = true,
+            part = OwnProfilePart.CONTACT,
+            showAddress = true,
         )
         OwnProfileForm(
             state = OwnProfileUiState(form = saved, saved = saved, message = "Gespeichert."),
             actions = OwnProfileActions(),
-            showAddressAndEmergencyContacts = false,
+            part = OwnProfilePart.CONTACT,
+            showAddress = false,
+        )
+        OwnProfileForm(
+            state = OwnProfileUiState(
+                form = saved.copy(
+                    emergencyContacts = listOf(EmergencyContact("Erika Muster", "", listOf("030 123456"))),
+                ),
+                saved = saved,
+            ),
+            actions = OwnProfileActions(),
+            part = OwnProfilePart.EMERGENCY_CONTACTS,
+            showAddress = true,
         )
     }
 }
