@@ -108,6 +108,12 @@ rules_version = '2';
 // Collection: region/.../country/{countryId}/weekEvents (one list per country, ADR-0034)
 // Document ID: free. Fields: name: string (1..100), cancelsTalk: bool.
 //   Readable by every signed-in user; written only by global admins and only below an existing country.
+//   Serves as the blueprint for the event types of a congregation (ADR-0036).
+//
+// Collection: region/.../congregation/{congId}/eventTypes (event types of a congregation, ADR-0036)
+// Document ID: free. Fields: name: string (1..100), cancelsTalk: bool, icon: string (an icon resource name
+//   'ic_cp_…', <= 100). Readable by the approved members; created by the congregation admin and the talk planner
+//   (schedule import), changed and deleted only by the congregation admin.
 //
 // Collection: region/.../country/{countryId}/talkCatalog (talk list of the country, ADR-0034)
 // Document ID: the talk number (1..9999, no leading zero). Fields: title: string (1..200), active: bool,
@@ -256,6 +262,13 @@ service cloud.firestore {
 
     // Planners of exactly this congregation: approved members with the role TALK_PLANNER. The role CONGREGATION_ADMIN
     // alone does not grant it, and global admins have no access (ADR-0013).
+    function isApprovedMember(regionId, subregionId, branchId, countryId, circuitId, congId) {
+      let memberPath = /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/country/$(countryId)/circuit/$(circuitId)/congregation/$(congId)/members/$(request.auth.uid);
+      return isAuthenticated() &&
+        exists(memberPath) &&
+        get(memberPath).data.approved == true;
+    }
+
     function canPlanTalks(regionId, subregionId, branchId, countryId, circuitId, congId) {
       let memberPath = /databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/country/$(countryId)/circuit/$(circuitId)/congregation/$(congId)/members/$(request.auth.uid);
       return isAuthenticated() &&
@@ -351,6 +364,15 @@ service cloud.firestore {
         data.audience is list && data.audience.size() >= 1 &&
         data.audience.toSet().size() == data.audience.size() &&
         data.audience.toSet().hasOnly(['ALL', 'BROTHERS', 'SISTERS', 'ELDERS', 'MINISTERIAL_SERVANTS']);
+    }
+
+    // Event type of a congregation (ADR-0036): name (1..100), cancelsTalk and an icon of the app's icon set.
+    function isValidEventType(data) {
+      return data.keys().hasOnly(['name', 'cancelsTalk', 'icon']) &&
+        data.keys().hasAll(['name', 'cancelsTalk', 'icon']) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+        data.cancelsTalk is bool &&
+        data.icon is string && data.icon.size() <= 100 && data.icon.matches('^ic_cp_[a-z0-9_]+$');
     }
 
     function isValidWeekEvent(data) {
@@ -931,6 +953,20 @@ service cloud.firestore {
                     canSeeEvent(regionId, subregionId, branchId, countryId, circuitId, congId, resource.data);
                   allow create, update: if isCongregationAdmin(regionId, subregionId, branchId, countryId, circuitId, congId) &&
                     isValidSpecialEvent(request.resource.data);
+                  allow delete: if isCongregationAdmin(regionId, subregionId, branchId, countryId, circuitId, congId);
+                }
+
+                // ---------------------------------------------------------
+                // Event types of a congregation (ADR-0036): read by members, maintained by admins; planners may
+                // only create (the schedule import adds missing types)
+                // ---------------------------------------------------------
+                match /eventTypes/{typeId} {
+                  allow read: if isApprovedMember(regionId, subregionId, branchId, countryId, circuitId, congId);
+                  allow create: if (isCongregationAdmin(regionId, subregionId, branchId, countryId, circuitId, congId) ||
+                      canPlanTalks(regionId, subregionId, branchId, countryId, circuitId, congId)) &&
+                    isValidEventType(request.resource.data);
+                  allow update: if isCongregationAdmin(regionId, subregionId, branchId, countryId, circuitId, congId) &&
+                    isValidEventType(request.resource.data);
                   allow delete: if isCongregationAdmin(regionId, subregionId, branchId, countryId, circuitId, congId);
                 }
 

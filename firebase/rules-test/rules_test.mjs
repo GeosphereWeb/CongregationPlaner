@@ -782,6 +782,26 @@ await expect('Nicht freigegebenes Mitglied fragt nicht ab', queryEvents(['ALL'],
 await expect('Fremde Versammlung fragt nicht ab', queryEvents(['ALL'], sister.token, OTHER_CONG), false);
 await expect('Admin löscht ein Ereignis', api('DELETE', `${EVENTS}/day`, undefined, congAdmin.token), true);
 
+// ---------- Ereignisarten der Versammlung (ADR-0036) ----------
+const TYPES = `${CONG}/eventTypes`;
+const eventType = (extra = {}) => fields({ name: 'Kreiskongress', cancelsTalk: true, icon: 'ic_cp_arena_duo', ...extra });
+const putType = (id, data, token = congAdmin.token) => api('PATCH', `${TYPES}/${id}`, data, token);
+
+await expect('Admin legt eine Ereignisart an', putType('kk', eventType()), true);
+await expect('Admin ändert eine Ereignisart', putType('kk', eventType({ icon: 'ic_cp_square' })), true);
+await expect('Planer legt eine Ereignisart an (Import)', putType('dw', eventType({ name: 'Dienstwoche', cancelsTalk: false }), planner.token), true);
+await expect('Planer ändert keine Ereignisart', putType('kk', eventType({ name: 'Anders' }), planner.token), false);
+await expect('Planer löscht keine Ereignisart', api('DELETE', `${TYPES}/kk`, undefined, planner.token), false);
+await expect('Mitglied legt keine Ereignisart an', putType('x', eventType(), plain.token), false);
+await expect('Ereignisart ohne Icon', putType('bad', fields({ name: 'X', cancelsTalk: false })), false);
+await expect('Ereignisart mit fremdem Icon-Namen', putType('bad', eventType({ icon: 'ic_launcher' })), false);
+await expect('Ereignisart mit leerem Namen', putType('bad', eventType({ name: '' })), false);
+await expect('Ereignisart mit zusätzlichem Feld', putType('bad', eventType({ note: 'x' })), false);
+await expect('Mitglied liest die Ereignisarten', api('GET', TYPES, undefined, plain.token), true);
+await expect('Nicht freigegebenes Mitglied liest keine Ereignisarten', api('GET', TYPES, undefined, pending.token), false);
+await expect('Fremder liest keine Ereignisarten', api('GET', TYPES, undefined, outsider.token), false);
+await expect('Admin löscht eine Ereignisart', api('DELETE', `${TYPES}/dw`, undefined, congAdmin.token), true);
+
 // ---------- Benachrichtigungen (CP-163, ADR-0035) ----------
 const NOTES = `${CONG}/notifications`;
 const note = (sender, extra = {}) => ({
