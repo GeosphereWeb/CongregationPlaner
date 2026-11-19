@@ -2,6 +2,8 @@ package de.geosphere.congregationplaner.importer.di
 
 import de.geosphere.congregationplaner.congregation.data.createCongregationMetadataRepository
 import de.geosphere.congregationplaner.congregation.domain.repository.CongregationMetadataRepository
+import de.geosphere.congregationplaner.event.data.createEventTypeRepository
+import de.geosphere.congregationplaner.event.domain.repository.EventTypeRepository
 import de.geosphere.congregationplaner.importer.data.ImportFileSource
 import de.geosphere.congregationplaner.importer.data.createImportFileSource
 import de.geosphere.congregationplaner.importer.presentation.ImportViewModel
@@ -24,6 +26,9 @@ interface ImportGraph {
 
     @Provides
     fun provideImportFileSource(): ImportFileSource = createImportFileSource()
+
+    @Provides
+    fun provideEventTypeRepository(): EventTypeRepository = createEventTypeRepository()
 
     @Provides
     fun provideWeekEventRepository(): WeekEventRepository = createWeekEventRepository()

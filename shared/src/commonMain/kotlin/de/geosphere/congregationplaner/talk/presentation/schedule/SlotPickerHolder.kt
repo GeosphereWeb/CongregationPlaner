@@ -1,16 +1,16 @@
 package de.geosphere.congregationplaner.talk.presentation.schedule
 
+import de.geosphere.congregationplaner.event.domain.model.EventType
 import de.geosphere.congregationplaner.talk.domain.model.Chairman
 import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkScheduleException
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
-import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 
 /** Übernimmt, was im Editor aus Listen gewählt wird: Ereignis, Vortrag, Redner und Vorsitz. */
 class SlotPickerHolder(private val session: TalkScheduleSession, private val editor: SlotEditorHolder) {
-    fun selectWeekEvent(event: WeekEvent?) = pick { it.withWeekEvent(event) }
+    fun selectWeekEvent(event: EventType?) = pick { it.withWeekEvent(event) }
 
     fun selectTalk(talk: Talk?) = pick { it.withTalk(talk) }
 

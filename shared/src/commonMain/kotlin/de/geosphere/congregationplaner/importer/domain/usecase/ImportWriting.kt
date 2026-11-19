@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner.importer.domain.usecase
 
+import de.geosphere.congregationplaner.event.domain.model.EventTypeException
 import de.geosphere.congregationplaner.importer.domain.model.ImportKind
 import de.geosphere.congregationplaner.importer.domain.model.ImportPlan
 import de.geosphere.congregationplaner.importer.domain.model.ImportReport
@@ -11,6 +12,7 @@ import de.geosphere.congregationplaner.talk.domain.model.TalkScheduleException
 internal class Written<T>(val report: ImportReport, val saved: List<PlanEntry<T>>)
 
 internal fun Throwable.isDenied(): Boolean = this is TalkReferenceException.NotAllowed ||
+    this is EventTypeException.NotAllowed ||
     this is ExternalDirectoryException.NotAllowed ||
     this is TalkScheduleException.NotAllowed
 

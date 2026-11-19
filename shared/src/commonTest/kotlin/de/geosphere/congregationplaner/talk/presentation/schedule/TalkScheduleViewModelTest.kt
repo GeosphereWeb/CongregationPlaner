@@ -2,6 +2,10 @@ package de.geosphere.congregationplaner.talk.presentation.schedule
 
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
 import de.geosphere.congregationplaner.congregation.testing.FakeCongregationMetadataRepository
+import de.geosphere.congregationplaner.event.domain.model.EventType
+import de.geosphere.congregationplaner.event.domain.permission.EventTypePolicy
+import de.geosphere.congregationplaner.event.domain.usecase.ObserveEventTypesUseCase
+import de.geosphere.congregationplaner.event.testing.FakeEventTypeRepository
 import de.geosphere.congregationplaner.notification.domain.permission.NotificationPermissionPolicy
 import de.geosphere.congregationplaner.notification.domain.usecase.NotifyConfirmedChangedUseCase
 import de.geosphere.congregationplaner.notification.domain.usecase.SendNotificationUseCase
@@ -16,7 +20,6 @@ import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkPlanningSettings
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
-import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.model.WhatsAppMessage
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.talk.domain.usecase.BuildWhatsAppMessagesUseCase
@@ -34,7 +37,6 @@ import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkCatalogUse
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkMembersUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkPlanningSettingsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkYearUseCase
-import de.geosphere.congregationplaner.talk.domain.usecase.ObserveWeekEventsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ReassignTalkUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveTalkPlanningSettingsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveTalkSlotUseCase
@@ -42,7 +44,6 @@ import de.geosphere.congregationplaner.talk.testing.FakeExternalSpeakerDirectory
 import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkPlanningSettingsRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
-import de.geosphere.congregationplaner.talk.testing.FakeWeekEventRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
@@ -95,7 +96,7 @@ class TalkScheduleViewModelTest {
 
     private val october25 = TalkSlot(LocalDate(2026, 10, 25), LocalTime(17, 30))
     private val november1 = TalkSlot(LocalDate(2026, 11, 1), LocalTime(17, 30))
-    private val kongress = WeekEvent("kongress", "Kongress", cancelsTalk = true)
+    private val kongress = EventType("kongress", "Kongress", cancelsTalk = true)
 
     private val speakerMember = AppUser(
         uid = "m1",
@@ -132,7 +133,7 @@ class TalkScheduleViewModelTest {
     private val pausedTalk = Talk(40, "Pausierter Vortrag", active = false)
 
     private lateinit var repository: FakeTalkScheduleRepository
-    private lateinit var weekEvents: FakeWeekEventRepository
+    private lateinit var eventTypes: FakeEventTypeRepository
     private lateinit var catalog: FakeTalkCatalogRepository
     private lateinit var users: FakeUserRepository
     private lateinit var externals: FakeExternalSpeakerDirectoryRepository
@@ -146,7 +147,7 @@ class TalkScheduleViewModelTest {
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         repository = FakeTalkScheduleRepository(listOf(october25, november1))
-        weekEvents = FakeWeekEventRepository(listOf(kongress))
+        eventTypes = FakeEventTypeRepository(listOf(kongress))
         catalog = FakeTalkCatalogRepository(listOf(activeTalk, pausedTalk))
         users = FakeUserRepository(members = listOf(speakerMember, otherMember, nameless, elder))
         externals = FakeExternalSpeakerDirectoryRepository(
@@ -180,7 +181,7 @@ class TalkScheduleViewModelTest {
                 ChangeYearSlotTimesUseCase(repository, policy),
             ),
             ScheduleReferenceUseCases(
-                ObserveWeekEventsUseCase(weekEvents),
+                ObserveEventTypesUseCase(eventTypes, EventTypePolicy()),
                 ObserveTalkCatalogUseCase(catalog),
                 ObserveTalkMembersUseCase(ObserveMembersUseCase(users)),
                 ObserveExternalSpeakersUseCase(ObserveExternalDirectoryUseCase(externals)),
@@ -390,7 +391,7 @@ class TalkScheduleViewModelTest {
         assertTrue(state.canPlan)
         assertFalse(state.isLoading)
         assertEquals(listOf(october25, november1), state.slots)
-        assertEquals(listOf(kongress), state.weekEvents)
+        assertEquals(listOf(kongress), state.eventTypes)
         assertEquals(2026, repository.requestedYear)
     }
 
@@ -581,7 +582,8 @@ class TalkScheduleViewModelTest {
         assertTrue(state.canViewMembers)
         assertTrue(state.speakers.isNotEmpty())
         assertTrue(state.talks.isEmpty())
-        assertTrue(state.weekEvents.isEmpty())
+        // Viewers load the event types too, for the icons in the list.
+        assertEquals(listOf(kongress), state.eventTypes)
         assertNull(state.editor)
         assertNotNull(state.errorMessage)
     }

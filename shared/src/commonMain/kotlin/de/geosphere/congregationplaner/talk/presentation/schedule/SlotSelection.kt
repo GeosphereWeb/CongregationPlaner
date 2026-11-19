@@ -1,14 +1,14 @@
 package de.geosphere.congregationplaner.talk.presentation.schedule
 
+import de.geosphere.congregationplaner.event.domain.model.EventType
 import de.geosphere.congregationplaner.talk.domain.model.Chairman
 import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
-import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 
 /** Übernimmt das Ereignis samt der Vorbelegung „Vortrag entfällt“; `null` entfernt das Ereignis. */
-internal fun TalkSlot.withWeekEvent(event: WeekEvent?): TalkSlot = if (event == null) {
+internal fun TalkSlot.withWeekEvent(event: EventType?): TalkSlot = if (event == null) {
     copy(weekEventId = null, weekEventName = null)
 } else {
     copy(weekEventId = event.id, weekEventName = event.name, talkCancelled = event.cancelsTalk)

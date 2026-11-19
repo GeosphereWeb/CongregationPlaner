@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner.talk.presentation.schedule
 
+import de.geosphere.congregationplaner.event.domain.model.EventType
 import de.geosphere.congregationplaner.presentation.components.ListDetailState
 import de.geosphere.congregationplaner.talk.domain.model.Chairman
 import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
@@ -9,7 +10,6 @@ import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkPlanningSettings
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
-import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.model.WhatsAppMessage
 import de.geosphere.congregationplaner.talk.domain.model.hasAssignment
 import de.geosphere.congregationplaner.talk.domain.model.planningUsageOf
@@ -41,7 +41,7 @@ data class TalkScheduleUiState(
     val slots: List<TalkSlot> = emptyList(),
     /** Gewählte Stände; leer zeigt das ganze Jahr. Bleibt beim Jahreswechsel erhalten. */
     val statusFilter: Set<SlotStatus> = emptySet(),
-    val weekEvents: List<WeekEvent> = emptyList(),
+    val eventTypes: List<EventType> = emptyList(),
     val talks: List<Talk> = emptyList(),
     val speakers: List<Speaker> = emptyList(),
     val chairmen: List<Chairman> = emptyList(),

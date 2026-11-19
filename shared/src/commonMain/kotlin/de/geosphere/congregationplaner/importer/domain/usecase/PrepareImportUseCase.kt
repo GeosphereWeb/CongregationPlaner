@@ -1,13 +1,18 @@
 package de.geosphere.congregationplaner.importer.domain.usecase
 
 import de.geosphere.congregationplaner.congregation.domain.repository.CongregationMetadataRepository
+import de.geosphere.congregationplaner.event.domain.model.EventType
+import de.geosphere.congregationplaner.event.domain.repository.EventTypeRepository
+import de.geosphere.congregationplaner.event.domain.usecase.SaveEventTypeUseCase
 import de.geosphere.congregationplaner.importer.domain.model.ImportError
 import de.geosphere.congregationplaner.importer.domain.model.ImportKind
 import de.geosphere.congregationplaner.importer.domain.model.ImportPlan
 import de.geosphere.congregationplaner.importer.domain.model.ImportReport
 import de.geosphere.congregationplaner.importer.domain.model.ImportTable
 import de.geosphere.congregationplaner.importer.domain.planning.ScheduleImportContext
+import de.geosphere.congregationplaner.importer.domain.planning.eventTypeIdsBySource
 import de.geosphere.congregationplaner.importer.domain.planning.excelSerialToDate
+import de.geosphere.congregationplaner.importer.domain.planning.planScheduleEventTypes
 import de.geosphere.congregationplaner.importer.domain.planning.planSpeakerDirectory
 import de.geosphere.congregationplaner.importer.domain.planning.planTalkCatalog
 import de.geosphere.congregationplaner.importer.domain.planning.planTalkSchedule
@@ -16,7 +21,6 @@ import de.geosphere.congregationplaner.organization.domain.model.CountryRef
 import de.geosphere.congregationplaner.talk.domain.model.ExternalDirectory
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkScheduleException
-import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.repository.TalkCatalogRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkScheduleRepository
 import de.geosphere.congregationplaner.talk.domain.repository.WeekEventRepository
@@ -57,12 +61,15 @@ class MissingImportCountryException : IllegalStateException("Bitte wähle zuerst
 /**
  * Reads the current data of the target (week events, catalog, directory, slots, meeting times), builds the
  * [ImportPlan]s for a parsed file and returns them as a [PreparedImport] to confirm. [country] is the target of week
- * events and talks; speakers and schedule check against the lists of the own congregation's country.
+ * events and talks; speakers check against the lists of the own congregation's country, the schedule against its event
+ * types (ADR-0036), creating the missing ones when it runs.
  */
 @Suppress("LongParameterList")
 @Inject
 class PrepareImportUseCase(
     private val weekEvents: WeekEventRepository,
+    private val eventTypes: EventTypeRepository,
+    private val saveEventType: SaveEventTypeUseCase,
     private val catalog: TalkCatalogRepository,
     private val directory: ObserveExternalDirectoryUseCase,
     private val schedule: TalkScheduleRepository,
@@ -113,8 +120,8 @@ class PrepareImportUseCase(
     private suspend fun ownTalks(user: AppUser): List<Talk> =
         user.congregation?.let { catalog.observeTalks(it.country).first() }.orEmpty()
 
-    private suspend fun ownWeekEvents(user: AppUser): List<WeekEvent> =
-        user.congregation?.let { weekEvents.observeWeekEvents(it.country).first() }.orEmpty()
+    private suspend fun ownEventTypes(user: AppUser): List<EventType> =
+        user.congregation?.let { eventTypes.observeEventTypes(it).first() }.orEmpty()
 
     private suspend fun prepareSpeakers(user: AppUser, table: ImportTable): PreparedImport {
         val known = ownTalks(user).map { it.number }.toSet()
@@ -136,21 +143,32 @@ class PrepareImportUseCase(
         }
         val years = dates.map { it.year }.distinct()
         val times = meetingTimes(user, years)
-        val events = ownWeekEvents(user)
+        val types = ownEventTypes(user)
+        val missingTypes = planScheduleEventTypes(table, types)
+        // The preview plans with placeholders for the missing types; the run plans again with their real IDs.
+        val placeholders = missingTypes.entries.map { it.item.copy(id = "new:${it.item.name}") }
         val context = ScheduleImportContext(
             existingSlots = existingSlots(user, years),
             catalog = ownTalks(user),
-            weekEvents = events,
-            weekEventIdBySourceId = eventIdsByName(table, events.associate { it.name.lowercase() to it.id }),
+            eventTypes = types + placeholders,
+            eventTypeIdBySourceId = eventTypeIdsBySource(table, types + placeholders),
             directory = currentDirectory(user),
             timeFor = { year -> times.getValue(year) },
         )
         val import = planTalkSchedule(table, context)
         return PreparedImport(
-            listOf(import.slots.summary("Termine")),
+            listOf(missingTypes.summary("Ereignisarten"), import.slots.summary("Termine")),
             import.slots.errors,
             import.warnings,
-        ) { importSchedule(user, import) }
+        ) {
+            val created = write(missingTypes, { "Ereignisart ${it.name}" }) { saveEventType(user, it) }.report
+            val allTypes = ownEventTypes(user)
+            val final = context.copy(
+                eventTypes = allTypes,
+                eventTypeIdBySourceId = eventTypeIdsBySource(table, allTypes),
+            )
+            created + importSchedule(user, planTalkSchedule(table, final))
+        }
     }
 
     private suspend fun currentDirectory(user: AppUser): ExternalDirectory = directory(user).first()
@@ -170,11 +188,3 @@ class PrepareImportUseCase(
 
 private fun <T> ImportPlan<T>.summary(label: String) =
     PlanSummary(label, count(ImportKind.CREATE), count(ImportKind.UPDATE), count(ImportKind.SKIP))
-
-/** The schedule file carries event ID and name per row; match the name against the events that now exist. */
-private fun eventIdsByName(table: ImportTable, idByName: Map<String, String>): Map<String, String> =
-    table.rows.mapNotNull { row ->
-        val sourceId = row.idText("ID_Wochenereignis") ?: return@mapNotNull null
-        val target = row.text("Ereignis")?.let { idByName[it.lowercase()] } ?: return@mapNotNull null
-        sourceId to target
-    }.toMap()

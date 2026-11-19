@@ -2,6 +2,10 @@ package de.geosphere.congregationplaner.importer.domain.usecase
 
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
 import de.geosphere.congregationplaner.congregation.testing.FakeCongregationMetadataRepository
+import de.geosphere.congregationplaner.event.domain.model.EventType
+import de.geosphere.congregationplaner.event.domain.permission.EventTypePolicy
+import de.geosphere.congregationplaner.event.domain.usecase.SaveEventTypeUseCase
+import de.geosphere.congregationplaner.event.testing.FakeEventTypeRepository
 import de.geosphere.congregationplaner.importer.data.UnavailableImportFileSource
 import de.geosphere.congregationplaner.importer.domain.model.ImportError
 import de.geosphere.congregationplaner.importer.domain.model.ImportReport
@@ -42,6 +46,7 @@ class PrepareImportUseCaseTest {
         congregation = testCongregation,
     )
     private val weekEvents = FakeWeekEventRepository(listOf(WeekEvent("e9", "Kreiskongress", cancelsTalk = true)))
+    private val eventTypes = FakeEventTypeRepository()
     private val catalog = FakeTalkCatalogRepository(listOf(Talk(12, "Zwölf")))
     private val schedule = FakeTalkScheduleRepository()
     private val directory = FakeExternalSpeakerDirectoryRepository()
@@ -52,6 +57,8 @@ class PrepareImportUseCaseTest {
 
     private fun prepare(congregations: List<CongregationMetadata> = listOf(meta)) = PrepareImportUseCase(
         weekEvents,
+        eventTypes,
+        SaveEventTypeUseCase(eventTypes, EventTypePolicy()),
         catalog,
         ObserveExternalDirectoryUseCase(directory),
         schedule,
@@ -74,17 +81,34 @@ class PrepareImportUseCaseTest {
     )
 
     @Test
-    fun `schedule uses the meeting time of the year and maps the event by name`() = runBlocking {
+    fun `schedule uses the meeting time of the year and maps the event type by name`() = runBlocking {
+        eventTypes.types.value = listOf(EventType("e9", "Kreiskongress", cancelsTalk = true))
         val prepared = prepare()(planner, ImportSource.SCHEDULE, scheduleTable).getOrThrow()
-        assertEquals(2, prepared.summaries.first().create)
+        assertEquals(listOf(0, 2), prepared.summaries.map { it.create })
 
         val report = prepared.run()
 
         assertEquals(2, report.created)
+        assertTrue(eventTypes.savedTypes.isEmpty())
         val first = schedule.savedSlots.first()
         assertEquals(LocalDate(2023, 1, 1), first.date)
         assertEquals(LocalTime(10, 15), first.time)
         assertEquals(TalkSlot(first.date, first.time, "e9", "Kreiskongress", talkCancelled = true), first)
+    }
+
+    @Test
+    fun `schedule creates missing event types and links the slots to them`() = runBlocking {
+        val prepared = prepare()(planner, ImportSource.SCHEDULE, scheduleTable).getOrThrow()
+        assertEquals("Ereignisarten", prepared.summaries.first().label)
+        assertEquals(listOf(1, 2), prepared.summaries.map { it.create })
+        assertTrue(prepared.errors.isEmpty())
+        assertTrue(eventTypes.savedTypes.isEmpty())
+
+        val report = prepared.run()
+
+        assertEquals(3, report.created)
+        assertEquals(listOf(EventType("type-1", "kreiskongress", cancelsTalk = true)), eventTypes.savedTypes)
+        assertEquals("type-1", schedule.savedSlots.first().weekEventId)
     }
 
     @Test

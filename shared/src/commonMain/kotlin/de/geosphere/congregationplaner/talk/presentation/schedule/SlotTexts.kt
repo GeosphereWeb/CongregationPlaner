@@ -3,6 +3,7 @@ package de.geosphere.congregationplaner.talk.presentation.schedule
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
+import de.geosphere.congregationplaner.event.domain.model.EventType
 import de.geosphere.congregationplaner.presentation.navigation.germanMonthName
 import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.Speaker
@@ -12,6 +13,10 @@ import kotlinx.datetime.LocalDate
 
 /** Name des Wochenereignisses als Zeile über dem Titel in der Liste; nur dort steht er. */
 internal fun slotEventLine(slot: TalkSlot): String? = slot.weekEventName
+
+/** Icon-Name der Ereignisart des Termins; `null`, wenn sie fehlt oder gelöscht ist (die Liste zeigt das Quadrat). */
+internal fun slotEventIcon(slot: TalkSlot, eventTypes: List<EventType>): String? =
+    slot.weekEventId?.let { id -> eventTypes.firstOrNull { it.id == id }?.icon }
 
 /** „Nr. 12 – Thema“; ohne gespeichertes Thema nur die Nummer, ein frei eingetragener Vortrag nur mit Titel. */
 internal fun slotTitle(slot: TalkSlot): String = slotTalkText(slot) ?: "Noch nicht geplant"
