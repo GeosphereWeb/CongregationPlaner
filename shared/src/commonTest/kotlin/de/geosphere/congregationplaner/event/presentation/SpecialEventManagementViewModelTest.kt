@@ -1,11 +1,15 @@
 package de.geosphere.congregationplaner.event.presentation
 
 import de.geosphere.congregationplaner.event.domain.model.EventAudience
+import de.geosphere.congregationplaner.event.domain.model.EventType
 import de.geosphere.congregationplaner.event.domain.model.SpecialEvent
+import de.geosphere.congregationplaner.event.domain.permission.EventTypePolicy
 import de.geosphere.congregationplaner.event.domain.permission.SpecialEventPolicy
 import de.geosphere.congregationplaner.event.domain.usecase.DeleteSpecialEventUseCase
+import de.geosphere.congregationplaner.event.domain.usecase.ObserveEventTypesUseCase
 import de.geosphere.congregationplaner.event.domain.usecase.ObserveManagedEventsUseCase
 import de.geosphere.congregationplaner.event.domain.usecase.SaveSpecialEventUseCase
+import de.geosphere.congregationplaner.event.testing.FakeEventTypeRepository
 import de.geosphere.congregationplaner.event.testing.FakeSpecialEventRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
@@ -38,17 +42,21 @@ class SpecialEventManagementViewModelTest {
     private val congress = SpecialEvent("1", "Kongress", LocalDate(2027, 6, 11), LocalDate(2027, 6, 13))
 
     private lateinit var events: FakeSpecialEventRepository
+    private lateinit var eventTypes: FakeEventTypeRepository
+    private val arena = EventType("kk", "Kreiskongress", cancelsTalk = true, icon = "ic_cp_arena_duo")
     private lateinit var viewModel: SpecialEventManagementViewModel
 
     @BeforeTest
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         events = FakeSpecialEventRepository(listOf(congress))
+        eventTypes = FakeEventTypeRepository(listOf(arena))
         val policy = SpecialEventPolicy()
         viewModel = SpecialEventManagementViewModel(
             ObserveManagedEventsUseCase(events, policy),
             SaveSpecialEventUseCase(events, policy),
             DeleteSpecialEventUseCase(events, policy),
+            ObserveEventTypesUseCase(eventTypes, EventTypePolicy()),
             policy,
         )
     }
@@ -143,6 +151,34 @@ class SpecialEventManagementViewModelTest {
         )
         assertEquals(emptySet(), elders.toggled(EventAudience.ELDERS).event.audience)
         assertEquals(setOf(EventAudience.ALL), elders.toggled(EventAudience.ALL).event.audience)
+    }
+
+    @Test
+    fun `the event types load with the events and a failure keeps the events`() {
+        viewModel.onCurrentUserChanged(admin)
+        assertEquals(listOf(arena), state.eventTypes)
+
+        eventTypes.observeError = IllegalStateException("rules not deployed")
+        viewModel.onCurrentUserChanged(admin.copy(uid = "other"))
+        assertEquals(listOf(congress), state.events)
+        assertEquals(emptyList(), state.eventTypes)
+        assertNull(state.errorMessage)
+    }
+
+    @Test
+    fun `choosing a type fills an empty title and the icon follows the type`() {
+        val blank = SpecialEventEditorState(SpecialEvent(startDate = LocalDate(2027, 3, 6)))
+
+        val typed = blank.withType(arena)
+        assertEquals("kk", typed.event.eventTypeId)
+        assertEquals("Kreiskongress", typed.event.title)
+        assertEquals("Frühjahr", blank.copy(event = blank.event.copy(title = "Frühjahr")).withType(arena).event.title)
+        assertEquals(null, typed.withType(null).event.eventTypeId)
+        assertEquals("Kreiskongress", typed.withType(null).event.title)
+
+        assertEquals("ic_cp_arena_duo", specialEventIconName(typed.event, listOf(arena)))
+        assertNull(specialEventIconName(typed.event, emptyList()))
+        assertNull(specialEventIconName(blank.event, listOf(arena)))
     }
 
     @Test

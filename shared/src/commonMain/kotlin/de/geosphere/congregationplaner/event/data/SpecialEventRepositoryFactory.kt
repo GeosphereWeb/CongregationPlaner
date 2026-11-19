@@ -12,19 +12,22 @@ expect fun createSpecialEventRepository(): SpecialEventRepository
 
 internal const val EVENTS_SUBCOLLECTION = "events"
 internal const val AUDIENCE_FIELD = "audience"
+internal const val EVENT_TYPE_FIELD = "eventTypeId"
 
 internal val CongregationRef.eventsPath: String get() = "$documentPath/$EVENTS_SUBCOLLECTION"
 
 /**
  * Baut ein Ereignis aus den gelesenen Feldern; ohne gültigen Beginn wird es übersprungen, ein fehlendes Ende ist der
- * Beginn.
+ * Beginn. Ein Parameter je Dokumentfeld, gemeinsam für den Android- und den REST-Mapper.
  */
+@Suppress("LongParameterList")
 internal fun specialEventOf(
     id: String,
     title: String?,
     startDate: String?,
     endDate: String?,
     audience: List<String?>,
+    eventTypeId: String? = null,
 ): SpecialEvent? {
     val start = parseEventDate(startDate) ?: return null
     return SpecialEvent(
@@ -33,6 +36,7 @@ internal fun specialEventOf(
         startDate = start,
         endDate = parseEventDate(endDate) ?: start,
         audience = EventAudience.fromValues(audience),
+        eventTypeId = eventTypeId?.takeIf(String::isNotBlank),
     )
 }
 

@@ -1,7 +1,10 @@
 package de.geosphere.congregationplaner.home.presentation
 
+import de.geosphere.congregationplaner.event.domain.permission.EventTypePolicy
 import de.geosphere.congregationplaner.event.domain.permission.SpecialEventPolicy
+import de.geosphere.congregationplaner.event.domain.usecase.ObserveEventTypesUseCase
 import de.geosphere.congregationplaner.event.domain.usecase.ObserveUpcomingEventsUseCase
+import de.geosphere.congregationplaner.event.testing.FakeEventTypeRepository
 import de.geosphere.congregationplaner.event.testing.FakeSpecialEventRepository
 import de.geosphere.congregationplaner.home.domain.model.TalkSummary
 import de.geosphere.congregationplaner.home.domain.usecase.ObserveHomeSummaryUseCase
@@ -55,6 +58,7 @@ class HomeViewModelTest {
                 ObserveTalkYearUseCase(schedule),
                 ObserveMembersUseCase(users),
                 ObserveUpcomingEventsUseCase(FakeSpecialEventRepository(), SpecialEventPolicy()),
+                ObserveEventTypesUseCase(FakeEventTypeRepository(), EventTypePolicy()),
             ),
         )
     }

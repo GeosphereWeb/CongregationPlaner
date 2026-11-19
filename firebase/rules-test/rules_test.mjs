@@ -766,6 +766,9 @@ await expect('Doppelte Zielgruppe', putEvent('bad', event(['ALL', 'ALL'])), fals
 await expect('Leerer Titel', putEvent('bad', event(['ALL'], { title: '' })), false);
 await expect('Ungültiges Datum', putEvent('bad', event(['ALL'], { startDate: '11.06.2027' })), false);
 await expect('Zusätzliches Feld', putEvent('bad', event(['ALL'], { note: 'x' })), false);
+await expect('Ereignis mit Ereignisart', putEvent('typed', event(['ALL'], { eventTypeId: 'kk' })), true);
+await expect('Ereignis mit leerer Ereignisart', putEvent('bad', event(['ALL'], { eventTypeId: '' })), false);
+await expect('Ereignis mit Ereignisart als Zahl', putEvent('bad', event(['ALL'], { eventTypeId: 7 })), false);
 await expect('Planer legt kein Ereignis an', putEvent('p', event(['ALL']), planner.token), false);
 await expect('Mitglied legt kein Ereignis an', putEvent('p', event(['ALL']), plain.token), false);
 await expect('Mitglied löscht kein Ereignis', api('DELETE', `${EVENTS}/all`, undefined, plain.token), false);

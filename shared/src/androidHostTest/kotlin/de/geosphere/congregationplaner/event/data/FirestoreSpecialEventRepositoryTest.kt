@@ -37,6 +37,7 @@ class FirestoreSpecialEventRepositoryTest {
         startDate = LocalDate(2027, 6, 11),
         endDate = LocalDate(2027, 6, 13),
         audience = setOf(EventAudience.SISTERS, EventAudience.BROTHERS),
+        eventTypeId = "kk",
     )
 
     init {
@@ -47,7 +48,7 @@ class FirestoreSpecialEventRepositoryTest {
     fun `observeAll maps the events and skips those without a valid start`() = runBlocking {
         emit(
             document("ev1", "Kongress", "2027-06-11", "2027-06-13", listOf("BROTHERS", "SISTERS", "UNKNOWN", 7)),
-            document("ev2", "Besuch", "2027-03-02", null, listOf("ALL")),
+            document("ev2", "Besuch", "2027-03-02", null, listOf("ALL"), eventTypeId = null),
             document("ev3", "Kaputt", "kein Datum", "2027-03-02", listOf("ALL")),
         )
 
@@ -96,6 +97,7 @@ class FirestoreSpecialEventRepositoryTest {
                 "startDate" to "2027-06-11",
                 "endDate" to "2027-06-13",
                 "audience" to listOf("BROTHERS", "SISTERS"),
+                "eventTypeId" to "kk",
             ),
             fields.captured,
         )
@@ -135,11 +137,13 @@ class FirestoreSpecialEventRepositoryTest {
         start: String?,
         end: String?,
         audience: List<Any>,
+        eventTypeId: String? = "kk",
     ): DocumentSnapshot = mockk {
         every { this@mockk.id } returns id
         every { getString("title") } returns title
         every { getString("startDate") } returns start
         every { getString("endDate") } returns end
         every { this@mockk.get("audience") } returns audience
+        every { getString("eventTypeId") } returns eventTypeId
     }
 }

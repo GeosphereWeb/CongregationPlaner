@@ -3,6 +3,8 @@ package de.geosphere.congregationplaner.event.presentation
 import congregationplaner.uilib.generated.resources.Res
 import congregationplaner.uilib.generated.resources.allDrawableResources
 import congregationplaner.uilib.generated.resources.ic_cp_square
+import de.geosphere.congregationplaner.event.domain.model.EventType
+import de.geosphere.congregationplaner.event.domain.model.SpecialEvent
 import org.jetbrains.compose.resources.DrawableResource
 
 private const val ICON_PREFIX = "ic_cp_"
@@ -24,3 +26,7 @@ internal fun List<String>.matchingIcons(query: String): List<String> {
     val words = query.lowercase().split(' ', '_').filter(String::isNotBlank)
     return filter { name -> words.all { it in iconLabel(name) } }
 }
+
+/** Der Icon-Name der Ereignisart eines besonderen Ereignisses; `null` ohne Art oder für eine gelöschte Art. */
+internal fun specialEventIconName(event: SpecialEvent, types: List<EventType>): String? =
+    event.eventTypeId?.let { id -> types.firstOrNull { it.id == id }?.icon }

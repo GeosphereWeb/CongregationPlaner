@@ -34,14 +34,13 @@ internal class FirestoreSpecialEventRepository(private val firestore: FirebaseFi
             // document() ohne Pfad vergibt eine zufällige ID.
             val document = if (event.id.isBlank()) collection.document() else collection.document(event.id)
             val saved = event.copy(id = document.id)
-            document.set(
-                mapOf(
-                    "title" to saved.title,
-                    "startDate" to saved.startDate.toString(),
-                    "endDate" to saved.endDate.toString(),
-                    AUDIENCE_FIELD to saved.audienceValues(),
-                ),
-            ).awaitResult()
+            val fields = mapOf(
+                "title" to saved.title,
+                "startDate" to saved.startDate.toString(),
+                "endDate" to saved.endDate.toString(),
+                AUDIENCE_FIELD to saved.audienceValues(),
+            ) + listOfNotNull(saved.eventTypeId?.let { EVENT_TYPE_FIELD to it })
+            document.set(fields).awaitResult()
             saved
         }
 
@@ -57,4 +56,5 @@ private fun toSpecialEvent(document: DocumentSnapshot): SpecialEvent? = specialE
     startDate = document.getString("startDate"),
     endDate = document.getString("endDate"),
     audience = (document.get(AUDIENCE_FIELD) as? List<*>).orEmpty().map { it as? String },
+    eventTypeId = document.getString(EVENT_TYPE_FIELD),
 )

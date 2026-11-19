@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import de.geosphere.congregationplaner.event.domain.model.SpecialEvent
 import de.geosphere.congregationplaner.event.domain.permission.SpecialEventPolicy
 import de.geosphere.congregationplaner.event.domain.usecase.DeleteSpecialEventUseCase
+import de.geosphere.congregationplaner.event.domain.usecase.ObserveEventTypesUseCase
 import de.geosphere.congregationplaner.event.domain.usecase.ObserveManagedEventsUseCase
 import de.geosphere.congregationplaner.event.domain.usecase.SaveSpecialEventUseCase
 import de.geosphere.congregationplaner.user.domain.model.AppUser
@@ -13,6 +14,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
@@ -26,6 +28,7 @@ class SpecialEventManagementViewModel(
     private val observeEvents: ObserveManagedEventsUseCase,
     private val saveEvent: SaveSpecialEventUseCase,
     private val deleteEvent: DeleteSpecialEventUseCase,
+    private val observeEventTypes: ObserveEventTypesUseCase,
     private val policy: SpecialEventPolicy,
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(SpecialEventUiState())
@@ -117,12 +120,14 @@ class SpecialEventManagementViewModel(
         observeJob?.cancel()
         mutableUiState.update { it.copy(isLoading = true) }
         observeJob = viewModelScope.launch {
-            observeEvents(user)
+            // Without the event types the events still load; only the choice and the icons are missing.
+            val types = observeEventTypes(user).catch { emit(emptyList()) }
+            combine(observeEvents(user), types) { events, eventTypes -> events to eventTypes }
                 .catch { exception ->
                     val message = exception.message ?: "Ereignisse konnten nicht geladen werden."
                     mutableUiState.update { it.copy(isLoading = false, errorMessage = message) }
-                }.collect { events ->
-                    mutableUiState.update { it.copy(events = events, isLoading = false) }
+                }.collect { (events, eventTypes) ->
+                    mutableUiState.update { it.copy(events = events, eventTypes = eventTypes, isLoading = false) }
                 }
         }
     }

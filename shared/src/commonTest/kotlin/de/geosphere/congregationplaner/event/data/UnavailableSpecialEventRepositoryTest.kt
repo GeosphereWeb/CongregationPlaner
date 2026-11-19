@@ -32,5 +32,7 @@ class UnavailableSpecialEventRepositoryTest {
         assertNull(specialEventOf("1", "T", null, "2027-01-02", listOf("ALL")))
         assertNull(specialEventOf("1", "T", "kein Datum", null, listOf("ALL")))
         assertEquals(SpecialEvent("1", "", start), specialEventOf("1", null, "2027-01-01", "kaputt", listOf("ALL")))
+        assertEquals("kk", specialEventOf("1", "T", "2027-01-01", null, listOf("ALL"), "kk")?.eventTypeId)
+        assertNull(specialEventOf("1", "T", "2027-01-01", null, listOf("ALL"), " ")?.eventTypeId)
     }
 }

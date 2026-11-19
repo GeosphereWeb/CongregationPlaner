@@ -1,6 +1,7 @@
 package de.geosphere.congregationplaner.event.presentation
 
 import de.geosphere.congregationplaner.event.domain.model.EventAudience
+import de.geosphere.congregationplaner.event.domain.model.EventType
 import de.geosphere.congregationplaner.event.domain.model.SpecialEvent
 import de.geosphere.congregationplaner.presentation.components.ListDetailState
 import de.geosphere.congregationplaner.talk.presentation.common.toDisplayText
@@ -19,6 +20,14 @@ data class SpecialEventEditorState(val event: SpecialEvent, val original: Specia
     fun withEnd(date: LocalDate): SpecialEventEditorState =
         copy(event = event.copy(startDate = minOf(date, event.startDate), endDate = date))
 
+    /** Setzt die Ereignisart; ein leerer Titel übernimmt ihren Namen. `null` entfernt die Art, der Titel bleibt. */
+    fun withType(type: EventType?): SpecialEventEditorState = copy(
+        event = event.copy(
+            eventTypeId = type?.id,
+            title = if (type != null && event.title.isBlank()) type.name else event.title,
+        ),
+    )
+
     /** „Alle“ schließt die übrigen Gruppen aus; wer eine Gruppe wählt, wählt „Alle“ ab. */
     fun toggled(group: EventAudience): SpecialEventEditorState {
         val audience = when {
@@ -32,6 +41,8 @@ data class SpecialEventEditorState(val event: SpecialEvent, val original: Specia
 
 data class SpecialEventUiState(
     val events: List<SpecialEvent> = emptyList(),
+    /** Die Ereignisarten der Versammlung zur Auswahl und für die Icons (ADR-0036). */
+    val eventTypes: List<EventType> = emptyList(),
     val isLoading: Boolean = true,
     val canManage: Boolean = false,
     val editor: SpecialEventEditorState? = null,
