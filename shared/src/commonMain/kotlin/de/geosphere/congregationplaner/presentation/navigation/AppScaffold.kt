@@ -21,6 +21,10 @@ import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -41,12 +45,15 @@ import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.organization.domain.model.SelectedCongregation
 import de.geosphere.congregationplaner.theming.AppTheme
 import de.geosphere.congregationplaner.theming.NightColors
+import de.geosphere.congregationplaner.ui.appbar.NightTabRow
 import de.geosphere.congregationplaner.ui.common.topCutoutInset
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.domain.model.GERMAN_AREA_CODES_STAND
 import de.geosphere.congregationplaner.user.presentation.profile.MessageTemplatesSection
+import de.geosphere.congregationplaner.user.presentation.profile.OwnProfilePart
 import de.geosphere.congregationplaner.user.presentation.profile.OwnProfileSection
+import de.geosphere.congregationplaner.user.presentation.profile.rememberOwnProfileViewModel
 /**
  * Der Rahmen der angemeldeten App mit den vier Hauptbereichen. Die Leiste liegt auf schmalen Fenstern unten und auf
  * breiten seitlich; das entscheidet [NavigationSuiteScaffold] aus der Fenstergröße, nicht aus der Plattform.
@@ -126,12 +133,18 @@ private fun nightNavigationItemColors() = NavigationSuiteDefaults.itemColors(
     ),
 )
 
-@Composable
 /**
- * Feste Kopfzeile mit der Überschrift und „Abmelden“ (Exit-Symbol, rechts); darunter scrollt der Rest, weil das
- * Profil mit Adresse und Notfallkontakten länger als der Bildschirm ist.
+ * Feste Kopfzeile mit der Überschrift und „Abmelden“ (Exit-Symbol, rechts), darunter die Reiter; der Inhalt eines
+ * Reiters scrollt, weil etwa das Profil länger als der Bildschirm ist.
  */
+@Composable
 private fun SettingsContent(currentUser: AppUser, onSignOut: () -> Unit) {
+    val tabs = settingsTabs(currentUser)
+    var selected by rememberSaveable { mutableIntStateOf(0) }
+    val index = selected.coerceIn(tabs.indices)
+    val tab = tabs[index]
+    // Einmal für beide Profil-Reiter, damit ungespeicherte Eingaben den Reiterwechsel überstehen.
+    val profileViewModel = rememberOwnProfileViewModel(currentUser)
     Column(Modifier.fillMaxSize()) {
         Row(
             modifier = Modifier.fillMaxWidth()
@@ -144,19 +157,23 @@ private fun SettingsContent(currentUser: AppUser, onSignOut: () -> Unit) {
                 Icon(logoutIcon, contentDescription = "Abmelden", tint = NightColors.Lavender)
             }
         }
+        NightTabRow(tabs.map { it.label }, selectedIndex = index, onSelect = { selected = it })
         Column(
             Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())
-                .padding(start = 24.dp, end = 24.dp, bottom = 24.dp),
+                .padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 24.dp),
         ) {
-            Text(
-                "Hier erscheinen später die Einstellungen der App.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            OwnProfileSection(currentUser, Modifier.padding(top = 24.dp).widthIn(max = 480.dp))
-            MessageTemplatesSection(currentUser, Modifier.padding(top = 32.dp).widthIn(max = 480.dp))
-            ImportSection(currentUser, Modifier.padding(top = 32.dp).widthIn(max = 480.dp))
-            DataSources(Modifier.padding(top = 32.dp).widthIn(max = 480.dp))
+            val modifier = Modifier.widthIn(max = 480.dp)
+            when (tab) {
+                SettingsTab.PROFILE ->
+                    OwnProfileSection(currentUser, OwnProfilePart.CONTACT, profileViewModel, modifier)
+                SettingsTab.EMERGENCY_CONTACTS ->
+                    OwnProfileSection(currentUser, OwnProfilePart.EMERGENCY_CONTACTS, profileViewModel, modifier)
+                SettingsTab.MESSAGE_TEMPLATES -> MessageTemplatesSection(currentUser, modifier)
+                SettingsTab.GENERAL -> {
+                    ImportSection(currentUser, modifier.padding(bottom = 32.dp))
+                    DataSources(modifier)
+                }
+            }
         }
     }
 }

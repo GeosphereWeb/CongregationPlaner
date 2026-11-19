@@ -36,7 +36,8 @@ internal fun ContactFields(
     profile: MemberProfile,
     enabled: Boolean,
     onChange: (MemberProfile) -> Unit,
-    showAddressAndEmergencyContacts: Boolean = true,
+    showAddress: Boolean = true,
+    showEmergencyContacts: Boolean = true,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         PhoneField(profile.mobilePhone, "Handy (optional)", smartphoneIcon, enabled, {
@@ -78,47 +79,59 @@ internal fun ContactFields(
             )
         }
 
-        if (showAddressAndEmergencyContacts) {
-            SectionTitle("Adresse", "Sehen die Admins und Planer der Versammlung.")
-            ProfileField(profile.street, "Straße und Hausnummer", enabled, {
-                onChange(profile.copy(street = it))
-            })
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ProfileField(
-                    profile.postalCode,
-                    "PLZ",
-                    enabled,
-                    { onChange(profile.copy(postalCode = it)) },
-                    KeyboardType.Number,
-                    Modifier.weight(1f),
-                )
-                ProfileField(
-                    profile.city,
-                    "Ort",
-                    enabled,
-                    { onChange(profile.copy(city = it)) },
-                    modifier = Modifier.weight(2f),
-                )
-            }
+        if (showAddress) AddressFields(profile, enabled, onChange)
+        if (showEmergencyContacts) EmergencyContactFields(profile, enabled, onChange)
+    }
+}
 
-            SectionTitle("Notfallkontakte", "Bis zu ${MemberProfile.MAX_EMERGENCY_CONTACTS}.")
-            profile.emergencyContacts.forEachIndexed { index, contact ->
-                EmergencyContactCard(
-                    contact = contact,
-                    number = index + 1,
-                    enabled = enabled,
-                    onChange = { onChange(profile.withContact(index, it)) },
-                    onRemove = { onChange(profile.withoutContact(index)) },
-                )
-            }
-            if (profile.canAddContact) {
-                SecondaryButton(
-                    text = "Notfallkontakt hinzufügen",
-                    onClick = { onChange(profile.withAddedContact()) },
-                    enabled = enabled,
-                    height = 44.dp,
-                )
-            }
+@Composable
+private fun AddressFields(profile: MemberProfile, enabled: Boolean, onChange: (MemberProfile) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionTitle("Adresse", "Sehen die Admins und Planer der Versammlung.")
+        ProfileField(profile.street, "Straße und Hausnummer", enabled, {
+            onChange(profile.copy(street = it))
+        })
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ProfileField(
+                profile.postalCode,
+                "PLZ",
+                enabled,
+                { onChange(profile.copy(postalCode = it)) },
+                KeyboardType.Number,
+                Modifier.weight(1f),
+            )
+            ProfileField(
+                profile.city,
+                "Ort",
+                enabled,
+                { onChange(profile.copy(city = it)) },
+                modifier = Modifier.weight(2f),
+            )
+        }
+    }
+}
+
+/** Die Notfallkontakte eines Mitglieds mit Hinzufügen und Entfernen; in „Mein Profil“ ein eigener Reiter. */
+@Composable
+internal fun EmergencyContactFields(profile: MemberProfile, enabled: Boolean, onChange: (MemberProfile) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionTitle("Notfallkontakte", "Bis zu ${MemberProfile.MAX_EMERGENCY_CONTACTS}.")
+        profile.emergencyContacts.forEachIndexed { index, contact ->
+            EmergencyContactCard(
+                contact = contact,
+                number = index + 1,
+                enabled = enabled,
+                onChange = { onChange(profile.withContact(index, it)) },
+                onRemove = { onChange(profile.withoutContact(index)) },
+            )
+        }
+        if (profile.canAddContact) {
+            SecondaryButton(
+                text = "Notfallkontakt hinzufügen",
+                onClick = { onChange(profile.withAddedContact()) },
+                enabled = enabled,
+                height = 44.dp,
+            )
         }
     }
 }
@@ -274,7 +287,12 @@ private fun ContactFieldsPreview() = PreviewThemeWrapper {
             enabled = true,
             onChange = {},
         )
-        ContactFields(profile = MemberProfile(), enabled = false, onChange = {
-        }, showAddressAndEmergencyContacts = false)
+        ContactFields(
+            profile = MemberProfile(),
+            enabled = false,
+            onChange = {},
+            showAddress = false,
+            showEmergencyContacts = false,
+        )
     }
 }
