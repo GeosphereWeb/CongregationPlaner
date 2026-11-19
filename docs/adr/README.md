@@ -86,3 +86,4 @@ Numbers are sequential and permanent. Never reuse or renumber an existing ADR, e
 - [ADR-0033: Besondere Ereignisse mit Sichtbarkeit je Gruppe](0033-special-events-visible-by-group.md) — Accepted
 - [ADR-0034: Vortragsliste und Wochenereignisse je Land](0034-reference-data-per-country.md) — Accepted
 - [ADR-0036: Ereignisarten je Versammlung mit Vorlage des Landes](0036-event-types-per-congregation.md) — Accepted
+- [ADR-0037: Termine mit Wochenereignis auf der Startseite](0037-schedule-week-events-on-home.md) — Accepted
