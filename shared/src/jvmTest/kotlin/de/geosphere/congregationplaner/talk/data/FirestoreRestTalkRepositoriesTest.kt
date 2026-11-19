@@ -74,6 +74,27 @@ class FirestoreRestTalkRepositoriesTest {
     }
 
     @Test
+    fun `observeWeekEventSlots runs a query for slots with a week event and sorts by date`() = runWithServer(
+        responder = {
+            FakeResponse(
+                200,
+                """[{"document":${document("2027-01-03")}},{"document":${document("2026-10-25")}},{"readTime":"x"}]""",
+            )
+        },
+    ) { server ->
+        val slots = FirestoreRestTalkScheduleRepository(idTokenProvider = { "token-123" })
+            .observeWeekEventSlots(congregation).first()
+
+        assertEquals(listOf(LocalDate(2026, 10, 25), LocalDate(2027, 1, 3)), slots.map { it.date })
+        val request = server.requests.single()
+        assertEquals("POST", request.method)
+        assertEquals("${FakeFirestoreRestServer.DOCUMENTS_PATH}/${congregation.documentPath}:runQuery", request.path)
+        val query = request.body
+        assertTrue(query.contains(""""collectionId":"talkSchedule""""))
+        assertTrue(query.contains(""""unaryFilter":{"field":{"fieldPath":"weekEventId"},"op":"IS_NOT_NULL"}"""))
+    }
+
+    @Test
     fun `observeYear follows the page token to read every page`() = runWithServer(
         responder = { request ->
             if (request.query.orEmpty().contains("pageToken=next%2F1")) {

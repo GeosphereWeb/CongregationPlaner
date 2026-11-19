@@ -106,6 +106,19 @@ class FirestoreTalkRepositoriesTest {
     }
 
     @Test
+    fun `observeWeekEventSlots filters on a set week event and sorts by date`(): Unit = withMockedLog {
+        val query = mockk<Query>()
+        every { collection.whereNotEqualTo("weekEventId", null) } returns query
+        emitSnapshot(query, querySnapshot(slotDocument("2026-10-25"), plainDocument("2026-01-03")), null)
+
+        val slots =
+            runBlocking { FirestoreTalkScheduleRepository(firestore).observeWeekEventSlots(congregation).first() }
+
+        assertEquals(listOf(LocalDate(2026, 1, 3), LocalDate(2026, 10, 25)), slots.map { it.date })
+        verify { registration.remove() }
+    }
+
+    @Test
     fun `saveSlots writes all slots in one batch`() = runBlocking {
         val batch = mockk<WriteBatch>()
         val other = mockk<DocumentReference>()

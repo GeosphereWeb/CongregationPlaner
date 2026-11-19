@@ -1,7 +1,5 @@
 package de.geosphere.congregationplaner.home.domain.usecase
 
-import de.geosphere.congregationplaner.event.domain.usecase.ObserveEventTypesUseCase
-import de.geosphere.congregationplaner.event.domain.usecase.ObserveUpcomingEventsUseCase
 import de.geosphere.congregationplaner.home.domain.model.HomeSummary
 import de.geosphere.congregationplaner.home.domain.model.TalkSummary
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
@@ -13,7 +11,6 @@ import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPoli
 import de.geosphere.congregationplaner.user.domain.usecase.ObserveMembersUseCase
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
@@ -24,7 +21,8 @@ import kotlinx.datetime.plus
 
 /**
  * Beobachtet die Daten der Startseite. Jeder Block wird nur abgefragt, wenn die Policy es erlaubt: die Termine für
- * Vortragsplaner, die offenen Freigaben für Versammlungsadmins, die besonderen Ereignisse für freigegebene Mitglieder.
+ * Vortragsplaner, die offenen Freigaben für Versammlungsadmins, die besonderen Ereignisse und die Termine mit
+ * Wochenereignis für freigegebene Mitglieder.
  */
 @Inject
 class ObserveHomeSummaryUseCase(
@@ -32,8 +30,7 @@ class ObserveHomeSummaryUseCase(
     private val userPolicy: UserPermissionPolicy,
     private val observeTalkYear: ObserveTalkYearUseCase,
     private val observeMembers: ObserveMembersUseCase,
-    private val observeEvents: ObserveUpcomingEventsUseCase,
-    private val observeEventTypes: ObserveEventTypesUseCase,
+    private val observeHomeEvents: ObserveHomeEventsUseCase,
 ) {
     operator fun invoke(user: AppUser, today: LocalDate): Flow<HomeSummary> {
         val congregation = user.congregation
@@ -49,14 +46,8 @@ class ObserveHomeSummaryUseCase(
         } else {
             flowOf(null)
         }
-        return combine(
-            talk,
-            approvals,
-            observeEvents(user, today),
-            // Without the event types the events still show, only with the default icon.
-            observeEventTypes(user).catch { emit(emptyList()) },
-        ) { talkSummary, pending, events, types ->
-            HomeSummary(talkSummary, pending, events, types)
+        return combine(talk, approvals, observeHomeEvents(user, today)) { talkSummary, pending, events ->
+            HomeSummary(talkSummary, pending, events)
         }
     }
 

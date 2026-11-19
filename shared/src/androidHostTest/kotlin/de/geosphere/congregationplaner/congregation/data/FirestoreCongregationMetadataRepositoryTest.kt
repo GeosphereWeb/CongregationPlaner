@@ -11,6 +11,7 @@ import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.Source
 import com.google.firebase.firestore.WriteBatch
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
+import de.geosphere.congregationplaner.congregation.domain.model.EventHorizon
 import de.geosphere.congregationplaner.congregation.domain.model.MeetingTimes
 import de.geosphere.congregationplaner.congregation.domain.model.NewCongregationAdmin
 import de.geosphere.congregationplaner.testing.assertFailure
@@ -105,6 +106,22 @@ class FirestoreCongregationMetadataRepositoryTest {
     }
 
     @Test
+    fun `observeAll maps the horizon of the home events and falls back for a missing value`() = runBlocking {
+        emitSnapshot(
+            querySnapshot(
+                document("1", "Berlin", "19:00", 3L, "10:00", 7L, eventHorizon = "2M"),
+                document("2", "Hamburg", "19:00", 3L, "10:00", 7L),
+            ),
+            null,
+        )
+
+        assertEquals(
+            listOf(EventHorizon(2), EventHorizon()),
+            repository.observeAll(circuit).first().map { it.eventHorizon },
+        )
+    }
+
+    @Test
     fun `create writes the congregation name document and first admin in one batch`() = runBlocking {
         val reference = mockk<DocumentReference>()
         val nameReference = mockk<DocumentReference>()
@@ -136,6 +153,7 @@ class FirestoreCongregationMetadataRepositoryTest {
                 "weekend_meeting_time" to "17:30",
                 "weekend_meeting_weekday" to 7,
                 "yearly_meeting_times" to emptyList<String>(),
+                "event_horizon" to "3M",
                 "createdBy" to "uid-1",
             ),
             fields.captured,
@@ -308,6 +326,7 @@ class FirestoreCongregationMetadataRepositoryTest {
         weekendTime: Any?,
         weekendWeekday: Any?,
         yearlyMeetingTimes: Any? = null,
+        eventHorizon: String? = null,
     ): DocumentSnapshot {
         val snapshot = mockk<DocumentSnapshot>()
         every { snapshot.id } returns id
@@ -317,6 +336,7 @@ class FirestoreCongregationMetadataRepositoryTest {
         every { snapshot.get("weekend_meeting_time") } returns weekendTime
         every { snapshot.get("weekend_meeting_weekday") } returns weekendWeekday
         every { snapshot.get("yearly_meeting_times") } returns yearlyMeetingTimes
+        every { snapshot.getString("event_horizon") } returns eventHorizon
         return snapshot
     }
 }

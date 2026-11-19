@@ -1,5 +1,8 @@
 package de.geosphere.congregationplaner.home.domain.usecase
 
+import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
+import de.geosphere.congregationplaner.congregation.domain.model.EventHorizon
+import de.geosphere.congregationplaner.congregation.testing.FakeCongregationMetadataRepository
 import de.geosphere.congregationplaner.event.domain.model.EventAudience
 import de.geosphere.congregationplaner.event.domain.model.EventType
 import de.geosphere.congregationplaner.event.domain.model.SpecialEvent
@@ -9,6 +12,7 @@ import de.geosphere.congregationplaner.event.domain.usecase.ObserveEventTypesUse
 import de.geosphere.congregationplaner.event.domain.usecase.ObserveUpcomingEventsUseCase
 import de.geosphere.congregationplaner.event.testing.FakeEventTypeRepository
 import de.geosphere.congregationplaner.event.testing.FakeSpecialEventRepository
+import de.geosphere.congregationplaner.home.domain.model.HomeEvent
 import de.geosphere.congregationplaner.home.domain.model.HomeSummary
 import de.geosphere.congregationplaner.home.domain.model.TalkSummary
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
@@ -37,13 +41,19 @@ class ObserveHomeSummaryUseCaseTest {
     private val users = FakeUserRepository()
     private val events = FakeSpecialEventRepository()
     private val eventTypes = FakeEventTypeRepository()
+    private val congregations = FakeCongregationMetadataRepository(
+        listOf(CongregationMetadata(id = testCongregation.congregationId, eventHorizon = EventHorizon(1))),
+    )
     private val useCase = ObserveHomeSummaryUseCase(
         TalkSchedulePermissionPolicy(),
         UserPermissionPolicy(),
         ObserveTalkYearUseCase(schedule),
         ObserveMembersUseCase(users),
-        ObserveUpcomingEventsUseCase(events, SpecialEventPolicy()),
-        ObserveEventTypesUseCase(eventTypes, EventTypePolicy()),
+        ObserveHomeEventsUseCase(
+            ObserveUpcomingEventsUseCase(events, SpecialEventPolicy()),
+            ObserveScheduleEventsUseCase(schedule, congregations, EventTypePolicy()),
+            ObserveEventTypesUseCase(eventTypes, EventTypePolicy()),
+        ),
     )
 
     private fun user(vararg roles: CongregationRole, approved: Boolean = true) =
@@ -71,7 +81,7 @@ class ObserveHomeSummaryUseCaseTest {
         val eldersOnly = SpecialEvent("2", "Schulung", today, audience = setOf(EventAudience.ELDERS))
         events.events.value = listOf(congress, eldersOnly)
 
-        assertEquals(listOf(congress), summary(user()).events)
+        assertEquals(listOf(HomeEvent("Kongress", today, LocalDate(2026, 11, 3))), summary(user()).events)
         assertEquals(setOf(EventAudience.ALL), events.requestedGroups)
     }
 
@@ -224,12 +234,50 @@ class ObserveHomeSummaryUseCaseTest {
 
     @Test
     fun `members get the event types for the icons and a failure only drops them`() = runTest {
-        val congress = EventType("kk", "Kreiskongress", icon = "ic_cp_arena_duo")
-        eventTypes.types.value = listOf(congress)
+        eventTypes.types.value = listOf(EventType("kk", "Kreiskongress", icon = "ic_cp_arena_duo"))
+        events.events.value = listOf(SpecialEvent("1", "Kongress", today, eventTypeId = "kk"))
 
-        assertEquals(listOf(congress), summary(user()).eventTypes)
+        assertEquals("ic_cp_arena_duo", summary(user()).events.single().icon)
 
         eventTypes.observeError = IllegalStateException("rules not deployed")
-        assertEquals(emptyList(), summary(user()).eventTypes)
+        assertNull(summary(user()).events.single().icon)
+    }
+
+    @Test
+    fun `members get the slots with a week event within the horizon of the congregation`() = runTest {
+        eventTypes.types.value = listOf(EventType("kk", "Kreiskongress", icon = "ic_cp_arena_duo"))
+        schedule.slots.value = listOf(
+            slot(daysFromToday(-1)) { it.copy(weekEventId = "kk", weekEventName = "Kongress") },
+            slot(daysFromToday(7)) { it.copy(weekEventId = "kk", weekEventName = "Kongress") },
+            slot(daysFromToday(14)),
+            // One month after 2026-11-01 is 2026-12-01, the last day shown.
+            slot(LocalDate(2026, 12, 1)) { it.copy(weekEventId = "x", weekEventName = "Besuch") },
+            slot(LocalDate(2026, 12, 2)) { it.copy(weekEventId = "kk", weekEventName = "Kongress") },
+        )
+        events.events.value = listOf(SpecialEvent("1", "Dienst", daysFromToday(10)))
+
+        assertEquals(
+            listOf(
+                HomeEvent("Kreiskongress", daysFromToday(7), icon = "ic_cp_arena_duo", fromSchedule = true),
+                HomeEvent("Dienst", daysFromToday(10)),
+                HomeEvent("Besuch", LocalDate(2026, 12, 1), fromSchedule = true),
+            ),
+            summary(user()).events,
+        )
+    }
+
+    @Test
+    fun `a failing schedule query keeps the special events`() = runTest {
+        schedule.observeError = IllegalStateException("rules not deployed")
+        events.events.value = listOf(SpecialEvent("1", "Dienst", today))
+
+        assertEquals(listOf(HomeEvent("Dienst", today)), summary(user()).events)
+    }
+
+    @Test
+    fun `an unapproved member gets no schedule events`() = runTest {
+        schedule.slots.value = listOf(slot(today) { it.copy(weekEventId = "kk", weekEventName = "Kongress") })
+
+        assertTrue(summary(user(approved = false)).events.isEmpty())
     }
 }

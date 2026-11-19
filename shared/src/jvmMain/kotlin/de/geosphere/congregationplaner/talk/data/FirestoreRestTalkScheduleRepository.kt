@@ -1,6 +1,8 @@
 package de.geosphere.congregationplaner.talk.data
 
+import com.google.gson.JsonArray
 import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import de.geosphere.congregationplaner.auth.data.FirebaseAuthManager
 import de.geosphere.congregationplaner.firestore.FirestoreHttpException
 import de.geosphere.congregationplaner.firestore.FirestoreRestClient
@@ -14,6 +16,7 @@ import de.geosphere.congregationplaner.firestore.firestoreString
 import de.geosphere.congregationplaner.firestore.listAllDocuments
 import de.geosphere.congregationplaner.firestore.optionalIntField
 import de.geosphere.congregationplaner.firestore.optionalStringField
+import de.geosphere.congregationplaner.firestore.parseDocument
 import de.geosphere.congregationplaner.firestore.pollingFlow
 import de.geosphere.congregationplaner.firestore.runCatchingIo
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
@@ -43,6 +46,18 @@ internal class FirestoreRestTalkScheduleRepository(
 
     override fun observeAll(congregation: CongregationRef): Flow<List<TalkSlot>> = pollingFlow {
         client.listAllDocuments(congregation.talkSchedulePath)
+            .sortedBy { it.id }
+            .mapNotNull { document -> runCatching { document.toSlot() }.getOrNull() }
+    }
+
+    // Only this filter matches the rule that lets members without a planner role read the slots (ADR-0037).
+    override fun observeWeekEventSlots(congregation: CongregationRef): Flow<List<TalkSlot>> = pollingFlow {
+        val url = "${client.collectionUrl(congregation.documentPath)}:runQuery"
+        // Each result row holds a document, except the row that only reports the read time.
+        JsonParser.parseString(client.request("POST", url, WEEK_EVENT_SLOTS_QUERY))
+            .asJsonArray
+            .mapNotNull { row -> row.asJsonObject.getAsJsonObject("document") }
+            .map { parseDocument(it) }
             .sortedBy { it.id }
             .mapNotNull { document -> runCatching { document.toSlot() }.getOrNull() }
     }
@@ -94,7 +109,7 @@ internal class FirestoreRestTalkScheduleRepository(
     private fun FirestoreRestDocument.toSlot(): TalkSlot = TalkSlot(
         date = LocalDate.parse(id),
         time = LocalTime.parse(fields.optionalStringField("time").orEmpty()),
-        weekEventId = fields.optionalStringField("weekEventId"),
+        weekEventId = fields.optionalStringField(WEEK_EVENT_ID_FIELD),
         weekEventName = fields.optionalStringField("weekEventName"),
         talkCancelled = fields.booleanField("talkCancelled"),
         confirmed = fields.booleanField("confirmed"),
@@ -110,27 +125,45 @@ internal class FirestoreRestTalkScheduleRepository(
         speakerCongregation = fields.optionalStringField("speakerCongregation"),
         note = fields.optionalStringField("note"),
     )
-
-    private fun TalkSlot.toBody(): String = firestoreFields(toFields())
-
-    private fun TalkSlot.toFields(): JsonObject = JsonObject().apply {
-        add("time", firestoreString(time.toString()))
-        add("talkCancelled", firestoreBoolean(talkCancelled))
-        add("confirmed", firestoreBoolean(confirmed))
-        add("note", firestoreNullableString(note))
-        add("weekEventId", firestoreNullableString(weekEventId))
-        add("weekEventName", firestoreNullableString(weekEventName))
-        add("talkNumber", firestoreNullableInteger(talkNumber))
-        add("talkTitle", firestoreNullableString(talkTitle))
-        add("speakerMemberId", firestoreNullableString(speakerMemberId))
-        add("speakerLastName", firestoreNullableString(speakerLastName))
-        add("speakerFirstName", firestoreNullableString(speakerFirstName))
-        add("chairmanMemberId", firestoreNullableString(chairmanMemberId))
-        add("chairmanLastName", firestoreNullableString(chairmanLastName))
-        add("chairmanFirstName", firestoreNullableString(chairmanFirstName))
-        add("externalSpeakerId", firestoreNullableString(externalSpeakerId))
-        add("speakerCongregation", firestoreNullableString(speakerCongregation))
-    }
 }
 
 private const val HTTP_CONFLICT = 409
+
+/** Strukturierte Abfrage: die Termine der Versammlung, deren Wochenereignis gesetzt ist. */
+private val WEEK_EVENT_SLOTS_QUERY: String = JsonObject().apply {
+    val filter = JsonObject().apply {
+        add("field", JsonObject().apply { addProperty("fieldPath", WEEK_EVENT_ID_FIELD) })
+        addProperty("op", "IS_NOT_NULL")
+    }
+    val query = JsonObject().apply {
+        add(
+            "from",
+            JsonArray().apply {
+                add(JsonObject().apply { addProperty("collectionId", TALK_SCHEDULE_SUBCOLLECTION) })
+            },
+        )
+        add("where", JsonObject().apply { add("unaryFilter", filter) })
+    }
+    add("structuredQuery", query)
+}.toString()
+
+private fun TalkSlot.toBody(): String = firestoreFields(toFields())
+
+private fun TalkSlot.toFields(): JsonObject = JsonObject().apply {
+    add("time", firestoreString(time.toString()))
+    add("talkCancelled", firestoreBoolean(talkCancelled))
+    add("confirmed", firestoreBoolean(confirmed))
+    add("note", firestoreNullableString(note))
+    add(WEEK_EVENT_ID_FIELD, firestoreNullableString(weekEventId))
+    add("weekEventName", firestoreNullableString(weekEventName))
+    add("talkNumber", firestoreNullableInteger(talkNumber))
+    add("talkTitle", firestoreNullableString(talkTitle))
+    add("speakerMemberId", firestoreNullableString(speakerMemberId))
+    add("speakerLastName", firestoreNullableString(speakerLastName))
+    add("speakerFirstName", firestoreNullableString(speakerFirstName))
+    add("chairmanMemberId", firestoreNullableString(chairmanMemberId))
+    add("chairmanLastName", firestoreNullableString(chairmanLastName))
+    add("chairmanFirstName", firestoreNullableString(chairmanFirstName))
+    add("externalSpeakerId", firestoreNullableString(externalSpeakerId))
+    add("speakerCongregation", firestoreNullableString(speakerCongregation))
+}

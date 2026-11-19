@@ -4,6 +4,7 @@ import de.geosphere.congregationplaner.auth.domain.repository.FirebaseUser
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationException
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationName
+import de.geosphere.congregationplaner.congregation.domain.model.EventHorizon
 import de.geosphere.congregationplaner.congregation.domain.model.NewCongregationAdmin
 import de.geosphere.congregationplaner.congregation.domain.permission.CongregationPermissionPolicy
 import de.geosphere.congregationplaner.congregation.domain.repository.CongregationMetadataRepository
@@ -145,6 +146,16 @@ class CreateCongregationUseCaseTest {
         assertIs<CongregationException.MissingName>(
             useCase(globalAdmin, circuit, own.copy(name = " ")).exceptionOrNull(),
         )
+    }
+
+    @Test
+    fun `saving rejects an invalid horizon of the home events`() = runBlocking<Unit> {
+        val own = CongregationMetadata(id = "k1", name = "Nord", eventHorizon = EventHorizon(25))
+
+        val failure = SaveCongregationUseCase(repository, policy)(congregationAdmin, circuit, own)
+
+        assertIs<CongregationException.InvalidEventHorizon>(failure.exceptionOrNull())
+        assertTrue(repository.lookedUp.isEmpty())
     }
 
     @Test

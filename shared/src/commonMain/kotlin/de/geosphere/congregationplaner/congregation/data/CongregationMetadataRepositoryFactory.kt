@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.flow
 
 expect fun createCongregationMetadataRepository(): CongregationMetadataRepository
 
+/** Firestore-Feld des Zeitraums der Startseite (ADR-0037). */
+internal const val EVENT_HORIZON_FIELD = "event_horizon"
+
 /** Die Namensdokumente der Versammlungen unter dem Kreis [circuitIds] (siehe `CongregationName`). */
 internal fun uniqueCongregationNamesCollectionPath(circuitIds: List<String>): String =
     "${OrgLevel.CIRCUIT.collectionPath(circuitIds.dropLast(1))}/${circuitIds.last()}/uniqueCongregationNames"

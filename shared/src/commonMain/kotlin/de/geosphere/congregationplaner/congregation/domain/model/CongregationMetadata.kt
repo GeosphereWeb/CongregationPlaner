@@ -26,6 +26,8 @@ data class CongregationMetadata(
     val weekendMeetingWeekday: Int = DEFAULT_WEEKEND_WEEKDAY,
     /** Abweichende Zeiten je Kalenderjahr; Jahre ohne Eintrag nutzen die Standardzeiten oben. */
     val yearlyMeetingTimes: Map<Int, MeetingTimes> = emptyMap(),
+    /** Wie weit die Startseite die Termine mit Wochenereignis zeigt (ADR-0037). */
+    val eventHorizon: EventHorizon = EventHorizon(),
 ) {
     val defaultMeetingTimes: MeetingTimes
         get() = MeetingTimes(midweekMeetingWeekday, midweekMeetingTime, weekendMeetingWeekday, weekendMeetingTime)

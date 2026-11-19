@@ -8,7 +8,10 @@ import de.geosphere.congregationplaner.congregation.domain.repository.Congregati
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import dev.zacsweers.metro.Inject
 
-/** [user] speichert Änderungen einer bestehenden Versammlung; ein neuer Name muss im Kreis noch frei sein. */
+/**
+ * [user] speichert Änderungen einer bestehenden Versammlung; ein neuer Name muss im Kreis noch frei sein, der Zeitraum
+ * der Startseite gültig.
+ */
 @Inject
 class SaveCongregationUseCase(
     private val repository: CongregationMetadataRepository,
@@ -20,10 +23,10 @@ class SaveCongregationUseCase(
         congregation: CongregationMetadata,
     ): Result<CongregationMetadata> {
         require(congregation.id.isNotBlank()) { "A new congregation is created with CreateCongregationUseCase." }
-        val error = if (policy.canEdit(user, congregation)) {
-            CongregationName.validate(congregation.name)
-        } else {
-            CongregationException.NotAllowed()
+        val error = when {
+            !policy.canEdit(user, congregation) -> CongregationException.NotAllowed()
+            !congregation.eventHorizon.isValid -> CongregationException.InvalidEventHorizon()
+            else -> CongregationName.validate(congregation.name)
         }
         if (error != null) return Result.failure(error)
         val trimmed = congregation.copy(name = congregation.name.trim())

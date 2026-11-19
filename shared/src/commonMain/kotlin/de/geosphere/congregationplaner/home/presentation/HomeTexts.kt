@@ -1,6 +1,6 @@
 package de.geosphere.congregationplaner.home.presentation
 
-import de.geosphere.congregationplaner.event.domain.model.SpecialEvent
+import de.geosphere.congregationplaner.home.domain.model.HomeEvent
 import de.geosphere.congregationplaner.presentation.navigation.germanDayAndMonth
 import de.geosphere.congregationplaner.presentation.navigation.germanMonthName
 import de.geosphere.congregationplaner.presentation.navigation.germanWeekdayName
@@ -52,7 +52,7 @@ internal fun approvalsBadge(count: Int?): String? = count?.takeIf { it > 0 }?.le
  * sonst „30. Mai – 2. Juni“. shortcut: ohne Jahr, weil nur kommende Ereignisse erscheinen; bei Ereignissen mehr als
  * ein Jahr im Voraus das Jahr ergänzen.
  */
-internal fun eventDatesText(event: SpecialEvent): String {
+internal fun eventDatesText(event: HomeEvent): String {
     val start = event.startDate
     val end = event.endDate
     return when {

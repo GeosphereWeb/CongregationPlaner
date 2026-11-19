@@ -77,7 +77,7 @@ const memberDoc = (email, roles, extra = {}) => fields(memberFields(email, roles
 // Alle Zeitfelder einer Versammlung; die Rules verlangen sie vollständig.
 const fullMeeting = {
   midweek_meeting_time: '19:00', midweek_meeting_weekday: 3, weekend_meeting_time: '17:30', weekend_meeting_weekday: 7,
-  yearly_meeting_times: [],
+  yearly_meeting_times: [], event_horizon: '3M',
 };
 
 // ---------- Nutzer und Daten (Seeding mit dem Owner-Token umgeht die Rules) ----------
@@ -176,6 +176,23 @@ await expect('Planer liest Termin', api('GET', `${SLOT}/2026-10-25`, undefined, 
 await expect('Nutzer ohne Planerrolle schreibt Termin', putSlot('2026-11-01', base, plain.token), false);
 await expect('Nutzer ohne Planerrolle liest Termin', api('GET', `${SLOT}/2026-10-25`, undefined, plain.token), false);
 await expect('Planer löscht Termin', api('DELETE', `${SLOT}/2026-10-25`, undefined, planner.token), true);
+// ADR-0037: Mitglieder lesen die Termine mit Wochenereignis (Home), sonst keine.
+const queryEventSlots = (token) => call('POST', `${FS}/${CONG}:runQuery`, {
+  structuredQuery: {
+    from: [{ collectionId: 'talkSchedule' }],
+    where: { unaryFilter: { field: { fieldPath: 'weekEventId' }, op: 'IS_NOT_NULL' } },
+  },
+}, token);
+await expect('Termin mit Wochenereignis anlegen', putSlot('2026-11-08', { ...base, weekEventId: 'k', weekEventName: 'Kongress' }), true);
+await expect('Mitglied liest Termin mit Wochenereignis', api('GET', `${SLOT}/2026-11-08`, undefined, plain.token), true);
+await expect('Mitglied fragt Termine mit Wochenereignis ab', queryEventSlots(plain.token), true);
+await expect('Mitglied listet alle Termine', api('GET', SLOT, undefined, plain.token), false);
+await expect('Mitglied einer anderen Versammlung liest Termin mit Wochenereignis', call('POST', `${FS}/${OTHER_CONG}:runQuery`, {
+  structuredQuery: {
+    from: [{ collectionId: 'talkSchedule' }],
+    where: { unaryFilter: { field: { fieldPath: 'weekEventId' }, op: 'IS_NOT_NULL' } },
+  },
+}, plain.token), false);
 
 // ---------- Verzeichnis externer Redner (Kreis → Versammlung → Redner) ----------
 const EXT_CIRCUITS = `${CONG}/externalCircuits`;
@@ -313,6 +330,16 @@ await expect('Versammlungsadmin setzt Wochentag 8', api('PATCH', `${CONG}${mask(
 await expect('Versammlungsadmin setzt Jahreszeiten als Text', api('PATCH', `${CONG}${mask('yearly_meeting_times')}`, { fields: { yearly_meeting_times: { stringValue: 'x' } } }, congAdmin.token), false);
 await expect('Versammlungsadmin setzt Jahreszeiten', api('PATCH', `${CONG}${mask('yearly_meeting_times')}`, { fields: { yearly_meeting_times: { arrayValue: { values: [{ stringValue: '2026|3|19:00|7|17:30' }] } } } }, congAdmin.token), true);
 await expect('Versammlungsadmin setzt zu viele Jahreszeiten', api('PATCH', `${CONG}${mask('yearly_meeting_times')}`, { fields: { yearly_meeting_times: { arrayValue: { values: Array.from({ length: 101 }, () => ({ stringValue: '2026|3|19:00|7|17:30' })) } } } }, congAdmin.token), false);
+const horizon = (value) => api('PATCH', `${CONG}${mask('event_horizon')}`, { fields: { event_horizon: { stringValue: value } } }, congAdmin.token);
+await expect('Versammlungsadmin setzt Zeitraum 30 Tage', horizon('30D'), true);
+await expect('Versammlungsadmin setzt Zeitraum 365 Tage', horizon('365D'), true);
+await expect('Versammlungsadmin setzt Zeitraum 24 Monate', horizon('24M'), true);
+await expect('Versammlungsadmin setzt Zeitraum 366 Tage', horizon('366D'), false);
+await expect('Versammlungsadmin setzt Zeitraum 25 Monate', horizon('25M'), false);
+await expect('Versammlungsadmin setzt Zeitraum 0 Tage', horizon('0D'), false);
+await expect('Versammlungsadmin setzt Zeitraum ohne Einheit', horizon('3'), false);
+await expect('Versammlungsadmin löscht den Zeitraum', api('PATCH', `${CONG}${mask('event_horizon')}`, { fields: {} }, congAdmin.token), false);
+await expect('Global Admin setzt den Zeitraum', api('PATCH', `${CONG}${mask('event_horizon')}`, { fields: { event_horizon: { stringValue: '1M' } } }, admin.token), false);
 await expect('Versammlungsadmin ändert fremdes Feld der eigenen Versammlung', api('PATCH', `${CONG}${mask('secret')}`, { fields: { secret: { stringValue: 'x' } } }, congAdmin.token), false);
 await expect('Versammlungsadmin ändert Zeiten einer fremden Versammlung', api('PATCH', `${OTHER_CONG}${mask('midweek_meeting_time')}`, time('18:30'), congAdmin.token), false);
 await expect('Versammlungsadmin löscht die eigene Versammlung', api('DELETE', CONG, undefined, congAdmin.token), false);

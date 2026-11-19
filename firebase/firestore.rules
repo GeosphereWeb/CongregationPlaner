@@ -23,8 +23,9 @@ rules_version = '2';
 //           circuit/{circuitId}        - name: string (1..100), overseer_name: string (<= 100, optional)
 //             congregation/{congId}    - name: string, createdBy: uid, midweek_meeting_time / weekend_meeting_time
 //               ('HH:mm'), midweek_meeting_weekday / weekend_meeting_weekday (1 Monday .. 7 Sunday),
-//               yearly_meeting_times (list, <= 100 entries); all of them are required. A congregation is only created in an
-//               existing circuit.
+//               yearly_meeting_times (list, <= 100 entries), event_horizon (how far home shows the weeks with a week
+//               event: '<1..365>D' or '<1..24>M', ADR-0037); all of them are required. A congregation is only created
+//               in an existing circuit.
 //             uniqueCongregationNames/{key}    - congregationId: string; one per congregation name of the circuit
 //               (key = name trimmed, lower case, blanks collapsed); makes the name unique within the circuit
 //
@@ -182,16 +183,18 @@ service cloud.firestore {
     function isValidMeetingTimes(data) {
       return isMeetingTime(data.midweek_meeting_time) && isMeetingWeekday(data.midweek_meeting_weekday) &&
         isMeetingTime(data.weekend_meeting_time) && isMeetingWeekday(data.weekend_meeting_weekday) &&
-        data.yearly_meeting_times is list && data.yearly_meeting_times.size() <= 100;
+        data.yearly_meeting_times is list && data.yearly_meeting_times.size() <= 100 &&
+        data.event_horizon is string &&
+        data.event_horizon.matches('^(([1-9]|[1-9][0-9]|[12][0-9][0-9]|3[0-5][0-9]|36[0-5])D|([1-9]|1[0-9]|2[0-4])M)$');
     }
 
     // A new congregation carries its creator and comes together with the name document of its circuit, so that a
     // name is taken at most once per circuit.
     function isValidNewCongregation(regionId, subregionId, branchId, countryId, circuitId, congId, data) {
       return data.keys().hasOnly(['name', 'createdBy', 'midweek_meeting_time', 'midweek_meeting_weekday',
-          'weekend_meeting_time', 'weekend_meeting_weekday', 'yearly_meeting_times']) &&
+          'weekend_meeting_time', 'weekend_meeting_weekday', 'yearly_meeting_times', 'event_horizon']) &&
         data.keys().hasAll(['name', 'createdBy', 'midweek_meeting_time', 'midweek_meeting_weekday',
-          'weekend_meeting_time', 'weekend_meeting_weekday', 'yearly_meeting_times']) &&
+          'weekend_meeting_time', 'weekend_meeting_weekday', 'yearly_meeting_times', 'event_horizon']) &&
         data.createdBy == request.auth.uid &&
         isValidMeetingTimes(data) &&
         isValidCongregationName(data.name) &&
@@ -864,7 +867,7 @@ service cloud.firestore {
                   isCongregationAdmin(regionId, subregionId, branchId, countryId, circuitId, congId) &&
                   request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                     'name', 'midweek_meeting_time', 'midweek_meeting_weekday',
-                    'weekend_meeting_time', 'weekend_meeting_weekday', 'yearly_meeting_times']) &&
+                    'weekend_meeting_time', 'weekend_meeting_weekday', 'yearly_meeting_times', 'event_horizon']) &&
                   isValidMeetingTimes(request.resource.data)
                 ));
 
@@ -930,10 +933,13 @@ service cloud.firestore {
                 }
 
                 // ---------------------------------------------------------
-                // Talk schedule of a congregation (planners only)
+                // Talk schedule of a congregation (planners only; approved members read the slots with a week
+                // event, which home shows among the special events, ADR-0037)
                 // ---------------------------------------------------------
                 match /talkSchedule/{date} {
-                  allow read: if canViewTalkPlanning(regionId, subregionId, branchId, countryId, circuitId, congId);
+                  allow read: if canViewTalkPlanning(regionId, subregionId, branchId, countryId, circuitId, congId) ||
+                    (isApprovedMember(regionId, subregionId, branchId, countryId, circuitId, congId) &&
+                      resource.data.get('weekEventId', null) != null);
                   allow delete: if canPlanTalks(regionId, subregionId, branchId, countryId, circuitId, congId);
 
                   allow create: if canPlanTalks(regionId, subregionId, branchId, countryId, circuitId, congId) &&

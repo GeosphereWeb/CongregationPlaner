@@ -2,6 +2,7 @@ package de.geosphere.congregationplaner.congregation.data
 
 import com.google.gson.JsonParser
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
+import de.geosphere.congregationplaner.congregation.domain.model.EventHorizon
 import de.geosphere.congregationplaner.congregation.domain.model.NewCongregationAdmin
 import de.geosphere.congregationplaner.testing.FakeFirestoreRestServer
 import de.geosphere.congregationplaner.testing.FakeFirestoreRestServer.FakeResponse
@@ -36,6 +37,22 @@ class FirestoreRestCongregationMetadataRepositoryTest {
         assertEquals(collectionPath, request.path)
         assertEquals("pageSize=1000", request.query)
         assertEquals("Bearer token-123", request.authorization)
+    }
+
+    @Test
+    fun `observeAll maps the horizon of the home events and falls back for a broken value`() = runWithServer(
+        FakeResponse(
+            200,
+            documentsJson(
+                congregationDocument("a", "Berlin", "19:00", 3, "10:00", 7, eventHorizon = "30D"),
+                congregationDocument("b", "Hamburg", "19:00", 3, "10:00", 7, eventHorizon = "99M"),
+            ),
+        ),
+    ) { _, repository ->
+        assertEquals(
+            listOf(EventHorizon(30, EventHorizon.Unit.DAYS), EventHorizon()),
+            repository.observeAll(circuit).first().map { it.eventHorizon },
+        )
     }
 
     @Test
@@ -110,6 +127,10 @@ class FirestoreRestCongregationMetadataRepositoryTest {
         assertEquals(
             "Grafing Süd",
             writes[0].getAsJsonObject("fields").getAsJsonObject("name").get("stringValue").asString,
+        )
+        assertEquals(
+            "3M",
+            writes[0].getAsJsonObject("fields").getAsJsonObject("event_horizon").get("stringValue").asString,
         )
         assertEquals(
             "$prefix/${uniqueCongregationNamesCollectionPath(circuit)}/grafing süd",
@@ -190,6 +211,7 @@ class FirestoreRestCongregationMetadataRepositoryTest {
             assertEquals("$collectionPath/609a", patch.path)
             assertTrue(patch.query.orEmpty().contains("updateMask.fieldPaths=name"))
             assertTrue(patch.query.orEmpty().contains("updateMask.fieldPaths=weekend_meeting_weekday"))
+            assertTrue(patch.query.orEmpty().contains("updateMask.fieldPaths=event_horizon"))
         }
     }
 
@@ -324,8 +346,10 @@ class FirestoreRestCongregationMetadataRepositoryTest {
         midweekWeekday: Int,
         weekendTime: String,
         weekendWeekday: Int,
+        eventHorizon: String = "3M",
     ): String = """{"name":"projects/p/databases/(default)/documents/congregation/$id","fields":{
         "name":{"stringValue":"$name"},
+        "event_horizon":{"stringValue":"$eventHorizon"},
         "midweek_meeting_time":{"stringValue":"$midweekTime"},
         "midweek_meeting_weekday":{"integerValue":"$midweekWeekday"},
         "weekend_meeting_time":{"stringValue":"$weekendTime"},

@@ -34,6 +34,12 @@ sealed class CongregationException(message: String) : Exception(message) {
 
     class NameTaken : CongregationException("In diesem Kreis gibt es schon eine Versammlung mit diesem Namen.")
 
+    class InvalidEventHorizon :
+        CongregationException(
+            "Der Zeitraum für besondere Ereignisse muss 1 bis ${EventHorizon.Unit.DAYS.max} Tage oder " +
+                "1 bis ${EventHorizon.Unit.MONTHS.max} Monate betragen.",
+        )
+
     class EmailNotVerified :
         CongregationException("Bitte bestätige zuerst deine E-Mail-Adresse, bevor du eine Versammlung anlegst.")
 }
