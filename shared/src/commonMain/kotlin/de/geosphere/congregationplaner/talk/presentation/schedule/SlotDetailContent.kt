@@ -40,7 +40,7 @@ internal fun SlotDetailContent(
         TalkSlotEditor(
             editor = editor,
             chip = slotChip(slotStatus(editor.slot, nextDate)),
-            weekEvents = state.weekEvents,
+            eventTypes = state.eventTypes,
             speakers = state.speakers,
             chairmen = state.chairmen,
             externalSpeakers = state.externalSpeakers,

@@ -52,12 +52,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.geosphere.congregationplaner.HostPlatform
 import de.geosphere.congregationplaner.congregation.presentation.MeetingTimeInput
-import de.geosphere.congregationplaner.event.presentation.specialEventIcon
+import de.geosphere.congregationplaner.event.domain.model.EventType
+import de.geosphere.congregationplaner.event.presentation.eventTypeIcon
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
 import de.geosphere.congregationplaner.talk.domain.model.Chairman
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
-import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.presentation.common.weekdayShortName
 import de.geosphere.congregationplaner.talk.presentation.picker.SpeakerActions
 import de.geosphere.congregationplaner.theming.NightColors
@@ -89,7 +89,7 @@ internal data class TalkScheduleActions(
     val onEditSlot: (TalkSlot) -> Unit = {},
     val onEditorChange: (TalkSlot) -> Unit = {},
     val onInformedChange: (Boolean) -> Unit = {},
-    val onSelectWeekEvent: (WeekEvent?) -> Unit = {},
+    val onSelectWeekEvent: (EventType?) -> Unit = {},
     val onSelectTalk: (Talk?) -> Unit = {},
     val speaker: SpeakerActions = SpeakerActions(),
     val onSelectChairman: (Chairman?) -> Unit = {},
@@ -312,7 +312,11 @@ internal fun TalkScheduleContent(
                                                 canDelete = false,
                                                 highlight = slotHighlight(slot, today),
                                             ) {
-                                                SlotSummary(slot, listSlotChips(slot, slotStatus(slot, nextDate)))
+                                                SlotSummary(
+                                                    slot,
+                                                    listSlotChips(slot, slotStatus(slot, nextDate)),
+                                                    slotEventIcon(slot, state.eventTypes),
+                                                )
                                             }
                                         }
                                     }
@@ -462,7 +466,7 @@ private fun Modifier.monthHeader(): Modifier =
  * die senkrechte Statusmarke.
  */
 @Composable
-private fun SlotSummary(slot: TalkSlot, chips: List<SlotChip>) {
+private fun SlotSummary(slot: TalkSlot, chips: List<SlotChip>, eventIcon: String?) {
     Row(
         modifier = Modifier.heightIn(min = SLOT_MIN_HEIGHT).height(IntrinsicSize.Min),
         verticalAlignment = Alignment.CenterVertically,
@@ -475,7 +479,7 @@ private fun SlotSummary(slot: TalkSlot, chips: List<SlotChip>) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
-                        painterResource(specialEventIcon(event)),
+                        painterResource(eventTypeIcon(eventIcon)),
                         contentDescription = null,
                         modifier = Modifier.size(14.dp),
                         tint = StatusTone.Sky.content,

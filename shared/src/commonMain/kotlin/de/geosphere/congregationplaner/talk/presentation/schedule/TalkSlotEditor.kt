@@ -19,13 +19,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.congregation.presentation.MeetingTimeInput
+import de.geosphere.congregationplaner.event.domain.model.EventType
 import de.geosphere.congregationplaner.presentation.navigation.germanWeekdayName
 import de.geosphere.congregationplaner.talk.domain.model.Chairman
 import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
-import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.usecase.SlotTalkCheck
 import de.geosphere.congregationplaner.talk.presentation.picker.MemberPickerDialog
 import de.geosphere.congregationplaner.talk.presentation.picker.SpeakerActions
@@ -51,14 +51,14 @@ import kotlinx.datetime.LocalTime
 internal fun TalkSlotEditor(
     editor: TalkSlotEditorState,
     chip: SlotChip,
-    weekEvents: List<WeekEvent>,
+    eventTypes: List<EventType>,
     speakers: List<Speaker>,
     chairmen: List<Chairman>,
     externalSpeakers: List<ExternalSpeaker>,
     canViewMembers: Boolean,
     isSaving: Boolean,
     onChange: (TalkSlot) -> Unit,
-    onSelectWeekEvent: (WeekEvent?) -> Unit,
+    onSelectWeekEvent: (EventType?) -> Unit,
     onSelectTalk: (Talk?) -> Unit,
     speakerActions: SpeakerActions,
     onSelectChairman: (Chairman?) -> Unit,
@@ -87,7 +87,7 @@ internal fun TalkSlotEditor(
         TalkDateInput(slot.date, onDateChange = { onChange(slot.copy(date = it)) })
         MeetingTimeInput("Uhrzeit", slot.time, onTimeChange = { onChange(slot.copy(time = it)) })
 
-        WeekEventChips(slot, weekEvents, onSelectWeekEvent)
+        WeekEventChips(slot, eventTypes, onSelectWeekEvent)
         SwitchRow("Vortrag entfällt", slot.talkCancelled) { onChange(slot.copy(talkCancelled = it)) }
 
         TalkCard(
@@ -284,9 +284,9 @@ private fun SpeakerActions.closingPicker(close: () -> Unit): SpeakerActions = co
     },
 )
 
-private val previewWeekEvents = listOf(
-    WeekEvent("kongress", "Kongress", cancelsTalk = true),
-    WeekEvent("besuch", "Kreisaufseher"),
+private val previewEventTypes = listOf(
+    EventType("kongress", "Kongress", cancelsTalk = true, icon = "ic_cp_arena_duo"),
+    EventType("besuch", "Kreisaufseher"),
 )
 
 @Composable
@@ -298,7 +298,7 @@ private fun EditorPreview(slot: TalkSlot, original: TalkSlot?, chip: SlotChip) =
             talkCheck = SlotTalkCheck(talksOnDate = listOf(Talk(1, "Beispielvortrag"), Talk(2, "Weiterer Vortrag"))),
         ),
         chip = chip,
-        weekEvents = previewWeekEvents,
+        eventTypes = previewEventTypes,
         speakers = listOf(Speaker("1", "Muster", "Max")),
         chairmen = listOf(Chairman("2", "Beispiel", "Tim")),
         externalSpeakers = listOf(ExternalSpeaker("e1", "Extern", "Eva", "Nord")),

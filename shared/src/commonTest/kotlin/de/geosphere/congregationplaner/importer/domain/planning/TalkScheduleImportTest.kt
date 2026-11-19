@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner.importer.domain.planning
 
+import de.geosphere.congregationplaner.event.domain.model.EventType
 import de.geosphere.congregationplaner.importer.domain.model.ImportKind
 import de.geosphere.congregationplaner.importer.domain.model.ImportRow
 import de.geosphere.congregationplaner.importer.domain.model.ImportTable
@@ -10,7 +11,6 @@ import de.geosphere.congregationplaner.talk.domain.model.ExternalDirectory
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
-import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.model.talkHistoryOf
 import de.geosphere.congregationplaner.talk.domain.usecase.checked
 import kotlinx.datetime.LocalDate
@@ -26,13 +26,13 @@ class TalkScheduleImportTest {
     private val berg = VisitingSpeaker("5", "20", "Berg", "Lea", talkNumbers = listOf(12))
     private val congregation = ExternalCongregation("20", "7", "Musterstadt")
     private val directory = ExternalDirectory(listOf(ExternalCircuit("7", "Nord")), listOf(congregation), listOf(berg))
-    private val kongress = WeekEvent("e2", "Kreiskongress", cancelsTalk = true)
+    private val kongress = EventType("e2", "Kreiskongress", cancelsTalk = true)
 
     private fun context(existing: List<TalkSlot> = emptyList()) = ScheduleImportContext(
         existingSlots = existing,
         catalog = listOf(Talk(12, "Zwölf"), Talk(45, "Fünfundvierzig")),
-        weekEvents = listOf(kongress),
-        weekEventIdBySourceId = mapOf("2" to "e2"),
+        eventTypes = listOf(kongress),
+        eventTypeIdBySourceId = mapOf("2" to "e2"),
         directory = directory,
         timeFor = { time },
     )
@@ -179,5 +179,25 @@ class TalkScheduleImportTest {
         val again = planTalkSchedule(rows, context(saved))
 
         assertEquals(listOf(ImportKind.SKIP), again.slots.entries.map { it.kind })
+    }
+
+    @Test
+    fun `missing event types are planned once per name and known names are mapped`() {
+        val rows = table(
+            row(2, "ID_Wochenereignis" to "2", "Ereignis" to "kreiskongress"),
+            row(3, "ID_Wochenereignis" to "3", "Ereignis" to "Zweigbesuch"),
+            row(4, "ID_Wochenereignis" to "3", "Ereignis" to "zweigbesuch"),
+            row(5, "ID_Wochenereignis" to "4", "Ereignis" to "Dienstwoche"),
+            row(6, "Ereignis" to "Ohne ID"),
+        )
+
+        val plan = planScheduleEventTypes(rows, listOf(kongress))
+
+        assertEquals(
+            listOf(EventType(name = "Zweigbesuch", cancelsTalk = true), EventType(name = "Dienstwoche")),
+            plan.entries.map { it.item },
+        )
+        assertTrue(plan.entries.all { it.kind == ImportKind.CREATE })
+        assertEquals(mapOf("2" to "e2"), eventTypeIdsBySource(rows, listOf(kongress)))
     }
 }

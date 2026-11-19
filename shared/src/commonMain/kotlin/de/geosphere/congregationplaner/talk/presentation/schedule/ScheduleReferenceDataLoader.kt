@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner.talk.presentation.schedule
 
+import de.geosphere.congregationplaner.event.domain.usecase.ObserveEventTypesUseCase
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.talk.domain.usecase.BuildWhatsAppMessagesUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.CheckSlotTalkUseCase
@@ -8,7 +9,6 @@ import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalSpeake
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkCatalogUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkMembersUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkPlanningSettingsUseCase
-import de.geosphere.congregationplaner.talk.domain.usecase.ObserveWeekEventsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveTalkPlanningSettingsUseCase
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.permission.UserPermissionPolicy
@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 @Suppress("LongParameterList") // ein reines Bündel der Abhängigkeiten, damit das ViewModel überschaubar bleibt
 @Inject
 class ScheduleReferenceUseCases(
-    val observeWeekEvents: ObserveWeekEventsUseCase,
+    val observeEventTypes: ObserveEventTypesUseCase,
     val observeTalkCatalog: ObserveTalkCatalogUseCase,
     val observeTalkMembers: ObserveTalkMembersUseCase,
     val observeExternalSpeakers: ObserveExternalSpeakersUseCase,
@@ -38,8 +38,9 @@ class ScheduleReferenceUseCases(
 )
 
 /**
- * Beobachtet Wochenereignisse, Vortragsliste, Redner und externe Redner, solange der Nutzer sie braucht: Ereignisse
- * und Vortragsliste nur der Planer, die Mitglieder nur mit dem Recht, sie einzusehen.
+ * Beobachtet Ereignisarten, Vortragsliste, Redner und externe Redner, solange der Nutzer sie braucht: die
+ * Ereignisarten jeder Betrachter (für ihre Icons), die Vortragsliste nur der Planer, die Mitglieder nur mit dem Recht,
+ * sie einzusehen.
  */
 class ScheduleReferenceDataLoader(
     private val session: TalkScheduleSession,
@@ -48,7 +49,7 @@ class ScheduleReferenceDataLoader(
     private val jobs = mutableMapOf<Source, Job>()
 
     private enum class Source(val label: String) {
-        WEEK_EVENTS("Wochenereignisse"),
+        EVENT_TYPES("Ereignisarten"),
         TALKS("Vortragsliste"),
         EXTERNAL_SPEAKERS("Externe Redner"),
         MEMBERS("Redner und Vorsitzende"),
@@ -60,8 +61,9 @@ class ScheduleReferenceDataLoader(
     fun observe(user: AppUser) {
         val canPlan = useCases.talkPolicy.canPlanTalks(user)
         val canView = useCases.talkPolicy.canViewTalkPlanning(user)
-        keep(Source.WEEK_EVENTS, canPlan, { useCases.observeWeekEvents(user) }) { state, events ->
-            state.copy(weekEvents = events)
+        // Every viewer needs the event types: the list shows their icons.
+        keep(Source.EVENT_TYPES, canView, { useCases.observeEventTypes(user) }) { state, types ->
+            state.copy(eventTypes = types)
         }
         keep(Source.TALKS, canPlan, { useCases.observeTalkCatalog(user) }) { state, talks -> state.copy(talks = talks) }
         keep(Source.EXTERNAL_SPEAKERS, canView, { useCases.observeExternalSpeakers(user) }) { state, speakers ->

@@ -1,6 +1,7 @@
 package de.geosphere.congregationplaner.talk.presentation.schedule
 
 import androidx.compose.ui.text.font.FontWeight
+import de.geosphere.congregationplaner.event.domain.model.EventType
 import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.SpeakerContact
@@ -157,6 +158,16 @@ class TalkSlotPresentationTest {
         assertEquals("Dienstwoche", slotEventLine(withEvent))
         assertEquals("Kongress", slotEventLine(cancelled))
         assertNull(slotEventLine(slot()))
+    }
+
+    @Test
+    fun `the event icon comes from the event type by id and is missing for deleted types`() {
+        val types = listOf(EventType("besuch", "Umbenannt", icon = "ic_cp_persons_doorstep_duo"))
+        val withEvent = slot { it.copy(weekEventId = "besuch", weekEventName = "Dienstwoche") }
+
+        assertEquals("ic_cp_persons_doorstep_duo", slotEventIcon(withEvent, types))
+        assertNull(slotEventIcon(withEvent.copy(weekEventId = "gelöscht"), types))
+        assertNull(slotEventIcon(slot(), types))
     }
 
     @Test

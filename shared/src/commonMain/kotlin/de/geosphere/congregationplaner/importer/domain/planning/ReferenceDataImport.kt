@@ -16,7 +16,7 @@ private const val TALK_TITLE_COLUMN = "Titel"
 private const val TALK_ACTIVE_COLUMN = "Aktiv"
 
 // Source events after which the talk is dropped (decided in the import plan); all others keep it.
-private val EVENTS_CANCELLING_TALK = setOf(
+internal val EVENTS_CANCELLING_TALK = setOf(
     "Kreiskongress",
     "Regionaler Kongress",
     "Besondere Zusammenkunft",

@@ -2,6 +2,9 @@ package de.geosphere.congregationplaner.importer.presentation
 
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
 import de.geosphere.congregationplaner.congregation.testing.FakeCongregationMetadataRepository
+import de.geosphere.congregationplaner.event.domain.permission.EventTypePolicy
+import de.geosphere.congregationplaner.event.domain.usecase.SaveEventTypeUseCase
+import de.geosphere.congregationplaner.event.testing.FakeEventTypeRepository
 import de.geosphere.congregationplaner.importer.data.ImportFileSource
 import de.geosphere.congregationplaner.importer.domain.model.ImportRow
 import de.geosphere.congregationplaner.importer.domain.model.ImportTable
@@ -84,8 +87,11 @@ class ImportViewModelTest {
         countries: List<CountryOption> = listOf(testCountry),
     ): ImportViewModel {
         val events = FakeWeekEventRepository()
+        val eventTypes = FakeEventTypeRepository()
         val prepare = PrepareImportUseCase(
             events,
+            eventTypes,
+            SaveEventTypeUseCase(eventTypes, EventTypePolicy()),
             catalog,
             ObserveExternalDirectoryUseCase(directory),
             schedule,

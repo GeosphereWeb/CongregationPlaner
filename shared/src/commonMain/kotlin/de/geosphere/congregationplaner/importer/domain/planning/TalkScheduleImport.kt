@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner.importer.domain.planning
 
+import de.geosphere.congregationplaner.event.domain.model.EventType
 import de.geosphere.congregationplaner.importer.domain.model.ImportError
 import de.geosphere.congregationplaner.importer.domain.model.ImportKind
 import de.geosphere.congregationplaner.importer.domain.model.ImportPlan
@@ -11,7 +12,6 @@ import de.geosphere.congregationplaner.talk.domain.model.ExternalDirectory
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
-import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 
@@ -30,16 +30,16 @@ private const val INFORMED = "rednerIstInformiert"
  * Everything the schedule import needs from the target congregation and the earlier import steps.
  *
  * @param existingSlots slots already stored in the target congregation; only empty ones are filled.
- * @param weekEvents the week events as they exist after the week event import.
- * @param weekEventIdBySourceId source event ID -> ID in [weekEvents] (see [WeekEventImport.idBySourceId]).
+ * @param eventTypes the event types of the congregation (ADR-0036), including those the import creates.
+ * @param eventTypeIdBySourceId source event ID -> ID in [eventTypes] (see [eventTypeIdsBySource]).
  * @param directory the speaker directory as it exists after the speaker list import.
  * @param timeFor meeting time for a year (the source has no time of day).
  */
 data class ScheduleImportContext(
     val existingSlots: List<TalkSlot>,
     val catalog: List<Talk>,
-    val weekEvents: List<WeekEvent>,
-    val weekEventIdBySourceId: Map<String, String>,
+    val eventTypes: List<EventType>,
+    val eventTypeIdBySourceId: Map<String, String>,
     val directory: ExternalDirectory,
     val timeFor: (year: Int) -> LocalTime,
 )
@@ -99,8 +99,8 @@ private fun buildSlot(row: ImportRow, date: LocalDate, run: ScheduleRun): TalkSl
         confirmed = row.text(INFORMED)?.toDoubleOrNull()?.let { it != 0.0 } ?: false,
     )
     row.idText(EVENT_ID)?.let { sourceId ->
-        val event = context.weekEventIdBySourceId[sourceId]?.let { id ->
-            context.weekEvents.firstOrNull { it.id == id }
+        val event = context.eventTypeIdBySourceId[sourceId]?.let { id ->
+            context.eventTypes.firstOrNull { it.id == id }
         }
         if (event != null) {
             slot = slot.copy(weekEventId = event.id, weekEventName = event.name, talkCancelled = event.cancelsTalk)
@@ -152,4 +152,38 @@ private fun freeSpeakerName(row: ImportRow): String? {
     val person = listOfNotNull(lastName, row.text(FIRST_NAME)).joinToString(", ")
     val name = row.text(CONGREGATION_NAME)?.let { "$person ($it)" } ?: person
     return name.take(TalkSlot.MAX_PERSON_NAME_LENGTH)
+}
+
+/**
+ * The event types the schedule needs: every event name of the file that the congregation does not have yet (ignoring
+ * case) is created, with "talk cancelled" preset as for the week events; known names are left alone.
+ */
+fun planScheduleEventTypes(table: ImportTable, existing: List<EventType>): ImportPlan<EventType> {
+    val known = existing.associateBy { it.name.trim().lowercase() }.toMutableMap()
+    val entries = table.rows.mapNotNull { row ->
+        val name = row.text(EVENT_NAME)?.takeIf { row.idText(EVENT_ID) != null } ?: return@mapNotNull null
+        when {
+            name.length > EventType.MAX_NAME_LENGTH -> null
+            name.lowercase() in known -> null
+            else -> EventType(
+                name = name,
+                cancelsTalk = EVENTS_CANCELLING_TALK.any {
+                    it.equals(name, ignoreCase = true)
+                },
+            ).also {
+                known[name.lowercase()] = it
+            }
+        }
+    }.map { PlanEntry(it, ImportKind.CREATE) }
+    return ImportPlan(entries, emptyList())
+}
+
+/** The schedule file carries event ID and name per row; match the name against the event types of the congregation. */
+fun eventTypeIdsBySource(table: ImportTable, types: List<EventType>): Map<String, String> {
+    val idByName = types.associate { it.name.trim().lowercase() to it.id }
+    return table.rows.mapNotNull { row ->
+        val sourceId = row.idText(EVENT_ID) ?: return@mapNotNull null
+        val target = row.text(EVENT_NAME)?.lowercase()?.let(idByName::get) ?: return@mapNotNull null
+        sourceId to target
+    }.toMap()
 }

@@ -3,13 +3,17 @@ package de.geosphere.congregationplaner.talk.presentation.schedule
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import de.geosphere.congregationplaner.event.domain.model.EventType
+import de.geosphere.congregationplaner.event.presentation.eventTypeIcon
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
-import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.ui.button.PrimaryButton
@@ -17,6 +21,7 @@ import de.geosphere.congregationplaner.ui.card.FieldCard
 import de.geosphere.congregationplaner.ui.form.FieldActions
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
+import org.jetbrains.compose.resources.painterResource
 
 private val ACTION_HEIGHT = 44.dp
 
@@ -24,7 +29,7 @@ private val ACTION_HEIGHT = 44.dp
 internal class CardActions(val onPick: () -> Unit, val onRemove: () -> Unit, val onOpen: () -> Unit)
 
 @Composable
-internal fun WeekEventChips(slot: TalkSlot, weekEvents: List<WeekEvent>, onSelect: (WeekEvent?) -> Unit) {
+internal fun WeekEventChips(slot: TalkSlot, eventTypes: List<EventType>, onSelect: (EventType?) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text("Wochenereignis", style = MaterialTheme.typography.labelLarge)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -33,15 +38,22 @@ internal fun WeekEventChips(slot: TalkSlot, weekEvents: List<WeekEvent>, onSelec
                 onClick = { onSelect(null) },
                 label = { Text("Kein Ereignis") },
             )
-            weekEvents.forEach { event ->
+            eventTypes.forEach { event ->
                 FilterChip(
                     selected = slot.weekEventId == event.id,
                     onClick = { onSelect(event) },
                     label = { Text(event.name) },
+                    leadingIcon = {
+                        Icon(
+                            painterResource(eventTypeIcon(event.icon)),
+                            contentDescription = null,
+                            Modifier.size(18.dp),
+                        )
+                    },
                 )
             }
             // Ein inzwischen entferntes Ereignis bleibt am Termin sichtbar.
-            if (slot.weekEventId != null && weekEvents.none { it.id == slot.weekEventId }) {
+            if (slot.weekEventId != null && eventTypes.none { it.id == slot.weekEventId }) {
                 FilterChip(selected = true, onClick = {}, label = { Text(slot.weekEventName.orEmpty()) })
             }
         }
@@ -150,7 +162,8 @@ private fun SlotEditorCardsPreview() = PreviewThemeWrapper {
     )
     val actions = CardActions({}, {}, {})
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        WeekEventChips(slot, listOf(WeekEvent("kongress", "Kongress", cancelsTalk = true)), {})
+        WeekEventChips(slot, listOf(EventType("kongress", "Kongress", cancelsTalk = true, icon = "ic_cp_arena_duo")), {
+        })
         // Gespeichert: beide Karten führen weiter.
         TalkCard(slot, slotTalkText(slot), inactiveNumber = null, historyTalk = 12, actions = actions)
         SpeakerCard(slot, slotSpeakerText(slot), supporting = null, directorySpeaker = "e1", actions = actions)
