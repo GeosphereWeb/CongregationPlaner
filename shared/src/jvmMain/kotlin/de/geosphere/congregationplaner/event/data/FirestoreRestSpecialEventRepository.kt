@@ -52,6 +52,7 @@ internal class FirestoreRestSpecialEventRepository(
                     add("startDate", firestoreString(event.startDate.toString()))
                     add("endDate", firestoreString(event.endDate.toString()))
                     add(AUDIENCE_FIELD, firestoreStringArray(event.audienceValues()))
+                    event.eventTypeId?.let { add(EVENT_TYPE_FIELD, firestoreString(it)) }
                 },
             )
             if (event.id.isBlank()) {
@@ -90,4 +91,5 @@ private fun FirestoreRestDocument.toSpecialEvent(): SpecialEvent? = specialEvent
     startDate = fields.optionalStringField("startDate"),
     endDate = fields.optionalStringField("endDate"),
     audience = fields.stringArrayField(AUDIENCE_FIELD),
+    eventTypeId = fields.optionalStringField(EVENT_TYPE_FIELD),
 )

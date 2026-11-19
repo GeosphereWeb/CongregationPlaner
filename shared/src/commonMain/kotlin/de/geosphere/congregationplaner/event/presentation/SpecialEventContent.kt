@@ -7,12 +7,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -22,10 +24,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.event.di.SpecialEventGraph
 import de.geosphere.congregationplaner.event.domain.model.EventAudience
+import de.geosphere.congregationplaner.event.domain.model.EventType
 import de.geosphere.congregationplaner.event.domain.model.SpecialEvent
 import de.geosphere.congregationplaner.talk.presentation.reference.ErrorRow
 import de.geosphere.congregationplaner.talk.presentation.reference.ReferenceListDetail
@@ -38,6 +42,7 @@ import de.geosphere.congregationplaner.ui.pane.DetailPlaceholder
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import dev.zacsweers.metro.createGraph
 import kotlinx.datetime.LocalDate
+import org.jetbrains.compose.resources.painterResource
 
 @Composable
 internal fun SpecialEventRoute(currentUser: AppUser) {
@@ -81,7 +86,7 @@ internal fun SpecialEventContent(
             onCreate = actions.onNew,
             list = { SpecialEventList(state, actions) },
             detail = {
-                state.editor?.let { SpecialEventEditorCard(it, state.isSaving, actions) }
+                state.editor?.let { SpecialEventEditorCard(it, state.eventTypes, state.isSaving, actions) }
                     ?: DetailPlaceholder("Wähle ein Ereignis aus oder lege ein neues an.")
             },
         )
@@ -100,7 +105,17 @@ private fun SpecialEventList(state: SpecialEventUiState, actions: SpecialEventAc
                 actionsEnabled = !state.isSaving,
                 canDelete = true,
             ) {
-                Text(event.title, style = MaterialTheme.typography.titleMedium)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        painterResource(eventTypeIcon(specialEventIconName(event, state.eventTypes))),
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Text(event.title, style = MaterialTheme.typography.titleMedium)
+                }
                 Text(event.dateRangeText())
                 Text("Sichtbar für: ${event.audienceText()}", style = MaterialTheme.typography.bodySmall)
             }
@@ -109,7 +124,12 @@ private fun SpecialEventList(state: SpecialEventUiState, actions: SpecialEventAc
 }
 
 @Composable
-private fun SpecialEventEditorCard(editor: SpecialEventEditorState, isSaving: Boolean, actions: SpecialEventActions) {
+private fun SpecialEventEditorCard(
+    editor: SpecialEventEditorState,
+    eventTypes: List<EventType>,
+    isSaving: Boolean,
+    actions: SpecialEventActions,
+) {
     val event = editor.event
     Card(colors = nightCardColors()) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -117,6 +137,9 @@ private fun SpecialEventEditorCard(editor: SpecialEventEditorState, isSaving: Bo
                 if (editor.isNew) "Neues Ereignis" else "Ereignis ändern",
                 style = MaterialTheme.typography.titleMedium,
             )
+            EventTypeChips(event.eventTypeId, eventTypes, enabled = !isSaving) {
+                actions.onEditorChange(editor.withType(it))
+            }
             OutlinedTextField(
                 value = event.title,
                 onValueChange = { actions.onEditorChange(editor.copy(event = event.copy(title = it))) },
@@ -147,8 +170,43 @@ private fun SpecialEventEditorCard(editor: SpecialEventEditorState, isSaving: Bo
     }
 }
 
+/** Auswahl der Ereignisart mit Icon; „Ohne Art“ lässt nur den Titel. */
+@Composable
+private fun EventTypeChips(
+    selectedId: String?,
+    eventTypes: List<EventType>,
+    enabled: Boolean,
+    onSelect: (EventType?) -> Unit,
+) {
+    Text("Art", style = MaterialTheme.typography.labelLarge)
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FilterChip(
+            selected = selectedId == null,
+            onClick = { onSelect(null) },
+            label = { Text("Ohne Art") },
+            enabled = enabled,
+        )
+        eventTypes.forEach { type ->
+            FilterChip(
+                selected = selectedId == type.id,
+                onClick = { onSelect(type) },
+                label = { Text(type.name) },
+                leadingIcon = {
+                    Icon(painterResource(eventTypeIcon(type.icon)), contentDescription = null, Modifier.size(18.dp))
+                },
+                enabled = enabled,
+            )
+        }
+    }
+}
+
+private val previewTypes = listOf(
+    EventType("kk", "Kreiskongress", cancelsTalk = true, icon = "ic_cp_arena_duo"),
+    EventType("dw", "Dienstwoche", icon = "ic_cp_persons_doorstep_duo"),
+)
+
 private val previewEvents = listOf(
-    SpecialEvent("1", "Kreiskongress", LocalDate(2027, 3, 6), LocalDate(2027, 3, 7)),
+    SpecialEvent("1", "Kreiskongress", LocalDate(2027, 3, 6), LocalDate(2027, 3, 7), eventTypeId = "kk"),
     SpecialEvent(
         "2",
         "Ältestenschule",
@@ -163,6 +221,7 @@ private fun SpecialEventContentPreview() = PreviewThemeWrapper {
     SpecialEventContent(
         state = SpecialEventUiState(
             events = previewEvents,
+            eventTypes = previewTypes,
             isLoading = false,
             canManage = true,
             editor = SpecialEventEditorState(previewEvents[1], previewEvents[1]),
@@ -185,6 +244,7 @@ private fun SpecialEventContentEmptyPreview() = PreviewThemeWrapper {
 private fun SpecialEventEditorSavingPreview() = PreviewThemeWrapper {
     SpecialEventEditorCard(
         SpecialEventEditorState(SpecialEvent(title = "Neu", startDate = LocalDate(2027, 5, 1))),
+        eventTypes = previewTypes,
         isSaving = true,
         actions = SpecialEventActions(),
     )

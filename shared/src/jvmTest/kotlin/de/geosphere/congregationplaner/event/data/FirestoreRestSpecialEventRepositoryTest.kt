@@ -24,6 +24,7 @@ class FirestoreRestSpecialEventRepositoryTest {
         startDate = LocalDate(2027, 6, 11),
         endDate = LocalDate(2027, 6, 13),
         audience = setOf(EventAudience.SISTERS, EventAudience.BROTHERS),
+        eventTypeId = "kk",
     )
 
     @Test
@@ -31,7 +32,7 @@ class FirestoreRestSpecialEventRepositoryTest {
         FakeResponse(
             200,
             """{"documents":[
-                {"name":"x/events/ev1","fields":{"title":{"stringValue":"Kongress"},
+                {"name":"x/events/ev1","fields":{"title":{"stringValue":"Kongress"},"eventTypeId":{"stringValue":"kk"},
                     "startDate":{"stringValue":"2027-06-11"},"endDate":{"stringValue":"2027-06-13"},
                     "audience":{"arrayValue":{"values":[{"stringValue":"BROTHERS"},{"stringValue":"SISTERS"},
                         {"stringValue":"UNKNOWN"}]}}}},
@@ -55,7 +56,7 @@ class FirestoreRestSpecialEventRepositoryTest {
     fun `observeFor runs a query for the groups and skips the read time row`() = runWithServer({
         FakeResponse(
             200,
-            """[{"document":{"name":"x/events/ev1","fields":{"title":{"stringValue":"Kongress"},
+            """[{"document":{"name":"x/events/ev1","fields":{"title":{"stringValue":"Kongress"},"eventTypeId":{"stringValue":"kk"},
                     "startDate":{"stringValue":"2027-06-11"},"endDate":{"stringValue":"2027-06-13"},
                     "audience":{"arrayValue":{"values":[{"stringValue":"BROTHERS"},{"stringValue":"SISTERS"}]}}}},
                 "readTime":"t"},
@@ -92,6 +93,7 @@ class FirestoreRestSpecialEventRepositoryTest {
         assertEquals(eventsPath, post.path)
         assertTrue(post.body.contains(""""startDate":{"stringValue":"2027-06-11"}"""))
         assertTrue(post.body.contains(""""endDate":{"stringValue":"2027-06-13"}"""))
+        assertTrue(post.body.contains(""""eventTypeId":{"stringValue":"kk"}"""))
         assertTrue(
             post.body.contains(
                 """"audience":{"arrayValue":{"values":[{"stringValue":"BROTHERS"},{"stringValue":"SISTERS"}]}}""",

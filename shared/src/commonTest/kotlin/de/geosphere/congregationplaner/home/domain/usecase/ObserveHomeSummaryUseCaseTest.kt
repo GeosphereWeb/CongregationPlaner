@@ -1,9 +1,13 @@
 package de.geosphere.congregationplaner.home.domain.usecase
 
 import de.geosphere.congregationplaner.event.domain.model.EventAudience
+import de.geosphere.congregationplaner.event.domain.model.EventType
 import de.geosphere.congregationplaner.event.domain.model.SpecialEvent
+import de.geosphere.congregationplaner.event.domain.permission.EventTypePolicy
 import de.geosphere.congregationplaner.event.domain.permission.SpecialEventPolicy
+import de.geosphere.congregationplaner.event.domain.usecase.ObserveEventTypesUseCase
 import de.geosphere.congregationplaner.event.domain.usecase.ObserveUpcomingEventsUseCase
+import de.geosphere.congregationplaner.event.testing.FakeEventTypeRepository
 import de.geosphere.congregationplaner.event.testing.FakeSpecialEventRepository
 import de.geosphere.congregationplaner.home.domain.model.HomeSummary
 import de.geosphere.congregationplaner.home.domain.model.TalkSummary
@@ -32,12 +36,14 @@ class ObserveHomeSummaryUseCaseTest {
     private val schedule = FakeTalkScheduleRepository()
     private val users = FakeUserRepository()
     private val events = FakeSpecialEventRepository()
+    private val eventTypes = FakeEventTypeRepository()
     private val useCase = ObserveHomeSummaryUseCase(
         TalkSchedulePermissionPolicy(),
         UserPermissionPolicy(),
         ObserveTalkYearUseCase(schedule),
         ObserveMembersUseCase(users),
         ObserveUpcomingEventsUseCase(events, SpecialEventPolicy()),
+        ObserveEventTypesUseCase(eventTypes, EventTypePolicy()),
     )
 
     private fun user(vararg roles: CongregationRole, approved: Boolean = true) =
@@ -214,5 +220,16 @@ class ObserveHomeSummaryUseCaseTest {
         val failure = runCatching { summary(user(CongregationRole.TALK_PLANNER)) }.exceptionOrNull()
 
         assertEquals("permission denied", failure?.message)
+    }
+
+    @Test
+    fun `members get the event types for the icons and a failure only drops them`() = runTest {
+        val congress = EventType("kk", "Kreiskongress", icon = "ic_cp_arena_duo")
+        eventTypes.types.value = listOf(congress)
+
+        assertEquals(listOf(congress), summary(user()).eventTypes)
+
+        eventTypes.observeError = IllegalStateException("rules not deployed")
+        assertEquals(emptyList(), summary(user()).eventTypes)
     }
 }

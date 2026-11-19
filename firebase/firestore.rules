@@ -353,10 +353,12 @@ service cloud.firestore {
         data.createdAt == request.time;
     }
 
-    // Special event of a congregation: title (1..100), startDate <= endDate ('yyyy-MM-dd') and the addressed
-    // groups (1..5, no duplicates).
+    // Special event of a congregation: title (1..100), startDate <= endDate ('yyyy-MM-dd'), the addressed
+    // groups (1..5, no duplicates) and optionally the id of an event type (ADR-0036).
     function isValidSpecialEvent(data) {
-      return data.keys().hasOnly(['title', 'startDate', 'endDate', 'audience']) &&
+      return data.keys().hasOnly(['title', 'startDate', 'endDate', 'audience', 'eventTypeId']) &&
+        (!('eventTypeId' in data) ||
+          (data.eventTypeId is string && data.eventTypeId.size() >= 1 && data.eventTypeId.size() <= 100)) &&
         data.keys().hasAll(['title', 'startDate', 'endDate', 'audience']) &&
         data.title is string && data.title.size() >= 1 && data.title.size() <= 100 &&
         isValidDateId(data.startDate) && isValidDateId(data.endDate) &&

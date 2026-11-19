@@ -17,8 +17,10 @@ import congregationplaner.uilib.generated.resources.ic_cp_calendar_check_duo
 import congregationplaner.uilib.generated.resources.ic_cp_globe_lands_fill
 import congregationplaner.uilib.generated.resources.ic_cp_speaker_audience_duo
 import congregationplaner.uilib.generated.resources.ic_cp_speaker_duo
+import de.geosphere.congregationplaner.event.domain.model.EventType
 import de.geosphere.congregationplaner.event.domain.model.SpecialEvent
-import de.geosphere.congregationplaner.event.presentation.specialEventIcon
+import de.geosphere.congregationplaner.event.presentation.eventTypeIcon
+import de.geosphere.congregationplaner.event.presentation.specialEventIconName
 import de.geosphere.congregationplaner.home.domain.model.HomeSummary
 import de.geosphere.congregationplaner.home.domain.model.TalkSummary
 import de.geosphere.congregationplaner.organization.domain.model.SelectedCongregation
@@ -65,7 +67,7 @@ internal fun HomeContent(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (summary.events.isNotEmpty()) {
                     val canManage = CongregationSection.SPECIAL_EVENTS in visible.congregationSections
-                    EventsBlock(summary.events, canManage, actions)
+                    EventsBlock(summary.events, summary.eventTypes, canManage, actions)
                 }
                 summary.talk?.let { TalkBlock(it, actions) }
                 summary.pendingApprovals?.let { ApprovalsBlock(it, actions) }
@@ -94,7 +96,12 @@ internal fun HomeContent(
 
 /** Die kommenden Ereignisse; der Versammlungsadmin öffnet mit einem Tipp ihre Pflege. */
 @Composable
-private fun EventsBlock(events: List<SpecialEvent>, canManage: Boolean, actions: AppNavigationActions) {
+private fun EventsBlock(
+    events: List<SpecialEvent>,
+    types: List<EventType>,
+    canManage: Boolean,
+    actions: AppNavigationActions,
+) {
     SectionLabel(
         "Besondere Ereignisse",
         Modifier.padding(top = 8.dp),
@@ -107,7 +114,7 @@ private fun EventsBlock(events: List<SpecialEvent>, canManage: Boolean, actions:
             title = event.title,
             onClick = open,
             supportingText = eventDatesText(event),
-            titleIcon = specialEventIcon(event.title),
+            titleIcon = eventTypeIcon(specialEventIconName(event, types)),
         )
     }
 }
@@ -204,9 +211,10 @@ private val previewState = HomeUiState(
         talk = TalkSummary(previewNext, listOf(LocalDate(2026, 11, 15), LocalDate(2026, 11, 22))),
         pendingApprovals = 2,
         events = listOf(
-            SpecialEvent("1", "Kreiskongress", LocalDate(2026, 11, 14), LocalDate(2026, 11, 15)),
+            SpecialEvent("1", "Kreiskongress", LocalDate(2026, 11, 14), LocalDate(2026, 11, 15), eventTypeId = "kk"),
             SpecialEvent("2", "Besuch des Kreisaufsehers", LocalDate(2026, 12, 1)),
         ),
+        eventTypes = listOf(EventType("kk", "Kreiskongress", cancelsTalk = true, icon = "ic_cp_arena_duo")),
     ),
 )
 

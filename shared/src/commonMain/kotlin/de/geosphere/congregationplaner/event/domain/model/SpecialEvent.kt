@@ -6,7 +6,8 @@ import kotlinx.datetime.LocalDate
 
 /**
  * Ein besonderes Ereignis der Versammlung aus `…/congregation/{id}/events/{id}` (ADR-0033): ein oder mehrere Tage,
- * sichtbar für die Gruppen in [audience]. Eintägige Ereignisse haben [endDate] gleich [startDate].
+ * sichtbar für die Gruppen in [audience]. Eintägige Ereignisse haben [endDate] gleich [startDate]. [eventTypeId]
+ * verweist optional auf eine Ereignisart der Versammlung (ADR-0036), von der das Icon kommt.
  */
 data class SpecialEvent(
     val id: String = "",
@@ -14,6 +15,7 @@ data class SpecialEvent(
     val startDate: LocalDate,
     val endDate: LocalDate = startDate,
     val audience: Set<EventAudience> = setOf(EventAudience.ALL),
+    val eventTypeId: String? = null,
 ) {
     val isSingleDay: Boolean get() = startDate == endDate
 
