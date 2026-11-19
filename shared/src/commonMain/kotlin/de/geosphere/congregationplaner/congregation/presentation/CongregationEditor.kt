@@ -110,5 +110,6 @@ private fun MeetingTimesFields(congregation: CongregationMetadata, onChange: (Co
             onTimeChange = { onChange(congregation.copy(weekendMeetingTime = it)) },
         )
         YearlyMeetingTimesEditor(congregation, onChange)
+        EventHorizonInput(congregation.eventHorizon) { onChange(congregation.copy(eventHorizon = it)) }
     }
 }

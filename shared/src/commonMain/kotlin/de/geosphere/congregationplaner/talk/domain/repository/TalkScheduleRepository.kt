@@ -12,6 +12,12 @@ interface TalkScheduleRepository {
     /** Alle Termine der Versammlung über alle Jahre, aufsteigend nach Datum (Grundlage der Vortragshistorie). */
     fun observeAll(congregation: CongregationRef): Flow<List<TalkSlot>>
 
+    /**
+     * Die Termine mit Wochenereignis über alle Jahre, aufsteigend nach Datum. Sie dürfen auch freigegebene Mitglieder
+     * ohne Planerrolle lesen (Startseite, ADR-0037).
+     */
+    fun observeWeekEventSlots(congregation: CongregationRef): Flow<List<TalkSlot>>
+
     suspend fun saveSlot(congregation: CongregationRef, slot: TalkSlot): Result<TalkSlot>
 
     /** Speichert alle [slots] in einem Schreibvorgang: entweder alle oder keiner (z. B. beim Tauschen). */

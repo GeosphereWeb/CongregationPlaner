@@ -1,5 +1,7 @@
 package de.geosphere.congregationplaner.home.di
 
+import de.geosphere.congregationplaner.congregation.data.createCongregationMetadataRepository
+import de.geosphere.congregationplaner.congregation.domain.repository.CongregationMetadataRepository
 import de.geosphere.congregationplaner.event.data.createEventTypeRepository
 import de.geosphere.congregationplaner.event.data.createSpecialEventRepository
 import de.geosphere.congregationplaner.event.domain.repository.EventTypeRepository
@@ -24,6 +26,9 @@ interface HomeGraph {
 
     @Provides
     fun provideSpecialEventRepository(): SpecialEventRepository = createSpecialEventRepository()
+
+    @Provides
+    fun provideCongregationMetadataRepository(): CongregationMetadataRepository = createCongregationMetadataRepository()
 
     @Provides
     fun provideEventTypeRepository(): EventTypeRepository = createEventTypeRepository()

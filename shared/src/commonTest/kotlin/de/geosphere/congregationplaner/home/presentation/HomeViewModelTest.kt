@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner.home.presentation
 
+import de.geosphere.congregationplaner.congregation.testing.FakeCongregationMetadataRepository
 import de.geosphere.congregationplaner.event.domain.permission.EventTypePolicy
 import de.geosphere.congregationplaner.event.domain.permission.SpecialEventPolicy
 import de.geosphere.congregationplaner.event.domain.usecase.ObserveEventTypesUseCase
@@ -7,7 +8,9 @@ import de.geosphere.congregationplaner.event.domain.usecase.ObserveUpcomingEvent
 import de.geosphere.congregationplaner.event.testing.FakeEventTypeRepository
 import de.geosphere.congregationplaner.event.testing.FakeSpecialEventRepository
 import de.geosphere.congregationplaner.home.domain.model.TalkSummary
+import de.geosphere.congregationplaner.home.domain.usecase.ObserveHomeEventsUseCase
 import de.geosphere.congregationplaner.home.domain.usecase.ObserveHomeSummaryUseCase
+import de.geosphere.congregationplaner.home.domain.usecase.ObserveScheduleEventsUseCase
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkYearUseCase
@@ -57,8 +60,11 @@ class HomeViewModelTest {
                 UserPermissionPolicy(),
                 ObserveTalkYearUseCase(schedule),
                 ObserveMembersUseCase(users),
-                ObserveUpcomingEventsUseCase(FakeSpecialEventRepository(), SpecialEventPolicy()),
-                ObserveEventTypesUseCase(FakeEventTypeRepository(), EventTypePolicy()),
+                ObserveHomeEventsUseCase(
+                    ObserveUpcomingEventsUseCase(FakeSpecialEventRepository(), SpecialEventPolicy()),
+                    ObserveScheduleEventsUseCase(schedule, FakeCongregationMetadataRepository(), EventTypePolicy()),
+                    ObserveEventTypesUseCase(FakeEventTypeRepository(), EventTypePolicy()),
+                ),
             ),
         )
     }

@@ -65,6 +65,9 @@ internal val CongregationRef.externalCongregationsPath: String
 
 internal val CongregationRef.visitingSpeakersPath: String get() = "$documentPath/$VISITING_SPEAKERS_SUBCOLLECTION"
 
+/** Firestore-Feld des Wochenereignisses eines Termins; Mitglieder lesen nur Termine, in denen es gesetzt ist. */
+internal const val WEEK_EVENT_ID_FIELD = "weekEventId"
+
 /** Die Dokument-IDs des Jahres sind ISO-Daten und damit lexikographisch geordnet. */
 internal fun yearIdRange(year: Int): ClosedRange<String> =
     LocalDate(year, 1, 1).toString()..LocalDate(year + 1, 1, 1).minus(1, DateTimeUnit.DAY).toString()
@@ -78,6 +81,10 @@ fun unavailableTalkScheduleRepository(platform: String): TalkScheduleRepository 
     }
 
     override fun observeAll(congregation: CongregationRef): Flow<List<TalkSlot>> = flow {
+        throw UnsupportedOperationException("Firestore is not configured for $platform.")
+    }
+
+    override fun observeWeekEventSlots(congregation: CongregationRef): Flow<List<TalkSlot>> = flow {
         throw UnsupportedOperationException("Firestore is not configured for $platform.")
     }
 

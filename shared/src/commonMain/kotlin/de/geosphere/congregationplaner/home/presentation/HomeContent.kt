@@ -17,10 +17,8 @@ import congregationplaner.uilib.generated.resources.ic_cp_calendar_check_duo
 import congregationplaner.uilib.generated.resources.ic_cp_globe_lands_fill
 import congregationplaner.uilib.generated.resources.ic_cp_speaker_audience_duo
 import congregationplaner.uilib.generated.resources.ic_cp_speaker_duo
-import de.geosphere.congregationplaner.event.domain.model.EventType
-import de.geosphere.congregationplaner.event.domain.model.SpecialEvent
 import de.geosphere.congregationplaner.event.presentation.eventTypeIcon
-import de.geosphere.congregationplaner.event.presentation.specialEventIconName
+import de.geosphere.congregationplaner.home.domain.model.HomeEvent
 import de.geosphere.congregationplaner.home.domain.model.HomeSummary
 import de.geosphere.congregationplaner.home.domain.model.TalkSummary
 import de.geosphere.congregationplaner.organization.domain.model.SelectedCongregation
@@ -66,8 +64,7 @@ internal fun HomeContent(
         NightPanel(Modifier.weight(1f)) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (summary.events.isNotEmpty()) {
-                    val canManage = CongregationSection.SPECIAL_EVENTS in visible.congregationSections
-                    EventsBlock(summary.events, summary.eventTypes, canManage, actions)
+                    EventsBlock(summary.events, visible.congregationSections, actions)
                 }
                 summary.talk?.let { TalkBlock(it, actions) }
                 summary.pendingApprovals?.let { ApprovalsBlock(it, actions) }
@@ -94,27 +91,21 @@ internal fun HomeContent(
     }
 }
 
-/** Die kommenden Ereignisse; der Versammlungsadmin öffnet mit einem Tipp ihre Pflege. */
+/** Die kommenden Ereignisse und Termine mit Wochenereignis; ein Tipp öffnet ihre Pflege, wo der Nutzer sie sieht. */
 @Composable
-private fun EventsBlock(
-    events: List<SpecialEvent>,
-    types: List<EventType>,
-    canManage: Boolean,
-    actions: AppNavigationActions,
-) {
+private fun EventsBlock(events: List<HomeEvent>, sections: List<CongregationSection>, actions: AppNavigationActions) {
     SectionLabel(
         "Besondere Ereignisse",
         Modifier.padding(top = 8.dp),
         StatusTone.Sky,
         icon = Res.drawable.ic_cp_calendar_check_duo,
     )
-    val open = { if (canManage) actions.onOpenCongregationSection(CongregationSection.SPECIAL_EVENTS) }
     events.forEach { event ->
         NavCardRow(
             title = event.title,
-            onClick = open,
+            onClick = { homeEventTarget(event, sections)?.let(actions.onOpenCongregationSection) },
             supportingText = eventDatesText(event),
-            titleIcon = eventTypeIcon(specialEventIconName(event, types)),
+            titleIcon = eventTypeIcon(event.icon),
         )
     }
 }
@@ -211,10 +202,10 @@ private val previewState = HomeUiState(
         talk = TalkSummary(previewNext, listOf(LocalDate(2026, 11, 15), LocalDate(2026, 11, 22))),
         pendingApprovals = 2,
         events = listOf(
-            SpecialEvent("1", "Kreiskongress", LocalDate(2026, 11, 14), LocalDate(2026, 11, 15), eventTypeId = "kk"),
-            SpecialEvent("2", "Besuch des Kreisaufsehers", LocalDate(2026, 12, 1)),
+            HomeEvent("Kreiskongress", LocalDate(2026, 11, 14), LocalDate(2026, 11, 15), icon = "ic_cp_arena_duo"),
+            HomeEvent("Besuch des Kreisaufsehers", LocalDate(2026, 11, 22), icon = "ic_cp_square", fromSchedule = true),
+            HomeEvent("Gemeinsamer Dienst", LocalDate(2026, 12, 1)),
         ),
-        eventTypes = listOf(EventType("kk", "Kreiskongress", cancelsTalk = true, icon = "ic_cp_arena_duo")),
     ),
 )
 
@@ -241,6 +232,6 @@ private fun HomeWithoutRolePreview() = HomePreview(HomeUiState(), VisibleNavigat
 @Preview(name = "Ohne Rolle mit Ereignis", widthDp = 360, heightDp = 780)
 @Composable
 private fun HomeWithoutRoleWithEventPreview() = HomePreview(
-    HomeUiState(HomeSummary(events = listOf(SpecialEvent("1", "Kongress", LocalDate(2026, 11, 20))))),
+    HomeUiState(HomeSummary(events = listOf(HomeEvent("Kongress", LocalDate(2026, 11, 20))))),
     VisibleNavigation(),
 )

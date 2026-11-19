@@ -32,6 +32,13 @@ internal class FirestoreTalkScheduleRepository(private val firestore: FirebaseFi
         observeDocuments(firestore.collection(congregation.talkSchedulePath), "talk slot", ::toSlotOrNull)
             .map { slots -> slots.filterNotNull().sortedBy { it.date } }
 
+    // Only this filter matches the rule that lets members without a planner role read the slots (ADR-0037).
+    override fun observeWeekEventSlots(congregation: CongregationRef): Flow<List<TalkSlot>> = observeDocuments(
+        firestore.collection(congregation.talkSchedulePath).whereNotEqualTo(WEEK_EVENT_ID_FIELD, null),
+        "talk slot",
+        ::toSlotOrNull,
+    ).map { slots -> slots.filterNotNull().sortedBy { it.date } }
+
     override suspend fun saveSlot(congregation: CongregationRef, slot: TalkSlot): Result<TalkSlot> =
         runFirestoreCatching("save talk slot") {
             firestore.collection(congregation.talkSchedulePath).document(slot.id)
@@ -86,7 +93,7 @@ private fun toSlotOrNull(document: DocumentSnapshot): TalkSlot? = runCatching { 
 private fun toSlot(document: DocumentSnapshot): TalkSlot = TalkSlot(
     date = LocalDate.parse(document.id),
     time = LocalTime.parse(document.getString("time").orEmpty()),
-    weekEventId = document.getString("weekEventId"),
+    weekEventId = document.getString(WEEK_EVENT_ID_FIELD),
     weekEventName = document.getString("weekEventName"),
     talkCancelled = document.getBoolean("talkCancelled") ?: false,
     confirmed = document.getBoolean("confirmed") ?: false,
@@ -109,7 +116,7 @@ private fun TalkSlot.toFirestoreFields(): Map<String, Any?> = mapOf(
     "talkCancelled" to talkCancelled,
     "confirmed" to confirmed,
     "note" to note,
-    "weekEventId" to weekEventId,
+    WEEK_EVENT_ID_FIELD to weekEventId,
     "weekEventName" to weekEventName,
     "talkNumber" to talkNumber,
     "talkTitle" to talkTitle,

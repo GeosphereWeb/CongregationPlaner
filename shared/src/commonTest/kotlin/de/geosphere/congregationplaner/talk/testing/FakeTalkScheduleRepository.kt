@@ -7,6 +7,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDate
 
 /** In-Memory-[TalkScheduleRepository]; Fehler lassen sich über die `*Result`-Felder einstellen. */
@@ -42,6 +43,12 @@ internal class FakeTalkScheduleRepository(slots: List<TalkSlot> = emptyList()) :
     override fun observeAll(congregation: CongregationRef): Flow<List<TalkSlot>> {
         requestedCongregation = congregation
         return observeError?.let { error -> flow { throw error } } ?: slots
+    }
+
+    override fun observeWeekEventSlots(congregation: CongregationRef): Flow<List<TalkSlot>> {
+        requestedCongregation = congregation
+        return observeError?.let { error -> flow { throw error } }
+            ?: slots.map { all -> all.filter { it.weekEventId != null } }
     }
 
     override suspend fun saveSlots(congregation: CongregationRef, slots: List<TalkSlot>): Result<Unit> {

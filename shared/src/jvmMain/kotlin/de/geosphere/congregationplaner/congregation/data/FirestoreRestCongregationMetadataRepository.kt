@@ -4,6 +4,7 @@ import com.google.gson.JsonObject
 import de.geosphere.congregationplaner.auth.data.FirebaseAuthManager
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationMetadata
 import de.geosphere.congregationplaner.congregation.domain.model.CongregationName
+import de.geosphere.congregationplaner.congregation.domain.model.EventHorizon
 import de.geosphere.congregationplaner.congregation.domain.model.NewCongregationAdmin
 import de.geosphere.congregationplaner.congregation.domain.model.decodeYearlyMeetingTimes
 import de.geosphere.congregationplaner.congregation.domain.model.encodeYearlyMeetingTimes
@@ -134,6 +135,7 @@ internal class FirestoreRestCongregationMetadataRepository(
         weekendMeetingTime = fields.timeField("weekend_meeting_time"),
         weekendMeetingWeekday = fields.intField("weekend_meeting_weekday"),
         yearlyMeetingTimes = fields.stringArrayField("yearly_meeting_times").decodeYearlyMeetingTimes(),
+        eventHorizon = EventHorizon.decode(fields.optionalStringField(EVENT_HORIZON_FIELD)),
     )
 
     private fun CongregationMetadata.toFirestoreFields(): JsonObject = JsonObject().apply {
@@ -143,6 +145,7 @@ internal class FirestoreRestCongregationMetadataRepository(
         add("weekend_meeting_time", firestoreString(weekendMeetingTime.toString()))
         add("weekend_meeting_weekday", firestoreInteger(weekendMeetingWeekday))
         add("yearly_meeting_times", firestoreStringArray(yearlyMeetingTimes.encodeYearlyMeetingTimes()))
+        add(EVENT_HORIZON_FIELD, firestoreString(eventHorizon.encode()))
     }
 
     private fun firestoreInteger(value: Int): JsonObject = JsonObject().apply {
@@ -180,6 +183,7 @@ internal class FirestoreRestCongregationMetadataRepository(
             "weekend_meeting_time",
             "weekend_meeting_weekday",
             "yearly_meeting_times",
+            EVENT_HORIZON_FIELD,
         )
     }
 }
