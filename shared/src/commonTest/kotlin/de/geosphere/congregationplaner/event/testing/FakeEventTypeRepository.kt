@@ -5,17 +5,23 @@ import de.geosphere.congregationplaner.event.domain.repository.EventTypeReposito
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
 
 /** In-Memory-[EventTypeRepository]; neue Arten bekommen die IDs `type-1`, `type-2` … */
 internal class FakeEventTypeRepository(types: List<EventType> = emptyList()) : EventTypeRepository {
     val types = MutableStateFlow(types)
 
     var saveResult: Result<Unit> = Result.success(Unit)
+    var deleteResult: Result<Unit> = Result.success(Unit)
+
+    /** Lässt [observeEventTypes] mit diesem Fehler enden. */
+    var observeError: Throwable? = null
 
     val savedTypes = mutableListOf<EventType>()
     val deletedIds = mutableListOf<String>()
 
-    override fun observeEventTypes(congregation: CongregationRef): Flow<List<EventType>> = types
+    override fun observeEventTypes(congregation: CongregationRef): Flow<List<EventType>> =
+        observeError?.let { error -> flow { throw error } } ?: types
 
     override suspend fun save(congregation: CongregationRef, type: EventType): Result<EventType> = saveResult.map {
         val saved = if (type.id.isBlank()) type.copy(id = "type-${savedTypes.size + 1}") else type
@@ -24,9 +30,8 @@ internal class FakeEventTypeRepository(types: List<EventType> = emptyList()) : E
         saved
     }
 
-    override suspend fun delete(congregation: CongregationRef, id: String): Result<Unit> {
+    override suspend fun delete(congregation: CongregationRef, id: String): Result<Unit> = deleteResult.onSuccess {
         deletedIds += id
         types.value = types.value.filterNot { it.id == id }
-        return Result.success(Unit)
     }
 }

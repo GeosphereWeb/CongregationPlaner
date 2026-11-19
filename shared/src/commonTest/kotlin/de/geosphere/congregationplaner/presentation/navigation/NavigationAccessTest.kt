@@ -75,6 +75,7 @@ class NavigationAccessTest {
                 CongregationSection.GENERAL_DATA,
                 CongregationSection.USER_MANAGEMENT,
                 CongregationSection.SPECIAL_EVENTS,
+                CongregationSection.EVENT_TYPES,
             ),
             visible.congregationSections,
         )
@@ -92,6 +93,7 @@ class NavigationAccessTest {
                 CongregationSection.GENERAL_DATA,
                 CongregationSection.USER_MANAGEMENT,
                 CongregationSection.SPECIAL_EVENTS,
+                CongregationSection.EVENT_TYPES,
             ) +
                 CongregationSection.talkPlanning,
             visible.congregationSections,

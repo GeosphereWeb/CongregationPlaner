@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.congregation.presentation.CongregationMetadataRoute
+import de.geosphere.congregationplaner.event.presentation.EventTypeRoute
 import de.geosphere.congregationplaner.event.presentation.SpecialEventRoute
 import de.geosphere.congregationplaner.notification.presentation.AnnouncementRoute
 import de.geosphere.congregationplaner.organization.domain.model.SelectedCongregation
@@ -242,6 +243,7 @@ private fun CongregationSectionContent(
         CongregationSection.GENERAL_DATA -> CongregationMetadataRoute(currentUser, ownOnly = true)
         CongregationSection.USER_MANAGEMENT -> UserManagementRoute(currentUser)
         CongregationSection.SPECIAL_EVENTS -> SpecialEventRoute(currentUser)
+        CongregationSection.EVENT_TYPES -> EventTypeRoute(currentUser)
         CongregationSection.ANNOUNCEMENTS -> AnnouncementRoute(currentUser)
         CongregationSection.MIDWEEK_PLANNING ->
             Text("leben_und_dienst \n Schätze \n uns verbessern \n leben als christ", Modifier.padding(16.dp))
