@@ -54,6 +54,8 @@ import de.geosphere.congregationplaner.user.presentation.profile.MessageTemplate
 import de.geosphere.congregationplaner.user.presentation.profile.OwnProfilePart
 import de.geosphere.congregationplaner.user.presentation.profile.OwnProfileSection
 import de.geosphere.congregationplaner.user.presentation.profile.rememberOwnProfileViewModel
+import de.geosphere.congregationplaner.user.presentation.theme.ThemeSection
+
 /**
  * Der Rahmen der angemeldeten App mit den vier Hauptbereichen. Die Leiste liegt auf schmalen Fenstern unten und auf
  * breiten seitlich; das entscheidet [NavigationSuiteScaffold] aus der Fenstergröße, nicht aus der Plattform.
@@ -170,6 +172,7 @@ private fun SettingsContent(currentUser: AppUser, onSignOut: () -> Unit) {
                     OwnProfileSection(currentUser, OwnProfilePart.EMERGENCY_CONTACTS, profileViewModel, modifier)
                 SettingsTab.MESSAGE_TEMPLATES -> MessageTemplatesSection(currentUser, modifier)
                 SettingsTab.GENERAL -> {
+                    ThemeSection(modifier.padding(bottom = 32.dp))
                     ImportSection(currentUser, modifier.padding(bottom = 32.dp))
                     DataSources(modifier)
                 }

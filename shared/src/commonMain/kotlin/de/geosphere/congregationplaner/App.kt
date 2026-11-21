@@ -18,6 +18,7 @@ import de.geosphere.congregationplaner.presentation.navigation.AppNavigationActi
 import de.geosphere.congregationplaner.presentation.navigation.AppNavigationGraph
 import de.geosphere.congregationplaner.presentation.navigation.AppScaffold
 import de.geosphere.congregationplaner.theming.AppTheme
+import de.geosphere.congregationplaner.user.di.ThemeGraph
 import de.geosphere.congregationplaner.user.di.UserAccessGraph
 import de.geosphere.congregationplaner.user.domain.model.UserAccessState
 import de.geosphere.congregationplaner.user.presentation.access.UserAccessGateScreen
@@ -27,7 +28,9 @@ import dev.zacsweers.metro.createGraph
 @Suppress("LongMethod")
 @Composable
 fun App() {
-    AppTheme {
+    val themeViewModel = remember { createGraph<ThemeGraph>().themeViewModel }
+    val theme by themeViewModel.preference.collectAsState()
+    AppTheme(theme.style, theme.mode) {
         val authGraph = remember { createGraph<AuthGraph>() }
         val sessionViewModel = remember { authGraph.sessionViewModel }
         val loginViewModel = remember { authGraph.loginViewModel }
