@@ -1,5 +1,7 @@
 package de.geosphere.congregationplaner.importer.data
 
+import de.geosphere.congregationplaner.importer.domain.model.ImportRow
+import de.geosphere.congregationplaner.importer.domain.model.ImportTable
 import java.io.ByteArrayOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -8,7 +10,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
-class XlsxReaderTest {
+/** Reads real (zipped) workbooks through [ZipArchive] and [Xlsx], as the desktop file source does. */
+class XlsxTest {
     private val workbook = """
         <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -73,6 +76,8 @@ class XlsxReaderTest {
         return bytes.toByteArray()
     }
 
+    private fun read(bytes: ByteArray) = Xlsx.readFirstSheet(ZipArchive.unzip(bytes))
+
     private val standardFiles = mapOf(
         "xl/workbook.xml" to workbook,
         "xl/_rels/workbook.xml.rels" to rels,
@@ -83,14 +88,14 @@ class XlsxReaderTest {
 
     @Test
     fun readsHeadersOfTheFirstSheetOnlyAndTrimsThem() {
-        val table = XlsxReader.readFirstSheet(xlsx(standardFiles))
+        val table = read(xlsx(standardFiles))
 
         assertEquals(listOf("Nummer", "Titel", "Datum"), table.headers)
     }
 
     @Test
     fun resolvesSharedStringsInlineStringsAndNumbers() {
-        val rows = XlsxReader.readFirstSheet(xlsx(standardFiles)).rows
+        val rows = read(xlsx(standardFiles)).rows
 
         assertEquals(3, rows.size)
         assertEquals("12", rows[0].text("Nummer"))
@@ -101,7 +106,7 @@ class XlsxReaderTest {
 
     @Test
     fun sparseCellsAreMissingNotShifted() {
-        val row = XlsxReader.readFirstSheet(xlsx(standardFiles)).rows[1]
+        val row = read(xlsx(standardFiles)).rows[1]
 
         assertNull(row.text("Titel"))
         assertEquals("inline", row.text("Datum"))
@@ -109,7 +114,7 @@ class XlsxReaderTest {
 
     @Test
     fun keepsTheRowNumbersOfTheFileAndIgnoresColumnsWithoutHeader() {
-        val rows = XlsxReader.readFirstSheet(xlsx(standardFiles)).rows
+        val rows = read(xlsx(standardFiles)).rows
 
         assertEquals(listOf(2, 3, 4), rows.map { it.number })
         assertNull(rows[2].text("C"))
@@ -117,7 +122,7 @@ class XlsxReaderTest {
 
     @Test
     fun worksWithoutSharedStringsFile() {
-        val table = XlsxReader.readFirstSheet(
+        val table = read(
             xlsx(
                 standardFiles - "xl/sharedStrings.xml" + ("xl/worksheets/sheet1.xml" to sheet2),
             ),
@@ -129,13 +134,28 @@ class XlsxReaderTest {
 
     @Test
     fun rejectsAFileThatIsNoWorkbook() {
-        assertFailsWith<IllegalStateException> { XlsxReader.readFirstSheet(xlsx(mapOf("readme.txt" to "hi"))) }
+        assertFailsWith<IllegalStateException> { read(xlsx(mapOf("readme.txt" to "hi"))) }
     }
 
     @Test
     fun rejectsAWorkbookWithoutSheets() {
         val files = standardFiles + ("xl/workbook.xml" to "<workbook xmlns=\"x\"><sheets/></workbook>")
 
-        assertFailsWith<IllegalStateException> { XlsxReader.readFirstSheet(xlsx(files)) }
+        assertFailsWith<IllegalStateException> { read(xlsx(files)) }
+    }
+
+    @Test
+    fun writtenWorkbookIsReadBackUnchanged() {
+        val table = ImportTable(
+            listOf("Nummer", "Titel", "Datum"),
+            listOf(
+                ImportRow(2, mapOf("Nummer" to "12", "Titel" to "Müller & <Söhne> \"Zitat\"", "Datum" to "46000")),
+                ImportRow(3, mapOf("Nummer" to "007", "Titel" to "Nur Titel")),
+            ),
+        )
+
+        val read = read(ZipArchive.zip(Xlsx.write(table)))
+
+        assertEquals(table, read)
     }
 }

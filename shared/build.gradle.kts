@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -18,6 +19,17 @@ compose.resources {
 }
 
 kotlin {
+    // Desktop and Android share JVM-only code (java.util.zip for the Excel files) in jvmAndAndroidMain.
+    @OptIn(org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi::class)
+    applyDefaultHierarchyTemplate {
+        common {
+            group("jvmAndAndroid") {
+                withJvm()
+                withCompilations { it.target.platformType == KotlinPlatformType.androidJvm }
+            }
+        }
+    }
+
     listOf(
         iosArm64(),
         iosSimulatorArm64(),
@@ -54,6 +66,8 @@ kotlin {
 
     sourceSets {
         androidMain.dependencies {
+            // System file dialog for the Excel import and export (Activity Result API).
+            implementation(libs.androidx.activity.compose)
             implementation(libs.firebase.firestore)
             implementation("com.google.firebase:firebase-analytics-ktx:22.3.0")
             implementation("com.google.firebase:firebase-auth-ktx:23.1.0")
@@ -132,6 +146,7 @@ detekt {
         "src/commonMain/kotlin",
         "src/androidMain/kotlin",
         "src/jvmMain/kotlin",
+        "src/jvmAndAndroidMain/kotlin",
         "src/iosMain/kotlin",
     )
     // Findings from before detekt analyzed these sources (CP-134); new code must not add entries.
