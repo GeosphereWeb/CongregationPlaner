@@ -60,6 +60,8 @@ val sonarExclusions = listOf(
     "**/CongregationDetail.kt",
     "**/TalkScheduleScreen.kt",
     "**/TalkSlotEditor.kt",
+    // Compose-Karten und Wochenereignis-Menü des Termin-Editors; die angezeigte Auswahl ist in weekEventSelection getestet
+    "**/SlotEditorCards.kt",
     // Reiner Compose-Auswahldialog; Suche und freier Eintrag (matching, freeEntryOf) sind in TalkPickerSearchTest getestet
     "**/TalkPickerDialog.kt",
     // Compose-Zeile der Stichtage mit Datumswähler; Beschriftung (cutoffLabel) und Speichern sind getestet
