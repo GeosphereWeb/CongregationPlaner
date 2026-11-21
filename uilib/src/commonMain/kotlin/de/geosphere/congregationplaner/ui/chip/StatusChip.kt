@@ -34,11 +34,29 @@ import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.theming.nightTextStyle
 
 /** Bedeutung eines Chips: Gold = Highlight/Wartet, Mint = Erfolg, Himmelblau = Info, Koralle = Fehler. */
-enum class StatusTone(val content: Color, val container: Color) {
-    Gold(NightColors.Gold, NightColors.GoldContainer),
-    Mint(NightColors.Mint, NightColors.MintContainer),
-    Sky(NightColors.Sky, NightColors.SkyContainer),
-    Coral(NightColors.Coral, NightColors.CoralContainer),
+enum class StatusTone {
+    Gold,
+    Mint,
+    Sky,
+    Coral,
+    ;
+
+    // Getters, not constructor values: the tokens follow the active theme.
+    val content: Color
+        get() = when (this) {
+            Gold -> NightColors.Gold
+            Mint -> NightColors.Mint
+            Sky -> NightColors.Sky
+            Coral -> NightColors.Coral
+        }
+
+    val container: Color
+        get() = when (this) {
+            Gold -> NightColors.GoldContainer
+            Mint -> NightColors.MintContainer
+            Sky -> NightColors.SkyContainer
+            Coral -> NightColors.CoralContainer
+        }
 }
 
 /** Kleine Statusmarke mit Punkt. */

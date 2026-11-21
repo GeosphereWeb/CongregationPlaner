@@ -35,10 +35,26 @@ import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 
 /** Farbliche Hervorhebung eines Listeneintrags: Info (blau) oder Warnung (rötlich). */
-enum class CardHighlight(val container: Color?, val border: Color?) {
-    None(null, null),
-    Info(NightColors.SkyContainer, NightColors.Sky),
-    Warning(NightColors.CoralContainer, NightColors.Coral),
+enum class CardHighlight {
+    None,
+    Info,
+    Warning,
+    ;
+
+    // Getters, not constructor values: the tokens follow the active theme.
+    val container: Color?
+        get() = when (this) {
+            None -> null
+            Info -> NightColors.SkyContainer
+            Warning -> NightColors.CoralContainer
+        }
+
+    val border: Color?
+        get() = when (this) {
+            None -> null
+            Info -> NightColors.Sky
+            Warning -> NightColors.Coral
+        }
 }
 
 /**
@@ -67,11 +83,8 @@ fun SelectableListCard(
     Row(
         modifier = Modifier.fillMaxWidth()
             .then(
-                if (highlight.border != null) {
-                    Modifier.shadow(8.dp, shape, ambientColor = highlight.border, spotColor = highlight.border)
-                } else {
-                    Modifier
-                },
+                highlight.border?.let { glow -> Modifier.shadow(8.dp, shape, ambientColor = glow, spotColor = glow) }
+                    ?: Modifier,
             )
             .clip(shape)
             .background(background)
