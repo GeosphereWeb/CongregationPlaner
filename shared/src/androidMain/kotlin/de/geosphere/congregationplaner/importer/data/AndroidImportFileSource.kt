@@ -34,15 +34,17 @@ internal object AndroidImportFileSource : ImportFileSource {
         }
     }
 
-    override suspend fun saveTable(fileName: String, table: ImportTable): Result<Boolean> = runCatching {
+    override suspend fun saveTable(fileName: String, table: ImportTable, dateHeaders: Set<String>): Result<Boolean> =
+        runCatching { save(fileName, ZipArchive.zip(Xlsx.write(table, dateHeaders))) }
+
+    private suspend fun save(fileName: String, bytes: ByteArray): Boolean {
         val activity = activity()
-        val uri = activity.awaitResult(ActivityResultContracts.CreateDocument(XLSX_MIME), fileName)
-            ?: return@runCatching false
+        val uri = activity.awaitResult(ActivityResultContracts.CreateDocument(XLSX_MIME), fileName) ?: return false
         withContext(Dispatchers.IO) {
-            activity.contentResolver.openOutputStream(uri)?.use { it.write(ZipArchive.zip(Xlsx.write(table))) }
+            activity.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
                 ?: error("Die Datei konnte nicht gespeichert werden.")
         }
-        true
+        return true
     }
 
     private fun activity(): ComponentActivity = FirebaseAndroidContextHolder.activity as? ComponentActivity

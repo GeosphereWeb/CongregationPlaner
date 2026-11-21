@@ -3,6 +3,8 @@ package de.geosphere.congregationplaner.importer.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.geosphere.congregationplaner.importer.data.ImportFileSource
+import de.geosphere.congregationplaner.importer.domain.export.ExportKind
+import de.geosphere.congregationplaner.importer.domain.export.ExportTableUseCase
 import de.geosphere.congregationplaner.importer.domain.model.ImportReport
 import de.geosphere.congregationplaner.importer.domain.usecase.ImportSource
 import de.geosphere.congregationplaner.importer.domain.usecase.MissingImportCountryException
@@ -19,6 +21,19 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
+import kotlin.time.Clock
+
+/**
+ * Where the import is shown: the settings keep the imports of the global admin (reference data of a country), the talk
+ * planning tab has the imports and exports of the talk planner.
+ */
+enum class ImportArea { SETTINGS, TALK_PLANNING }
+
+/** One export button: the schedule once per offered year, the lists once ([year] then only names the request). */
+data class ExportOption(val kind: ExportKind, val year: Int, val label: String)
 
 /** A parsed file waiting for the user's confirmation. */
 class PendingImport(val source: ImportSource, val prepared: PreparedImport)
@@ -42,10 +57,25 @@ data class ImportUiState(
     val step: ImportStep = ImportStep.Idle,
     val isBusy: Boolean = false,
     val errorMessage: String? = null,
+    /** What this user may export here; empty outside the talk planning or without a file dialog. */
+    val exportKinds: List<ExportKind> = emptyList(),
+    /** The years offered for the schedule export: the current and the next one. */
+    val exportYears: List<Int> = emptyList(),
+    /** The file name of the last saved export, to confirm it. */
+    val savedFile: String? = null,
 ) {
     val pending: PendingImport? get() = (step as? ImportStep.Preview)?.pending
     val report: ImportReport? get() = (step as? ImportStep.Done)?.report
     val reportSource: ImportSource? get() = (step as? ImportStep.Done)?.source
+
+    val exportOptions: List<ExportOption>
+        get() = exportKinds.flatMap { kind ->
+            if (kind == ExportKind.SCHEDULE) {
+                exportYears.map { ExportOption(kind, it, "${kind.label} $it") }
+            } else {
+                exportYears.take(1).map { ExportOption(kind, it, kind.label) }
+            }
+        }
 
     /** Whether the country picker belongs on screen: some allowed source goes into a country. */
     val needsCountry: Boolean get() = allowedSources.any { it.needsGlobalAdmin }
@@ -59,6 +89,7 @@ class ImportViewModel(
     private val referencePolicy: TalkReferenceDataPolicy,
     private val schedulePolicy: TalkSchedulePermissionPolicy,
     listCountries: ListCountriesUseCase,
+    private val exportTable: ExportTableUseCase,
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(ImportUiState())
     val uiState = mutableUiState.asStateFlow()
@@ -72,12 +103,20 @@ class ImportViewModel(
 
     private var currentUser: AppUser? = null
 
-    fun onCurrentUserChanged(user: AppUser) {
+    fun onCurrentUserChanged(
+        user: AppUser,
+        area: ImportArea = ImportArea.SETTINGS,
+        today: LocalDate = Clock.System.todayIn(TimeZone.currentSystemDefault()),
+    ) {
         currentUser = user
-        val allowed = if (fileSource.isAvailable) ImportSource.entries.filter { canImport(user, it) } else emptyList()
+        val available = fileSource.isAvailable
+        val allowed = if (available) ImportSource.entries.filter { canImport(user, it, area) } else emptyList()
+        val exports = available && area == ImportArea.TALK_PLANNING && schedulePolicy.canPlanTalks(user)
         mutableUiState.update { state ->
             state.copy(
                 allowedSources = allowed,
+                exportKinds = if (exports) ExportKind.entries else emptyList(),
+                exportYears = listOf(today.year, today.year + 1),
                 step = state.step.takeUnless { it is ImportStep.Preview && it.pending.source !in allowed }
                     ?: ImportStep.Idle,
             )
@@ -85,8 +124,31 @@ class ImportViewModel(
         if (mutableUiState.value.needsCountry) countries.load(user.congregation)
     }
 
-    private fun canImport(user: AppUser, source: ImportSource) =
-        if (source.needsGlobalAdmin) referencePolicy.canManage(user) else schedulePolicy.canPlanTalks(user)
+    private fun canImport(user: AppUser, source: ImportSource, area: ImportArea) = when (area) {
+        ImportArea.SETTINGS -> source.needsGlobalAdmin && referencePolicy.canManage(user)
+        ImportArea.TALK_PLANNING -> !source.needsGlobalAdmin && schedulePolicy.canPlanTalks(user)
+    }
+
+    /** Saves [kind] (for the schedule: the slots of [year]) as an `.xlsx` file the user picks. */
+    fun export(kind: ExportKind, year: Int) {
+        val user = currentUser
+        if (user == null || mutableUiState.value.isBusy || kind !in mutableUiState.value.exportKinds) return
+        mutableUiState.update { it.copy(isBusy = true, errorMessage = null, savedFile = null) }
+        viewModelScope.launch {
+            val file = exportTable(user, kind, year).getOrElse {
+                return@launch fail("Der Export konnte nicht erstellt werden: ${it.message}")
+            }
+            fileSource.saveTable(file.fileName, file.table, file.dateHeaders)
+                .onSuccess { saved ->
+                    mutableUiState.update {
+                        it.copy(isBusy = false, savedFile = file.fileName.takeIf { saved })
+                    }
+                }
+                .onFailure { fail("Die Datei konnte nicht gespeichert werden: ${it.message}") }
+        }
+    }
+
+    fun dismissSaved() = mutableUiState.update { it.copy(savedFile = null) }
 
     fun choose(source: ImportSource) {
         val user = currentUser

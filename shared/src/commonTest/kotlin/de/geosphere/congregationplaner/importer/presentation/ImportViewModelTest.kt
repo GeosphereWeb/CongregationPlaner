@@ -6,6 +6,8 @@ import de.geosphere.congregationplaner.event.domain.permission.EventTypePolicy
 import de.geosphere.congregationplaner.event.domain.usecase.SaveEventTypeUseCase
 import de.geosphere.congregationplaner.event.testing.FakeEventTypeRepository
 import de.geosphere.congregationplaner.importer.data.ImportFileSource
+import de.geosphere.congregationplaner.importer.domain.export.ExportKind
+import de.geosphere.congregationplaner.importer.domain.export.ExportTableUseCase
 import de.geosphere.congregationplaner.importer.domain.model.ImportRow
 import de.geosphere.congregationplaner.importer.domain.model.ImportTable
 import de.geosphere.congregationplaner.importer.domain.usecase.ImportReferenceDataUseCase
@@ -38,6 +40,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.LocalDate
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -61,9 +64,14 @@ class ImportViewModelTest {
         ImportFileSource {
         override suspend fun pickTable(title: String) = result
 
-        override suspend fun saveTable(fileName: String, table: ImportTable) = Result.success(false)
+        val saved = mutableListOf<Pair<String, Set<String>>>()
+        var saveResult: Result<Boolean> = Result.success(true)
+
+        override suspend fun saveTable(fileName: String, table: ImportTable, dateHeaders: Set<String>) =
+            saveResult.also { saved += fileName to dateHeaders }
     }
 
+    private val today = LocalDate(2026, 11, 21)
     private val catalog = FakeTalkCatalogRepository()
     private val schedule = FakeTalkScheduleRepository()
     private val directory = FakeExternalSpeakerDirectoryRepository()
@@ -106,7 +114,8 @@ class ImportViewModelTest {
             ),
             ImportTalkScheduleUseCase(SaveTalkSlotUseCase(schedule, planning)),
         )
-        return ImportViewModel(source, prepare, reference, planning, listCountries(*countries.toTypedArray()))
+        val export = ExportTableUseCase(planning, schedule, ObserveExternalDirectoryUseCase(directory), catalog)
+        return ImportViewModel(source, prepare, reference, planning, listCountries(*countries.toTypedArray()), export)
     }
 
     @Test
@@ -114,12 +123,19 @@ class ImportViewModelTest {
         val source = FakeFileSource(Result.success(null))
 
         val admin = viewModel(source).apply { onCurrentUserChanged(globalAdmin) }
-        val plannerModel = viewModel(source).apply { onCurrentUserChanged(planner) }
-        val plain = viewModel(source).apply { onCurrentUserChanged(member) }
+        val plannerSettings = viewModel(source).apply { onCurrentUserChanged(planner) }
+        val plannerTab = viewModel(source).apply { onCurrentUserChanged(planner, ImportArea.TALK_PLANNING, today) }
+        val adminTab = viewModel(source).apply { onCurrentUserChanged(globalAdmin, ImportArea.TALK_PLANNING, today) }
+        val plain = viewModel(source).apply { onCurrentUserChanged(member, ImportArea.TALK_PLANNING, today) }
 
         assertEquals(listOf(ImportSource.WEEK_EVENTS, ImportSource.TALK_CATALOG), admin.uiState.value.allowedSources)
-        assertEquals(listOf(ImportSource.SPEAKERS, ImportSource.SCHEDULE), plannerModel.uiState.value.allowedSources)
-        assertTrue(plain.uiState.value.allowedSources.isEmpty())
+        assertTrue(admin.uiState.value.exportKinds.isEmpty())
+        // The planner's imports moved from the settings to the talk planning tab.
+        assertTrue(plannerSettings.uiState.value.allowedSources.isEmpty())
+        assertEquals(listOf(ImportSource.SPEAKERS, ImportSource.SCHEDULE), plannerTab.uiState.value.allowedSources)
+        assertEquals(ExportKind.entries, plannerTab.uiState.value.exportKinds)
+        assertTrue(adminTab.uiState.value.allowedSources.isEmpty() && adminTab.uiState.value.exportKinds.isEmpty())
+        assertTrue(plain.uiState.value.allowedSources.isEmpty() && plain.uiState.value.exportKinds.isEmpty())
     }
 
     @Test
@@ -214,7 +230,49 @@ class ImportViewModelTest {
         assertEquals(listOf(austria.ref), catalog.countries.distinct())
 
         val plannerModel = viewModel(FakeFileSource(Result.success(null)))
-        plannerModel.onCurrentUserChanged(planner)
+        plannerModel.onCurrentUserChanged(planner, ImportArea.TALK_PLANNING, today)
         assertTrue(!plannerModel.uiState.value.needsCountry && plannerModel.uiState.value.country.countries.isEmpty())
+    }
+
+    @Test
+    fun `export offers the schedule per year and saves the file with its date column`() {
+        val source = FakeFileSource(Result.success(null))
+        val model = viewModel(source).apply { onCurrentUserChanged(planner, ImportArea.TALK_PLANNING, today) }
+
+        assertEquals(
+            listOf("Wochenplan 2026", "Wochenplan 2027", "Rednerliste", "Vortragsliste"),
+            model.uiState.value.exportOptions.map { it.label },
+        )
+        model.export(ExportKind.SCHEDULE, 2027)
+
+        assertEquals(listOf("Export_Vortragsplanung_2027.xlsx" to setOf("Datum")), source.saved)
+        assertEquals("Export_Vortragsplanung_2027.xlsx", model.uiState.value.savedFile)
+        model.dismissSaved()
+        assertNull(model.uiState.value.savedFile)
+    }
+
+    @Test
+    fun `a cancelled or failed save is no success`() {
+        val source = FakeFileSource(Result.success(null)).apply { saveResult = Result.success(false) }
+        val model = viewModel(source).apply { onCurrentUserChanged(planner, ImportArea.TALK_PLANNING, today) }
+
+        model.export(ExportKind.TALK_CATALOG, 2026)
+        assertNull(model.uiState.value.savedFile)
+        assertNull(model.uiState.value.errorMessage)
+
+        source.saveResult = Result.failure(IllegalStateException("voll"))
+        model.export(ExportKind.SPEAKERS, 2026)
+        assertTrue(model.uiState.value.errorMessage.orEmpty().contains("voll"))
+        assertTrue(!model.uiState.value.isBusy)
+    }
+
+    @Test
+    fun `export is ignored outside the talk planning`() {
+        val source = FakeFileSource(Result.success(null))
+        val model = viewModel(source).apply { onCurrentUserChanged(planner) }
+
+        model.export(ExportKind.SCHEDULE, 2026)
+
+        assertTrue(source.saved.isEmpty())
     }
 }

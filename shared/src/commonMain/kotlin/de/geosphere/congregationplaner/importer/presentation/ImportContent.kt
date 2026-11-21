@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.importer.di.ImportGraph
+import de.geosphere.congregationplaner.importer.domain.export.ExportKind
 import de.geosphere.congregationplaner.importer.domain.model.ImportError
 import de.geosphere.congregationplaner.importer.domain.model.ImportReport
 import de.geosphere.congregationplaner.importer.domain.usecase.ImportSource
@@ -36,6 +37,8 @@ import dev.zacsweers.metro.createGraph
 
 internal data class ImportActions(
     val onChoose: (ImportSource) -> Unit = {},
+    val onExport: (ExportKind, Int) -> Unit = { _, _ -> },
+    val onDismissSaved: () -> Unit = {},
     val onConfirm: () -> Unit = {},
     val onCancel: () -> Unit = {},
     val onDismissReport: () -> Unit = {},
@@ -69,9 +72,10 @@ fun ImportSection(currentUser: AppUser, modifier: Modifier = Modifier) {
 @Composable
 internal fun ImportContent(state: ImportUiState, actions: ImportActions, modifier: Modifier = Modifier) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Import aus dem alten Planungstool", style = MaterialTheme.typography.titleSmall)
+        Text("Import aus Excel", style = MaterialTheme.typography.titleSmall)
         Text(
-            "Wähle eine Excel-Datei. Vor dem Schreiben siehst du, was passiert.",
+            "Wähle eine Excel-Datei aus dem alten Planungstool oder einem Export. Vor dem Schreiben siehst du, " +
+                "was passiert.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
