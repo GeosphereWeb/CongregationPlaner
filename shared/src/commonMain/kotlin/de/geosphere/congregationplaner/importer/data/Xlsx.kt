@@ -8,6 +8,10 @@ private const val WORKBOOK = "xl/workbook.xml"
 private const val WORKBOOK_RELS = "xl/_rels/workbook.xml.rels"
 private const val SHARED_STRINGS = "xl/sharedStrings.xml"
 private const val SHEET = "xl/worksheets/sheet1.xml"
+private const val STYLES = "xl/styles.xml"
+
+// Index into cellXfs of STYLES_XML: built-in number format 14, the short date of the user's locale.
+private const val DATE_STYLE = 1
 private const val LETTERS = 26
 private const val SHEET_NAME = "Tabelle1"
 private val PLAIN_NUMBER = Regex("-?(0|[1-9][0-9]{0,14})")
@@ -32,31 +36,37 @@ object Xlsx {
 
     /**
      * A workbook with one sheet: [table]'s headers in the first row, then its rows in order. Whole numbers without a
-     * leading zero become number cells, everything else text cells.
+     * leading zero become number cells, everything else text cells. Number cells in the columns [dateHeaders] (Excel
+     * serial dates, see [excelSerialToDate]) are shown as dates.
      */
-    fun write(table: ImportTable): Map<String, ByteArray> = mapOf(
+    fun write(table: ImportTable, dateHeaders: Set<String> = emptySet()): Map<String, ByteArray> = mapOf(
         "[Content_Types].xml" to CONTENT_TYPES,
         "_rels/.rels" to ROOT_RELS,
         WORKBOOK to WORKBOOK_XML,
         WORKBOOK_RELS to WORKBOOK_RELS_XML,
-        SHEET to sheetXml(table),
+        STYLES to STYLES_XML,
+        SHEET to sheetXml(table, dateHeaders),
     ).mapValues { it.value.encodeToByteArray() }
 
-    private fun sheetXml(table: ImportTable): String = buildString {
+    private fun sheetXml(table: ImportTable, dateHeaders: Set<String>): String = buildString {
         append(XML_HEADER)
         append("<worksheet xmlns=\"$MAIN_NS\"><sheetData>")
-        appendRow(1, table.headers)
-        table.rows.forEachIndexed { index, row -> appendRow(index + 2, table.headers.map { row.text(it).orEmpty() }) }
+        val dateColumns = table.headers.indices.filter { table.headers[it] in dateHeaders }.toSet()
+        appendRow(1, table.headers, emptySet())
+        table.rows.forEachIndexed { index, row ->
+            appendRow(index + 2, table.headers.map { row.text(it).orEmpty() }, dateColumns)
+        }
         append("</sheetData></worksheet>")
     }
 
-    private fun StringBuilder.appendRow(number: Int, values: List<String>) {
+    private fun StringBuilder.appendRow(number: Int, values: List<String>, dateColumns: Set<Int>) {
         append("<row r=\"$number\">")
         values.forEachIndexed { column, value ->
             if (value.isEmpty()) return@forEachIndexed
             val reference = columnName(column) + number
             if (PLAIN_NUMBER.matches(value)) {
-                append("<c r=\"$reference\"><v>$value</v></c>")
+                val style = if (column in dateColumns) " s=\"$DATE_STYLE\"" else ""
+                append("<c r=\"$reference\"$style><v>$value</v></c>")
             } else {
                 append("<c r=\"$reference\" t=\"inlineStr\"><is><t xml:space=\"preserve\">")
                 append(escape(value))
@@ -224,6 +234,8 @@ private const val CONTENT_TYPES = XML_HEADER +
     "<Default Extension=\"xml\" ContentType=\"application/xml\"/>" +
     "<Override PartName=\"/xl/workbook.xml\" " +
     "ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/>" +
+    "<Override PartName=\"/xl/styles.xml\" " +
+    "ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml\"/>" +
     "<Override PartName=\"/xl/worksheets/sheet1.xml\" " +
     "ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>" +
     "</Types>"
@@ -241,4 +253,16 @@ private const val WORKBOOK_XML = XML_HEADER +
 private const val WORKBOOK_RELS_XML = XML_HEADER +
     "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">" +
     "<Relationship Id=\"rId1\" Type=\"$REL_NS/worksheet\" Target=\"worksheets/sheet1.xml\"/>" +
+    "<Relationship Id=\"rId2\" Type=\"$REL_NS/styles\" Target=\"styles.xml\"/>" +
     "</Relationships>"
+
+private const val STYLES_XML = XML_HEADER +
+    "<styleSheet xmlns=\"$MAIN_NS\">" +
+    "<fonts count=\"1\"><font><sz val=\"11\"/><name val=\"Calibri\"/></font></fonts>" +
+    "<fills count=\"2\"><fill><patternFill patternType=\"none\"/></fill>" +
+    "<fill><patternFill patternType=\"gray125\"/></fill></fills>" +
+    "<borders count=\"1\"><border><left/><right/><top/><bottom/><diagonal/></border></borders>" +
+    "<cellStyleXfs count=\"1\"><xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\"/></cellStyleXfs>" +
+    "<cellXfs count=\"2\"><xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\" xfId=\"0\"/>" +
+    "<xf numFmtId=\"14\" fontId=\"0\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyNumberFormat=\"1\"/></cellXfs>" +
+    "</styleSheet>"

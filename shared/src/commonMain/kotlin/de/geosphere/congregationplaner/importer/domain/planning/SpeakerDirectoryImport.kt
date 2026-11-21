@@ -83,7 +83,12 @@ fun planSpeakerDirectory(
             emptyList(),
         ),
         speakers = ImportPlan(
-            speakers.map { PlanEntry(it, kindFor(existing.speakers.firstOrNull { s -> s.id == it.id }, it)) },
+            speakers.map { imported ->
+                val current = existing.speakers.firstOrNull { it.id == imported.id }
+                // The source has no "excluded from planning"; a choice made in the app survives a new import.
+                val wanted = imported.copy(excludedFromPlanning = current?.excludedFromPlanning ?: false)
+                PlanEntry(wanted, kindFor(current, wanted))
+            },
             errors,
         ),
     )
