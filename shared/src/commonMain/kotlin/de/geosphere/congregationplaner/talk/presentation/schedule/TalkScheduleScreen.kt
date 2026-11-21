@@ -200,7 +200,7 @@ internal fun TalkScheduleContent(
     ) {
         ListPaneHeader(
             title = "Planung am Wochenende",
-            subtitle = state.year.toString(),
+            pageLabel = state.year.toString(),
             onPrevious = { actions.onYearChange(state.year - 1) },
             previousDescription = "Vorheriges Jahr",
             onNext = { actions.onYearChange(state.year + 1) },

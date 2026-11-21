@@ -87,7 +87,7 @@ internal fun TalkSlotEditor(
         TalkDateInput(slot.date, onDateChange = { onChange(slot.copy(date = it)) })
         MeetingTimeInput("Uhrzeit", slot.time, onTimeChange = { onChange(slot.copy(time = it)) })
 
-        WeekEventChips(slot, eventTypes, onSelectWeekEvent)
+        WeekEventDropdown(slot, eventTypes, onSelectWeekEvent)
         SwitchRow("Vortrag entfällt", slot.talkCancelled) { onChange(slot.copy(talkCancelled = it)) }
 
         TalkCard(

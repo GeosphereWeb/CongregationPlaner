@@ -109,7 +109,7 @@ fun DetailPlaceholder(text: String, modifier: Modifier = Modifier) {
 
 /**
  * Kopf einer Liste: Titel, optional ein Untertitel und – wenn [onPrevious] bzw. [onNext] gesetzt sind – zwei
- * Pfeile zum Blättern (z. B. Jahr zurück/vor), je 44 dp groß.
+ * Pfeile zum Blättern (z. B. Jahr zurück/vor), je 44 dp groß; [pageLabel] steht zwischen den Pfeilen (z. B. das Jahr).
  */
 @Composable
 @Suppress("LongParameterList")
@@ -122,6 +122,7 @@ fun ListPaneHeader(
     onNext: (() -> Unit)? = null,
     nextDescription: String = "Vor",
     onToday: (() -> Unit)? = null,
+    pageLabel: String? = null,
 ) {
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
@@ -135,6 +136,9 @@ fun ListPaneHeader(
             IconButton(onClick = onPrevious, modifier = Modifier.size(44.dp)) {
                 Icon(arrowBackIcon, contentDescription = previousDescription)
             }
+        }
+        if (pageLabel != null) {
+            Text(pageLabel, style = MaterialTheme.typography.titleMedium, color = NightColors.OnBackground)
         }
         if (onNext != null) {
             IconButton(onClick = onNext, modifier = Modifier.size(44.dp)) {
@@ -155,7 +159,7 @@ private fun DetailPanePhonePreview() = AppTheme {
 @Composable
 private fun DetailPaneWidePreview() = AppTheme {
     Column {
-        ListPaneHeader("Planung am Wochenende", subtitle = "2026", onPrevious = {}, onNext = {}, onToday = {})
+        ListPaneHeader("Planung am Wochenende", onPrevious = {}, onNext = {}, onToday = {}, pageLabel = "2026")
         DetailPane(showBack = false, onBack = {}) { DetailPlaceholder("Wähle einen Termin zum Bearbeiten aus.") }
     }
 }
