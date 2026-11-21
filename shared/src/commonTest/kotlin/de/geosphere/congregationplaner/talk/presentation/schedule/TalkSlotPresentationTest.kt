@@ -171,6 +171,14 @@ class TalkSlotPresentationTest {
     }
 
     @Test
+    fun `week event selection shows the stored name or no event`() {
+        assertEquals("Kein Ereignis", weekEventSelection(slot()))
+        // A removed event type keeps its stored name on the slot.
+        val removed = slot { it.copy(weekEventId = "gelöscht", weekEventName = "Kongress") }
+        assertEquals("Kongress", weekEventSelection(removed))
+    }
+
+    @Test
     fun `a cancelled slot keeps the cancelled chip and has the week event name only in the event line`() {
         val s = slot { it.copy(weekEventId = "kongress", weekEventName = "Kongress", talkCancelled = true) }
 
