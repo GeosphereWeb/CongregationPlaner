@@ -2,13 +2,21 @@ package de.geosphere.congregationplaner.talk.presentation.schedule
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.event.domain.model.EventType
@@ -28,36 +36,47 @@ private val ACTION_HEIGHT = 44.dp
 /** Auswahl, Entfernen und Sprung einer Feldkarte des Editors. */
 internal class CardActions(val onPick: () -> Unit, val onRemove: () -> Unit, val onOpen: () -> Unit)
 
+/** Auswahl des Wochenereignisses als Menü: je Woche gibt es höchstens eines. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun WeekEventChips(slot: TalkSlot, eventTypes: List<EventType>, onSelect: (EventType?) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text("Wochenereignis", style = MaterialTheme.typography.labelLarge)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(
-                selected = slot.weekEventId == null,
-                onClick = { onSelect(null) },
-                label = { Text("Kein Ereignis") },
+internal fun WeekEventDropdown(slot: TalkSlot, eventTypes: List<EventType>, onSelect: (EventType?) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = weekEventSelection(slot),
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Wochenereignis") },
+            leadingIcon = slotEventIcon(slot, eventTypes)?.let { icon -> { WeekEventIcon(icon) } },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text(NO_WEEK_EVENT) },
+                onClick = {
+                    onSelect(null)
+                    expanded = false
+                },
             )
             eventTypes.forEach { event ->
-                FilterChip(
-                    selected = slot.weekEventId == event.id,
-                    onClick = { onSelect(event) },
-                    label = { Text(event.name) },
-                    leadingIcon = {
-                        Icon(
-                            painterResource(eventTypeIcon(event.icon)),
-                            contentDescription = null,
-                            Modifier.size(18.dp),
-                        )
+                DropdownMenuItem(
+                    text = { Text(event.name) },
+                    leadingIcon = { WeekEventIcon(event.icon) },
+                    onClick = {
+                        onSelect(event)
+                        expanded = false
                     },
                 )
             }
-            // Ein inzwischen entferntes Ereignis bleibt am Termin sichtbar.
-            if (slot.weekEventId != null && eventTypes.none { it.id == slot.weekEventId }) {
-                FilterChip(selected = true, onClick = {}, label = { Text(slot.weekEventName.orEmpty()) })
-            }
         }
     }
+}
+
+@Composable
+private fun WeekEventIcon(icon: String) {
+    Icon(painterResource(eventTypeIcon(icon)), contentDescription = null, Modifier.size(20.dp))
 }
 
 /** Der Vortrag; mit [historyTalk] führt ein Tipp auf die Karte zur Vortragshistorie. */
@@ -162,8 +181,9 @@ private fun SlotEditorCardsPreview() = PreviewThemeWrapper {
     )
     val actions = CardActions({}, {}, {})
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        WeekEventChips(slot, listOf(EventType("kongress", "Kongress", cancelsTalk = true, icon = "ic_cp_arena_duo")), {
-        })
+        val kongress = EventType("kongress", "Kongress", cancelsTalk = true, icon = "ic_cp_arena_duo")
+        WeekEventDropdown(slot, listOf(kongress), {})
+        WeekEventDropdown(slot.copy(weekEventId = "kongress", weekEventName = "Kongress"), listOf(kongress), {})
         // Gespeichert: beide Karten führen weiter.
         TalkCard(slot, slotTalkText(slot), inactiveNumber = null, historyTalk = 12, actions = actions)
         SpeakerCard(slot, slotSpeakerText(slot), supporting = null, directorySpeaker = "e1", actions = actions)
