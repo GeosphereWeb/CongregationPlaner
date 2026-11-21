@@ -60,6 +60,8 @@ class ImportViewModelTest {
     private class FakeFileSource(var result: Result<ImportTable?>, override val isAvailable: Boolean = true) :
         ImportFileSource {
         override suspend fun pickTable(title: String) = result
+
+        override suspend fun saveTable(fileName: String, table: ImportTable) = Result.success(false)
     }
 
     private val catalog = FakeTalkCatalogRepository()
