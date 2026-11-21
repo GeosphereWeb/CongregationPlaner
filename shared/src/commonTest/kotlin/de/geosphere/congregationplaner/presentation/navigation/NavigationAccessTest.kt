@@ -46,10 +46,13 @@ class NavigationAccessTest {
     }
 
     @Test
-    fun `a talk helper sees the talk planning`() {
+    fun `a talk helper sees the talk planning without import and export`() {
         val visible = access.visibleFor(member(CongregationRole.TALK_HELPER))
 
-        assertEquals(CongregationSection.talkPlanning, visible.congregationSections)
+        assertEquals(
+            CongregationSection.talkPlanning - CongregationSection.TALK_IMPORT_EXPORT,
+            visible.congregationSections,
+        )
     }
 
     @Test

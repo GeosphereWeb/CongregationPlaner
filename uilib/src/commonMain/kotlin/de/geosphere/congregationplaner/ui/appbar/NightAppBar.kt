@@ -10,7 +10,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
@@ -69,9 +69,11 @@ fun NightTabRow(
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    PrimaryTabRow(
+    // Scrollable, so long labels are not cut off when a row has three or more tabs.
+    PrimaryScrollableTabRow(
         selectedTabIndex = selectedIndex,
         modifier = modifier,
+        edgePadding = 0.dp,
         containerColor = Color.Transparent,
         contentColor = NightColors.OnBackground,
         indicator = {
@@ -109,6 +111,10 @@ private fun NightTopBarWithTabsPreview() = NightPreviewWrapper {
             onBack = {},
             subtitle = "Berlin-Mitte",
         )
-        NightTabRow(listOf("Wochenende", "Externe Redner", "Historie"), selectedIndex = 0, onSelect = {})
+        NightTabRow(
+            listOf("Wochenplanung", "Rednerliste", "Vortragshistorie", "Import/Export"),
+            selectedIndex = 0,
+            onSelect = {},
+        )
     }
 }

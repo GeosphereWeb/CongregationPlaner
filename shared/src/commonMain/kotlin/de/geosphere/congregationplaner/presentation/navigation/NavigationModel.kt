@@ -54,11 +54,13 @@ enum class CongregationSection(
     WEEKEND_TALKS("Planung am Wochenende", CongregationGroup.PLANNING, nested = true, tabLabel = "Wochenplanung"),
     EXTERNAL_SPEAKERS("Externe Redner", CongregationGroup.PLANNING, nested = true, tabLabel = "Rednerliste"),
     TALK_HISTORY("Vortragshistorie", CongregationGroup.PLANNING, nested = true, tabLabel = "Vortragshistorie"),
+    TALK_IMPORT_EXPORT("Import / Export", CongregationGroup.PLANNING, nested = true, tabLabel = "Import/Export"),
     ;
 
     companion object {
         /** Die Unterbereiche der Vortragsplanung; auf dem Handy sind sie Tabs, auf großen Fenstern eingerückt. */
-        val talkPlanning: List<CongregationSection> = listOf(WEEKEND_TALKS, EXTERNAL_SPEAKERS, TALK_HISTORY)
+        val talkPlanning: List<CongregationSection> =
+            listOf(WEEKEND_TALKS, EXTERNAL_SPEAKERS, TALK_HISTORY, TALK_IMPORT_EXPORT)
     }
 }
 

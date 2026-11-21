@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.congregation.presentation.CongregationMetadataRoute
 import de.geosphere.congregationplaner.event.presentation.EventTypeRoute
 import de.geosphere.congregationplaner.event.presentation.SpecialEventRoute
+import de.geosphere.congregationplaner.importer.presentation.TalkImportExportRoute
 import de.geosphere.congregationplaner.notification.presentation.AnnouncementRoute
 import de.geosphere.congregationplaner.organization.domain.model.SelectedCongregation
 import de.geosphere.congregationplaner.organization.presentation.management.OrganizationRoute
@@ -251,6 +252,7 @@ private fun CongregationSectionContent(
             TalkScheduleRoute(currentUser, actions.onOpenTalkHistory, actions.onOpenExternalSpeaker)
         CongregationSection.EXTERNAL_SPEAKERS -> ExternalDirectoryRoute(currentUser, state.directorySpeakerId)
         CongregationSection.TALK_HISTORY -> TalkHistoryRoute(currentUser, state.historyTalkNumber)
+        CongregationSection.TALK_IMPORT_EXPORT -> TalkImportExportRoute(currentUser)
     }
 }
 

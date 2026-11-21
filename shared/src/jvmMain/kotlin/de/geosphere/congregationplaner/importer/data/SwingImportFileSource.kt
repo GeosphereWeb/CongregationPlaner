@@ -18,12 +18,12 @@ internal object SwingImportFileSource : ImportFileSource {
         runCatching { chooseFile(title, save = false)?.let { Xlsx.readFirstSheet(ZipArchive.unzip(it.readBytes())) } }
     }
 
-    override suspend fun saveTable(fileName: String, table: ImportTable): Result<Boolean> =
+    override suspend fun saveTable(fileName: String, table: ImportTable, dateHeaders: Set<String>): Result<Boolean> =
         withContext(Dispatchers.IO) {
             runCatching {
                 val file = chooseFile("Speichern unter", save = true, proposed = fileName) ?: return@runCatching false
                 val target = if (file.extension.equals("xlsx", ignoreCase = true)) file else File("${file.path}.xlsx")
-                target.writeBytes(ZipArchive.zip(Xlsx.write(table)))
+                target.writeBytes(ZipArchive.zip(Xlsx.write(table, dateHeaders)))
                 true
             }
         }

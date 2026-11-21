@@ -49,6 +49,9 @@ class NavigationAccess(
         CongregationSection.EXTERNAL_SPEAKERS,
         CongregationSection.TALK_HISTORY,
         -> talkSchedulePolicy.canViewTalkPlanning(user)
+
+        // Import and export change or copy the whole planning; helpers only view it.
+        CongregationSection.TALK_IMPORT_EXPORT -> talkSchedulePolicy.canPlanTalks(user)
     }
 
     private fun canSee(user: AppUser, section: GlobalSection): Boolean = when (section) {

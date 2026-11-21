@@ -12,8 +12,11 @@ interface ImportFileSource {
     /** Asks for an `.xlsx` file and parses its first sheet; `null` if the user cancelled. */
     suspend fun pickTable(title: String): Result<ImportTable?>
 
-    /** Asks where to save [table] as an `.xlsx` file, proposing [fileName]; `false` if the user cancelled. */
-    suspend fun saveTable(fileName: String, table: ImportTable): Result<Boolean>
+    /**
+     * Asks where to save [table] as an `.xlsx` file, proposing [fileName]; `false` if the user cancelled. The columns
+     * [dateHeaders] hold Excel serial dates and are shown as dates.
+     */
+    suspend fun saveTable(fileName: String, table: ImportTable, dateHeaders: Set<String> = emptySet()): Result<Boolean>
 }
 
 /** Platform choice of the file source, like the repository factories. */
@@ -24,7 +27,8 @@ internal object UnavailableImportFileSource : ImportFileSource {
 
     override suspend fun pickTable(title: String): Result<ImportTable?> = unavailable()
 
-    override suspend fun saveTable(fileName: String, table: ImportTable): Result<Boolean> = unavailable()
+    override suspend fun saveTable(fileName: String, table: ImportTable, dateHeaders: Set<String>): Result<Boolean> =
+        unavailable()
 
     private fun <T> unavailable(): Result<T> =
         Result.failure(UnsupportedOperationException("Excel-Dateien gibt es nur in der Android- und Desktop-App."))

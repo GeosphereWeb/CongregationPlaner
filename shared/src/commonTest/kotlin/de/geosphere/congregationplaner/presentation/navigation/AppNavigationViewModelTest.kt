@@ -161,7 +161,7 @@ class AppNavigationViewModelTest {
     @Test
     fun `the talk planning sections are tabs of one area`() {
         assertEquals(
-            listOf("Wochenplanung", "Rednerliste", "Vortragshistorie"),
+            listOf("Wochenplanung", "Rednerliste", "Vortragshistorie", "Import/Export"),
             CongregationSection.talkPlanning.map { it.tabLabel },
         )
         assertEquals("Allgemeine Versammlungsdaten", CongregationSection.GENERAL_DATA.tabLabel)
