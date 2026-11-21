@@ -70,7 +70,7 @@ Numbers are sequential and permanent. Never reuse or renumber an existing ADR, e
 - [ADR-0011: Admin-Namen sind vor der Freigabe lesbar](0011-admin-contacts-visible-before-approval.md) — Accepted (teilweise ersetzt durch ADR-0012, ADR-0013)
 - [ADR-0012: Eine Liste gleichrangiger Rollen je Mitglied](0012-congregation-roles-list.md) — Accepted
 - [ADR-0013: Der globale Admin hat keinen Einblick in Versammlungsdaten](0013-global-admin-without-congregation-data.md) — Accepted
-- [ADR-0014: Nachtblau-Design als `MaterialTheme`](0014-night-design-as-material-theme.md) — Accepted
+- [ADR-0014: Nachtblau-Design als `MaterialTheme`](0014-night-design-as-material-theme.md) — Accepted (ergänzt durch ADR-0038)
 - [ADR-0015: Adresse und Notfallkontakte in einem eigenen Dokument](0015-private-member-details-separate-document.md) — Superseded by ADR-0016
 - [ADR-0016: Adresse und Notfallkontakte im Mitgliedsdokument](0016-contact-details-in-member-document.md) — Accepted
 - [ADR-0017: Organisationsbaum in der App pflegen](0017-organization-tree-maintained-in-app.md) — Accepted
@@ -87,3 +87,4 @@ Numbers are sequential and permanent. Never reuse or renumber an existing ADR, e
 - [ADR-0034: Vortragsliste und Wochenereignisse je Land](0034-reference-data-per-country.md) — Accepted
 - [ADR-0036: Ereignisarten je Versammlung mit Vorlage des Landes](0036-event-types-per-congregation.md) — Accepted
 - [ADR-0037: Termine mit Wochenereignis auf der Startseite](0037-schedule-week-events-on-home.md) — Accepted
+- [ADR-0038: Wählbares Design je Gerät](0038-selectable-theme-per-device.md) — Accepted
