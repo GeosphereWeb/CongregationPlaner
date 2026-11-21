@@ -14,10 +14,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,6 +29,7 @@ import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.ui.icon.arrowBackIcon
+import de.geosphere.congregationplaner.ui.icon.todayIcon
 import de.geosphere.congregationplaner.theming.AppTheme
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.ui.button.SecondaryButton
@@ -109,7 +109,8 @@ fun DetailPlaceholder(text: String, modifier: Modifier = Modifier) {
 
 /**
  * Kopf einer Liste: Titel, optional ein Untertitel und – wenn [onPrevious] bzw. [onNext] gesetzt sind – zwei
- * Pfeile zum Blättern (z. B. Jahr zurück/vor), je 44 dp groß; [pageLabel] steht zwischen den Pfeilen (z. B. das Jahr).
+ * Pfeile zum Blättern (z. B. Jahr zurück/vor), je 44 dp groß; [pageLabel] steht zwischen den Pfeilen (z. B. das Jahr),
+ * darunter [onToday] als Kalender-Icon „Heute“.
  */
 @Composable
 @Suppress("LongParameterList")
@@ -124,26 +125,40 @@ fun ListPaneHeader(
     onToday: (() -> Unit)? = null,
     pageLabel: String? = null,
 ) {
-    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    // Filled buttons, so arrows and "today" are recognisable as something to press.
+    Row(
+        modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.headlineSmall, color = NightColors.OnBackground)
             if (subtitle != null) {
                 Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = NightColors.OnBackgroundMuted)
             }
         }
-        if (onToday != null) TextButton(onClick = onToday) { Text("Heute") }
-        if (onPrevious != null) {
-            IconButton(onClick = onPrevious, modifier = Modifier.size(44.dp)) {
-                Icon(arrowBackIcon, contentDescription = previousDescription)
+        // The arrows sit on the line of the page (e.g. the year), "today" centred below it.
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (onPrevious != null) {
+                    FilledTonalIconButton(onClick = onPrevious, modifier = Modifier.size(44.dp)) {
+                        Icon(arrowBackIcon, contentDescription = previousDescription)
+                    }
+                }
+                if (pageLabel != null) {
+                    Text(pageLabel, style = MaterialTheme.typography.titleMedium, color = NightColors.OnBackground)
+                }
+                if (onNext != null) {
+                    FilledTonalIconButton(onClick = onNext, modifier = Modifier.size(44.dp)) {
+                        // Der Pfeil nach rechts ist der gespiegelte Zurück-Pfeil.
+                        Icon(arrowBackIcon, nextDescription, Modifier.scale(scaleX = -1f, scaleY = 1f))
+                    }
+                }
             }
-        }
-        if (pageLabel != null) {
-            Text(pageLabel, style = MaterialTheme.typography.titleMedium, color = NightColors.OnBackground)
-        }
-        if (onNext != null) {
-            IconButton(onClick = onNext, modifier = Modifier.size(44.dp)) {
-                // Der Pfeil nach rechts ist der gespiegelte Zurück-Pfeil.
-                Icon(arrowBackIcon, nextDescription, Modifier.scale(scaleX = -1f, scaleY = 1f))
+            if (onToday != null) {
+                FilledTonalIconButton(onClick = onToday, modifier = Modifier.padding(top = 4.dp).size(40.dp)) {
+                    Icon(todayIcon, contentDescription = "Heute")
+                }
             }
         }
     }
