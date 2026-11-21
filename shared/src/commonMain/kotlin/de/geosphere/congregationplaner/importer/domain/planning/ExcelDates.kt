@@ -2,6 +2,7 @@ package de.geosphere.congregationplaner.importer.domain.planning
 
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.daysUntil
 import kotlinx.datetime.plus
 
 private const val FIRST_SERIAL_AFTER_FAKE_LEAP_DAY = 61
@@ -21,3 +22,11 @@ fun excelSerialToDate(serial: Double): LocalDate {
     val epoch = if (day >= FIRST_SERIAL_AFTER_FAKE_LEAP_DAY) EPOCH_FROM_MARCH_1900 else EPOCH_BEFORE_MARCH_1900
     return epoch.plus(day, DateTimeUnit.DAY)
 }
+
+/** The Excel serial number of [date] (1900 date system); inverse of [excelSerialToDate] for dates from March 1900. */
+fun dateToExcelSerial(date: LocalDate): Int {
+    require(date >= EARLIEST_EXPORTABLE) { "Datum vor März 1900: $date" }
+    return EPOCH_FROM_MARCH_1900.daysUntil(date)
+}
+
+private val EARLIEST_EXPORTABLE = LocalDate(1900, 3, 1)

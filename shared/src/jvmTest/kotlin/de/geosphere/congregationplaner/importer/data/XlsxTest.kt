@@ -158,4 +158,17 @@ class XlsxTest {
 
         assertEquals(table, read)
     }
+
+    @Test
+    fun dateColumnsGetTheDateStyleAndKeepTheirSerial() {
+        val row = ImportRow(2, mapOf("Datum" to "46000", "Nummer" to "7"))
+        val table = ImportTable(listOf("Datum", "Nummer"), listOf(row))
+
+        val files = Xlsx.write(table, dateHeaders = setOf("Datum"))
+
+        val sheet = files.getValue("xl/worksheets/sheet1.xml").decodeToString()
+        assertEquals(true, "<c r=\"A2\" s=\"1\"><v>46000</v></c>" in sheet)
+        assertEquals(true, "<c r=\"B2\"><v>7</v></c>" in sheet)
+        assertEquals(table, read(ZipArchive.zip(files)))
+    }
 }
