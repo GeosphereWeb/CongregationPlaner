@@ -47,6 +47,7 @@ internal fun SlotDetailContent(
             canViewMembers = state.canViewMembers,
             isSaving = state.isSaving,
             onChange = actions.onEditorChange,
+            onRequestedChange = actions.onRequestedChange,
             onSelectWeekEvent = actions.onSelectWeekEvent,
             onSelectTalk = actions.onSelectTalk,
             speakerActions = actions.speaker,

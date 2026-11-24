@@ -58,6 +58,7 @@ internal fun TalkSlotEditor(
     canViewMembers: Boolean,
     isSaving: Boolean,
     onChange: (TalkSlot) -> Unit,
+    onRequestedChange: (Boolean) -> Unit,
     onSelectWeekEvent: (EventType?) -> Unit,
     onSelectTalk: (Talk?) -> Unit,
     speakerActions: SpeakerActions,
@@ -131,6 +132,13 @@ internal fun TalkSlotEditor(
             canPick = canViewMembers && selectableChairmen.isNotEmpty(),
             onPick = { showChairmanPicker = true },
             onRemove = { onSelectChairman(null) },
+        )
+
+        SwitchRow(
+            label = "Angefragt (Antwort offen)",
+            checked = slot.isRequested,
+            enabled = slot.canBeRequested || slot.isRequested,
+            onCheckedChange = onRequestedChange,
         )
 
         SwitchRow(
@@ -305,6 +313,7 @@ private fun EditorPreview(slot: TalkSlot, original: TalkSlot?, chip: SlotChip) =
         canViewMembers = true,
         isSaving = false,
         onChange = {},
+        onRequestedChange = {},
         onSelectWeekEvent = {},
         onSelectTalk = {},
         speakerActions = SpeakerActions(),
@@ -365,6 +374,22 @@ private fun TalkSlotEditorCompletePreview() {
         confirmed = true,
     )
     EditorPreview(slot, slot, SlotChip("Informiert", StatusTone.Mint))
+}
+
+@ThemePreviews
+@Composable
+private fun TalkSlotEditorRequestedPreview() {
+    val slot = TalkSlot(
+        LocalDate(2026, 12, 6),
+        LocalTime(10, 0),
+        talkNumber = 12,
+        talkTitle = "Der Weg zum Glück",
+        speakerMemberId = "1",
+        speakerLastName = "Muster",
+        speakerFirstName = "Max",
+        requestId = "r1",
+    )
+    EditorPreview(slot, slot, SlotChip("Angefragt", StatusTone.Gold))
 }
 
 @ThemePreviews

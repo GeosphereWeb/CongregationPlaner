@@ -5,16 +5,17 @@ import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.usecase.ConfirmSpeakerUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.IsSlotDateTakenUseCase
-import de.geosphere.congregationplaner.talk.domain.usecase.MoveTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ReassignTalkUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.SaveEditedSlotUseCase
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.launch
+import kotlinx.datetime.LocalDate
 
 /** Die UseCases, die einen Termin schreiben. */
 @Inject
 class SlotChangeUseCases(
-    val moveSlot: MoveTalkSlotUseCase,
+    val saveEditedSlot: SaveEditedSlotUseCase,
     val deleteSlot: DeleteTalkSlotUseCase,
     val confirmSpeaker: ConfirmSpeakerUseCase,
     val reassignTalk: ReassignTalkUseCase,
@@ -26,6 +27,7 @@ class SlotChangeUseCases(
 class SlotChangesHolder(
     private val session: TalkScheduleSession,
     private val useCases: SlotChangeUseCases,
+    private val today: LocalDate,
     private val onYearChange: (Int) -> Unit,
 ) {
     private val store get() = session.store
@@ -45,15 +47,27 @@ class SlotChangesHolder(
         if (useCases.isSlotDateTaken(state.slots, editor.slot, editor.original?.date)) {
             store.update { it.copy(errorMessage = "Für diesen Tag gibt es schon einen Termin.") }
         } else {
-            write(user, editor)
+            val warning = requestReplacementWarning(editor.original, editor.slot)
+            if (warning != null) store.update { it.copy(requestWarning = warning) } else write(user, editor)
         }
     }
+
+    /** Der Planer bestätigt, dass die offene Anfrage beim Speichern gelöscht wird. */
+    fun confirmRequestWarning() {
+        val editor = store.value.editor
+        store.update { it.copy(requestWarning = null) }
+        val user = session.allowedUser() ?: return
+        if (editor != null && !store.value.isSaving) write(user, editor)
+    }
+
+    fun dismissRequestWarning() = store.update { it.copy(requestWarning = null) }
 
     private fun write(user: AppUser, editor: TalkSlotEditorState) {
         val slot = editor.slot
         store.update { it.copy(isSaving = true, errorMessage = null) }
         session.scope.launch {
-            useCases.moveSlot(user, editor.original?.date ?: slot.date, slot)
+            val from = editor.original?.date ?: slot.date
+            useCases.saveEditedSlot(user, from, editor.original, slot, requested = slot.isRequested, today = today)
                 .onSuccess { saved ->
                     store.update { it.copy(editor = TalkSlotEditorState(saved, saved), isSaving = false) }
                     // Ein Termin in einem anderen Jahr wäre sonst nicht in der Liste zu sehen.
@@ -68,7 +82,7 @@ class SlotChangesHolder(
         val user = session.allowedUser() ?: return
         store.update { it.copy(isSaving = true, errorMessage = null) }
         session.scope.launch {
-            useCases.deleteSlot(user, slot.date)
+            useCases.deleteSlot(user, slot.date, slot.requestId)
                 .onSuccess {
                     store.update { state ->
                         state.copy(

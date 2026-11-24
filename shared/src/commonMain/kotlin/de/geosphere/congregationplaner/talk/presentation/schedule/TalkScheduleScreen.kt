@@ -89,6 +89,9 @@ internal data class TalkScheduleActions(
     val onEditSlot: (TalkSlot) -> Unit = {},
     val onEditorChange: (TalkSlot) -> Unit = {},
     val onInformedChange: (Boolean) -> Unit = {},
+    val onRequestedChange: (Boolean) -> Unit = {},
+    val onConfirmRequestWarning: () -> Unit = {},
+    val onDismissRequestWarning: () -> Unit = {},
     val onSelectWeekEvent: (EventType?) -> Unit = {},
     val onSelectTalk: (Talk?) -> Unit = {},
     val speaker: SpeakerActions = SpeakerActions(),
@@ -134,6 +137,9 @@ fun TalkScheduleScreen(
             onEditSlot = viewModel::selectSlot,
             onEditorChange = viewModel.editor::update,
             onInformedChange = viewModel.editor::setSpeakerInformed,
+            onRequestedChange = viewModel.editor::setRequested,
+            onConfirmRequestWarning = viewModel.changes::confirmRequestWarning,
+            onDismissRequestWarning = viewModel.changes::dismissRequestWarning,
             onSelectWeekEvent = viewModel.picker::selectWeekEvent,
             onSelectTalk = viewModel.picker::selectTalk,
             speaker = SpeakerActions(
@@ -370,6 +376,10 @@ internal fun TalkScheduleContent(
         reassign.swapTarget?.let { target ->
             SwapDialog(reassign.source, target, actions.onConfirmSwap, actions.onDismissSwap)
         }
+    }
+
+    state.requestWarning?.let { warning ->
+        RequestWarningDialog(warning, actions.onConfirmRequestWarning, actions.onDismissRequestWarning)
     }
 
     if (state.confirmCreateYear) {

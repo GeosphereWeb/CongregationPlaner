@@ -59,7 +59,7 @@ class TalkScheduleViewModel(
 
     val editor = SlotEditorHolder(session, today)
     val picker = SlotPickerHolder(session, editor)
-    val changes = SlotChangesHolder(session, slotChangeUseCases, ::changeYear)
+    val changes = SlotChangesHolder(session, slotChangeUseCases, today, ::changeYear)
     val yearSetup = YearSetupHolder(session, yearSetupUseCases)
     val planningSettings = PlanningSettingsHolder(session, referenceUseCases)
     val reassign = ReassignHolder(session, slotChangeUseCases.reassignTalk)

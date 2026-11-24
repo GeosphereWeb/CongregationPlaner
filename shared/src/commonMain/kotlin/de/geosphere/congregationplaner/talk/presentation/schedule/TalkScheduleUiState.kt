@@ -63,6 +63,8 @@ data class TalkScheduleUiState(
     /** Ohne diese Berechtigung können die Redner nicht geladen werden. */
     val canViewMembers: Boolean = false,
     val editor: TalkSlotEditorState? = null,
+    /** Frage vor dem Speichern, wenn dabei eine offene Anfrage gelöscht würde (ADR-0039); `null` = keine. */
+    val requestWarning: String? = null,
     /** `true`, solange die Rückfrage zu „Jahr anlegen“ offen ist. */
     val confirmCreateYear: Boolean = false,
     /** Die im Dialog „Uhrzeit ändern“ gewählte Uhrzeit; `null`, solange der Dialog zu ist. */

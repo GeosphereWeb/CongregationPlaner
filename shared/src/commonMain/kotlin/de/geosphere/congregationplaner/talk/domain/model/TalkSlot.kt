@@ -90,6 +90,12 @@ data class TalkSlot(
     }
 }
 
+/** `true`, wenn [other] denselben Redner hat (Mitglied, externer oder frei eingetragener Redner). */
+fun TalkSlot.sameSpeakerAs(other: TalkSlot): Boolean =
+    speakerMemberId == other.speakerMemberId &&
+        externalSpeakerId == other.externalSpeakerId &&
+        freeSpeakerName == other.freeSpeakerName
+
 /** Der Vortrag als Text: „Nr. 12 – Titel“, ohne Titel nur die Nummer, frei eingetragen nur der Titel; sonst `null`. */
 fun TalkSlot.talkLabel(): String? {
     val title = talkTitle?.takeIf { it.isNotBlank() }

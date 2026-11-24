@@ -4,6 +4,7 @@ import de.geosphere.congregationplaner.talk.domain.model.SpeakerRequest
 import de.geosphere.congregationplaner.talk.domain.model.TalkScheduleException
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.newRequestId
+import de.geosphere.congregationplaner.talk.domain.model.sameSpeakerAs
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.talk.domain.repository.ScheduleWrite
 import de.geosphere.congregationplaner.talk.domain.repository.SpeakerRequestRepository
@@ -76,8 +77,3 @@ fun planSlotEdit(
     )
     return Result.success(write to saved)
 }
-
-private fun TalkSlot.sameSpeakerAs(other: TalkSlot): Boolean =
-    speakerMemberId == other.speakerMemberId &&
-        externalSpeakerId == other.externalSpeakerId &&
-        freeSpeakerName == other.freeSpeakerName

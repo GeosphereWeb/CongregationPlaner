@@ -383,38 +383,6 @@ class TalkScheduleUseCasesTest {
     }
 
     @Test
-    fun `move saves the new day first and then deletes the old one`() = runBlocking {
-        val moved = slot(LocalDate(2026, 10, 24))
-
-        val result = MoveTalkSlotUseCase(save, delete)(admin, from = sunday, slot = moved)
-
-        assertEquals(moved, result.getOrThrow())
-        assertEquals(listOf(moved), repository.savedSlots)
-        assertEquals(listOf(sunday), repository.deletedDates)
-    }
-
-    @Test
-    fun `move on the same day only saves and a failed save deletes nothing`() = runBlocking {
-        val move = MoveTalkSlotUseCase(save, delete)
-
-        assertTrue(move(admin, sunday, slot()).isSuccess)
-        assertTrue(repository.deletedDates.isEmpty())
-
-        repository.saveResult = Result.failure(IllegalStateException("offline"))
-        assertTrue(move(admin, from = LocalDate(2026, 10, 18), slot = slot()).isFailure)
-        assertTrue(repository.deletedDates.isEmpty())
-    }
-
-    @Test
-    fun `move reports a failed delete of the old day`() = runBlocking {
-        repository.deleteResult = Result.failure(IllegalStateException("offline"))
-
-        val result = MoveTalkSlotUseCase(save, delete)(admin, from = sunday, slot = slot(LocalDate(2026, 10, 24)))
-
-        assertEquals("offline", result.exceptionOrNull()?.message)
-    }
-
-    @Test
     fun `observe returns nothing for a user without congregation`() = runBlocking {
         val slots = ObserveTalkYearUseCase(repository)(member.copy(congregation = null), 2026).toList()
 

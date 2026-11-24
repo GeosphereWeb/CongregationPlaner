@@ -21,9 +21,15 @@ internal class FakeSpeakerRequestRepository(
 
     override fun observeRequests(congregation: CongregationRef): Flow<List<SpeakerRequest>> = requests
 
-    override suspend fun commit(congregation: CongregationRef, write: ScheduleWrite): Result<Unit> =
-        commitResult.onSuccess {
+    // Termine schreiben folgt den Einstellungen von [schedule] (saveResult, saveGate) und zeichnet dort mit auf, damit
+    // bestehende Tests des Editors gleich bleiben.
+    override suspend fun commit(congregation: CongregationRef, write: ScheduleWrite): Result<Unit> {
+        if (write.saveSlots.isNotEmpty()) schedule.saveGate?.await()
+        val slotResult = if (write.saveSlots.isNotEmpty()) schedule.saveResult else Result.success(Unit)
+        return commitResult.mapCatching { slotResult.getOrThrow() }.onSuccess {
             writes += write
+            schedule.savedSlots += write.saveSlots
+            schedule.deletedDates += write.deleteSlotDates
             val savedDates = write.saveSlots.map { it.date }.toSet()
             schedule.slots.value = (
                 schedule.slots.value.filterNot { it.date in savedDates || it.date in write.deleteSlotDates } +
@@ -33,4 +39,5 @@ internal class FakeSpeakerRequestRepository(
             requests.value = requests.value.filterNot { it.id in savedIds || it.id in write.deleteRequestIds } +
                 write.saveRequests
         }
+    }
 }
