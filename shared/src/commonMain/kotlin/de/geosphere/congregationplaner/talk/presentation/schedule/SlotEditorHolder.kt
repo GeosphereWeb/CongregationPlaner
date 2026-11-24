@@ -22,9 +22,13 @@ class SlotEditorHolder(private val session: TalkScheduleSession, private val tod
         store.update { it.copy(editor = TalkSlotEditorState(slot, slot), errorMessage = null) }
     }
 
-    /** Während des Speicherns bleibt der Editor unverändert, sonst würde das Ergebnis die Eingaben überschreiben. */
+    /**
+     * Während des Speicherns bleibt der Editor unverändert, sonst würde das Ergebnis die Eingaben überschreiben. Ohne
+     * Redner gibt es keine Anfrage mehr; der Schalter „Angefragt“ geht dann aus.
+     */
     fun update(slot: TalkSlot) = store.update {
-        if (it.isSaving) it else it.copy(editor = it.editor?.copy(slot = slot.withLimitedNote()))
+        val updated = slot.withLimitedNote().let { s -> if (s.hasSpeaker) s else s.withRequested(false, null) }
+        if (it.isSaving) it else it.copy(editor = it.editor?.copy(slot = updated))
     }
 
     fun cancel() {
@@ -37,6 +41,16 @@ class SlotEditorHolder(private val session: TalkScheduleSession, private val tod
         store.update { state ->
             val editor = state.editor?.takeUnless { it.isNew }?.let { it.copy(slot = it.original ?: it.slot) }
             state.copy(editor = editor, errorMessage = null)
+        }
+    }
+
+    /** Schalter „Angefragt“: nur mit Redner und Vortrag, der nicht entfällt; schaltet „Informiert“ aus. */
+    fun setRequested(requested: Boolean) = store.update { state ->
+        val editor = state.editor?.takeUnless { state.isSaving } ?: return@update state
+        if (requested && !editor.slot.canBeRequested) {
+            state
+        } else {
+            state.copy(editor = editor.copy(slot = editor.slot.withRequested(requested, editor.original)))
         }
     }
 

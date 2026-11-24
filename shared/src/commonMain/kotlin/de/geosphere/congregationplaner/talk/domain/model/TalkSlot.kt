@@ -23,6 +23,8 @@ import kotlinx.datetime.LocalTime
  * @param confirmed `true`, wenn der Planer den Termin bestätigt hat (z. B. weil der Redner zugesagt hat); ältere
  *   Termine ohne das Feld gelten als nicht bestätigt.
  * @param note Freie Notiz des Planers zum Termin (höchstens [MAX_NOTE_LENGTH] Zeichen); `null` = keine.
+ * @param requestId Die offene Anfrage bei diesem Redner in `talkRequests` (ADR-0039); `null` = keine Anfrage offen
+ *   (der Redner hat zugesagt oder es ist keiner eingetragen).
  * @param chairmanMemberId Das Mitglied, das die Zusammenkunft leitet (Vorsitzender); Name und Vorname werden
  *   wie beim Redner als Momentaufnahme mitgespeichert, die drei Felder gehören zusammen.
  */
@@ -44,6 +46,7 @@ data class TalkSlot(
     val speakerCongregation: String? = null,
     val confirmed: Boolean = false,
     val note: String? = null,
+    val requestId: String? = null,
 ) {
     /** Dokument-ID in Firestore: ISO-Datum `yyyy-MM-dd`. */
     val id: String get() = date.toString()
@@ -70,6 +73,9 @@ data class TalkSlot(
     val speakerDisplayName: String?
         get() = externalSpeaker?.displayName ?: speaker?.displayName ?: freeSpeakerName
 
+    /** `true`, solange die Anfrage beim Redner offen ist. */
+    val isRequested: Boolean get() = requestId != null
+
     /** `true`, wenn ein Vortrag aus der Liste oder ein frei eingetragener Vortrag gewählt ist. */
     val hasTalk: Boolean get() = talkNumber != null || talkTitle != null
 
@@ -83,6 +89,11 @@ data class TalkSlot(
         const val MAX_NOTE_LENGTH = 500
     }
 }
+
+/** `true`, wenn [other] denselben Redner hat (Mitglied, externer oder frei eingetragener Redner). */
+fun TalkSlot.sameSpeakerAs(other: TalkSlot): Boolean = speakerMemberId == other.speakerMemberId &&
+    externalSpeakerId == other.externalSpeakerId &&
+    freeSpeakerName == other.freeSpeakerName
 
 /** Der Vortrag als Text: „Nr. 12 – Titel“, ohne Titel nur die Nummer, frei eingetragen nur der Titel; sonst `null`. */
 fun TalkSlot.talkLabel(): String? {
@@ -197,6 +208,19 @@ sealed class TalkScheduleException(message: String) : Exception(message) {
     class TargetCancelled : TalkScheduleException("Am gewählten Tag entfällt der Vortrag.")
 
     class SameDay : TalkScheduleException("Bitte wähle einen anderen Tag.")
+
+    class InvalidRequest :
+        TalkScheduleException("Eine Anfrage braucht einen Redner und einen Tag, an dem der Vortrag stattfindet.")
+
+    class InvalidContactAttempt :
+        TalkScheduleException(
+            "Der Kontaktversuch ist ungültig: Notiz höchstens ${SpeakerRequest.MAX_ATTEMPT_NOTE_LENGTH} Zeichen, " +
+                "höchstens ${SpeakerRequest.MAX_ATTEMPTS} Versuche.",
+        )
+
+    class TargetTaken : TalkScheduleException("Am gewählten Tag ist schon ein Vortrag oder Redner eingeplant.")
+
+    class RequestNotFound : TalkScheduleException("Die Anfrage gibt es nicht mehr.")
 
     class InvalidTalk :
         TalkScheduleException(

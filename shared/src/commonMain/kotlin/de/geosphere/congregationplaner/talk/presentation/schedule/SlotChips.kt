@@ -16,7 +16,11 @@ internal data class SlotChip(val text: String, val tone: StatusTone)
  */
 internal fun listSlotChips(slot: TalkSlot, status: SlotStatus): List<SlotChip> = when (status) {
     SlotStatus.PLANNED, SlotStatus.NOT_PLANNED -> emptyList()
-    SlotStatus.NEXT -> listOfNotNull(slotChip(status), slotChip(SlotStatus.INFORMED).takeIf { slot.confirmed })
+    SlotStatus.NEXT -> listOfNotNull(
+        slotChip(status),
+        slotChip(SlotStatus.REQUESTED).takeIf { slot.isRequested },
+        slotChip(SlotStatus.INFORMED).takeIf { slot.confirmed },
+    )
     else -> listOf(slotChip(status))
 }
 
@@ -40,6 +44,7 @@ internal fun slotChip(status: SlotStatus): SlotChip = when (status) {
     SlotStatus.NEXT -> SlotChip(statusLabel(status), StatusTone.Gold)
     SlotStatus.CANCELLED -> SlotChip(statusLabel(status), StatusTone.Sky)
     SlotStatus.NOT_PLANNED -> SlotChip(statusLabel(status), StatusTone.Coral)
+    SlotStatus.REQUESTED -> SlotChip(statusLabel(status), StatusTone.Gold)
     SlotStatus.PLANNED -> SlotChip(statusLabel(status), StatusTone.Sky)
     SlotStatus.INFORMED -> SlotChip(statusLabel(status), StatusTone.Mint)
 }

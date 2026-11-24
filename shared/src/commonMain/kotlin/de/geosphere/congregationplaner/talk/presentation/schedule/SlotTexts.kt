@@ -33,9 +33,9 @@ internal fun slotListTitle(slot: TalkSlot): AnnotatedString? {
 }
 
 /** Redner in der Liste; an einem entfallenden Termin steht dort nichts (siehe [slotListTitle]). */
-/** „Informiert“ lässt sich nur für einen Termin mit Vortrag und Redner setzen, der nicht entfällt. */
+/** „Informiert“ lässt sich nur für einen Termin mit Vortrag und zugesagtem Redner setzen, der nicht entfällt. */
 internal val TalkSlot.canBeInformed: Boolean
-    get() = hasTalk && hasSpeaker && !talkCancelled
+    get() = hasTalk && hasSpeaker && !talkCancelled && !isRequested
 
 internal fun slotListSpeakerLine(slot: TalkSlot): String? = slotSpeakerLine(slot).takeUnless { slot.talkCancelled }
 

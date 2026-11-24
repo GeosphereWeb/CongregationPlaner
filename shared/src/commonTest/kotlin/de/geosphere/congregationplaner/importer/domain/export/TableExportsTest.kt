@@ -73,7 +73,13 @@ class TableExportsTest {
                 confirmed = true,
             ),
             TalkSlot(LocalDate(2026, 3, 1), time, kongress.id, kongress.name, talkCancelled = true),
-            TalkSlot(LocalDate(2026, 3, 15), time, talkTitle = "Frei eingetragen", speakerLastName = "Gast"),
+            TalkSlot(
+                LocalDate(2026, 3, 15),
+                time,
+                talkTitle = "Frei eingetragen",
+                speakerLastName = "Gast",
+                requestId = "r1",
+            ),
         )
         val table = exportTalkSchedule(slots)
         val context = ScheduleImportContext(
@@ -91,6 +97,8 @@ class TableExportsTest {
         val dates = listOf(LocalDate(2026, 3, 1), LocalDate(2026, 3, 8), LocalDate(2026, 3, 15))
         assertEquals(dates, import.slots.entries.map { it.item.date })
         assertEquals("1", table.rows[1].text("rednerIstInformiert"))
+        assertEquals("0", table.rows[1].text("rednerIstAngefragt"))
+        assertEquals("1", table.rows[2].text("rednerIstAngefragt"))
     }
 
     @Test

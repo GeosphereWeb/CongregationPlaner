@@ -74,6 +74,14 @@ class ReassignTalkUseCaseTest {
     }
 
     @Test
+    fun `an open request moves with the speaker`() {
+        val (newSource, newTarget) = reassignTalk(source.copy(confirmed = false, requestId = "r1"), freeDay)
+
+        assertEquals(null, newSource.requestId)
+        assertEquals("r1", newTarget.requestId)
+    }
+
+    @Test
     fun `a talk moves to a free day and both slots are saved together`() = runBlocking {
         val (newSource, newTarget) = reassign(planner, source, freeDay).getOrThrow()
 

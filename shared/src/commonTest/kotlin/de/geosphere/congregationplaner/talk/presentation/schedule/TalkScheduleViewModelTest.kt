@@ -16,6 +16,7 @@ import de.geosphere.congregationplaner.talk.domain.model.ExternalCongregation
 import de.geosphere.congregationplaner.talk.domain.model.ExternalSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.MessageSender
 import de.geosphere.congregationplaner.talk.domain.model.Speaker
+import de.geosphere.congregationplaner.talk.domain.model.SpeakerRequest
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkPlanningSettings
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
@@ -29,7 +30,6 @@ import de.geosphere.congregationplaner.talk.domain.usecase.ConfirmSpeakerUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.CreateYearSlotsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.IsSlotDateTakenUseCase
-import de.geosphere.congregationplaner.talk.domain.usecase.MoveTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveAllTalkSlotsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalDirectoryUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalSpeakersUseCase
@@ -38,9 +38,10 @@ import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkMembersUse
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkPlanningSettingsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkYearUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ReassignTalkUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.SaveEditedSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveTalkPlanningSettingsUseCase
-import de.geosphere.congregationplaner.talk.domain.usecase.SaveTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.testing.FakeExternalSpeakerDirectoryRepository
+import de.geosphere.congregationplaner.talk.testing.FakeSpeakerRequestRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkPlanningSettingsRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
@@ -133,6 +134,7 @@ class TalkScheduleViewModelTest {
     private val pausedTalk = Talk(40, "Pausierter Vortrag", active = false)
 
     private lateinit var repository: FakeTalkScheduleRepository
+    private lateinit var requests: FakeSpeakerRequestRepository
     private lateinit var eventTypes: FakeEventTypeRepository
     private lateinit var catalog: FakeTalkCatalogRepository
     private lateinit var users: FakeUserRepository
@@ -162,12 +164,12 @@ class TalkScheduleViewModelTest {
         templates = FakeMessageTemplateRepository()
         notifications = FakeNotificationRepository()
         val policy = TalkSchedulePermissionPolicy()
-        val save = SaveTalkSlotUseCase(repository, policy)
-        val delete = DeleteTalkSlotUseCase(repository, policy)
+        requests = FakeSpeakerRequestRepository(schedule = repository)
+        val delete = DeleteTalkSlotUseCase(repository, requests, policy)
         viewModel = TalkScheduleViewModel(
             ObserveTalkYearUseCase(repository),
             SlotChangeUseCases(
-                MoveTalkSlotUseCase(save, delete),
+                SaveEditedSlotUseCase(requests, policy),
                 delete,
                 ConfirmSpeakerUseCase(repository, policy),
                 ReassignTalkUseCase(repository, policy),
@@ -802,6 +804,76 @@ class TalkScheduleViewModelTest {
 
         assertEquals(listOf(moved), repository.savedSlots)
         assertEquals(listOf(october25.date), repository.deletedDates)
+    }
+
+    @Test
+    fun `a planner marks the speaker as requested and saving creates the request`() {
+        viewModel.onCurrentUserChanged(planner)
+        val planned = october25.copy(speakerMemberId = "m1", speakerLastName = "Muster", speakerFirstName = "Max")
+        repository.slots.value = listOf(planned, november1)
+        viewModel.editor.edit(planned)
+
+        viewModel.editor.setRequested(true)
+        viewModel.changes.save()
+
+        val saved = repository.slots.value.first { it.date == october25.date }
+        assertEquals(saved.requestId, requests.requests.value.single().id)
+        assertEquals(saved, state.editor?.original)
+    }
+
+    @Test
+    fun `replacing the speaker of a requested slot asks first and saves after confirmation`() {
+        viewModel.onCurrentUserChanged(planner)
+        val requested = october25.copy(
+            speakerMemberId = "m1",
+            speakerLastName = "Muster",
+            speakerFirstName = "Max",
+            requestId = "r1",
+        )
+        repository.slots.value = listOf(requested, november1)
+        requests.requests.value = listOf(SpeakerRequest("r1", LocalDate(2026, 10, 1)))
+        viewModel.editor.edit(requested)
+        viewModel.editor.update(requested.copy(speakerMemberId = null, speakerLastName = null, speakerFirstName = null))
+
+        viewModel.changes.save()
+
+        assertEquals("Die offene Anfrage bei Muster, Max wird gelöscht. Trotzdem speichern?", state.requestWarning)
+        assertTrue(requests.writes.isEmpty())
+
+        viewModel.changes.confirmRequestWarning()
+
+        assertNull(state.requestWarning)
+        assertTrue(requests.requests.value.isEmpty())
+        assertNull(repository.slots.value.first { it.date == october25.date }.requestId)
+    }
+
+    @Test
+    fun `dismissing the request warning keeps everything unsaved`() {
+        viewModel.onCurrentUserChanged(planner)
+        val requested = october25.copy(speakerLastName = "Gast", speakerFirstName = "", requestId = "r1")
+        repository.slots.value = listOf(requested, november1)
+        viewModel.editor.edit(requested)
+        viewModel.editor.update(requested.copy(speakerLastName = null, speakerFirstName = null))
+        viewModel.changes.save()
+
+        viewModel.changes.dismissRequestWarning()
+
+        assertNull(state.requestWarning)
+        assertTrue(requests.writes.isEmpty())
+        assertNotNull(state.editor)
+    }
+
+    @Test
+    fun `deleting a requested slot deletes its request`() {
+        viewModel.onCurrentUserChanged(planner)
+        val requested = october25.copy(speakerLastName = "Gast", speakerFirstName = "", requestId = "r1")
+        repository.slots.value = listOf(requested, november1)
+        requests.requests.value = listOf(SpeakerRequest("r1", LocalDate(2026, 10, 1)))
+
+        viewModel.changes.delete(requested)
+
+        assertTrue(requests.requests.value.isEmpty())
+        assertEquals(listOf(november1), repository.slots.value)
     }
 
     @Test

@@ -84,6 +84,21 @@ class TalkSlotPresentationTest {
     }
 
     @Test
+    fun `an open request makes the slot requested and it cannot be informed`() {
+        val requested = slot { withMember(it).copy(requestId = "r1") }
+
+        assertEquals(SlotStatus.REQUESTED, slotStatus(requested, nextSlotDate = null))
+        assertEquals(SlotStatus.REQUESTED, filterStatus(requested))
+        assertEquals(SlotChip("Angefragt", StatusTone.Gold), slotChip(SlotStatus.REQUESTED))
+        assertEquals(
+            listOf(SlotChip("Nächster", StatusTone.Gold), SlotChip("Angefragt", StatusTone.Gold)),
+            listSlotChips(requested, SlotStatus.NEXT),
+        )
+        assertTrue(SlotStatus.REQUESTED in FILTER_STATUSES)
+        assertFalse(requested.canBeInformed)
+    }
+
+    @Test
     fun `an external speaker counts as a speaker`() {
         val s = slot {
             withTalk(it).copy(
@@ -145,7 +160,7 @@ class TalkSlotPresentationTest {
     @Test
     fun `filter labels follow the planning terms`() {
         assertEquals(
-            listOf("Nicht geplant", "Geplant", "Entfällt"),
+            listOf("Nicht geplant", "Angefragt", "Geplant", "Entfällt"),
             FILTER_STATUSES.map(::statusLabel),
         )
     }

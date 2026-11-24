@@ -46,6 +46,7 @@ class NavigationAccess(
         CongregationSection.MIDWEEK_PLANNING -> midweekPolicy.canPlanMidweek(user)
 
         CongregationSection.WEEKEND_TALKS,
+        CongregationSection.TALK_REQUESTS,
         CongregationSection.EXTERNAL_SPEAKERS,
         CongregationSection.TALK_HISTORY,
         -> talkSchedulePolicy.canViewTalkPlanning(user)

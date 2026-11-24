@@ -8,6 +8,7 @@ import de.geosphere.congregationplaner.talk.domain.model.TalkScheduleException
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
+import de.geosphere.congregationplaner.talk.testing.FakeSpeakerRequestRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
 import de.geosphere.congregationplaner.talk.testing.FakeWeekEventRepository
@@ -34,7 +35,7 @@ class TalkScheduleUseCasesTest {
     private val repository = FakeTalkScheduleRepository()
     private val policy = TalkSchedulePermissionPolicy()
     private val save = SaveTalkSlotUseCase(repository, policy)
-    private val delete = DeleteTalkSlotUseCase(repository, policy)
+    private val delete = DeleteTalkSlotUseCase(repository, FakeSpeakerRequestRepository(schedule = repository), policy)
 
     private val admin = AppUser(
         uid = "1",
@@ -379,38 +380,6 @@ class TalkScheduleUseCasesTest {
 
         assertTrue(delete(admin, sunday).isSuccess)
         assertEquals(listOf(sunday), repository.deletedDates)
-    }
-
-    @Test
-    fun `move saves the new day first and then deletes the old one`() = runBlocking {
-        val moved = slot(LocalDate(2026, 10, 24))
-
-        val result = MoveTalkSlotUseCase(save, delete)(admin, from = sunday, slot = moved)
-
-        assertEquals(moved, result.getOrThrow())
-        assertEquals(listOf(moved), repository.savedSlots)
-        assertEquals(listOf(sunday), repository.deletedDates)
-    }
-
-    @Test
-    fun `move on the same day only saves and a failed save deletes nothing`() = runBlocking {
-        val move = MoveTalkSlotUseCase(save, delete)
-
-        assertTrue(move(admin, sunday, slot()).isSuccess)
-        assertTrue(repository.deletedDates.isEmpty())
-
-        repository.saveResult = Result.failure(IllegalStateException("offline"))
-        assertTrue(move(admin, from = LocalDate(2026, 10, 18), slot = slot()).isFailure)
-        assertTrue(repository.deletedDates.isEmpty())
-    }
-
-    @Test
-    fun `move reports a failed delete of the old day`() = runBlocking {
-        repository.deleteResult = Result.failure(IllegalStateException("offline"))
-
-        val result = MoveTalkSlotUseCase(save, delete)(admin, from = sunday, slot = slot(LocalDate(2026, 10, 24)))
-
-        assertEquals("offline", result.exceptionOrNull()?.message)
     }
 
     @Test

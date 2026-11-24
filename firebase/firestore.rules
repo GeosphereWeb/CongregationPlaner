@@ -80,6 +80,20 @@ rules_version = '2';
 //   - A member is never speaker and chairman on the same day (speakerMemberId != chairmanMemberId).
 //   - externalSpeakerId: string | null, speakerCongregation: string | null (1..100 chars): an external speaker
 //     instead of a member; then the speaker name fields are set and speakerMemberId is null (never both).
+//   - requestId: string | null (required, 1..128 chars): the open speaker request in talkRequests (ADR-0039); only with
+//     a speaker, never on a cancelled talk and never together with confirmed == true. Talk helpers may set
+//     `confirmed` only while no request is open.
+//
+// Collection: region/.../congregation/{congId}/talkRequests (CP-188, ADR-0039)
+// Document ID: free (auto id). Open speaker requests; readable by planners and talk helpers of this congregation,
+//   written and deleted only by the planners. Members without these roles never read them (contact attempts and
+//   notes are private), which is why they are not stored on the slot.
+// Fields:
+//   - createdOn: string 'yyyy-MM-dd' (required)
+//   - note: string | null (<= 500 chars)
+//   - contactAttempts: list (required, <= 20) of maps { date: 'yyyy-MM-dd', kind: 'CALL' | 'VOICEMAIL' | 'MESSAGE' |
+//     'EMAIL' | 'IN_PERSON', note: string | null (<= 200 chars) }; the rules check only list and size, the app each entry
+//   - speaker and talk fields with the same shape as on the slot; set only while no slot points to the request
 //
 // Directory of external speakers, kept by the planners of this congregation. Independent of the organization
 // hierarchy above: circuits and congregations are entered by the planner. Document IDs: free (auto id).
@@ -524,14 +538,38 @@ service cloud.firestore {
         (talk == null || (talk is string && isValidDateId(talk)));
     }
 
+    // An open speaker request (ADR-0039): the slot points to its document in talkRequests. Only with a speaker, never
+    // on a cancelled talk and never together with `confirmed` (the speaker is informed only after accepting).
+    function isValidRequestRef(data) {
+      let requestId = data.requestId;
+      return requestId == null ||
+        (requestId is string && requestId.size() >= 1 && requestId.size() <= 128 &&
+          data.get('speakerLastName', null) != null && data.talkCancelled == false && data.confirmed == false);
+    }
+
+    // A speaker request: speaker and talk have the shape of the slot fields; whether they must be set depends on the
+    // slot that points to the request, which the app checks.
+    function isValidSpeakerRequest(data) {
+      return data.keys().hasOnly(['createdOn', 'note', 'contactAttempts', 'speakerMemberId', 'speakerLastName',
+          'speakerFirstName', 'externalSpeakerId', 'speakerCongregation', 'talkNumber', 'talkTitle']) &&
+        data.keys().hasAll(['createdOn', 'contactAttempts']) &&
+        data.createdOn is string && isValidDateId(data.createdOn) &&
+        isNullableString(data.get('note', null), 500) &&
+        // Rules have no loops and 20 checked entries exceed the expression limit: the app checks each attempt.
+        data.contactAttempts is list && data.contactAttempts.size() <= 20 &&
+        isValidTalkFields(data) &&
+        isValidSpeakerFields(data);
+    }
+
     function isValidTalkSlot(date, data) {
       let eventId = data.get('weekEventId', null);
       let eventName = data.get('weekEventName', null);
       return isValidDateId(date) &&
         data.keys().hasOnly(['time', 'talkCancelled', 'confirmed', 'note', 'weekEventId', 'weekEventName', 'talkNumber', 'talkTitle',
           'speakerMemberId', 'speakerLastName', 'speakerFirstName',
-          'chairmanMemberId', 'chairmanLastName', 'chairmanFirstName', 'externalSpeakerId', 'speakerCongregation']) &&
-        data.keys().hasAll(['time', 'talkCancelled', 'confirmed']) &&
+          'chairmanMemberId', 'chairmanLastName', 'chairmanFirstName', 'externalSpeakerId', 'speakerCongregation',
+          'requestId']) &&
+        data.keys().hasAll(['time', 'talkCancelled', 'confirmed', 'requestId']) &&
         data.time is string && data.time.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$') &&
         data.talkCancelled is bool &&
         data.confirmed is bool &&
@@ -542,6 +580,7 @@ service cloud.firestore {
         isValidTalkFields(data) &&
         isValidSpeakerFields(data) &&
         isValidChairmanFields(data) &&
+        isValidRequestRef(data) &&
         // A member is never speaker and chairman on the same day.
         (data.get('speakerMemberId', null) == null || data.get('chairmanMemberId', null) == null ||
           data.get('speakerMemberId', null) != data.get('chairmanMemberId', null));
@@ -950,7 +989,19 @@ service cloud.firestore {
                       isValidTalkSlot(date, request.resource.data)) ||
                     (canViewTalkPlanning(regionId, subregionId, branchId, countryId, circuitId, congId) &&
                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['confirmed']) &&
-                      request.resource.data.confirmed is bool);
+                      request.resource.data.confirmed is bool &&
+                      resource.data.get('requestId', null) == null);
+                }
+
+                // ---------------------------------------------------------
+                // Speaker requests (CP-188, ADR-0039): contact attempts stay hidden from members who read slots
+                // with a week event; read by planners and talk helpers, written only by planners
+                // ---------------------------------------------------------
+                match /talkRequests/{requestId} {
+                  allow read: if canViewTalkPlanning(regionId, subregionId, branchId, countryId, circuitId, congId);
+                  allow create, update: if canPlanTalks(regionId, subregionId, branchId, countryId, circuitId, congId) &&
+                    isValidSpeakerRequest(request.resource.data);
+                  allow delete: if canPlanTalks(regionId, subregionId, branchId, countryId, circuitId, congId);
                 }
 
                 // ---------------------------------------------------------

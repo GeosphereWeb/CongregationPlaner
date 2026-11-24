@@ -7,10 +7,12 @@ import de.geosphere.congregationplaner.event.domain.repository.EventTypeReposito
 import de.geosphere.congregationplaner.notification.data.createNotificationRepository
 import de.geosphere.congregationplaner.notification.domain.repository.NotificationRepository
 import de.geosphere.congregationplaner.talk.data.createExternalSpeakerDirectoryRepository
+import de.geosphere.congregationplaner.talk.data.createSpeakerRequestRepository
 import de.geosphere.congregationplaner.talk.data.createTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.data.createTalkPlanningSettingsRepository
 import de.geosphere.congregationplaner.talk.data.createTalkScheduleRepository
 import de.geosphere.congregationplaner.talk.domain.repository.ExternalSpeakerDirectoryRepository
+import de.geosphere.congregationplaner.talk.domain.repository.SpeakerRequestRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkCatalogRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkPlanningSettingsRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkScheduleRepository
@@ -28,6 +30,10 @@ interface TalkScheduleGraph {
 
     @Provides
     fun provideTalkScheduleRepository(): TalkScheduleRepository = createTalkScheduleRepository()
+
+    // Offene Redneranfragen (ADR-0039); Termin und Anfrage werden zusammen geschrieben.
+    @Provides
+    fun provideSpeakerRequestRepository(): SpeakerRequestRepository = createSpeakerRequestRepository()
 
     @Provides
     fun provideEventTypeRepository(): EventTypeRepository = createEventTypeRepository()

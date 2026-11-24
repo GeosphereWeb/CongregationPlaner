@@ -1,6 +1,7 @@
 package de.geosphere.congregationplaner.talk.data
 
 import de.geosphere.congregationplaner.talk.domain.repository.ExternalSpeakerDirectoryRepository
+import de.geosphere.congregationplaner.talk.domain.repository.SpeakerRequestRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkCatalogRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkPlanningSettingsRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkScheduleRepository
@@ -17,3 +18,5 @@ actual fun createExternalSpeakerDirectoryRepository(): ExternalSpeakerDirectoryR
 
 actual fun createTalkPlanningSettingsRepository(): TalkPlanningSettingsRepository =
     FirestoreRestTalkPlanningSettingsRepository()
+
+actual fun createSpeakerRequestRepository(): SpeakerRequestRepository = FirestoreRestSpeakerRequestRepository()

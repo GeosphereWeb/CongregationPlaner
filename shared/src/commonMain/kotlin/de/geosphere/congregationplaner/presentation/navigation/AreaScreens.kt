@@ -28,6 +28,7 @@ import de.geosphere.congregationplaner.organization.presentation.management.Orga
 import de.geosphere.congregationplaner.talk.presentation.directory.ExternalDirectoryRoute
 import de.geosphere.congregationplaner.talk.presentation.history.TalkHistoryRoute
 import de.geosphere.congregationplaner.talk.presentation.reference.TalkReferenceRoute
+import de.geosphere.congregationplaner.talk.presentation.requests.SpeakerRequestsRoute
 import de.geosphere.congregationplaner.talk.presentation.schedule.TalkScheduleRoute
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.ui.appbar.NightTabRow
@@ -250,6 +251,7 @@ private fun CongregationSectionContent(
             Text("leben_und_dienst \n Schätze \n uns verbessern \n leben als christ", Modifier.padding(16.dp))
         CongregationSection.WEEKEND_TALKS ->
             TalkScheduleRoute(currentUser, actions.onOpenTalkHistory, actions.onOpenExternalSpeaker)
+        CongregationSection.TALK_REQUESTS -> SpeakerRequestsRoute(currentUser)
         CongregationSection.EXTERNAL_SPEAKERS -> ExternalDirectoryRoute(currentUser, state.directorySpeakerId)
         CongregationSection.TALK_HISTORY -> TalkHistoryRoute(currentUser, state.historyTalkNumber)
         CongregationSection.TALK_IMPORT_EXPORT -> TalkImportExportRoute(currentUser)

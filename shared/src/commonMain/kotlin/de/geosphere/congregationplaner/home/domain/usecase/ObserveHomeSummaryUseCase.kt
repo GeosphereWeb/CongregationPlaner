@@ -70,6 +70,8 @@ internal fun summarizeTalks(slots: List<TalkSlot>, today: LocalDate): TalkSummar
     val end = horizonEnd(today)
     return TalkSummary(
         nextSlot = upcoming.firstOrNull(),
-        openDates = upcoming.filter { it.date < end && (it.talkNumber == null || !it.hasSpeaker) }.map { it.date },
+        openDates = upcoming
+            .filter { it.date < end && (it.talkNumber == null || !it.hasSpeaker || it.isRequested) }
+            .map { it.date },
     )
 }

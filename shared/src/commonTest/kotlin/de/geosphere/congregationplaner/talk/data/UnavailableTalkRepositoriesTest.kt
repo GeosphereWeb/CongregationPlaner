@@ -8,6 +8,7 @@ import de.geosphere.congregationplaner.talk.domain.model.TalkPlanningSettings
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
+import de.geosphere.congregationplaner.talk.domain.repository.ScheduleWrite
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
@@ -33,6 +34,16 @@ class UnavailableTalkRepositoriesTest {
         assertIs<UnsupportedOperationException>(repository.deleteSlot(congregation, slot.date).exceptionOrNull())
         val create = repository.createMissingSlots(congregation, listOf(slot)).exceptionOrNull()
         assertIs<UnsupportedOperationException>(create)
+    }
+
+    @Test
+    fun `unavailable speaker request repository fails with the platform name`(): Unit = runBlocking {
+        val repository = unavailableSpeakerRequestRepository("iOS")
+
+        assertFailsWith<UnsupportedOperationException> { repository.observeRequests(congregation).first() }
+        val commit = repository.commit(congregation, ScheduleWrite()).exceptionOrNull()
+        assertIs<UnsupportedOperationException>(commit)
+        assertEquals("Firestore is not configured for iOS.", commit.message)
     }
 
     @Test

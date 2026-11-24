@@ -58,6 +58,7 @@ internal fun TalkSlotEditor(
     canViewMembers: Boolean,
     isSaving: Boolean,
     onChange: (TalkSlot) -> Unit,
+    onRequestedChange: (Boolean) -> Unit,
     onSelectWeekEvent: (EventType?) -> Unit,
     onSelectTalk: (Talk?) -> Unit,
     speakerActions: SpeakerActions,
@@ -132,6 +133,8 @@ internal fun TalkSlotEditor(
             onPick = { showChairmanPicker = true },
             onRemove = { onSelectChairman(null) },
         )
+
+        RequestSwitch(slot, onRequestedChange)
 
         SwitchRow(
             label = "Informiert",
@@ -305,6 +308,7 @@ private fun EditorPreview(slot: TalkSlot, original: TalkSlot?, chip: SlotChip) =
         canViewMembers = true,
         isSaving = false,
         onChange = {},
+        onRequestedChange = {},
         onSelectWeekEvent = {},
         onSelectTalk = {},
         speakerActions = SpeakerActions(),
