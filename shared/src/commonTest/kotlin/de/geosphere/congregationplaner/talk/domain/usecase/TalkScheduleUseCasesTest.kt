@@ -9,6 +9,7 @@ import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
+import de.geosphere.congregationplaner.talk.testing.FakeSpeakerRequestRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
 import de.geosphere.congregationplaner.talk.testing.FakeWeekEventRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
@@ -34,7 +35,7 @@ class TalkScheduleUseCasesTest {
     private val repository = FakeTalkScheduleRepository()
     private val policy = TalkSchedulePermissionPolicy()
     private val save = SaveTalkSlotUseCase(repository, policy)
-    private val delete = DeleteTalkSlotUseCase(repository, policy)
+    private val delete = DeleteTalkSlotUseCase(repository, FakeSpeakerRequestRepository(schedule = repository), policy)
 
     private val admin = AppUser(
         uid = "1",

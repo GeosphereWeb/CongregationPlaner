@@ -43,6 +43,7 @@ import de.geosphere.congregationplaner.talk.domain.usecase.SaveTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.testing.FakeExternalSpeakerDirectoryRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkPlanningSettingsRepository
+import de.geosphere.congregationplaner.talk.testing.FakeSpeakerRequestRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment
@@ -163,7 +164,7 @@ class TalkScheduleViewModelTest {
         notifications = FakeNotificationRepository()
         val policy = TalkSchedulePermissionPolicy()
         val save = SaveTalkSlotUseCase(repository, policy)
-        val delete = DeleteTalkSlotUseCase(repository, policy)
+        val delete = DeleteTalkSlotUseCase(repository, FakeSpeakerRequestRepository(schedule = repository), policy)
         viewModel = TalkScheduleViewModel(
             ObserveTalkYearUseCase(repository),
             SlotChangeUseCases(
