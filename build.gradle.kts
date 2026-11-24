@@ -50,6 +50,9 @@ val sonarExclusions = listOf(
     "**/UserAccessGateScreen.kt",
     // Compose-Rahmen, Bereichsansichten und Vektor-Icons der Hauptnavigation; Auswahl und Sichtbarkeit sind in AppNavigationViewModel getestet
     "**/AppScaffold.kt",
+    // Routen verdrahten nur Graph, ViewModel und Screen (rememberScopedViewModel, ScopedViewModelTest); Logik ist in
+    // den ViewModels getestet
+    "**/*Route.kt",
     "**/AreaScreens.kt",
     "**/NavigationIcons.kt",
     // Gemeinsame Compose-Bausteine der Listen-/Detailansichten und die reinen Compose-Dateien der Pflegeseiten

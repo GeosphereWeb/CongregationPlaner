@@ -15,10 +15,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import de.geosphere.congregationplaner.presentation.components.rememberScopedViewModel
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
@@ -38,7 +38,7 @@ import dev.zacsweers.metro.createGraph
 @Composable
 internal fun MessageTemplatesSection(user: AppUser, modifier: Modifier = Modifier) {
     if (!user.canKeepMessageTemplates) return
-    val viewModel = remember { createGraph<OwnProfileGraph>().messageTemplatesViewModel }
+    val viewModel = rememberScopedViewModel { createGraph<OwnProfileGraph>().messageTemplatesViewModel }
     LaunchedEffect(viewModel, user) { viewModel.onUserChanged(user) }
     val state by viewModel.uiState.collectAsState()
     MessageTemplatesForm(

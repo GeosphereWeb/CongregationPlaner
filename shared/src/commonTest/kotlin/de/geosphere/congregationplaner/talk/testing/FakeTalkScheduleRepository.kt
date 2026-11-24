@@ -33,6 +33,10 @@ internal class FakeTalkScheduleRepository(slots: List<TalkSlot> = emptyList()) :
         private set
     var requestedYear: Int? = null
         private set
+
+    /** Wie oft [observeAll] abonniert wurde; jede Abfrage liest auf dem Desktop die ganze Sammlung. */
+    var observeAllCalls = 0
+        private set
     val savedSlots = mutableListOf<TalkSlot>()
     val createdSlots = mutableListOf<TalkSlot>()
     val deletedDates = mutableListOf<LocalDate>()
@@ -46,6 +50,7 @@ internal class FakeTalkScheduleRepository(slots: List<TalkSlot> = emptyList()) :
 
     override fun observeAll(congregation: CongregationRef): Flow<List<TalkSlot>> {
         requestedCongregation = congregation
+        observeAllCalls++
         return observeError?.let { error -> flow { throw error } } ?: if (frozen) flowOf(slots.value) else slots
     }
 

@@ -44,6 +44,7 @@ import de.geosphere.congregationplaner.organization.di.OrganizationManagementGra
 import de.geosphere.congregationplaner.organization.domain.model.OrgLevel
 import de.geosphere.congregationplaner.organization.domain.model.OrgUnit
 import de.geosphere.congregationplaner.presentation.components.rememberListDetailNavigation
+import de.geosphere.congregationplaner.presentation.components.rememberScopedViewModel
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
@@ -67,7 +68,7 @@ internal val OrgLevel.pluralLabel: String
 
 @Composable
 internal fun OrganizationRoute(currentUser: AppUser) {
-    val viewModel = remember { createGraph<OrganizationManagementGraph>().organizationViewModel }
+    val viewModel = rememberScopedViewModel { createGraph<OrganizationManagementGraph>().organizationViewModel }
     LaunchedEffect(viewModel, currentUser) { viewModel.onCurrentUserChanged(currentUser) }
     val state by viewModel.uiState.collectAsState()
     // Eine Ebene nach oben, solange kein Eintrag geöffnet ist; das Detail schließt die Listenansicht selbst.

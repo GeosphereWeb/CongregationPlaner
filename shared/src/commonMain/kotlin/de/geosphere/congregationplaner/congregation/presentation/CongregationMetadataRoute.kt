@@ -2,8 +2,8 @@ package de.geosphere.congregationplaner.congregation.presentation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import de.geosphere.congregationplaner.congregation.di.CongregationMetadataGraph
+import de.geosphere.congregationplaner.presentation.components.rememberScopedViewModel
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import dev.zacsweers.metro.createGraph
 
@@ -14,7 +14,7 @@ internal fun CongregationMetadataRoute(
     ownOnly: Boolean = false,
     circuitIds: List<String>? = null,
 ) {
-    val viewModel = remember { createGraph<CongregationMetadataGraph>().congregationMetadataViewModel }
+    val viewModel = rememberScopedViewModel { createGraph<CongregationMetadataGraph>().congregationMetadataViewModel }
     LaunchedEffect(viewModel, currentUser, ownOnly, circuitIds) {
         viewModel.onCurrentUserChanged(currentUser, ownOnly, circuitIds)
     }

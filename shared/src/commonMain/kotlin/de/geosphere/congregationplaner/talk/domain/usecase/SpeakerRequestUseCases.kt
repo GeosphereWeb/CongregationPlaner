@@ -20,18 +20,24 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.datetime.LocalDate
 
-/** Die offenen Anfragen für die Übersicht; Planer und Helfer sehen sie, alle anderen eine leere Liste. */
+/** Die offenen Anfragen und alle Termine, aus denselben Abfragen (die Termine braucht „Tag zuweisen“). */
+data class RequestOverview(val open: List<OpenRequest> = emptyList(), val slots: List<TalkSlot> = emptyList())
+
+/**
+ * Die offenen Anfragen für die Übersicht; Planer und Helfer sehen sie, alle anderen nichts. Die Termine werden nur
+ * einmal abgefragt und mitgeliefert, denn jede Abfrage liest auf dem Desktop die ganze Sammlung (CP-189).
+ */
 @Inject
 class ObserveOpenRequestsUseCase(
     private val requests: SpeakerRequestRepository,
     private val schedule: TalkScheduleRepository,
     private val policy: TalkSchedulePermissionPolicy,
 ) {
-    operator fun invoke(user: AppUser, today: LocalDate): Flow<List<OpenRequest>> {
+    operator fun invoke(user: AppUser, today: LocalDate): Flow<RequestOverview> {
         val congregation = user.congregation
-        if (congregation == null || !policy.canViewTalkPlanning(user)) return flowOf(emptyList())
+        if (congregation == null || !policy.canViewTalkPlanning(user)) return flowOf(RequestOverview())
         return combine(requests.observeRequests(congregation), schedule.observeAll(congregation)) { open, slots ->
-            openRequestsOf(open, slots, today)
+            RequestOverview(openRequestsOf(open, slots, today), slots)
         }
     }
 }

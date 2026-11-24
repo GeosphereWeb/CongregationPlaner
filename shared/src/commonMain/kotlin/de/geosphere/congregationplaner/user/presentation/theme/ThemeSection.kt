@@ -10,9 +10,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import de.geosphere.congregationplaner.presentation.components.rememberScopedViewModel
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemeMode
 import de.geosphere.congregationplaner.theming.ThemePreviews
@@ -24,7 +24,7 @@ import dev.zacsweers.metro.createGraph
 /** "Darstellung" in the settings; the choice applies immediately and is stored on the device. */
 @Composable
 fun ThemeSection(modifier: Modifier = Modifier) {
-    val viewModel = remember { createGraph<ThemeGraph>().themeViewModel }
+    val viewModel = rememberScopedViewModel { createGraph<ThemeGraph>().themeViewModel }
     val preference by viewModel.preference.collectAsState()
     ThemeSettings(preference, viewModel::selectStyle, viewModel::selectMode, modifier)
 }

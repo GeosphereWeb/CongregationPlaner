@@ -7,11 +7,6 @@ import com.google.gson.JsonParser
 import de.geosphere.congregationplaner.auth.data.DesktopEnv
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.net.URI
@@ -52,8 +47,13 @@ internal class FirestoreRestClient(
             }.build()
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
         if (response.statusCode() !in 200..299) throw FirestoreHttpException(response.statusCode())
+        if (isWrite(method, url)) DesktopPolling.onWrite()
         return response.body()
     }
+
+    // Abfragen per POST (:runQuery) lesen nur; alle anderen Methoden außer GET ändern Daten.
+    private fun isWrite(method: String, url: String): Boolean =
+        method != "GET" && !(method == "POST" && url.endsWith(":runQuery"))
 
     /** Wie [request], liefert für nicht existierende Dokumente (HTTP 404) aber `null`. */
     fun requestOrNull(method: String, url: String): String? = try {
@@ -255,16 +255,6 @@ internal fun JsonObject.stringField(name: String): String {
         throw IllegalArgumentException("Firestore field '$name' must be a string.")
     }
     return value.asJsonObject.get("stringValue").asString
-}
-
-private const val FIRESTORE_POLL_INTERVAL_MILLIS = 15_000L
-
-/** Die REST-API kennt keine Listener; Änderungen werden daher regelmäßig abgefragt. */
-internal fun <T> pollingFlow(fetch: () -> T): Flow<T> = flow {
-    do {
-        emit(withContext(Dispatchers.IO) { fetch() })
-        delay(FIRESTORE_POLL_INTERVAL_MILLIS)
-    } while (currentCoroutineContext().isActive)
 }
 
 /** Führt [block] auf [Dispatchers.IO] aus und bildet Fehler (außer Abbruch) auf [Result.failure] ab. */

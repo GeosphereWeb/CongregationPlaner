@@ -14,7 +14,6 @@ import de.geosphere.congregationplaner.talk.domain.usecase.AcceptSpeakerRequestU
 import de.geosphere.congregationplaner.talk.domain.usecase.AddContactAttemptUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.AssignRequestToDateUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.DeclineSpeakerRequestUseCase
-import de.geosphere.congregationplaner.talk.domain.usecase.ObserveAllTalkSlotsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalSpeakersUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveOpenRequestsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkCatalogUseCase
@@ -24,8 +23,8 @@ import de.geosphere.congregationplaner.user.domain.model.AppUser
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
@@ -86,7 +85,6 @@ class RequestReferenceUseCases(
 @Inject
 class SpeakerRequestsViewModel(
     private val observeOpen: ObserveOpenRequestsUseCase,
-    private val observeSlots: ObserveAllTalkSlotsUseCase,
     changeUseCases: SpeakerRequestChangeUseCases,
     private val reference: RequestReferenceUseCases,
     private val policy: TalkSchedulePermissionPolicy,
@@ -95,9 +93,11 @@ class SpeakerRequestsViewModel(
     val uiState = session.uiState
 
     val changes = RequestChangesHolder(session, changeUseCases)
-    val draft = RequestDraftHolder(session, changeUseCases.save)
+    val draft = RequestDraftHolder(session, changeUseCases.save) { loadReference() }
 
     private var observeJob: Job? = null
+    private var referenceJob: Job? = null
+    private var referenceLoaded = false
 
     fun onCurrentUserChanged(user: AppUser) {
         if (user == session.user) return
@@ -106,24 +106,44 @@ class SpeakerRequestsViewModel(
         val today = session.today
         session.state.value = SpeakerRequestsUiState(today, canEdit = canEdit)
         observeJob?.cancel()
+        referenceJob?.cancel()
+        referenceLoaded = false
         observeJob = viewModelScope.launch {
-            // Redner, Vorträge und freie Tage braucht nur, wer Anfragen ändern darf.
-            val members = if (canEdit) reference.members(user) else flowOf(null)
-            val externals = if (canEdit) reference.externals(user) else flowOf(emptyList())
-            val talks = if (canEdit) reference.catalog(user) else flowOf(emptyList())
-            val slots = if (canEdit) observeSlots(user) else flowOf(emptyList())
-            combine(observeOpen(user, today), slots, members, externals, talks) { items, all, people, ext, catalog ->
-                session.state.value.copy(
-                    items = items,
-                    allSlots = all,
-                    speakers = people?.speakers.orEmpty(),
-                    externalSpeakers = ext,
-                    talks = catalog.filter { it.active },
-                    isLoading = false,
+            observeOpen(user, today)
+                .map { overview ->
+                    session.state.value.copy(items = overview.open, allSlots = overview.slots, isLoading = false)
+                }.catch { error ->
+                    emit(session.state.value.copy(isLoading = false, errorMessage = messageOf(error)))
+                }.collect { next -> session.state.value = next }
+        }
+    }
+
+    /**
+     * Redner und Vorträge für „Anfrage ohne Tag“, einmalig beim ersten Öffnen des Dialogs gelesen statt laufend
+     * abgefragt (CP-189); für die Auswahl reicht dieser Stand.
+     */
+    private fun loadReference() {
+        val user = session.user ?: return
+        if (referenceLoaded || referenceJob?.isActive == true || !session.state.value.canEdit) return
+        referenceJob = viewModelScope.launch {
+            runCatching {
+                Triple(
+                    reference.members(user).first(),
+                    reference.externals(user).first(),
+                    reference.catalog(user).first(),
                 )
-            }.catch { error ->
-                emit(session.state.value.copy(isLoading = false, errorMessage = messageOf(error)))
-            }.collect { next -> session.state.value = next }
+            }.onSuccess { (members, externals, talks) ->
+                referenceLoaded = true
+                session.state.update {
+                    it.copy(
+                        speakers = members.speakers,
+                        externalSpeakers = externals,
+                        talks = talks.filter(Talk::active),
+                    )
+                }
+            }.onFailure { error ->
+                session.state.update { it.copy(errorMessage = messageOf(error)) }
+            }
         }
     }
 

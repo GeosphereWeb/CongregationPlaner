@@ -9,9 +9,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import de.geosphere.congregationplaner.presentation.components.rememberScopedViewModel
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
@@ -33,7 +33,7 @@ internal enum class OwnProfilePart { CONTACT, EMERGENCY_CONTACTS }
  */
 @Composable
 internal fun rememberOwnProfileViewModel(user: AppUser): OwnProfileViewModel {
-    val viewModel = remember { createGraph<OwnProfileGraph>().ownProfileViewModel }
+    val viewModel = rememberScopedViewModel { createGraph<OwnProfileGraph>().ownProfileViewModel }
     LaunchedEffect(viewModel, user) { viewModel.onUserChanged(user) }
     return viewModel
 }

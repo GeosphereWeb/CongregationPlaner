@@ -4,14 +4,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import de.geosphere.congregationplaner.presentation.components.rememberScopedViewModel
 import de.geosphere.congregationplaner.talk.di.SpeakerRequestsGraph
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import dev.zacsweers.metro.createGraph
 
 @Composable
 internal fun SpeakerRequestsRoute(currentUser: AppUser) {
-    val viewModel = remember { createGraph<SpeakerRequestsGraph>().speakerRequestsViewModel }
+    val viewModel = rememberScopedViewModel { createGraph<SpeakerRequestsGraph>().speakerRequestsViewModel }
     LaunchedEffect(viewModel, currentUser) { viewModel.onCurrentUserChanged(currentUser) }
     val state by viewModel.uiState.collectAsState()
     SpeakerRequestsContent(
