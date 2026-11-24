@@ -4,7 +4,7 @@ package de.geosphere.congregationplaner.talk.domain.model
 val TalkSlot.hasAssignment: Boolean get() = hasTalk || hasSpeaker
 
 /**
- * Plant die Belegung von [from] (Vortrag, Redner, Bestätigung) auf [to] um und gibt [from] die bisherige Belegung von
+ * Plant die Belegung von [from] (Vortrag, Redner, Bestätigung, offene Anfrage) auf [to] um und gibt [from] die bisherige Belegung von
  * [to]; ist [to] frei, wird [from] frei. Ereignis, Uhrzeit, „Vortrag entfällt“, Vorsitz und Notiz bleiben am Tag.
  * Liefert die neuen Termine in der Reihenfolge ([from], [to]).
  */
@@ -20,4 +20,5 @@ private fun TalkSlot.withAssignmentOf(other: TalkSlot): TalkSlot = copy(
     externalSpeakerId = other.externalSpeakerId,
     speakerCongregation = other.speakerCongregation,
     confirmed = other.confirmed,
+    requestId = other.requestId,
 )
