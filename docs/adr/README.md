@@ -89,3 +89,4 @@ Numbers are sequential and permanent. Never reuse or renumber an existing ADR, e
 - [ADR-0037: Termine mit Wochenereignis auf der Startseite](0037-schedule-week-events-on-home.md) — Accepted
 - [ADR-0038: Wählbares Design je Gerät](0038-selectable-theme-per-device.md) — Accepted
 - [ADR-0039: Redneranfragen in eigener Sammlung, Termin verweist darauf](0039-speaker-requests-collection.md) — Accepted
+- [ADR-0040: Bereichs-ViewModels enden mit dem Bereich, Desktop fragt sparsam ab](0040-scoped-view-models-and-desktop-polling.md) — Accepted
