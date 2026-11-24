@@ -26,7 +26,12 @@ data class SpeakerReminderCheck(val open: List<TalkSlot>, val remindNow: Boolean
     /** Z. B. „22.11.2026: Muster, Max ist noch nicht informiert.“, je offenem Termin eine Zeile. */
     val body: String
         get() = open.joinToString("\n") { slot ->
-            "${slot.date.dayText()}: ${slot.speakerDisplayName ?: "Der Redner"} ist noch nicht informiert."
+            val speaker = slot.speakerDisplayName ?: "Der Redner"
+            if (slot.isRequested) {
+                "${slot.date.dayText()}: Anfrage bei $speaker noch offen."
+            } else {
+                "${slot.date.dayText()}: $speaker ist noch nicht informiert."
+            }
         }
 }
 

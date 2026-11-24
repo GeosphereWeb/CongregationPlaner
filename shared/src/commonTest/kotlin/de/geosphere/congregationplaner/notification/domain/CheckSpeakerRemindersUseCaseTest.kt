@@ -103,6 +103,17 @@ class CheckSpeakerRemindersUseCaseTest {
     }
 
     @Test
+    fun `an open request is named in the reminder`() = runTest {
+        val requested = planned.copy(date = LocalDate(2027, 1, 3), requestId = "r1")
+        val byYear = ByYear(listOf(requested))
+        val reminders = CheckSpeakerRemindersUseCase(auth, selection, users, byYear, TalkSchedulePermissionPolicy())
+
+        val result = reminders(at(LocalDate(2026, 12, 28)), null).getOrThrow()
+
+        assertEquals("03.01.2027: Anfrage bei Muster, Max noch offen.", result.body)
+    }
+
+    @Test
     fun `the week may cross the turn of the year`() = runTest {
         val newYearSunday = planned.copy(date = LocalDate(2027, 1, 3))
         val byYear = ByYear(listOf(newYearSunday))

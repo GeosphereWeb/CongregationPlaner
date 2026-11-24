@@ -200,6 +200,19 @@ class ObserveHomeSummaryUseCaseTest {
     }
 
     @Test
+    fun `a requested slot counts as open even with talk and speaker`() = runTest {
+        schedule.slots.value = listOf(
+            slot(daysFromToday(7)) {
+                it.copy(talkNumber = 1, talkTitle = "T", speakerLastName = "E", speakerFirstName = "", requestId = "r1")
+            },
+        )
+
+        val talk = summary(user(CongregationRole.TALK_PLANNER)).talk
+
+        assertEquals(listOf(daysFromToday(7)), talk?.openDates)
+    }
+
+    @Test
     fun `a talk without speaker is open and an external speaker counts`() = runTest {
         schedule.slots.value = listOf(
             slot(daysFromToday(7)) { it.copy(talkNumber = 1, talkTitle = "T") },

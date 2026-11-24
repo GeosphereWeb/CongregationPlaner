@@ -18,6 +18,7 @@ private const val SCHEDULE_CONGREGATION = "Name"
 private const val SCHEDULE_TALK_NUMBER = "Nummer"
 private const val SCHEDULE_TALK_TITLE = "Titel"
 private const val SCHEDULE_INFORMED = "rednerIstInformiert"
+private const val SCHEDULE_REQUESTED = "rednerIstAngefragt"
 
 private val SCHEDULE_HEADERS = listOf(
     SCHEDULE_DATE,
@@ -30,6 +31,7 @@ private val SCHEDULE_HEADERS = listOf(
     SCHEDULE_FIRST_NAME,
     SCHEDULE_CONGREGATION,
     SCHEDULE_INFORMED,
+    SCHEDULE_REQUESTED,
 )
 
 private val DIRECTORY_HEADERS = listOf(
@@ -78,6 +80,7 @@ fun exportTalkSchedule(slots: List<TalkSlot>): ImportTable = table(
             SCHEDULE_FIRST_NAME to slot.speakerFirstName,
             SCHEDULE_CONGREGATION to slot.speakerCongregation,
             SCHEDULE_INFORMED to flag(slot.confirmed),
+            SCHEDULE_REQUESTED to flag(slot.isRequested),
         )
     },
 )
