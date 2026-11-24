@@ -101,7 +101,7 @@ class SpeakerRequestUseCasesTest {
         schedule.slots.value = listOf(requestedSlot)
         requests.requests.value = listOf(datedRequest, undated)
 
-        val open = ObserveOpenRequestsUseCase(requests, schedule, policy)(helper, today).first()
+        val open = ObserveOpenRequestsUseCase(requests, schedule, policy)(helper, today).first().open
         val write = SaveSpeakerRequestUseCase(requests, policy)(helper, undated, today)
 
         assertEquals(listOf("r1", "u1"), open.map { it.request.id })
@@ -113,7 +113,7 @@ class SpeakerRequestUseCasesTest {
         requests.requests.value = listOf(undated)
         val member = planner.copy(uid = "m", roles = emptySet())
 
-        assertTrue(ObserveOpenRequestsUseCase(requests, schedule, policy)(member, today).first().isEmpty())
+        assertTrue(ObserveOpenRequestsUseCase(requests, schedule, policy)(member, today).first().open.isEmpty())
     }
 
     @Test
@@ -121,7 +121,8 @@ class SpeakerRequestUseCasesTest {
         schedule.slots.value = listOf(requestedSlot.copy(date = LocalDate(2026, 11, 1)))
         requests.requests.value = listOf(datedRequest)
 
-        assertTrue(ObserveOpenRequestsUseCase(requests, schedule, policy)(planner, today).first().single().datePassed)
+        val open = ObserveOpenRequestsUseCase(requests, schedule, policy)(planner, today).first().open
+        assertTrue(open.single().datePassed)
     }
 
     @Test

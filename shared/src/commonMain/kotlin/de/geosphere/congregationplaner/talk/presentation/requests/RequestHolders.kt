@@ -90,8 +90,16 @@ class RequestChangesHolder(
 }
 
 /** Neue Anfrage ohne Tag: Redner und Vortrag werden wie im Termin gewählt. */
-class RequestDraftHolder(private val session: SpeakerRequestsSession, private val save: SaveSpeakerRequestUseCase) {
-    fun newRequest() = session.openDialog(RequestDialog.New(TalkSlot(session.today, LocalTime(0, 0))))
+class RequestDraftHolder(
+    private val session: SpeakerRequestsSession,
+    private val save: SaveSpeakerRequestUseCase,
+    private val onOpen: () -> Unit,
+) {
+    /** Öffnet den Dialog; [onOpen] lädt Redner und Vorträge erst jetzt. */
+    fun newRequest() {
+        session.openDialog(RequestDialog.New(TalkSlot(session.today, LocalTime(0, 0))))
+        onOpen()
+    }
 
     fun selectSpeaker(speaker: MemberRef?) = update { it.withSpeaker(speaker) ?: it }
 

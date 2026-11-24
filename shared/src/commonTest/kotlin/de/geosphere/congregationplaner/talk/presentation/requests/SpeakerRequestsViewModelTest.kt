@@ -14,7 +14,6 @@ import de.geosphere.congregationplaner.talk.domain.usecase.AcceptSpeakerRequestU
 import de.geosphere.congregationplaner.talk.domain.usecase.AddContactAttemptUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.AssignRequestToDateUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.DeclineSpeakerRequestUseCase
-import de.geosphere.congregationplaner.talk.domain.usecase.ObserveAllTalkSlotsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalDirectoryUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalSpeakersUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveOpenRequestsUseCase
@@ -75,6 +74,7 @@ class SpeakerRequestsViewModelTest {
 
     private lateinit var schedule: FakeTalkScheduleRepository
     private lateinit var requests: FakeSpeakerRequestRepository
+    private lateinit var catalog: FakeTalkCatalogRepository
     private lateinit var viewModel: SpeakerRequestsViewModel
 
     private val state get() = viewModel.uiState.value
@@ -84,6 +84,7 @@ class SpeakerRequestsViewModelTest {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         schedule = FakeTalkScheduleRepository(listOf(requestedSlot, freeSlot))
         requests = FakeSpeakerRequestRepository(listOf(dated, undated), schedule)
+        catalog = FakeTalkCatalogRepository(listOf(Talk(12, "Zwölf")))
         val policy = TalkSchedulePermissionPolicy()
         val externals = FakeExternalSpeakerDirectoryRepository(
             listOf(ExternalCircuit("c1", "Kreis Nord")),
@@ -92,7 +93,6 @@ class SpeakerRequestsViewModelTest {
         )
         viewModel = SpeakerRequestsViewModel(
             ObserveOpenRequestsUseCase(requests, schedule, policy),
-            ObserveAllTalkSlotsUseCase(schedule),
             SpeakerRequestChangeUseCases(
                 SaveSpeakerRequestUseCase(requests, policy),
                 AddContactAttemptUseCase(requests, policy),
@@ -103,7 +103,7 @@ class SpeakerRequestsViewModelTest {
             RequestReferenceUseCases(
                 ObserveTalkMembersUseCase(ObserveMembersUseCase(FakeUserRepository())),
                 ObserveExternalSpeakersUseCase(ObserveExternalDirectoryUseCase(externals)),
-                ObserveTalkCatalogUseCase(FakeTalkCatalogRepository(listOf(Talk(12, "Zwölf")))),
+                ObserveTalkCatalogUseCase(catalog),
             ),
             policy,
         )
@@ -123,7 +123,26 @@ class SpeakerRequestsViewModelTest {
         assertEquals(setOf("r1", "u1"), state.items.map { it.request.id }.toSet())
         assertTrue(state.canEdit)
         assertFalse(state.isLoading)
+    }
+
+    @Test
+    fun `the slots are read once for list and free days`() {
+        viewModel.onCurrentUserChanged(planner)
+
+        assertEquals(1, schedule.observeAllCalls)
+        assertEquals(listOf(freeSlot), state.assignableSlots)
+    }
+
+    @Test
+    fun `speakers and talks are loaded only for a new request`() {
+        viewModel.onCurrentUserChanged(planner)
+        assertTrue(state.externalSpeakers.isEmpty())
+        assertTrue(state.talks.isEmpty())
+
+        viewModel.draft.newRequest()
+
         assertEquals(listOf(ExternalSpeaker("e1", "Extern", "Eva", "Nord")), state.externalSpeakers)
+        assertEquals(listOf(Talk(12, "Zwölf")), state.talks)
     }
 
     @Test
@@ -248,6 +267,22 @@ class SpeakerRequestsViewModelTest {
         viewModel.changes.confirmDecline()
 
         assertTrue(state.items.isEmpty())
+    }
+
+    @Test
+    fun `a failed load of speakers and talks shows the error and is tried again on the next open`() {
+        viewModel.onCurrentUserChanged(planner)
+        catalog.observeError = IllegalStateException("offline")
+
+        viewModel.draft.newRequest()
+        assertNotNull(state.errorMessage)
+        assertTrue(state.talks.isEmpty())
+
+        catalog.observeError = null
+        viewModel.dismissDialog()
+        viewModel.draft.newRequest()
+
+        assertEquals(listOf(Talk(12, "Zwölf")), state.talks)
     }
 
     @Test
