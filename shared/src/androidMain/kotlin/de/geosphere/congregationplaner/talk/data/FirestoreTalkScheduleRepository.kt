@@ -108,10 +108,11 @@ private fun toSlot(document: DocumentSnapshot): TalkSlot = TalkSlot(
     externalSpeakerId = document.getString("externalSpeakerId"),
     speakerCongregation = document.getString("speakerCongregation"),
     note = document.getString("note"),
+    requestId = document.getString("requestId"),
 )
 
 // LocalTime.toString() liefert HH:mm, solange keine Sekunden gesetzt sind; die Rules verlangen genau dieses Format.
-private fun TalkSlot.toFirestoreFields(): Map<String, Any?> = mapOf(
+internal fun TalkSlot.toFirestoreFields(): Map<String, Any?> = mapOf(
     "time" to time.toString(),
     "talkCancelled" to talkCancelled,
     "confirmed" to confirmed,
@@ -128,4 +129,5 @@ private fun TalkSlot.toFirestoreFields(): Map<String, Any?> = mapOf(
     "chairmanFirstName" to chairmanFirstName,
     "externalSpeakerId" to externalSpeakerId,
     "speakerCongregation" to speakerCongregation,
+    "requestId" to requestId,
 )

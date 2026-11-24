@@ -182,12 +182,14 @@ class FirestoreTalkRepositoriesTest {
             every { getString("chairmanFirstName") } returns null
             every { getString("externalSpeakerId") } returns "e1"
             every { getString("speakerCongregation") } returns "Nord"
+            every { getString("requestId") } returns "r1"
         }
         emitSnapshot(ranged, querySnapshot(external), null)
         val repository = FirestoreTalkScheduleRepository(firestore)
 
         val read = repository.observeYear(congregation, 2026).first().single()
         assertEquals(ExternalSpeaker("e1", "Extern", "Eva", "Nord"), read.externalSpeaker)
+        assertEquals("r1", read.requestId)
 
         val fields = slot<Any>()
         every { reference.set(capture(fields)) } returns successTask<Void?>(null)
@@ -195,6 +197,7 @@ class FirestoreTalkRepositoriesTest {
         val written = fields.captured as Map<*, *>
         assertEquals("e1", written["externalSpeakerId"])
         assertEquals("Nord", written["speakerCongregation"])
+        assertEquals("r1", written["requestId"])
     }
 
     @Test
@@ -221,6 +224,7 @@ class FirestoreTalkRepositoriesTest {
                 "chairmanFirstName" to "Anton",
                 "externalSpeakerId" to null,
                 "speakerCongregation" to null,
+                "requestId" to null,
             ),
             fields.captured,
         )
@@ -391,6 +395,7 @@ class FirestoreTalkRepositoriesTest {
         every { getString("chairmanFirstName") } returns "Anton"
         every { getString("externalSpeakerId") } returns null
         every { getString("speakerCongregation") } returns null
+        every { getString("requestId") } returns null
     }
 
     // Ein Termin ohne Ereignis; fehlende Felder bekommen ihre Vorgaben.
@@ -412,6 +417,7 @@ class FirestoreTalkRepositoriesTest {
         every { getString("chairmanFirstName") } returns null
         every { getString("externalSpeakerId") } returns null
         every { getString("speakerCongregation") } returns null
+        every { getString("requestId") } returns null
     }
 
     @Test

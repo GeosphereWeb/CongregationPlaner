@@ -124,6 +124,7 @@ internal class FirestoreRestTalkScheduleRepository(
         externalSpeakerId = fields.optionalStringField("externalSpeakerId"),
         speakerCongregation = fields.optionalStringField("speakerCongregation"),
         note = fields.optionalStringField("note"),
+        requestId = fields.optionalStringField("requestId"),
     )
 }
 
@@ -149,7 +150,7 @@ private val WEEK_EVENT_SLOTS_QUERY: String = JsonObject().apply {
 
 private fun TalkSlot.toBody(): String = firestoreFields(toFields())
 
-private fun TalkSlot.toFields(): JsonObject = JsonObject().apply {
+internal fun TalkSlot.toFields(): JsonObject = JsonObject().apply {
     add("time", firestoreString(time.toString()))
     add("talkCancelled", firestoreBoolean(talkCancelled))
     add("confirmed", firestoreBoolean(confirmed))
@@ -166,4 +167,5 @@ private fun TalkSlot.toFields(): JsonObject = JsonObject().apply {
     add("chairmanFirstName", firestoreNullableString(chairmanFirstName))
     add("externalSpeakerId", firestoreNullableString(externalSpeakerId))
     add("speakerCongregation", firestoreNullableString(speakerCongregation))
+    add("requestId", firestoreNullableString(requestId))
 }

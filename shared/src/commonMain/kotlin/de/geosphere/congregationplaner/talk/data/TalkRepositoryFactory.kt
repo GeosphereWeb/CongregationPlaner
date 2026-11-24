@@ -4,6 +4,7 @@ import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.organization.domain.model.CountryRef
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCircuit
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCongregation
+import de.geosphere.congregationplaner.talk.domain.model.SpeakerRequest
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkPlanningSettings
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
@@ -11,6 +12,8 @@ import de.geosphere.congregationplaner.talk.domain.model.TalkTitleChange
 import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
 import de.geosphere.congregationplaner.talk.domain.model.WeekEvent
 import de.geosphere.congregationplaner.talk.domain.repository.ExternalSpeakerDirectoryRepository
+import de.geosphere.congregationplaner.talk.domain.repository.ScheduleWrite
+import de.geosphere.congregationplaner.talk.domain.repository.SpeakerRequestRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkCatalogRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkPlanningSettingsRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkScheduleRepository
@@ -31,7 +34,12 @@ expect fun createExternalSpeakerDirectoryRepository(): ExternalSpeakerDirectoryR
 
 expect fun createTalkPlanningSettingsRepository(): TalkPlanningSettingsRepository
 
+expect fun createSpeakerRequestRepository(): SpeakerRequestRepository
+
 internal const val TALK_SCHEDULE_SUBCOLLECTION = "talkSchedule"
+
+/** Offene Redneranfragen; nur Planer und Helfer lesen sie (ADR-0039). */
+internal const val TALK_REQUESTS_SUBCOLLECTION = "talkRequests"
 
 /** Einstellungen der Versammlung; die Stichtage des Planungsassistenten stehen in [TALK_PLANNING_SETTINGS_ID]. */
 internal const val SETTINGS_SUBCOLLECTION = "settings"
@@ -55,6 +63,8 @@ internal val CountryRef.weekEventsPath: String get() = "$documentPath/$WEEK_EVEN
 internal val CountryRef.talkCatalogPath: String get() = "$documentPath/$TALK_CATALOG_SUBCOLLECTION"
 
 internal val CongregationRef.talkSchedulePath: String get() = "$documentPath/$TALK_SCHEDULE_SUBCOLLECTION"
+
+internal val CongregationRef.talkRequestsPath: String get() = "$documentPath/$TALK_REQUESTS_SUBCOLLECTION"
 
 internal val CongregationRef.settingsPath: String get() = "$documentPath/$SETTINGS_SUBCOLLECTION"
 
@@ -189,4 +199,13 @@ internal fun parseSettingsDate(value: String?): LocalDate? =
 internal fun titleChangeOrNull(validFrom: String?, title: String?): TalkTitleChange? {
     val date = parseSettingsDate(validFrom)
     return if (date != null && title != null) TalkTitleChange(date, title) else null
+}
+
+fun unavailableSpeakerRequestRepository(platform: String): SpeakerRequestRepository = object : SpeakerRequestRepository {
+    override fun observeRequests(congregation: CongregationRef): Flow<List<SpeakerRequest>> = flow {
+        throw UnsupportedOperationException("Firestore is not configured for $platform.")
+    }
+
+    override suspend fun commit(congregation: CongregationRef, write: ScheduleWrite): Result<Unit> =
+        Result.failure(UnsupportedOperationException("Firestore is not configured for $platform."))
 }
