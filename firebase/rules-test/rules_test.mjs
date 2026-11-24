@@ -107,7 +107,7 @@ await api('PATCH', CONG, fields({ name: 'Berlin', ...fullMeeting }), owner);
 await api('PATCH', OTHER_CONG, fields({ name: 'Hamburg', ...fullMeeting }), owner);
 
 const SLOT = `${CONG}/talkSchedule`;
-const base = { time: '17:30', talkCancelled: false, confirmed: false };
+const base = { time: '17:30', talkCancelled: false, confirmed: false, requestId: null };
 const speaker = { speakerMemberId: 'm1', speakerLastName: 'Muster', speakerFirstName: 'Max' };
 const chairman = { chairmanMemberId: 'm2', chairmanLastName: 'Alt', chairmanFirstName: 'Anton' };
 const external = {
@@ -160,7 +160,8 @@ await expect('Datum 2026-04-31 gibt es nicht', putSlot('2026-04-31', base), fals
 await expect('Datum 2026-02-30 gibt es nicht', putSlot('2026-02-30', base), false);
 await expect('Schalttag 2028-02-29', putSlot('2028-02-29', base), true);
 await expect('Jahresende 2026-12-31', putSlot('2026-12-31', base), true);
-await expect('Termin ohne Bestätigungsfeld', putSlot('2026-10-25', { time: '17:30', talkCancelled: false }), false);
+await expect('Termin ohne Bestätigungsfeld', putSlot('2026-10-25', { time: '17:30', talkCancelled: false, requestId: null }), false);
+await expect('Termin ohne Anfragefeld (CP-188)', putSlot('2026-10-25', { time: '17:30', talkCancelled: false, confirmed: false }), false);
 await expect('Vortragsnummer 9999', putSlot('2026-10-25', { ...base, talkNumber: 9999, talkTitle: 'x' }), true);
 await expect('Vortragsnummer 10000', putSlot('2026-10-25', { ...base, talkNumber: 10000, talkTitle: 'x' }), false);
 await expect('unbekanntes Feld', putSlot('2026-10-25', { ...base, extra: 'x' }), false);
@@ -171,7 +172,7 @@ await expect('Notiz gültig', putSlot('2026-10-25', { ...base, note: 'Redner bri
 await expect('Notiz 500 Zeichen', putSlot('2026-10-25', { ...base, note: 'x'.repeat(500) }), true);
 await expect('Notiz 501 Zeichen', putSlot('2026-10-25', { ...base, note: 'x'.repeat(501) }), false);
 await expect('Notiz kein String', putSlot('2026-10-25', { ...base, note: 5 }), false);
-await expect('ungültige Uhrzeit', putSlot('2026-10-25', { time: '25:00', talkCancelled: false, confirmed: false }), false);
+await expect('ungültige Uhrzeit', putSlot('2026-10-25', { ...base, time: '25:00' }), false);
 await expect('Planer liest Termin', api('GET', `${SLOT}/2026-10-25`, undefined, planner.token), true);
 await expect('Nutzer ohne Planerrolle schreibt Termin', putSlot('2026-11-01', base, plain.token), false);
 await expect('Nutzer ohne Planerrolle liest Termin', api('GET', `${SLOT}/2026-10-25`, undefined, plain.token), false);
@@ -766,6 +767,54 @@ await expect('Planer ersetzt weiter den ganzen Termin', putSlot(HELPER_SLOT, { .
 await expect('Admin vergibt die Helfer-Rolle', api('PATCH', rolesMask(roleTarget.uid), rolesBody('TALK_HELPER'), congAdmin.token), true);
 await expect('Helfer-Rolle zusammen mit der Planerrolle', api('PATCH', rolesMask(roleTarget.uid), rolesBody('TALK_HELPER', 'TALK_PLANNER'), congAdmin.token), true);
 await expect('Selbstregistrierung mit Helfer-Rolle', api('PATCH', registerPath(helperNewcomer), registerBody('helpernewcomer@test.de', { roles: ['TALK_HELPER'] }), helperNewcomer.token), false);
+
+// ---------- Redneranfragen (CP-188, ADR-0039) ----------
+const REQ = `${CONG}/talkRequests`;
+const attempt = (extra = {}) => ({ date: '2026-11-12', kind: 'VOICEMAIL', note: null, ...extra });
+const requestDoc = (extra = {}) => ({
+  createdOn: '2026-11-10',
+  note: null,
+  contactAttempts: [attempt()],
+  speakerMemberId: null,
+  speakerLastName: null,
+  speakerFirstName: null,
+  externalSpeakerId: null,
+  speakerCongregation: null,
+  talkNumber: null,
+  talkTitle: null,
+  ...extra,
+});
+const putRequest = (id, data, token = planner.token) => api('PATCH', `${REQ}/${id}`, fields(data), token);
+
+await expect('Planer legt Anfrage mit Tag an', putRequest('r1', requestDoc()), true);
+await expect('Planer legt Anfrage ohne Tag an', putRequest('r2', requestDoc({ ...external, talkNumber: 12, talkTitle: 'x', note: 'Frühjahr' })), true);
+await expect('Anfrage ohne Kontaktversuche', putRequest('r3', requestDoc({ contactAttempts: [] })), true);
+await expect('Anfrage mit 20 Kontaktversuchen', putRequest('r3', requestDoc({ contactAttempts: Array(20).fill(attempt()) })), true);
+await expect('Kontaktversuche kein Array', putRequest('r3', requestDoc({ contactAttempts: 'x' })), false);
+await expect('Anfrage mit 21 Kontaktversuchen', putRequest('r3', requestDoc({ contactAttempts: Array(21).fill(attempt()) })), false);
+await expect('Kontaktversuch-Notiz 200 Zeichen', putRequest('r3', requestDoc({ contactAttempts: [attempt({ note: 'x'.repeat(200) })] })), true);
+await expect('Anfrage-Notiz 501 Zeichen', putRequest('r3', requestDoc({ note: 'x'.repeat(501) })), false);
+await expect('Anfrage ohne Anlagedatum', putRequest('r3', requestDoc({ createdOn: null })), false);
+await expect('Anfrage mit unbekanntem Feld', putRequest('r3', requestDoc({ extra: 'x' })), false);
+await expect('Anfrage mit ungültigem Redner', putRequest('r3', requestDoc({ speakerMemberId: 'm1' })), false);
+await expect('Planer liest Anfragen', api('GET', REQ, undefined, planner.token), true);
+await expect('Helfer liest Anfragen', api('GET', REQ, undefined, helper.token), true);
+await expect('Helfer schreibt keine Anfrage', putRequest('r4', requestDoc(), helper.token), false);
+await expect('Helfer löscht keine Anfrage', api('DELETE', `${REQ}/r1`, undefined, helper.token), false);
+await expect('Mitglied liest keine Anfragen', api('GET', REQ, undefined, plain.token), false);
+await expect('Mitglied liest keine einzelne Anfrage', api('GET', `${REQ}/r1`, undefined, plain.token), false);
+await expect('Admin ohne Planerrolle liest keine Anfragen', api('GET', REQ, undefined, congAdmin.token), false);
+await expect('Planer liest keine Anfragen einer anderen Versammlung', api('GET', `${OTHER_CONG}/talkRequests`, undefined, planner.token), false);
+
+await expect('angefragter Termin mit Redner', putSlot('2027-02-07', { ...base, ...speaker, requestId: 'r1' }), true);
+await expect('angefragter Termin ohne Vortrag, nur Redner frei eingetragen', putSlot('2027-02-14', { ...base, speakerLastName: 'Huber', speakerFirstName: '', requestId: 'r1' }), true);
+await expect('angefragter Termin ohne Redner', putSlot('2027-02-21', { ...base, requestId: 'r1' }), false);
+await expect('angefragter Termin, Vortrag entfällt', putSlot('2027-02-21', { ...base, ...speaker, talkCancelled: true, requestId: 'r1' }), false);
+await expect('angefragter Termin informiert', putSlot('2027-02-21', { ...base, ...speaker, confirmed: true, requestId: 'r1' }), false);
+await expect('Anfrage-ID leer', putSlot('2027-02-21', { ...base, ...speaker, requestId: '' }), false);
+const requestedMask = `${SLOT}/2027-02-07?updateMask.fieldPaths=confirmed`;
+await expect('Helfer markiert angefragten Termin nicht als informiert', api('PATCH', requestedMask, confirmedBody(true), helper.token), false);
+await expect('Planer löscht Anfrage', api('DELETE', `${REQ}/r3`, undefined, planner.token), true);
 
 // ---------- Besondere Ereignisse (CP-160) ----------
 const EVENTS = `${CONG}/events`;
