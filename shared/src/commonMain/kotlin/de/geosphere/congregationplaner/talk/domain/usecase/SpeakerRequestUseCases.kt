@@ -62,23 +62,30 @@ class SaveSpeakerRequestUseCase(
         }
 }
 
-/** Hängt einen Kontaktversuch an die Anfrage an (Notiz getrimmt, höchstens [SpeakerRequest.MAX_ATTEMPTS]). */
+/**
+ * Hängt einen Kontaktversuch an die Anfrage an (Notiz getrimmt, höchstens [SpeakerRequest.MAX_ATTEMPTS]) und liefert
+ * die gespeicherte Anfrage.
+ */
 @Inject
 class AddContactAttemptUseCase(
     private val repository: SpeakerRequestRepository,
     private val policy: TalkSchedulePermissionPolicy,
 ) {
-    suspend operator fun invoke(user: AppUser, request: SpeakerRequest, attempt: ContactAttempt): Result<Unit> =
-        planner(user, policy).mapCatching { congregation ->
-            val cleaned = attempt.copy(note = attempt.note?.trim()?.ifEmpty { null })
-            if ((cleaned.note?.length ?: 0) > SpeakerRequest.MAX_ATTEMPT_NOTE_LENGTH ||
-                request.contactAttempts.size >= SpeakerRequest.MAX_ATTEMPTS
-            ) {
-                throw TalkScheduleException.InvalidContactAttempt()
-            }
-            val updated = request.copy(contactAttempts = request.contactAttempts + cleaned)
-            repository.commit(congregation, ScheduleWrite(saveRequests = listOf(updated))).getOrThrow()
+    suspend operator fun invoke(
+        user: AppUser,
+        request: SpeakerRequest,
+        attempt: ContactAttempt,
+    ): Result<SpeakerRequest> = planner(user, policy).mapCatching { congregation ->
+        val cleaned = attempt.copy(note = attempt.note?.trim()?.ifEmpty { null })
+        if ((cleaned.note?.length ?: 0) > SpeakerRequest.MAX_ATTEMPT_NOTE_LENGTH ||
+            request.contactAttempts.size >= SpeakerRequest.MAX_ATTEMPTS
+        ) {
+            throw TalkScheduleException.InvalidContactAttempt()
         }
+        val updated = request.copy(contactAttempts = request.contactAttempts + cleaned)
+        repository.commit(congregation, ScheduleWrite(saveRequests = listOf(updated))).getOrThrow()
+        updated
+    }
 }
 
 /** Der Redner hat zugesagt: der Termin verliert den Verweis, die Anfrage wird gelöscht. Nur für Anfragen mit Tag. */
@@ -119,14 +126,14 @@ class DeclineSpeakerRequestUseCase(
 
 /**
  * Legt eine Anfrage ohne Tag auf den Termin [target]: Redner und Vortrag wandern in den Termin, der auf die Anfrage
- * verweist; Notiz und Kontaktversuche bleiben in der Anfrage. Das Ergebnis ist ein angefragter Termin.
+ * verweist; Notiz und Kontaktversuche bleiben in der Anfrage. Das Ergebnis ist der angefragte Termin.
  */
 @Inject
 class AssignRequestToDateUseCase(
     private val repository: SpeakerRequestRepository,
     private val policy: TalkSchedulePermissionPolicy,
 ) {
-    suspend operator fun invoke(user: AppUser, request: SpeakerRequest, target: TalkSlot): Result<Unit> =
+    suspend operator fun invoke(user: AppUser, request: SpeakerRequest, target: TalkSlot): Result<TalkSlot> =
         planner(user, policy).mapCatching { congregation ->
             when {
                 target.hasAssignment -> throw TalkScheduleException.TargetTaken()
@@ -146,6 +153,7 @@ class AssignRequestToDateUseCase(
             val dated = SpeakerRequest(request.id, request.createdOn, request.note, request.contactAttempts)
             repository.commit(congregation, ScheduleWrite(saveSlots = listOf(slot), saveRequests = listOf(dated)))
                 .getOrThrow()
+            slot
         }
 }
 

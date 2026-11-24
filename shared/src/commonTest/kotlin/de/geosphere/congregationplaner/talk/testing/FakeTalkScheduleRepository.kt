@@ -7,6 +7,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDate
 
@@ -18,6 +19,9 @@ internal class FakeTalkScheduleRepository(slots: List<TalkSlot> = emptyList()) :
     var createMissingResult: Result<Unit> = Result.success(Unit)
     var deleteResult: Result<Unit> = Result.success(Unit)
     var confirmResult: Result<Unit> = Result.success(Unit)
+
+    /** Wie die Desktop-Abfrage: [observeAll] liefert nur den Stand beim Abonnieren. */
+    var frozen = false
 
     /** Lässt [observeYear] mit diesem Fehler enden. */
     var observeError: Throwable? = null
@@ -42,7 +46,7 @@ internal class FakeTalkScheduleRepository(slots: List<TalkSlot> = emptyList()) :
 
     override fun observeAll(congregation: CongregationRef): Flow<List<TalkSlot>> {
         requestedCongregation = congregation
-        return observeError?.let { error -> flow { throw error } } ?: slots
+        return observeError?.let { error -> flow { throw error } } ?: if (frozen) flowOf(slots.value) else slots
     }
 
     override fun observeWeekEventSlots(congregation: CongregationRef): Flow<List<TalkSlot>> {

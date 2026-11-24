@@ -6,8 +6,9 @@ import kotlinx.datetime.LocalDate
 
 /**
  * Wo ein Termin der Vortragsplanung steht; bestimmt die Marke in der Liste und im Detail. Vortrag und Redner werden
- * immer zusammen geplant: fehlt eines davon, ist der Termin [NOT_PLANNED]. [REQUESTED] heißt, die Anfrage beim Redner ist
- * noch offen (ADR-0039). [INFORMED] heißt, der Redner wurde an den Termin erinnert (Feld `confirmed`). [NEXT] ist nur eine Marke, kein eigener Planungsstand.
+ * immer zusammen geplant: fehlt eines davon, ist der Termin [NOT_PLANNED]. [REQUESTED] heißt, die Anfrage beim
+ * Redner ist noch offen (ADR-0039). [INFORMED] heißt, der Redner wurde an den Termin erinnert (Feld `confirmed`).
+ * [NEXT] ist nur eine Marke, kein eigener Planungsstand.
  */
 enum class SlotStatus {
     NEXT,

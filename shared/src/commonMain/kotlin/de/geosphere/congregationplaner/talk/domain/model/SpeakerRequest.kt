@@ -101,6 +101,10 @@ fun openRequestsOf(requests: List<SpeakerRequest>, slots: List<TalkSlot>, today:
     }.sortedWith(compareBy<OpenRequest> { it.request.lastContact }.thenBy(nullsLast()) { it.slot?.date })
 }
 
+/** Die Tage, auf die sich eine Anfrage ohne Tag legen lässt: ab [today], frei und ohne abgesagten Vortrag. */
+fun assignableSlots(slots: List<TalkSlot>, today: LocalDate): List<TalkSlot> =
+    slots.filter { it.date >= today && !it.talkCancelled && !it.hasAssignment }.sortedBy { it.date }
+
 private const val REQUEST_ID_LENGTH = 20
 private const val ID_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 

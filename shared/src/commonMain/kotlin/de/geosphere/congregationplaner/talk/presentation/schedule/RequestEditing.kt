@@ -13,12 +13,11 @@ internal const val NEW_REQUEST_ID = "new"
 internal val TalkSlot.canBeRequested: Boolean get() = hasSpeaker && !talkCancelled
 
 /** Der Termin mit eingeschaltetem oder ausgeschaltetem Schalter „Angefragt“; angefragt ist er nie „Informiert“. */
-internal fun TalkSlot.withRequested(requested: Boolean, original: TalkSlot?): TalkSlot =
-    if (requested) {
-        copy(requestId = original?.requestId ?: NEW_REQUEST_ID, confirmed = false)
-    } else {
-        copy(requestId = null)
-    }
+internal fun TalkSlot.withRequested(requested: Boolean, original: TalkSlot?): TalkSlot = if (requested) {
+    copy(requestId = original?.requestId ?: NEW_REQUEST_ID, confirmed = false)
+} else {
+    copy(requestId = null)
+}
 
 /** Rückfrage, wenn Speichern eine offene Anfrage löscht, weil der Redner ersetzt oder entfernt wurde. */
 internal fun requestReplacementWarning(original: TalkSlot?, edited: TalkSlot): String? =

@@ -30,7 +30,6 @@ import de.geosphere.congregationplaner.talk.domain.usecase.ConfirmSpeakerUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.CreateYearSlotsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.IsSlotDateTakenUseCase
-import de.geosphere.congregationplaner.talk.domain.usecase.SaveEditedSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveAllTalkSlotsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalDirectoryUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalSpeakersUseCase
@@ -39,11 +38,12 @@ import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkMembersUse
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkPlanningSettingsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveTalkYearUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ReassignTalkUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.SaveEditedSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveTalkPlanningSettingsUseCase
 import de.geosphere.congregationplaner.talk.testing.FakeExternalSpeakerDirectoryRepository
+import de.geosphere.congregationplaner.talk.testing.FakeSpeakerRequestRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkCatalogRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkPlanningSettingsRepository
-import de.geosphere.congregationplaner.talk.testing.FakeSpeakerRequestRepository
 import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.Appointment

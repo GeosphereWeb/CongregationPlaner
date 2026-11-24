@@ -6,6 +6,7 @@ import de.geosphere.congregationplaner.talk.domain.repository.ScheduleWrite
 import de.geosphere.congregationplaner.talk.domain.repository.SpeakerRequestRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 
 /**
  * In-Memory-[SpeakerRequestRepository]; [commit] wirkt auf die Anfragen hier und auf die Termine in [schedule], damit
@@ -19,7 +20,11 @@ internal class FakeSpeakerRequestRepository(
     val writes = mutableListOf<ScheduleWrite>()
     var commitResult: Result<Unit> = Result.success(Unit)
 
-    override fun observeRequests(congregation: CongregationRef): Flow<List<SpeakerRequest>> = requests
+    /** Wie die Desktop-Abfrage zwischen zwei Abrufen: Schreiben erscheint erst bei der nächsten Abfrage. */
+    var frozen = false
+
+    override fun observeRequests(congregation: CongregationRef): Flow<List<SpeakerRequest>> =
+        if (frozen) flowOf(requests.value) else requests
 
     // Termine schreiben folgt den Einstellungen von [schedule] (saveResult, saveGate) und zeichnet dort mit auf, damit
     // bestehende Tests des Editors gleich bleiben.

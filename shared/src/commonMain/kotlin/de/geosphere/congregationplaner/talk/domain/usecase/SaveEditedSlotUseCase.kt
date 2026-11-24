@@ -20,25 +20,21 @@ import kotlinx.datetime.LocalDate
  * shortcut: bearbeiten zwei Planer denselben Termin gleichzeitig, gewinnt der letzte Schreiber und eine Anfrage kann
  * verwaisen (sie wird dann nicht angezeigt). Bei Bedarf eine Transaktion, die die gespeicherte `requestId` vergleicht.
  */
+/** Ein Termin aus dem Editor: [edited] ersetzt [original] vom Tag [from]; [requested] ist der Schalter „Angefragt“. */
+data class SlotEdit(val from: LocalDate?, val original: TalkSlot?, val edited: TalkSlot, val requested: Boolean)
+
 @Inject
 class SaveEditedSlotUseCase(
     private val repository: SpeakerRequestRepository,
     private val policy: TalkSchedulePermissionPolicy,
 ) {
-    suspend operator fun invoke(
-        user: AppUser,
-        from: LocalDate?,
-        original: TalkSlot?,
-        edited: TalkSlot,
-        requested: Boolean,
-        today: LocalDate,
-    ): Result<TalkSlot> {
+    suspend operator fun invoke(user: AppUser, edit: SlotEdit, today: LocalDate): Result<TalkSlot> {
         val congregation = user.congregation
         if (congregation == null || !policy.canPlanTalks(user)) {
             return Result.failure(TalkScheduleException.NotAllowed())
         }
-        return edited.checked()
-            .mapCatching { planSlotEdit(from, original, it, requested, newRequestId(), today).getOrThrow() }
+        return edit.edited.checked()
+            .mapCatching { planSlotEdit(edit.copy(edited = it), newRequestId(), today).getOrThrow() }
             .mapCatching { (write, saved) ->
                 repository.commit(congregation, write).getOrThrow()
                 saved
@@ -47,21 +43,17 @@ class SaveEditedSlotUseCase(
 }
 
 /**
- * Was beim Speichern von [edited] geschrieben wird, und der gespeicherte Termin:
+ * Was beim Speichern von [SlotEdit.edited] geschrieben wird, und der gespeicherte Termin:
  * - angefragt ohne bisherige Anfrage oder mit anderem Redner → neue Anfrage [newId] (die alte wird gelöscht),
  * - angefragt mit demselben Redner → die Anfrage bleibt,
  * - nicht (mehr) angefragt → die bisherige Anfrage wird gelöscht (Zusage oder Redner entfernt),
- * - anderer Tag als [from] → der alte Tag wird gelöscht.
+ * - anderer Tag als [SlotEdit.from] → der alte Tag wird gelöscht.
  * Eine Anfrage braucht einen Redner und einen Vortrag, der nicht entfällt; „Informiert“ gilt erst nach der Zusage.
  */
-fun planSlotEdit(
-    from: LocalDate?,
-    original: TalkSlot?,
-    edited: TalkSlot,
-    requested: Boolean,
-    newId: String,
-    today: LocalDate,
-): Result<Pair<ScheduleWrite, TalkSlot>> {
+fun planSlotEdit(edit: SlotEdit, newId: String, today: LocalDate): Result<Pair<ScheduleWrite, TalkSlot>> {
+    val original = edit.original
+    val edited = edit.edited
+    val requested = edit.requested
     if (requested && (!edited.hasSpeaker || edited.talkCancelled)) {
         return Result.failure(TalkScheduleException.InvalidRequest())
     }
@@ -71,7 +63,7 @@ fun planSlotEdit(
     val saved = edited.copy(requestId = requestId, confirmed = edited.confirmed && requestId == null)
     val write = ScheduleWrite(
         saveSlots = listOf(saved),
-        deleteSlotDates = listOfNotNull(from?.takeIf { it != saved.date }),
+        deleteSlotDates = listOfNotNull(edit.from?.takeIf { it != saved.date }),
         saveRequests = listOfNotNull(SpeakerRequest(newId, today).takeIf { requested && keepId == null }),
         deleteRequestIds = listOfNotNull(previousId?.takeIf { it != keepId }),
     )

@@ -201,11 +201,12 @@ internal fun titleChangeOrNull(validFrom: String?, title: String?): TalkTitleCha
     return if (date != null && title != null) TalkTitleChange(date, title) else null
 }
 
-fun unavailableSpeakerRequestRepository(platform: String): SpeakerRequestRepository = object : SpeakerRequestRepository {
-    override fun observeRequests(congregation: CongregationRef): Flow<List<SpeakerRequest>> = flow {
-        throw UnsupportedOperationException("Firestore is not configured for $platform.")
-    }
+fun unavailableSpeakerRequestRepository(platform: String): SpeakerRequestRepository =
+    object : SpeakerRequestRepository {
+        override fun observeRequests(congregation: CongregationRef): Flow<List<SpeakerRequest>> = flow {
+            throw UnsupportedOperationException("Firestore is not configured for $platform.")
+        }
 
-    override suspend fun commit(congregation: CongregationRef, write: ScheduleWrite): Result<Unit> =
-        Result.failure(UnsupportedOperationException("Firestore is not configured for $platform."))
-}
+        override suspend fun commit(congregation: CongregationRef, write: ScheduleWrite): Result<Unit> =
+            Result.failure(UnsupportedOperationException("Firestore is not configured for $platform."))
+    }

@@ -46,8 +46,8 @@ class SlotEditorHolder(private val session: TalkScheduleSession, private val tod
 
     /** Schalter „Angefragt“: nur mit Redner und Vortrag, der nicht entfällt; schaltet „Informiert“ aus. */
     fun setRequested(requested: Boolean) = store.update { state ->
-        val editor = state.editor
-        if (state.isSaving || editor == null || (requested && !editor.slot.canBeRequested)) {
+        val editor = state.editor?.takeUnless { state.isSaving } ?: return@update state
+        if (requested && !editor.slot.canBeRequested) {
             state
         } else {
             state.copy(editor = editor.copy(slot = editor.slot.withRequested(requested, editor.original)))

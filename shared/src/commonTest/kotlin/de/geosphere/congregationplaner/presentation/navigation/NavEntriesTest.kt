@@ -52,7 +52,7 @@ class NavEntriesTest {
         val parts = entries.dropWhile { !it.heading }.drop(1)
         assertEquals(CongregationSection.talkPlanning.map { it.label }, parts.map { it.label })
         assertTrue(parts.all { it.nested })
-        assertEquals(listOf(false, false, true, false), parts.map { it.selected })
+        assertEquals(listOf(false, false, false, true, false), parts.map { it.selected })
         assertFalse(heading.selected)
     }
 

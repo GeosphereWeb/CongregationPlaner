@@ -19,7 +19,7 @@ class SlotEditPlanTest {
     private val requested = muster.copy(requestId = "old")
 
     private fun plan(original: TalkSlot?, edited: TalkSlot, requested: Boolean, from: LocalDate? = original?.date) =
-        planSlotEdit(from, original, edited, requested, newId = "new", today = today)
+        planSlotEdit(SlotEdit(from, original, edited, requested), newId = "new", today = today)
 
     @Test
     fun `a new request creates the request and links it`() {

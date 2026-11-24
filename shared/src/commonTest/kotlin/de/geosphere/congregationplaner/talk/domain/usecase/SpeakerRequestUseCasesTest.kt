@@ -38,10 +38,11 @@ class SpeakerRequestUseCasesTest {
 
     private val schedule = FakeTalkScheduleRepository(listOf(free))
     private val requests = FakeSpeakerRequestRepository(schedule = schedule)
+    private val saveEdited = SaveEditedSlotUseCase(requests, policy)
 
     @Test
     fun `saving an edited slot with request needs a planner`() = runBlocking {
-        val result = SaveEditedSlotUseCase(requests, policy)(helper, day, free, muster, requested = true, today)
+        val result = saveEdited(helper, SlotEdit(day, free, muster, requested = true), today)
 
         assertIs<TalkScheduleException.NotAllowed>(result.exceptionOrNull())
         assertTrue(requests.writes.isEmpty())
@@ -49,7 +50,7 @@ class SpeakerRequestUseCasesTest {
 
     @Test
     fun `saving an edited slot as request writes slot and request in one batch`() = runBlocking {
-        val saved = SaveEditedSlotUseCase(requests, policy)(planner, day, free, muster, requested = true, today)
+        val saved = saveEdited(planner, SlotEdit(day, free, muster, requested = true), today)
             .getOrThrow()
 
         assertEquals(1, requests.writes.size)
@@ -62,7 +63,7 @@ class SpeakerRequestUseCasesTest {
     fun `saving checks the slot like before`() = runBlocking {
         val invalid = muster.copy(note = "x".repeat(TalkSlot.MAX_NOTE_LENGTH + 1))
 
-        val result = SaveEditedSlotUseCase(requests, policy)(planner, day, free, invalid, requested = false, today)
+        val result = saveEdited(planner, SlotEdit(day, free, invalid, requested = false), today)
 
         assertIs<TalkScheduleException.InvalidNote>(result.exceptionOrNull())
         assertTrue(requests.writes.isEmpty())
@@ -88,7 +89,8 @@ class SpeakerRequestUseCasesTest {
         assertTrue(requests.writes.isEmpty())
     }
 
-    private val undated = SpeakerRequest("u1", LocalDate(2026, 11, 20), speakerLastName = "Huber", speakerFirstName = "")
+    private val undated =
+        SpeakerRequest("u1", LocalDate(2026, 11, 20), speakerLastName = "Huber", speakerFirstName = "")
     private val requestedSlot = muster.copy(requestId = "r1", talkNumber = 12, talkTitle = "Zwölf", note = "Saal")
     private val datedRequest = SpeakerRequest("r1", LocalDate(2026, 11, 10))
 
@@ -136,7 +138,8 @@ class SpeakerRequestUseCasesTest {
         val save = SaveSpeakerRequestUseCase(requests, policy)
         val longNote = undated.copy(note = "x".repeat(SpeakerRequest.MAX_NOTE_LENGTH + 1))
 
-        assertIs<TalkScheduleException.InvalidSpeaker>(save(planner, SpeakerRequest("", today), today).exceptionOrNull())
+        val noSpeaker = save(planner, SpeakerRequest("", today), today)
+        assertIs<TalkScheduleException.InvalidSpeaker>(noSpeaker.exceptionOrNull())
         assertIs<TalkScheduleException.InvalidNote>(save(planner, longNote, today).exceptionOrNull())
     }
 

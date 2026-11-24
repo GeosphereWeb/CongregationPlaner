@@ -7,6 +7,7 @@ import de.geosphere.congregationplaner.talk.domain.usecase.DeleteTalkSlotUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.IsSlotDateTakenUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ReassignTalkUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveEditedSlotUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.SlotEdit
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.launch
@@ -67,7 +68,7 @@ class SlotChangesHolder(
         store.update { it.copy(isSaving = true, errorMessage = null) }
         session.scope.launch {
             val from = editor.original?.date ?: slot.date
-            useCases.saveEditedSlot(user, from, editor.original, slot, requested = slot.isRequested, today = today)
+            useCases.saveEditedSlot(user, SlotEdit(from, editor.original, slot, slot.isRequested), today)
                 .onSuccess { saved ->
                     store.update { it.copy(editor = TalkSlotEditorState(saved, saved), isSaving = false) }
                     // Ein Termin in einem anderen Jahr wäre sonst nicht in der Liste zu sehen.

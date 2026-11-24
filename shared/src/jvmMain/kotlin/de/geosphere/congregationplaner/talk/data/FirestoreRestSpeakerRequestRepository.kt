@@ -74,19 +74,19 @@ private fun JsonObject.contactAttempts(): List<ContactAttempt> = get("contactAtt
     }
     .orEmpty()
 
+private fun ContactAttempt.toMapValue(): JsonObject {
+    val fields = JsonObject().apply {
+        add("date", firestoreString(date.toString()))
+        add("kind", firestoreString(kind.name))
+        add("note", firestoreNullableString(note))
+    }
+    return JsonObject().apply { add("mapValue", JsonObject().apply { add("fields", fields) }) }
+}
+
 private fun SpeakerRequest.toFields(): JsonObject = JsonObject().apply {
     add("createdOn", firestoreString(createdOn.toString()))
     add("note", firestoreNullableString(note))
-    val attempts = JsonArray().apply {
-        contactAttempts.forEach { attempt ->
-            val fields = JsonObject().apply {
-                add("date", firestoreString(attempt.date.toString()))
-                add("kind", firestoreString(attempt.kind.name))
-                add("note", firestoreNullableString(attempt.note))
-            }
-            add(JsonObject().apply { add("mapValue", JsonObject().apply { add("fields", fields) }) })
-        }
-    }
+    val attempts = JsonArray().apply { contactAttempts.forEach { add(it.toMapValue()) } }
     add("contactAttempts", JsonObject().apply { add("arrayValue", JsonObject().apply { add("values", attempts) }) })
     add("speakerMemberId", firestoreNullableString(speakerMemberId))
     add("speakerLastName", firestoreNullableString(speakerLastName))
