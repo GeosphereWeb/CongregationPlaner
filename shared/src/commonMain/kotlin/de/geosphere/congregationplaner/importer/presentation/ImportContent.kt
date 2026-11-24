@@ -15,7 +15,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -30,6 +29,7 @@ import de.geosphere.congregationplaner.organization.domain.model.CountryOption
 import de.geosphere.congregationplaner.organization.domain.model.CountryRef
 import de.geosphere.congregationplaner.organization.presentation.country.CountryChoiceState
 import de.geosphere.congregationplaner.organization.presentation.country.CountryPicker
+import de.geosphere.congregationplaner.presentation.components.rememberScopedViewModel
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.user.domain.model.AppUser
@@ -50,7 +50,7 @@ internal data class ImportActions(
 /** The import section of the settings; shows nothing where the user cannot import or the platform has no file dialog. */
 @Composable
 fun ImportSection(currentUser: AppUser, modifier: Modifier = Modifier) {
-    val viewModel = remember { createGraph<ImportGraph>().importViewModel }
+    val viewModel = rememberScopedViewModel { createGraph<ImportGraph>().importViewModel }
     LaunchedEffect(viewModel, currentUser) { viewModel.onCurrentUserChanged(currentUser) }
     val state by viewModel.uiState.collectAsState()
     if (state.allowedSources.isEmpty()) return

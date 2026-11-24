@@ -18,11 +18,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.event.domain.model.EventAudience
 import de.geosphere.congregationplaner.notification.di.NotificationGraph
+import de.geosphere.congregationplaner.presentation.components.rememberScopedViewModel
 import de.geosphere.congregationplaner.talk.presentation.reference.ErrorRow
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
@@ -33,7 +33,7 @@ import dev.zacsweers.metro.createGraph
 
 @Composable
 internal fun AnnouncementRoute(currentUser: AppUser) {
-    val viewModel = remember { createGraph<NotificationGraph>().announcementViewModel }
+    val viewModel = rememberScopedViewModel { createGraph<NotificationGraph>().announcementViewModel }
     LaunchedEffect(viewModel, currentUser) { viewModel.onCurrentUserChanged(currentUser) }
     val state by viewModel.uiState.collectAsState()
     AnnouncementContent(

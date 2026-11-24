@@ -16,12 +16,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.importer.di.ImportGraph
 import de.geosphere.congregationplaner.importer.domain.export.ExportKind
 import de.geosphere.congregationplaner.importer.domain.usecase.ImportSource
+import de.geosphere.congregationplaner.presentation.components.rememberScopedViewModel
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.user.domain.model.AppUser
@@ -30,7 +30,7 @@ import dev.zacsweers.metro.createGraph
 /** The "Import/Export" tab of the talk planning: exports as Excel and the imports of the talk planner. */
 @Composable
 fun TalkImportExportRoute(currentUser: AppUser) {
-    val viewModel = remember { createGraph<ImportGraph>().importViewModel }
+    val viewModel = rememberScopedViewModel { createGraph<ImportGraph>().importViewModel }
     LaunchedEffect(viewModel, currentUser) { viewModel.onCurrentUserChanged(currentUser, ImportArea.TALK_PLANNING) }
     val state by viewModel.uiState.collectAsState()
     TalkImportExportContent(

@@ -23,7 +23,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -31,6 +30,7 @@ import de.geosphere.congregationplaner.event.di.SpecialEventGraph
 import de.geosphere.congregationplaner.event.domain.model.EventAudience
 import de.geosphere.congregationplaner.event.domain.model.EventType
 import de.geosphere.congregationplaner.event.domain.model.SpecialEvent
+import de.geosphere.congregationplaner.presentation.components.rememberScopedViewModel
 import de.geosphere.congregationplaner.talk.presentation.reference.ErrorRow
 import de.geosphere.congregationplaner.talk.presentation.reference.ReferenceListDetail
 import de.geosphere.congregationplaner.talk.presentation.schedule.TalkDateInput
@@ -46,7 +46,7 @@ import org.jetbrains.compose.resources.painterResource
 
 @Composable
 internal fun SpecialEventRoute(currentUser: AppUser) {
-    val viewModel = remember { createGraph<SpecialEventGraph>().specialEventManagementViewModel }
+    val viewModel = rememberScopedViewModel { createGraph<SpecialEventGraph>().specialEventManagementViewModel }
     LaunchedEffect(viewModel, currentUser) { viewModel.onCurrentUserChanged(currentUser) }
     val state by viewModel.uiState.collectAsState()
     SpecialEventContent(

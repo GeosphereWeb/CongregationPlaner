@@ -2,7 +2,7 @@ package de.geosphere.congregationplaner.talk.presentation.schedule
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
+import de.geosphere.congregationplaner.presentation.components.rememberScopedViewModel
 import de.geosphere.congregationplaner.talk.di.TalkScheduleGraph
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import dev.zacsweers.metro.createGraph
@@ -13,7 +13,7 @@ internal fun TalkScheduleRoute(
     onOpenHistory: (Int) -> Unit = {},
     onOpenSpeaker: (String) -> Unit = {},
 ) {
-    val viewModel = remember { createGraph<TalkScheduleGraph>().talkScheduleViewModel }
+    val viewModel = rememberScopedViewModel { createGraph<TalkScheduleGraph>().talkScheduleViewModel }
     LaunchedEffect(viewModel, currentUser) { viewModel.onCurrentUserChanged(currentUser) }
     TalkScheduleScreen(viewModel, onOpenHistory = onOpenHistory, onOpenSpeaker = onOpenSpeaker)
 }
