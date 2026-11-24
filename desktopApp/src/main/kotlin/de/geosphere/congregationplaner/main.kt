@@ -1,6 +1,8 @@
 package de.geosphere.congregationplaner
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.window.MenuBar
@@ -14,6 +16,7 @@ import de.geosphere.congregationplaner.auth.presentation.LoginContent
 import de.geosphere.congregationplaner.auth.presentation.LoginForm
 import de.geosphere.congregationplaner.auth.presentation.LoginStep
 import de.geosphere.congregationplaner.auth.presentation.LoginUiState
+import de.geosphere.congregationplaner.firestore.DesktopPolling
 import de.geosphere.congregationplaner.organization.presentation.selection.InviteLinkInbox
 import de.geosphere.congregationplaner.theming.AppTheme
 import org.jetbrains.compose.resources.painterResource
@@ -50,6 +53,9 @@ fun main(args: Array<String>) {
                     Item("Einfügen", onClick = { /* Aktion */ })
                 }
             }
+            // Ohne Fensterfokus (z. B. minimiert oder im Hintergrund) ruhen die Firestore-Abfragen (CP-189).
+            val windowFocused = LocalWindowInfo.current.isWindowFocused
+            LaunchedEffect(windowFocused) { DesktopPolling.setWindowActive(windowFocused) }
             App()
         }
     }
