@@ -7,7 +7,9 @@ import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
 import kotlinx.datetime.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class SpeakerRecencyTest {
     private val today = LocalDate(2026, 11, 25)
@@ -61,5 +63,17 @@ class SpeakerRecencyTest {
     fun `the congregation of a speaker is named`() {
         assertEquals("Altdorf", state(null).congregationName(berg))
         assertEquals("", state(null).congregationName(berg.copy(congregationId = "x")))
+    }
+
+    @Test
+    fun `a speaker excluded from planning is dimmed`() {
+        assertEquals(1f, speakerRowAlpha(berg))
+        assertEquals(0.5f, speakerRowAlpha(berg.copy(excludedFromPlanning = true)))
+    }
+
+    @Test
+    fun `sorting by last visit is offered only with loaded visits`() {
+        assertFalse(state(null).canSortByLastVisit)
+        assertTrue(state(emptyMap()).canSortByLastVisit)
     }
 }

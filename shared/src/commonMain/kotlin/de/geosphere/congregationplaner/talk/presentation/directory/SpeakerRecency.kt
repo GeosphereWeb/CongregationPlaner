@@ -22,3 +22,9 @@ internal val ExternalDirectoryUiState.speakersByLastVisit: List<VisitingSpeaker>
 /** Der Name der Versammlung eines Redners, leer, wenn sie fehlt. */
 internal fun ExternalDirectoryUiState.congregationName(speaker: VisitingSpeaker): String =
     directory.congregations.firstOrNull { it.id == speaker.congregationId }?.name.orEmpty()
+
+private const val EXCLUDED_SPEAKER_ALPHA = 0.5f
+
+/** Ein von der Planung ausgeschlossener Redner steht blass in der Liste. */
+internal fun speakerRowAlpha(speaker: VisitingSpeaker): Float =
+    if (speaker.excludedFromPlanning) EXCLUDED_SPEAKER_ALPHA else 1f

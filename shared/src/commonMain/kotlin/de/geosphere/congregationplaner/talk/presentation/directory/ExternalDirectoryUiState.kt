@@ -90,8 +90,11 @@ data class ExternalDirectoryUiState(
 
     val isFiltered: Boolean get() = filter.isActive || speakerQuery.isNotBlank()
 
+    /** Nach letztem Besuch sortieren geht nur mit geladenen Besuchen; ohne sie (oder ohne Leserecht) kein Schalter. */
+    val canSortByLastVisit: Boolean get() = visits != null
+
     /** Die flache Liste braucht die Besuche; ohne sie bleibt der Baum. */
-    val showsVisitList: Boolean get() = sortByLastVisit && visits != null
+    val showsVisitList: Boolean get() = sortByLastVisit && canSortByLastVisit
 }
 
 internal fun <T> List<T>.upsert(item: T, id: (T) -> String): List<T> =

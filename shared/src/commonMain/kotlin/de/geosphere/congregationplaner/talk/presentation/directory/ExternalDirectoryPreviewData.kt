@@ -3,7 +3,9 @@ package de.geosphere.congregationplaner.talk.presentation.directory
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCircuit
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCongregation
 import de.geosphere.congregationplaner.talk.domain.model.ExternalDirectory
+import de.geosphere.congregationplaner.talk.domain.model.SpeakerVisits
 import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
+import kotlinx.datetime.LocalDate
 
 /** Beispieldaten für die Previews des Verzeichnisses. */
 internal val previewSpeaker = VisitingSpeaker(
@@ -33,4 +35,8 @@ internal val previewDirectoryState = ExternalDirectoryUiState(
     isLoading = false,
     canView = true,
     canPlan = true,
+    visits = mapOf("s1" to SpeakerVisits(LocalDate(2023, 6, 4), 2)),
 )
+
+/** Fester „heute“-Tag der Vorschauen, damit die Farben stabil bleiben. */
+internal val previewToday = LocalDate(2026, 11, 25)
