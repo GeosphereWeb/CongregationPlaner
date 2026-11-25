@@ -4,6 +4,7 @@ import de.geosphere.congregationplaner.presentation.components.ListDetailState
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCircuit
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCongregation
 import de.geosphere.congregationplaner.talk.domain.model.ExternalDirectory
+import de.geosphere.congregationplaner.talk.domain.model.SpeakerVisits
 import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
 
 /** Der Eintrag im Detail; `original` ist `null`, solange der Eintrag neu und noch nicht gespeichert ist. */
@@ -76,6 +77,10 @@ data class ExternalDirectoryUiState(
     val congregationQuery: String = "",
     /** Die Suche nach Rednern (Familien-, Vorname oder Versammlung), zusätzlich zum Filter. */
     val speakerQuery: String = "",
+    /** Besuche je Redner (CP-193); `null`, solange sie nicht geladen sind oder nicht gelesen werden dürfen. */
+    val visits: Map<String, SpeakerVisits>? = null,
+    /** Flache Liste nach letztem Besuch statt des Baums. */
+    val sortByLastVisit: Boolean = false,
     override val errorMessage: String? = null,
 ) : ListDetailState {
     override val hasDetail: Boolean get() = editor != null
@@ -84,6 +89,9 @@ data class ExternalDirectoryUiState(
     val visibleDirectory: ExternalDirectory get() = directory.filtered(filter).searched(speakerQuery)
 
     val isFiltered: Boolean get() = filter.isActive || speakerQuery.isNotBlank()
+
+    /** Die flache Liste braucht die Besuche; ohne sie bleibt der Baum. */
+    val showsVisitList: Boolean get() = sortByLastVisit && visits != null
 }
 
 internal fun <T> List<T>.upsert(item: T, id: (T) -> String): List<T> =
