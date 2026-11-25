@@ -126,6 +126,27 @@ class SpeakerRequestUseCasesTest {
     }
 
     @Test
+    fun `a planner deletes orphaned requests once when the overview starts`() = runBlocking {
+        val orphan = SpeakerRequest("o1", LocalDate(2026, 11, 1))
+        requests.requests.value = listOf(orphan, undated)
+
+        val open = ObserveOpenRequestsUseCase(requests, schedule, policy)(planner, today).first().open
+
+        assertEquals(listOf("o1"), requests.writes.single().deleteRequestIds)
+        assertEquals(listOf(undated), requests.requests.value)
+        assertEquals(listOf("u1"), open.map { it.request.id })
+    }
+
+    @Test
+    fun `a helper does not delete orphaned requests`() = runBlocking {
+        requests.requests.value = listOf(SpeakerRequest("o1", LocalDate(2026, 11, 1)))
+
+        ObserveOpenRequestsUseCase(requests, schedule, policy)(helper, today).first()
+
+        assertTrue(requests.writes.isEmpty())
+    }
+
+    @Test
     fun `a new undated request gets an id and today as creation day`() = runBlocking {
         val saved = SaveSpeakerRequestUseCase(requests, policy)(planner, undated.copy(id = ""), today).getOrThrow()
 
