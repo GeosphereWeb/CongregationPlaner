@@ -27,6 +27,7 @@ import de.geosphere.congregationplaner.talk.domain.model.Speaker
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.usecase.SlotTalkCheck
+import de.geosphere.congregationplaner.talk.presentation.common.rememberToday
 import de.geosphere.congregationplaner.talk.presentation.picker.MemberPickerDialog
 import de.geosphere.congregationplaner.talk.presentation.picker.SpeakerActions
 import de.geosphere.congregationplaner.talk.presentation.picker.SpeakerPickerDialog
@@ -219,6 +220,7 @@ internal fun TalkSlotEditor(
                 showTalkPicker = false
             },
             usage = editor.usage,
+            today = rememberToday(),
         )
     }
 }
