@@ -4,9 +4,11 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
@@ -35,6 +37,9 @@ import de.geosphere.congregationplaner.presentation.components.rememberListDetai
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkHistoryEntry
 import de.geosphere.congregationplaner.talk.domain.usecase.TalkHistoryRow
+import de.geosphere.congregationplaner.talk.presentation.common.RecencyChip
+import de.geosphere.congregationplaner.talk.presentation.common.RecencyStripe
+import de.geosphere.congregationplaner.talk.presentation.common.rememberToday
 import de.geosphere.congregationplaner.talk.presentation.common.toDisplayText
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
@@ -53,6 +58,7 @@ internal data class TalkHistoryActions(
     val onSelectNumber: (Int) -> Unit = {},
     val onSearch: (String) -> Unit = {},
     val onGroupByFrequency: (Boolean) -> Unit = {},
+    val onShowTiles: (Boolean) -> Unit = {},
     val onClose: () -> Unit = {},
     val onDismissError: () -> Unit = {},
 )
@@ -67,6 +73,7 @@ fun TalkHistoryScreen(viewModel: TalkHistoryViewModel, modifier: Modifier = Modi
             onSelectNumber = viewModel::selectTalkNumber,
             onSearch = viewModel::search,
             onGroupByFrequency = viewModel::setGroupByFrequency,
+            onShowTiles = viewModel::setShowTiles,
             onClose = viewModel::closeDetail,
             onDismissError = viewModel::dismissError,
         ),
@@ -76,7 +83,12 @@ fun TalkHistoryScreen(viewModel: TalkHistoryViewModel, modifier: Modifier = Modi
 
 @Composable
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
-internal fun TalkHistoryContent(state: TalkHistoryUiState, actions: TalkHistoryActions, modifier: Modifier = Modifier) {
+internal fun TalkHistoryContent(
+    state: TalkHistoryUiState,
+    actions: TalkHistoryActions,
+    modifier: Modifier = Modifier,
+    today: LocalDate = rememberToday(),
+) {
     val navigator = rememberListDetailNavigation(state, onClose = actions.onClose)
     val listState = rememberLazyListState()
     Column(
@@ -108,7 +120,15 @@ internal fun TalkHistoryContent(state: TalkHistoryUiState, actions: TalkHistoryA
                 directive = navigator.scaffoldDirective,
                 scaffoldState = navigator.scaffoldState,
                 modifier = Modifier.weight(1f).fillMaxWidth(),
-                listPane = { AnimatedPane { TalkHistoryList(state, actions, listState) } },
+                listPane = {
+                    AnimatedPane {
+                        if (state.showsTiles) {
+                            TalkHistoryTiles(state, actions, today)
+                        } else {
+                            TalkHistoryList(state, actions, listState, today)
+                        }
+                    }
+                },
                 detailPane = {
                     AnimatedPane {
                         DetailPane(
@@ -138,15 +158,26 @@ private fun TalkHistoryHeader(state: TalkHistoryUiState, actions: TalkHistoryAct
             modifier = Modifier.fillMaxWidth(),
         )
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            AppSwitch(checked = state.groupByFrequency, onCheckedChange = actions.onGroupByFrequency)
-            Text("Nach Häufigkeit gruppieren")
+            AppSwitch(checked = state.showTiles, onCheckedChange = actions.onShowTiles)
+            Text("Als Kacheln")
+        }
+        if (!state.showTiles) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                AppSwitch(checked = state.groupByFrequency, onCheckedChange = actions.onGroupByFrequency)
+                Text("Nach Häufigkeit gruppieren")
+            }
         }
     }
 }
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-private fun TalkHistoryList(state: TalkHistoryUiState, actions: TalkHistoryActions, listState: LazyListState) {
+private fun TalkHistoryList(
+    state: TalkHistoryUiState,
+    actions: TalkHistoryActions,
+    listState: LazyListState,
+    today: LocalDate,
+) {
     LazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize(),
@@ -158,7 +189,7 @@ private fun TalkHistoryList(state: TalkHistoryUiState, actions: TalkHistoryActio
         }
         if (state.rows.isEmpty()) item { Text("Noch keine Vorträge in der Liste.") }
         if (!state.groupByFrequency) {
-            items(state.rows, key = { it.talk.number }) { row -> TalkRowCard(row, state, actions) }
+            items(state.rows, key = { it.talk.number }) { row -> TalkRowCard(row, state, actions, today) }
             return@LazyColumn
         }
         state.groups.forEach { group ->
@@ -172,13 +203,13 @@ private fun TalkHistoryList(state: TalkHistoryUiState, actions: TalkHistoryActio
                         .padding(vertical = 8.dp),
                 )
             }
-            items(group.rows, key = { it.talk.number }) { row -> TalkRowCard(row, state, actions) }
+            items(group.rows, key = { it.talk.number }) { row -> TalkRowCard(row, state, actions, today) }
         }
     }
 }
 
 @Composable
-private fun TalkRowCard(row: TalkHistoryRow, state: TalkHistoryUiState, actions: TalkHistoryActions) {
+private fun TalkRowCard(row: TalkHistoryRow, state: TalkHistoryUiState, actions: TalkHistoryActions, today: LocalDate) {
     SelectableListCard(
         selected = state.selectedNumber == row.talk.number,
         onSelect = { actions.onSelect(row.talk) },
@@ -186,10 +217,19 @@ private fun TalkRowCard(row: TalkHistoryRow, state: TalkHistoryUiState, actions:
         actionsEnabled = true,
         canDelete = false,
     ) {
-        Column(Modifier.alpha(historyRowAlpha(row.talk))) {
-            Text("${row.talk.number} – ${row.talk.title}", style = MaterialTheme.typography.titleMedium)
-            val last = row.entry?.lastHeldOn
-            Text(if (last == null) "noch nie gehalten" else "zuletzt ${last.toDisplayText()}")
+        val badge = row.badge(today)
+        Row(
+            modifier = Modifier.height(IntrinsicSize.Min).alpha(historyRowAlpha(row.talk)),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            RecencyStripe(badge.level)
+            Column(Modifier.weight(1f)) {
+                Text("${row.talk.number} – ${row.talk.title}", style = MaterialTheme.typography.titleMedium)
+                val last = row.entry?.lastHeldOn
+                Text(if (last == null) "noch nie gehalten" else "zuletzt ${last.toDisplayText()}")
+            }
+            RecencyChip(badge)
         }
     }
 }
@@ -262,6 +302,7 @@ private fun TalkHistoryContentPreview() = PreviewThemeWrapper {
             selectedNumber = 1,
         ),
         actions = TalkHistoryActions(),
+        today = previewToday,
     )
 }
 
@@ -298,6 +339,7 @@ private fun TalkHistorySearchPreview() = PreviewThemeWrapper {
             query = "mus",
         ),
         actions = TalkHistoryActions(),
+        today = previewToday,
     )
 }
 
@@ -314,5 +356,6 @@ private fun TalkHistoryGroupedPreview() = PreviewThemeWrapper {
             groupByFrequency = true,
         ),
         actions = TalkHistoryActions(),
+        today = previewToday,
     )
 }
