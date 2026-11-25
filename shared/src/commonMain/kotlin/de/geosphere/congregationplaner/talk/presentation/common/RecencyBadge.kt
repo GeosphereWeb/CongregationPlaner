@@ -32,3 +32,16 @@ fun recencyBadgeOf(lastHeld: LocalDate?, count: Int, today: LocalDate): RecencyB
     }
     return RecencyBadge(level, "$distance · $count×")
 }
+
+/** Text einer Kachel für Screenreader und ohne Farbsehen, z. B. „Vortrag 31, vor 5 J. · 2×“. */
+fun RecencyBadge.tileDescription(number: Int): String = "Vortrag $number, $label"
+
+/** Die Legende der Skala: je Stufe der Bereich in Worten, in der Reihenfolge von [RecencyLevel]. */
+fun recencyLegend(): List<RecencyBadge> = listOf(
+    RecencyBadge(RecencyLevel.RECENT, "unter 1 J. / geplant"),
+    RecencyBadge(RecencyLevel.ONE_TO_TWO_YEARS, "1–2 J."),
+    RecencyBadge(RecencyLevel.TWO_TO_FOUR_YEARS, "2–4 J."),
+    RecencyBadge(RecencyLevel.FOUR_TO_SIX_YEARS, "4–6 J."),
+    RecencyBadge(RecencyLevel.OVER_SIX_YEARS, "über 6 J."),
+    RecencyBadge(RecencyLevel.NEVER, "nie"),
+)

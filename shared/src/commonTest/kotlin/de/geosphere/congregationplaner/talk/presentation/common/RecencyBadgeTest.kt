@@ -40,4 +40,18 @@ class RecencyBadgeTest {
     fun `after a year the distance is in years`() {
         assertEquals(RecencyBadge(RecencyLevel.FOUR_TO_SIX_YEARS, "vor 5 J. · 2×"), badge(LocalDate(2021, 11, 2), 2))
     }
+
+    @Test
+    fun `the legend names every level in order`() {
+        assertEquals(
+            listOf("unter 1 J. / geplant", "1–2 J.", "2–4 J.", "4–6 J.", "über 6 J.", "nie"),
+            recencyLegend().map { it.label },
+        )
+        assertEquals(RecencyLevel.entries, recencyLegend().map { it.level })
+    }
+
+    @Test
+    fun `a tile describes its talk and recency in words`() {
+        assertEquals("Vortrag 31, vor 5 J. · 2×", badge(LocalDate(2021, 11, 2), 2).tileDescription(31))
+    }
 }
