@@ -101,6 +101,15 @@ fun openRequestsOf(requests: List<SpeakerRequest>, slots: List<TalkSlot>, today:
     }.sortedWith(compareBy<OpenRequest> { it.request.lastContact }.thenBy(nullsLast()) { it.slot?.date })
 }
 
+/**
+ * Die IDs der verwaisten Anfragen in [requests] (kein Termin aus [slots] verweist darauf, kein Redner), die gelöscht
+ * werden dürfen. Vor [today] angelegt, denn eine neue Anfrage und ihr Termin kommen über zwei Abfragen an.
+ */
+fun orphanRequestIds(requests: List<SpeakerRequest>, slots: List<TalkSlot>, today: LocalDate): List<String> {
+    val referenced = slots.mapNotNullTo(HashSet()) { it.requestId }
+    return requests.filter { it.createdOn < today && it.id !in referenced && !it.hasSpeaker }.map { it.id }
+}
+
 /** Die Tage, auf die sich eine Anfrage ohne Tag legen lässt: ab [today], frei und ohne abgesagten Vortrag. */
 fun assignableSlots(slots: List<TalkSlot>, today: LocalDate): List<TalkSlot> =
     slots.filter { it.date >= today && !it.talkCancelled && !it.hasAssignment }.sortedBy { it.date }

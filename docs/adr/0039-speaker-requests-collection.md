@@ -13,7 +13,8 @@ Planer fragen Redner an, bevor diese zusagen, oft ohne sofortige Antwort. Bisher
 - „Informiert“ ist erst nach der Zusage erlaubt. Eine Zusage oder Absage löscht die Anfrage samt Kontaktversuchen.
 
 ## Consequences
-- Wer Anfragen anzeigt, liest zwei Sammlungen und verbindet sie über die ID (`openRequestsOf`). Eine Anfrage, auf die kein Termin verweist und die keinen Redner hat, gilt als verwaist und wird ausgeblendet.
+- Wer Anfragen anzeigt, liest zwei Sammlungen und verbindet sie über die ID (`openRequestsOf`). Eine Anfrage, auf die kein Termin verweist und die keinen Redner hat, gilt als verwaist und wird ausgeblendet; öffnet ein Planer die Übersicht, wird sie gelöscht, sofern sie vor heute angelegt wurde (CP-190).
+- Ein Termin darf nur auf eine Anfrage verweisen, die nach dem Schreiben existiert (`existsAfter`, CP-190). Ein unveränderter Verweis wird nicht erneut geprüft, das spart einen Lesezugriff je Terminänderung.
 - Die Regeln prüfen bei den Kontaktversuchen nur Typ und Länge der Liste (≤ 20); jeden Eintrag prüft die App, weil 20 einzeln geprüfte Einträge das Ausdruckslimit von Firestore überschreiten.
 - Bearbeiten zwei Planer denselben Termin gleichzeitig, gewinnt der letzte Schreiber (`shortcut:` in `SaveEditedSlotUseCase`).
 - Nach einer Zusage gibt es keine Historie der Kontaktversuche mehr.

@@ -65,6 +65,19 @@ class SpeakerRequestTest {
     }
 
     @Test
+    fun `only orphans created before today are deleted`() {
+        val old = LocalDate(2026, 11, 1)
+        val requests = listOf(
+            request("orphan", old),
+            request("new", today),
+            request("dated", old),
+            request("undated", old, speaker = "Muster"),
+        )
+
+        assertEquals(listOf("orphan"), orphanRequestIds(requests, listOf(slot(LocalDate(2026, 12, 6), "dated")), today))
+    }
+
+    @Test
     fun `a slot in the next year is included`() {
         val open = openRequestsOf(listOf(request("a", today)), listOf(slot(LocalDate(2027, 1, 10), "a")), today)
         assertEquals(LocalDate(2027, 1, 10), open.single().slot?.date)

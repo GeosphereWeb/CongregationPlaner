@@ -812,6 +812,12 @@ await expect('angefragter Termin ohne Redner', putSlot('2027-02-21', { ...base, 
 await expect('angefragter Termin, Vortrag entfällt', putSlot('2027-02-21', { ...base, ...speaker, talkCancelled: true, requestId: 'r1' }), false);
 await expect('angefragter Termin informiert', putSlot('2027-02-21', { ...base, ...speaker, confirmed: true, requestId: 'r1' }), false);
 await expect('Anfrage-ID leer', putSlot('2027-02-21', { ...base, ...speaker, requestId: '' }), false);
+await expect('Termin verweist auf eine fehlende Anfrage', putSlot('2027-02-21', { ...base, ...speaker, requestId: 'missing' }), false);
+await expect('Termin wechselt auf eine fehlende Anfrage', putSlot('2027-02-07', { ...base, ...speaker, requestId: 'missing' }), false);
+await expect('Termin und neue Anfrage im selben Batch', commit([
+  setDoc(`${SLOT}/2027-02-21`, { ...base, ...speaker, requestId: 'r5' }),
+  setDoc(`${REQ}/r5`, requestDoc()),
+], planner.token), true);
 const requestedMask = `${SLOT}/2027-02-07?updateMask.fieldPaths=confirmed`;
 await expect('Helfer markiert angefragten Termin nicht als informiert', api('PATCH', requestedMask, confirmedBody(true), helper.token), false);
 await expect('Planer löscht Anfrage', api('DELETE', `${REQ}/r3`, undefined, planner.token), true);

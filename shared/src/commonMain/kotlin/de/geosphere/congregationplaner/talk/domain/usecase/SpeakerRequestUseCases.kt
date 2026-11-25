@@ -9,6 +9,7 @@ import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.hasAssignment
 import de.geosphere.congregationplaner.talk.domain.model.newRequestId
 import de.geosphere.congregationplaner.talk.domain.model.openRequestsOf
+import de.geosphere.congregationplaner.talk.domain.model.orphanRequestIds
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.talk.domain.repository.ScheduleWrite
 import de.geosphere.congregationplaner.talk.domain.repository.SpeakerRequestRepository
@@ -26,6 +27,11 @@ data class RequestOverview(val open: List<OpenRequest> = emptyList(), val slots:
 /**
  * Die offenen Anfragen für die Übersicht; Planer und Helfer sehen sie, alle anderen nichts. Die Termine werden nur
  * einmal abgefragt und mitgeliefert, denn jede Abfrage liest auf dem Desktop die ganze Sammlung (CP-189).
+ *
+ * Beim ersten Stand löscht ein Planer verwaiste Anfragen ([orphanRequestIds]); ein Fehler dabei bleibt folgenlos, der
+ * nächste Aufruf versucht es erneut.
+ * shortcut: schreibt ein anderer Planer genau zwischen den beiden ersten Abfragen „Tag zuweisen“, kann dessen Anfrage
+ * als verwaist gelten und gelöscht werden; bei Bedarf in einer Transaktion gegen den Termin prüfen.
  */
 @Inject
 class ObserveOpenRequestsUseCase(
@@ -36,7 +42,13 @@ class ObserveOpenRequestsUseCase(
     operator fun invoke(user: AppUser, today: LocalDate): Flow<RequestOverview> {
         val congregation = user.congregation
         if (congregation == null || !policy.canViewTalkPlanning(user)) return flowOf(RequestOverview())
+        var cleanUp = policy.canPlanTalks(user)
         return combine(requests.observeRequests(congregation), schedule.observeAll(congregation)) { open, slots ->
+            if (cleanUp) {
+                cleanUp = false
+                val orphans = orphanRequestIds(open, slots, today)
+                if (orphans.isNotEmpty()) requests.commit(congregation, ScheduleWrite(deleteRequestIds = orphans))
+            }
             RequestOverview(openRequestsOf(open, slots, today), slots)
         }
     }
