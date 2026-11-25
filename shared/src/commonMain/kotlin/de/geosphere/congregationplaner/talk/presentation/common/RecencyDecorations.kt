@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,9 +49,12 @@ fun RecencyPalette.colorOf(level: RecencyLevel): Color = when (level) {
     RecencyLevel.NEVER -> never
 }
 
-/** Der heutige Tag, einmal je Anzeige gelesen. */
+/** Der heutige Tag; wechselt auch bei offener Anzeige nach Mitternacht (CP-192). */
 @Composable
-internal fun rememberToday(): LocalDate = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
+internal fun rememberToday(): LocalDate {
+    val days = remember { todayFlow() }
+    return days.collectAsState(remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }).value
+}
 
 private const val CHIP_FILL_ALPHA = 0.18f
 private const val DIMMED_ALPHA = 0.5f
