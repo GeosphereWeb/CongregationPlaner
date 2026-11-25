@@ -80,8 +80,8 @@ rules_version = '2';
 //   - A member is never speaker and chairman on the same day (speakerMemberId != chairmanMemberId).
 //   - externalSpeakerId: string | null, speakerCongregation: string | null (1..100 chars): an external speaker
 //     instead of a member; then the speaker name fields are set and speakerMemberId is null (never both).
-//   - requestId: string | null (required, 1..128 chars): the open speaker request in talkRequests (ADR-0039); only with
-//     a speaker, never on a cancelled talk and never together with confirmed == true. Talk helpers may set
+//   - requestId: string | null (required, 1..128 chars): the open speaker request in talkRequests (ADR-0039), which
+//     must exist after the write; only with a speaker, never on a cancelled talk and never together with confirmed == true. Talk helpers may set
 //     `confirmed` only while no request is open.
 //
 // Collection: region/.../congregation/{congId}/talkRequests (CP-188, ADR-0039)
@@ -547,6 +547,12 @@ service cloud.firestore {
           data.get('speakerLastName', null) != null && data.talkCancelled == false && data.confirmed == false);
     }
 
+    // A slot refers only to a speaker request that exists after the write (it may come in the same batch).
+    function isKnownRequest(regionId, subregionId, branchId, countryId, circuitId, congId, requestId) {
+      return requestId == null ||
+        existsAfter(/databases/$(database)/documents/region/$(regionId)/subregion/$(subregionId)/branch/$(branchId)/country/$(countryId)/circuit/$(circuitId)/congregation/$(congId)/talkRequests/$(requestId));
+    }
+
     // A speaker request: speaker and talk have the shape of the slot fields; whether they must be set depends on the
     // slot that points to the request, which the app checks.
     function isValidSpeakerRequest(data) {
@@ -982,11 +988,15 @@ service cloud.firestore {
                   allow delete: if canPlanTalks(regionId, subregionId, branchId, countryId, circuitId, congId);
 
                   allow create: if canPlanTalks(regionId, subregionId, branchId, countryId, circuitId, congId) &&
-                    isValidTalkSlot(date, request.resource.data);
+                    isValidTalkSlot(date, request.resource.data) &&
+                    isKnownRequest(regionId, subregionId, branchId, countryId, circuitId, congId, request.resource.data.requestId);
 
                   // Planners change the whole slot; a talk helper only `confirmed` (the speaker is informed).
+                  // An unchanged requestId is not checked again (saves a read on every slot update).
                   allow update: if (canPlanTalks(regionId, subregionId, branchId, countryId, circuitId, congId) &&
-                      isValidTalkSlot(date, request.resource.data)) ||
+                      isValidTalkSlot(date, request.resource.data) &&
+                      (request.resource.data.requestId == resource.data.get('requestId', null) ||
+                        isKnownRequest(regionId, subregionId, branchId, countryId, circuitId, congId, request.resource.data.requestId))) ||
                     (canViewTalkPlanning(regionId, subregionId, branchId, countryId, circuitId, congId) &&
                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['confirmed']) &&
                       request.resource.data.confirmed is bool &&
