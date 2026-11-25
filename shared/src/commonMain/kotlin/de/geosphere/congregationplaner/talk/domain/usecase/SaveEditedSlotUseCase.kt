@@ -12,17 +12,18 @@ import de.geosphere.congregationplaner.user.domain.model.AppUser
 import dev.zacsweers.metro.Inject
 import kotlinx.datetime.LocalDate
 
-/**
- * Speichert einen im Editor bearbeiteten Termin samt Anfrage (ADR-0039) in einem Schreibvorgang: [requested] ist der
- * Schalter „Angefragt“. Ein geänderter Tag verschiebt den Termin (der alte Tag wird gelöscht); der Aufrufer muss wie
- * bisher sicherstellen, dass am Zieltag kein anderer Termin liegt.
- *
- * shortcut: bearbeiten zwei Planer denselben Termin gleichzeitig, gewinnt der letzte Schreiber und eine Anfrage kann
- * verwaisen (sie wird dann nicht angezeigt). Bei Bedarf eine Transaktion, die die gespeicherte `requestId` vergleicht.
- */
 /** Ein Termin aus dem Editor: [edited] ersetzt [original] vom Tag [from]; [requested] ist der Schalter „Angefragt“. */
 data class SlotEdit(val from: LocalDate?, val original: TalkSlot?, val edited: TalkSlot, val requested: Boolean)
 
+/**
+ * Speichert einen im Editor bearbeiteten Termin samt Anfrage (ADR-0039) in einem Schreibvorgang:
+ * [SlotEdit.requested] ist der Schalter „Angefragt“. Ein geänderter Tag verschiebt den Termin (der alte Tag wird
+ * gelöscht); der Aufrufer muss wie bisher sicherstellen, dass am Zieltag kein anderer Termin liegt.
+ *
+ * shortcut: bearbeiten zwei Planer denselben Termin gleichzeitig, gewinnt der letzte Schreiber und eine Anfrage kann
+ * verwaisen (ausgeblendet, später von [ObserveOpenRequestsUseCase] gelöscht). Bei Bedarf eine Transaktion, die die
+ * gespeicherte `requestId` vergleicht.
+ */
 @Inject
 class SaveEditedSlotUseCase(
     private val repository: SpeakerRequestRepository,
