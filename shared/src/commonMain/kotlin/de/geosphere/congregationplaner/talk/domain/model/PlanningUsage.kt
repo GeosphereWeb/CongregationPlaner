@@ -7,13 +7,14 @@ import kotlinx.datetime.LocalDate
  * Stichtage aus [settings] sperren: gesperrt ist, wer an einem Tag ab dem Stichtag eingeplant ist.
  *
  * Mitglieder und externe Redner zählen über ihre ID, Vorträge über ihre Nummer; frei eingetragene Redner und
- * Vorträge haben keine und werden daher weder gezählt noch gesperrt.
+ * Vorträge haben keine und werden daher weder gezählt noch gesperrt. [talkHeldCount] ist die Zahl der Tage je Vortrag.
  */
 data class PlanningUsage(
     val settings: TalkPlanningSettings = TalkPlanningSettings(),
     val memberLastPlanned: Map<String, LocalDate> = emptyMap(),
     val externalLastPlanned: Map<String, LocalDate> = emptyMap(),
     val talkLastPlanned: Map<Int, LocalDate> = emptyMap(),
+    val talkHeldCount: Map<Int, Int> = emptyMap(),
 ) {
     fun isMemberBlocked(memberId: String): Boolean = blocks(memberLastPlanned[memberId], settings.speakerFreeSince)
 
@@ -36,6 +37,9 @@ fun planningUsageOf(slots: List<TalkSlot>, settings: TalkPlanningSettings, exclu
         memberLastPlanned = held.latestBy { it.speakerMemberId },
         externalLastPlanned = held.latestBy { it.externalSpeakerId },
         talkLastPlanned = held.latestBy { it.talkNumber },
+        talkHeldCount = held.mapNotNull { slot -> slot.talkNumber?.let { it to slot.date } }
+            .groupBy({ it.first }, { it.second })
+            .mapValues { (_, dates) -> dates.distinct().size },
     )
 }
 

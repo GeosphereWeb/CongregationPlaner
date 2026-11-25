@@ -21,6 +21,8 @@ import de.geosphere.congregationplaner.talk.domain.model.PlanningUsage
 import de.geosphere.congregationplaner.talk.domain.model.Talk
 import de.geosphere.congregationplaner.talk.domain.model.TalkPlanningSettings
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
+import de.geosphere.congregationplaner.talk.presentation.common.RecencyBadge
+import de.geosphere.congregationplaner.talk.presentation.common.recencyBadgeOf
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import kotlinx.datetime.LocalDate
@@ -29,7 +31,8 @@ import kotlinx.datetime.LocalDate
  * Auswahl aus der Vortragsliste mit Suche nach Nummer oder Titel; nicht aktive Vorträge sind nicht wählbar.
  * Vorgeschlagen werden zuerst die Vorträge, die am längsten nicht eingeplant sind; Vorträge, die der Stichtag aus
  * [usage] sperrt, lassen sich einblenden. Steht der Vortrag nicht in der Liste, trägt [onFreeEntry] den Suchtext als
- * Titel ohne Nummer ein.
+ * Titel ohne Nummer ein. Mit [today] zeigt jede Zeile Farbe und Chip „wie lange her“ (CP-191); ohne Nutzungsdaten
+ * bleibt [today] `null`, sonst stünde überall „nie“.
  */
 @Composable
 internal fun TalkPickerDialog(
@@ -38,6 +41,7 @@ internal fun TalkPickerDialog(
     onDismiss: () -> Unit,
     onFreeEntry: (String) -> Unit = {},
     usage: PlanningUsage = PlanningUsage(),
+    today: LocalDate? = null,
 ) {
     var query by remember { mutableStateOf("") }
     var showBlocked by remember { mutableStateOf(false) }
@@ -61,9 +65,13 @@ internal fun TalkPickerDialog(
                 LazyColumn(modifier = Modifier.heightIn(max = 360.dp)) {
                     if (suggestions.isEmpty()) item { Text("Kein passender freier Vortrag gefunden.") }
                     items(suggestions, key = { it.item.number }) { suggestion ->
-                        SuggestionRow(suggestion.item.label(), suggestion.note, suggestion.blocked) {
-                            onSelect(suggestion.item)
-                        }
+                        SuggestionRow(
+                            label = suggestion.item.label(),
+                            note = suggestion.note,
+                            blocked = suggestion.blocked,
+                            badge = today?.let { usage.talkBadge(suggestion.item.number, it) },
+                            onClick = { onSelect(suggestion.item) },
+                        )
                     }
                 }
             }
@@ -75,6 +83,10 @@ internal fun TalkPickerDialog(
     )
 }
 
+/** Der Chip „wie lange her“ für den Vortrag [number] aus derselben Nutzung, nach der auch sortiert wird (CP-191). */
+internal fun PlanningUsage.talkBadge(number: Int, today: LocalDate): RecencyBadge =
+    recencyBadgeOf(talkLastPlanned[number], talkHeldCount[number] ?: 0, today)
+
 @ThemePreviews
 @Composable
 private fun TalkPickerDialogPreview() = PreviewThemeWrapper {
@@ -85,6 +97,8 @@ private fun TalkPickerDialogPreview() = PreviewThemeWrapper {
         usage = PlanningUsage(
             settings = TalkPlanningSettings(talkFreeSince = LocalDate(2024, 1, 1)),
             talkLastPlanned = mapOf(1 to LocalDate(2026, 3, 1), 2 to LocalDate(2023, 5, 7)),
+            talkHeldCount = mapOf(1 to 4, 2 to 1),
         ),
+        today = LocalDate(2026, 11, 25),
     )
 }

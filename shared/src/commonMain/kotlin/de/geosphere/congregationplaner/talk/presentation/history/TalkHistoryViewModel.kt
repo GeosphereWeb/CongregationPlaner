@@ -36,6 +36,8 @@ data class TalkHistoryUiState(
     val selectedNumber: Int? = null,
     val query: String = "",
     val groupByFrequency: Boolean = false,
+    /** Kachel-Übersicht (Heatmap) statt Liste (CP-191). */
+    val showTiles: Boolean = false,
     val overview: TalkHistoryOverview = TalkHistoryOverview(),
     /** Ergebnis der Rednersuche; leer, solange die Suche nicht aktiv ist. */
     val speakerResults: List<SpeakerHistory> = emptyList(),
@@ -52,6 +54,9 @@ data class TalkHistoryUiState(
     val neverHeldCount: Int get() = overview.neverHeldCount
 
     val selected: TalkHistoryRow? get() = rows.firstOrNull { it.talk.number == selectedNumber }
+
+    /** Die Kacheln stehen nur ohne aktive Rednersuche; die Suche zeigt immer ihre Ergebnisliste. */
+    val showsTiles: Boolean get() = showTiles && !isSearching
 }
 
 /** Übersicht, wann welcher Vortrag in der Versammlung gehalten wurde (nur lesend). */
@@ -109,6 +114,11 @@ class TalkHistoryViewModel(
     /** Schaltet zwischen der Liste nach Nummer und der nach Häufigkeit gruppierten Darstellung um. */
     fun setGroupByFrequency(enabled: Boolean) {
         update { it.copy(groupByFrequency = enabled) }
+    }
+
+    /** Schaltet zwischen Liste und Kachel-Übersicht um; der gewählte Vortrag bleibt gewählt. */
+    fun setShowTiles(enabled: Boolean) {
+        update { it.copy(showTiles = enabled) }
     }
 
     fun closeDetail() {

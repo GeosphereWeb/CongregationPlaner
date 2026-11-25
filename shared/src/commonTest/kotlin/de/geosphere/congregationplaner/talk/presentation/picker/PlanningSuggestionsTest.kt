@@ -117,4 +117,13 @@ class PlanningSuggestionsTest {
         assertNull(slot.copy(externalSpeakerId = "gone").selectedExternal(listOf(known)))
         assertNull(slot.selectedExternal(listOf(known)))
     }
+
+    @Test
+    fun `a talk badge uses last planned day and held count`() {
+        val usage = PlanningUsage(talkLastPlanned = mapOf(1 to LocalDate(2021, 11, 2)), talkHeldCount = mapOf(1 to 2))
+        val today = LocalDate(2026, 11, 25)
+
+        assertEquals("vor 5 J. · 2×", usage.talkBadge(1, today).label)
+        assertEquals("nie", usage.talkBadge(99, today).label)
+    }
 }

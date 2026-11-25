@@ -223,4 +223,27 @@ class TalkHistoryViewModelTest {
         assertEquals(listOf("Muster, Max"), viewModel.uiState.value.speakerResults.map { it.speaker })
         assertEquals(listOf(1), viewModel.uiState.value.speakerResults.single().talks.map { it.talkNumber })
     }
+
+    @Test
+    fun `switching to tiles keeps the selected talk`() {
+        viewModel.onCurrentUserChanged(planner)
+        viewModel.selectTalk(first)
+
+        viewModel.setShowTiles(true)
+        assertTrue(state.showTiles)
+        assertEquals(first.number, state.selectedNumber)
+
+        viewModel.setShowTiles(false)
+        assertFalse(state.showTiles)
+    }
+
+    @Test
+    fun `tiles give way to the speaker search`() {
+        viewModel.onCurrentUserChanged(planner)
+        viewModel.setShowTiles(true)
+        assertTrue(state.showsTiles)
+
+        viewModel.search("mu")
+        assertFalse(state.showsTiles)
+    }
 }

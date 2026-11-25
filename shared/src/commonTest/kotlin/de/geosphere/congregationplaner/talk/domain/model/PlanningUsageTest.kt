@@ -104,4 +104,17 @@ class PlanningUsageTest {
 
         assertEquals(PlanningUsage(settings), usage)
     }
+
+    @Test
+    fun `the held count skips cancelled talks and the edited slot`() {
+        val edited = LocalDate(2026, 12, 6)
+        val slots = listOf(
+            slot(LocalDate(2020, 1, 5), number = 5),
+            slot(LocalDate(2024, 3, 3), number = 5),
+            slot(edited, number = 5),
+            slot(LocalDate(2025, 1, 5), number = 5).copy(talkCancelled = true),
+        )
+
+        assertEquals(2, planningUsageOf(slots, settings, edited).talkHeldCount[5])
+    }
 }
