@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Text
@@ -21,13 +22,19 @@ import kotlinx.datetime.LocalDate
 
 /** Heatmap: alle Vorträge als Kacheln in der Farbe „wie lange her“; ein Tipp öffnet den Vortrag (CP-191). */
 @Composable
-internal fun TalkHistoryTiles(state: TalkHistoryUiState, actions: TalkHistoryActions, today: LocalDate) {
+internal fun TalkHistoryTiles(
+    state: TalkHistoryUiState,
+    actions: TalkHistoryActions,
+    gridState: LazyGridState,
+    today: LocalDate,
+) {
     if (state.rows.isEmpty()) {
         Text("Noch keine Vorträge in der Liste.")
         return
     }
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 52.dp),
+        state = gridState,
         modifier = Modifier.fillMaxSize(),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
