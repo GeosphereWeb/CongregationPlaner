@@ -1,6 +1,8 @@
 package de.geosphere.congregationplaner.ui.dialog
 
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -9,7 +11,8 @@ import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 
 /**
- * Confirm Dialog Komponente
+ * Rückfrage mit Bestätigen und Abbrechen. [isDangerous] färbt den Bestätigungsknopf in der Fehlerfarbe (z. B. Löschen);
+ * [enabled] = `false` sperrt beide Knöpfe und das Wegtippen, solange etwas läuft.
  */
 @Composable
 fun ConfirmDialog(
@@ -20,43 +23,24 @@ fun ConfirmDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
     isDangerous: Boolean = false,
+    enabled: Boolean = true,
 ) {
     AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = title,
-                color = Color.Unspecified,
-            )
-        },
-        text = {
-            Text(
-                text = message,
-                color = Color.Unspecified,
-            )
-        },
+        onDismissRequest = { if (enabled) onDismiss() },
+        title = { Text(title) },
+        text = { Text(message) },
         confirmButton = {
             TextButton(
                 onClick = onConfirm,
-                content = {
-                    Text(
-                        text = confirmText,
-                        color = if (isDangerous) Color.Unspecified else Color.Unspecified,
-                    )
+                enabled = enabled,
+                colors = if (isDangerous) {
+                    ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                } else {
+                    ButtonDefaults.textButtonColors()
                 },
-            )
+            ) { Text(confirmText) }
         },
-        dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-                content = {
-                    Text(
-                        text = dismissText,
-                        color = Color.Unspecified,
-                    )
-                },
-            )
-        },
+        dismissButton = { TextButton(onClick = onDismiss, enabled = enabled) { Text(dismissText) } },
     )
 }
 
@@ -104,9 +88,24 @@ private fun ConfirmDialogPreview() = PreviewThemeWrapper {
     ConfirmDialog(
         title = "Versammlung löschen?",
         message = "Diese Versammlung wird dauerhaft gelöscht.",
+        confirmText = "Löschen",
         onConfirm = {},
         onDismiss = {},
         isDangerous = true,
+    )
+}
+
+@ThemePreviews
+@Composable
+private fun ConfirmDialogDisabledPreview() = PreviewThemeWrapper {
+    ConfirmDialog(
+        title = "Versammlung löschen?",
+        message = "Diese Versammlung wird dauerhaft gelöscht.",
+        confirmText = "Löscht …",
+        onConfirm = {},
+        onDismiss = {},
+        isDangerous = true,
+        enabled = false,
     )
 }
 
