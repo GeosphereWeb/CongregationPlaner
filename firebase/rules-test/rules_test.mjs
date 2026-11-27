@@ -767,6 +767,7 @@ await expect('Aushang-Bild ohne Namen', putImage('img2', { name: '', png }), fal
 await expect('Aushang-Bild mit 61 Zeichen Namen', putImage('img2', { name: 'x'.repeat(61), png }), false);
 await expect('Aushang-Bild mit Text statt Bytes', putImage('img2', { name: 'Logo', png: 'abc' }), false);
 await expect('Aushang-Bild ohne Bytes', putImage('img2', { name: 'Logo', png: new Uint8Array([]) }), false);
+await expect('Aushang-Bild mit genau 700000 Bytes', putImage('img700k', { name: 'Logo', png: new Uint8Array(700000) }), true);
 await expect('Aushang-Bild mit zu großen Bytes', putImage('img2', { name: 'Logo', png: new Uint8Array(700001) }), false);
 await expect('Aushang-Bild mit Zusatzfeld', putImage('img2', { name: 'Logo', png, x: 'y' }), false);
 await expect('Helfer legt Aushang-Bild an', putImage('img3', { name: 'Logo', png }, helper.token), false);

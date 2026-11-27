@@ -188,6 +188,32 @@ class TalkNoticeUseCasesTest {
     }
 
     @Test
+    fun `a failing settings save keeps the image and fails the delete`() = runBlocking {
+        val image = add(planner, "a", png).getOrThrow()
+        repository.settings.value = TalkNoticeSettings(defaultImageId = image.id)
+        val failing = object : TalkNoticeRepository by repository {
+            override suspend fun saveSettings(
+                congregation: CongregationRef,
+                settings: TalkNoticeSettings,
+            ): Result<TalkNoticeSettings> = Result.failure(IllegalStateException("denied"))
+        }
+
+        assertTrue(DeleteNoticeImageUseCase(failing, policy)(planner, image.id).isFailure)
+
+        assertEquals(listOf(image), repository.images)
+    }
+
+    @Test
+    fun `a failing image delete is returned as a failure`() = runBlocking {
+        val failing = object : TalkNoticeRepository by repository {
+            override suspend fun deleteImage(congregation: CongregationRef, id: String): Result<Unit> =
+                Result.failure(IllegalStateException("denied"))
+        }
+
+        assertTrue(DeleteNoticeImageUseCase(failing, policy)(planner, "x").isFailure)
+    }
+
+    @Test
     fun `adding an image stays cancelled when the coroutine is cancelled`() {
         val cancelling = object : TalkNoticeRepository by repository {
             override suspend fun addImage(congregation: CongregationRef, name: String, png: ByteArray) =
