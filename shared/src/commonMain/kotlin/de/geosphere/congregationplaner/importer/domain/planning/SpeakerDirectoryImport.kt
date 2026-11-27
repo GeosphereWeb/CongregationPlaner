@@ -97,10 +97,11 @@ fun planSpeakerDirectory(
 private fun toSpeaker(draft: SpeakerDraft, errors: MutableList<ImportError>): VisitingSpeaker? {
     val row = draft.row
     val lastName = row.text(LAST_NAME)
-    val ranking = row.text(RANKING)?.toDoubleOrNull()?.toInt() ?: 0
+    val rankingText = row.text(RANKING)
+    val ranking = rankingText?.let(::halfStars) ?: 0
     val problem = when {
         lastName == null -> "Redner ohne Nachnamen"
-        ranking !in 0..VisitingSpeaker.MAX_RANKING -> "Ungültige Bewertung $ranking"
+        rankingText != null && halfStars(rankingText) == null -> "Ungültige Bewertung $rankingText"
         listOf(lastName, row.text(FIRST_NAME).orEmpty()).any { it.length > VisitingSpeaker.MAX_NAME_LENGTH } ->
             "Name zu lang"
         listOf(row.text(MOBILE), row.text(LANDLINE)).any { (it?.length ?: 0) > VisitingSpeaker.MAX_PHONE_LENGTH } ->
@@ -123,4 +124,11 @@ private fun toSpeaker(draft: SpeakerDraft, errors: MutableList<ImportError>): Vi
         talkNumbers = draft.talkNumbers.sorted(),
         ranking = ranking,
     )
+}
+
+/** Stars as in the file ("3.5" or "3,5") in half stars (7); null unless a half step from 0 to 5 stars. */
+private fun halfStars(text: String): Int? {
+    val doubled = text.replace(',', '.').toDoubleOrNull()?.times(2) ?: return null
+    val halves = doubled.toInt()
+    return halves.takeIf { it.toDouble() == doubled && it in 0..VisitingSpeaker.MAX_RANKING }
 }
