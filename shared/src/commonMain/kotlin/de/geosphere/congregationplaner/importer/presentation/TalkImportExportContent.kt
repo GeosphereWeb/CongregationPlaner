@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.importer.di.ImportGraph
 import de.geosphere.congregationplaner.importer.domain.export.ExportKind
 import de.geosphere.congregationplaner.importer.domain.usecase.ImportSource
+import de.geosphere.congregationplaner.notice.presentation.TalkNoticeRoute
 import de.geosphere.congregationplaner.presentation.components.rememberScopedViewModel
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
@@ -44,16 +45,23 @@ fun TalkImportExportRoute(currentUser: AppUser) {
             onDismissReport = viewModel::dismissReport,
             onDismissError = viewModel::dismissError,
         ),
+        notice = { TalkNoticeRoute(currentUser) },
     )
 }
 
 @Composable
-internal fun TalkImportExportContent(state: ImportUiState, actions: ImportActions, modifier: Modifier = Modifier) {
+internal fun TalkImportExportContent(
+    state: ImportUiState,
+    actions: ImportActions,
+    modifier: Modifier = Modifier,
+    notice: @Composable () -> Unit = {},
+) {
     Column(
         modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(32.dp),
     ) {
         val width = Modifier.widthIn(max = 480.dp)
+        notice()
         if (state.exportKinds.isEmpty() && state.allowedSources.isEmpty()) {
             Text(
                 "Import und Export gibt es in der Android- und Desktop-App.",
