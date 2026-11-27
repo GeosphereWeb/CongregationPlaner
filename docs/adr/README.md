@@ -90,3 +90,4 @@ Numbers are sequential and permanent. Never reuse or renumber an existing ADR, e
 - [ADR-0038: Wählbares Design je Gerät](0038-selectable-theme-per-device.md) — Accepted
 - [ADR-0039: Redneranfragen in eigener Sammlung, Termin verweist darauf](0039-speaker-requests-collection.md) — Accepted
 - [ADR-0040: Bereichs-ViewModels enden mit dem Bereich, Desktop fragt sparsam ab](0040-scoped-view-models-and-desktop-polling.md) — Accepted
+- [ADR-0041: Aushang der Vorträge als PDF mit eigenem Schreiber, Grafiken in Firestore](0041-talk-notice-pdf.md) — Accepted
