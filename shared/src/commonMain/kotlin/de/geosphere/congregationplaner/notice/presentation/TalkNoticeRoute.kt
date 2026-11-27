@@ -32,6 +32,7 @@ fun TalkNoticeRoute(currentUser: AppUser, modifier: Modifier = Modifier) {
             onMakeDefault = viewModel::makeDefault,
             onAddImage = viewModel::addImage,
             onRenameImage = viewModel::renameImage,
+            isValidImageName = viewModel::isValidImageName,
             onRequestDeleteImage = viewModel::requestDeleteImage,
             onConfirmDeleteImage = viewModel::confirmDeleteImage,
         ),

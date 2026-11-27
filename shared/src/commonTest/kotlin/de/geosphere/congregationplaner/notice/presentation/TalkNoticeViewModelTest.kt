@@ -18,6 +18,7 @@ import de.geosphere.congregationplaner.notice.domain.usecase.LoadNoticeImagesUse
 import de.geosphere.congregationplaner.notice.domain.usecase.ObserveTalkNoticeSettingsUseCase
 import de.geosphere.congregationplaner.notice.domain.usecase.RenameNoticeImageUseCase
 import de.geosphere.congregationplaner.notice.domain.usecase.SaveTalkNoticeSettingsUseCase
+import de.geosphere.congregationplaner.notice.testing.testPng
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
@@ -46,7 +47,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-private val PNG = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3)
+private val PNG = testPng()
 
 private class FakeRenderer(override val isAvailable: Boolean = true) : NoticePdfRenderer {
     var result: Result<ByteArray> = Result.success(byteArrayOf(7, 7))
@@ -329,6 +330,15 @@ class TalkNoticeViewModelTest {
 
         assertEquals(listOf("Neu"), vm.uiState.value.images.map { it.name })
         assertEquals("img", vm.uiState.value.settings.defaultImageId)
+    }
+
+    @Test
+    fun `the view model tells whether an image name is valid`() {
+        val vm = viewModel()
+
+        assertTrue(vm.isValidImageName(" Saal "))
+        assertTrue(!vm.isValidImageName("  "))
+        assertTrue(!vm.isValidImageName("a".repeat(61)))
     }
 
     @Test

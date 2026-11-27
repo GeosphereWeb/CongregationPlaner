@@ -12,6 +12,7 @@ import de.geosphere.congregationplaner.notice.domain.model.NoticeColorSet
 import de.geosphere.congregationplaner.notice.domain.model.NoticeImage
 import de.geosphere.congregationplaner.notice.domain.model.TalkNoticeSettings
 import de.geosphere.congregationplaner.notice.domain.model.buildTalkNotice
+import de.geosphere.congregationplaner.notice.domain.model.isValidImageName as isValidName
 import de.geosphere.congregationplaner.notice.domain.usecase.AddNoticeImageUseCase
 import de.geosphere.congregationplaner.notice.domain.usecase.DeleteNoticeImageUseCase
 import de.geosphere.congregationplaner.notice.domain.usecase.LoadNoticeImagesUseCase
@@ -206,6 +207,8 @@ class TalkNoticeViewModel(
                 .onFailure { fail(it.message.orEmpty()) }
         }
     }
+
+    fun isValidImageName(name: String): Boolean = isValidName(name)
 
     fun renameImage(id: String, name: String) {
         val user = manager() ?: return

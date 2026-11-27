@@ -2,11 +2,13 @@ package de.geosphere.congregationplaner.notice.domain.usecase
 
 import de.geosphere.congregationplaner.notice.domain.model.MAX_IMAGES
 import de.geosphere.congregationplaner.notice.domain.model.MAX_IMAGE_BYTES
-import de.geosphere.congregationplaner.notice.domain.model.MAX_IMAGE_NAME_LENGTH
+import de.geosphere.congregationplaner.notice.domain.model.MAX_IMAGE_PIXELS
 import de.geosphere.congregationplaner.notice.domain.model.MAX_TITLE_LENGTH
 import de.geosphere.congregationplaner.notice.domain.model.NoticeImage
 import de.geosphere.congregationplaner.notice.domain.model.TalkNoticeException
 import de.geosphere.congregationplaner.notice.domain.model.TalkNoticeSettings
+import de.geosphere.congregationplaner.notice.domain.model.isValidImageName
+import de.geosphere.congregationplaner.notice.domain.model.pngSize
 import de.geosphere.congregationplaner.notice.domain.repository.TalkNoticeRepository
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
@@ -17,10 +19,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 
-private val PNG_SIGNATURE = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)
-
-private fun ByteArray.isPng() = size >= PNG_SIGNATURE.size && copyOf(PNG_SIGNATURE.size).contentEquals(PNG_SIGNATURE)
-
 private fun AppUser.plannerCongregation(policy: TalkSchedulePermissionPolicy): CongregationRef? =
     congregation?.takeIf { policy.canPlanTalks(this) }
 
@@ -28,8 +26,6 @@ private fun AppUser.viewerCongregation(policy: TalkSchedulePermissionPolicy): Co
     congregation?.takeIf { policy.canViewTalkPlanning(this) }
 
 private fun notAllowed() = Result.failure<Nothing>(TalkNoticeException.NotAllowed())
-
-private fun isValidImageName(name: String) = name.isNotEmpty() && name.length <= MAX_IMAGE_NAME_LENGTH
 
 /** The notice settings of the user's congregation; nothing without a congregation or insight into the planning. */
 @Inject
@@ -69,7 +65,7 @@ class LoadNoticeImagesUseCase(
     }
 }
 
-/** Adds a PNG image: name 1..60 characters, at most 700 KB, PNG signature, at most 10 images. */
+/** Adds a PNG image: name 1..60 characters, at most 700 KB and 2000 x 2000 px, valid PNG header, at most 10 images. */
 @Inject
 class AddNoticeImageUseCase(
     private val repository: TalkNoticeRepository,
@@ -78,10 +74,12 @@ class AddNoticeImageUseCase(
     suspend operator fun invoke(user: AppUser, name: String, png: ByteArray): Result<NoticeImage> {
         val congregation = user.plannerCongregation(policy) ?: return notAllowed()
         val trimmed = name.trim()
+        val size = pngSize(png)
         val error = when {
             !isValidImageName(trimmed) -> TalkNoticeException.InvalidImageName()
             png.size > MAX_IMAGE_BYTES -> TalkNoticeException.ImageTooLarge()
-            !png.isPng() -> TalkNoticeException.NotAPng()
+            size == null -> TalkNoticeException.NotAPng()
+            size.first > MAX_IMAGE_PIXELS || size.second > MAX_IMAGE_PIXELS -> TalkNoticeException.ImageTooLargePixels()
             else -> null
         }
         return if (error != null) {

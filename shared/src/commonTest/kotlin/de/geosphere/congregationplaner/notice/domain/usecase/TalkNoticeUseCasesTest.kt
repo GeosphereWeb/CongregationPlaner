@@ -4,6 +4,7 @@ import de.geosphere.congregationplaner.notice.domain.model.NoticeImage
 import de.geosphere.congregationplaner.notice.domain.model.TalkNoticeException
 import de.geosphere.congregationplaner.notice.domain.model.TalkNoticeSettings
 import de.geosphere.congregationplaner.notice.domain.repository.TalkNoticeRepository
+import de.geosphere.congregationplaner.notice.testing.testPng
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.user.domain.model.AppUser
@@ -73,7 +74,7 @@ class TalkNoticeUseCasesTest {
         congregation = testCongregation,
     )
     private val helper = planner.copy(uid = "h", roles = setOf(CongregationRole.TALK_HELPER))
-    private val png = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2)
+    private val png = testPng()
 
     @Test
     fun `helpers may only observe settings and load images`() = runBlocking {
@@ -100,6 +101,8 @@ class TalkNoticeUseCasesTest {
     fun `image validation covers size signature name and count`() = runBlocking {
         val big = png + ByteArray(700_000)
         assertIs<TalkNoticeException.ImageTooLarge>(add(planner, "a", big).exceptionOrNull())
+        assertTrue(add(planner, "exact", testPng(extraBytes = 700_000 - png.size)).isSuccess)
+        repository.images.clear()
         assertIs<TalkNoticeException.NotAPng>(add(planner, "a", byteArrayOf(1, 2, 3)).exceptionOrNull())
         assertIs<TalkNoticeException.InvalidImageName>(add(planner, "", png).exceptionOrNull())
         assertIs<TalkNoticeException.InvalidImageName>(add(planner, "a".repeat(61), png).exceptionOrNull())
@@ -107,6 +110,14 @@ class TalkNoticeUseCasesTest {
         repeat(10) { assertTrue(add(planner, "img $it", png).isSuccess) }
         assertIs<TalkNoticeException.TooManyImages>(add(planner, "eleven", png).exceptionOrNull())
         assertEquals(10, repository.images.size)
+    }
+
+    @Test
+    fun `the pixel limit is 2000 by 2000`(): Unit = runBlocking {
+        assertTrue(add(planner, "a", testPng(2000, 2000)).isSuccess)
+        assertIs<TalkNoticeException.ImageTooLargePixels>(add(planner, "a", testPng(2001, 10)).exceptionOrNull())
+        assertIs<TalkNoticeException.ImageTooLargePixels>(add(planner, "a", testPng(10, 2001)).exceptionOrNull())
+        assertIs<TalkNoticeException.NotAPng>(add(planner, "a", png.copyOf(20)).exceptionOrNull())
     }
 
     @Test
