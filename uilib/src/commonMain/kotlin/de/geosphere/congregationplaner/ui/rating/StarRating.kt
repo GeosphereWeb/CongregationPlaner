@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 
@@ -22,7 +23,13 @@ fun StarRating(stars: List<Boolean>, label: String = "Bewertung", onTap: (Int) -
                 TextButton(
                     onClick = { onTap(index + 1) },
                     modifier = Modifier.semantics { contentDescription = "${index + 1} Sterne" },
-                ) { Text(if (filled) "★" else "☆", style = MaterialTheme.typography.titleLarge) }
+                ) {
+                    Text(
+                        if (filled) "★" else "☆",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = NightColors.Gold,
+                    )
+                }
             }
         }
     }
