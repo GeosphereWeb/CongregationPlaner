@@ -113,6 +113,15 @@ rules_version = '2';
 //   optional). Readable by planners and talk helpers of this congregation, written only by the planners; never
 //   deleted.
 //
+// Document: region/.../congregation/{congId}/settings/talkNotice (CP-197, ADR-0041)
+// Settings of the talk notice PDF: title: string (1..120), colorSet: 'blue' | 'green' | 'bordeaux' | 'anthracite' |
+//   'petrol', defaultImageId: string (1..128) | null; all three required. Readable by planners and talk helpers,
+//   written only by the planners; never deleted.
+//
+// Collection: region/.../congregation/{congId}/noticeImages (CP-197, ADR-0041)
+// Document ID: free (auto id). Fields: name: string (1..60), png: bytes (1..700000). Readable by planners and talk
+//   helpers, created, renamed and deleted only by the planners.
+//
 // Collection: region/.../congregation/{congId}/notifications (ADR-0035)
 // Document ID: free (auto id). Fields: category: string, title: string (1..100), body: string (<= 500),
 //   audience: list<string> (groups of ADR-0033 and roles, 1..20), senderUid: string (the sender), createdAt: timestamp
@@ -536,6 +545,23 @@ service cloud.firestore {
       return data.keys().hasOnly(['speakerFreeSince', 'talkFreeSince']) &&
         (speaker == null || (speaker is string && isValidDateId(speaker))) &&
         (talk == null || (talk is string && isValidDateId(talk)));
+    }
+
+    // Talk notice PDF settings: title, color set key and the optional default image id.
+    function isValidTalkNoticeSettings(data) {
+      let imageId = data.get('defaultImageId', 0);
+      return data.keys().hasOnly(['title', 'colorSet', 'defaultImageId']) &&
+        data.keys().hasAll(['title', 'colorSet', 'defaultImageId']) &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 120 &&
+        data.colorSet in ['blue', 'green', 'bordeaux', 'anthracite', 'petrol'] &&
+        (imageId == null || (imageId is string && imageId.size() >= 1 && imageId.size() <= 128));
+    }
+
+    // Logo of the talk notice: a name and the PNG bytes.
+    function isValidNoticeImage(data) {
+      return data.keys().hasOnly(['name', 'png']) && data.keys().hasAll(['name', 'png']) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 60 &&
+        data.png is bytes && data.png.size() >= 1 && data.png.size() <= 700000;
     }
 
     // An open speaker request (ADR-0039): the slot points to its document in talkRequests. Only with a speaker, never
@@ -1055,9 +1081,17 @@ service cloud.firestore {
                 // ---------------------------------------------------------
                 match /settings/{settingId} {
                   allow read: if canViewTalkPlanning(regionId, subregionId, branchId, countryId, circuitId, congId);
-                  allow create, update: if settingId == 'talkPlanning' &&
-                    canPlanTalks(regionId, subregionId, branchId, countryId, circuitId, congId) &&
-                    isValidTalkPlanningSettings(request.resource.data);
+                  allow create, update: if canPlanTalks(regionId, subregionId, branchId, countryId, circuitId, congId) &&
+                    ((settingId == 'talkPlanning' && isValidTalkPlanningSettings(request.resource.data)) ||
+                      (settingId == 'talkNotice' && isValidTalkNoticeSettings(request.resource.data)));
+                }
+
+                // Logos for the talk notice PDF (CP-197, ADR-0041)
+                match /noticeImages/{imageId} {
+                  allow read: if canViewTalkPlanning(regionId, subregionId, branchId, countryId, circuitId, congId);
+                  allow delete: if canPlanTalks(regionId, subregionId, branchId, countryId, circuitId, congId);
+                  allow create, update: if canPlanTalks(regionId, subregionId, branchId, countryId, circuitId, congId) &&
+                    isValidNoticeImage(request.resource.data);
                 }
 
                 // ---------------------------------------------------------

@@ -14,6 +14,7 @@ function enc(value) {
   if (value === null) return { nullValue: null };
   if (typeof value === 'boolean') return { booleanValue: value };
   if (typeof value === 'number') return { integerValue: String(value) };
+  if (value instanceof Uint8Array) return { bytesValue: Buffer.from(value).toString('base64') };
   if (Array.isArray(value)) return { arrayValue: { values: value.map(enc) } };
   if (typeof value === 'object') return { mapValue: fields(value) };
   return { stringValue: value };
@@ -740,6 +741,39 @@ await expect('Helfer liest die externen Redner', api('GET', EXT_SPEAKERS, undefi
 await expect('Helfer liest keine talkHistory', api('GET', HIST, undefined, helper.token), false);
 await expect('Helfer liest die Stichtage', api('GET', `${CONG}/settings/talkPlanning`, undefined, helper.token), true);
 await expect('Helfer setzt keine Stichtage', api('PATCH', `${CONG}/settings/talkPlanning`, fields({ speakerFreeSince: null }), helper.token), false);
+// Aushang (CP-197): Einstellungen und Bilder
+const NOTICE = `${CONG}/settings/talkNotice`;
+const noticeSettings = { title: 'Zusammenkünfte', colorSet: 'blue', defaultImageId: null };
+const IMAGES = `${CONG}/noticeImages`;
+const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
+const putNotice = (data, token = planner.token) => api('PATCH', NOTICE, fields(data), token);
+const putImage = (id, data, token = planner.token) => api('PATCH', `${IMAGES}/${id}`, fields(data), token);
+await expect('Planer legt Aushang-Einstellungen an', putNotice(noticeSettings), true);
+await expect('Planer ändert Aushang-Einstellungen', putNotice({ ...noticeSettings, colorSet: 'petrol', defaultImageId: 'img1' }), true);
+await expect('Aushang-Titel leer', putNotice({ ...noticeSettings, title: '' }), false);
+await expect('Aushang-Titel mit 121 Zeichen', putNotice({ ...noticeSettings, title: 'x'.repeat(121) }), false);
+await expect('Aushang-Titel mit 120 Zeichen', putNotice({ ...noticeSettings, title: 'x'.repeat(120) }), true);
+await expect('Aushang mit Zusatzfeld', putNotice({ ...noticeSettings, x: 'y' }), false);
+await expect('Aushang ohne Farbschema', putNotice({ title: 'T', defaultImageId: null }), false);
+await expect('Aushang mit unbekanntem Farbschema', putNotice({ ...noticeSettings, colorSet: 'pink' }), false);
+await expect('Aushang mit leerer Bild-ID', putNotice({ ...noticeSettings, defaultImageId: '' }), false);
+await expect('Helfer ändert Aushang-Einstellungen', putNotice(noticeSettings, helper.token), false);
+await expect('Helfer liest Aushang-Einstellungen', api('GET', NOTICE, undefined, helper.token), true);
+await expect('Fremder liest Aushang-Einstellungen nicht', api('GET', NOTICE, undefined, plain.token), false);
+await expect('Planer löscht Aushang-Einstellungen nicht', api('DELETE', NOTICE, undefined, planner.token), false);
+await expect('Planer legt Aushang-Bild an', putImage('img1', { name: 'Logo', png }), true);
+await expect('Planer benennt Aushang-Bild um', putImage('img1', { name: 'Neu', png }), true);
+await expect('Aushang-Bild ohne Namen', putImage('img2', { name: '', png }), false);
+await expect('Aushang-Bild mit 61 Zeichen Namen', putImage('img2', { name: 'x'.repeat(61), png }), false);
+await expect('Aushang-Bild mit Text statt Bytes', putImage('img2', { name: 'Logo', png: 'abc' }), false);
+await expect('Aushang-Bild ohne Bytes', putImage('img2', { name: 'Logo', png: new Uint8Array([]) }), false);
+await expect('Aushang-Bild mit zu großen Bytes', putImage('img2', { name: 'Logo', png: new Uint8Array(700001) }), false);
+await expect('Aushang-Bild mit Zusatzfeld', putImage('img2', { name: 'Logo', png, x: 'y' }), false);
+await expect('Helfer legt Aushang-Bild an', putImage('img3', { name: 'Logo', png }, helper.token), false);
+await expect('Helfer liest Aushang-Bild', api('GET', `${IMAGES}/img1`, undefined, helper.token), true);
+await expect('Fremder liest Aushang-Bild nicht', api('GET', `${IMAGES}/img1`, undefined, plain.token), false);
+await expect('Helfer löscht Aushang-Bild nicht', api('DELETE', `${IMAGES}/img1`, undefined, helper.token), false);
+await expect('Planer löscht Aushang-Bild', api('DELETE', `${IMAGES}/img1`, undefined, planner.token), true);
 await expect('Helfer listet die Mitglieder', api('GET', MEMBERS, undefined, helper.token), true);
 await expect('Helfer liest ein fremdes Mitglied', api('GET', `${MEMBERS}/${planner.uid}`, undefined, helper.token), true);
 
