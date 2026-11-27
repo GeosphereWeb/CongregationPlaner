@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +39,7 @@ import de.geosphere.congregationplaner.talk.presentation.common.rememberToday
 import de.geosphere.congregationplaner.talk.presentation.picker.label
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
+import de.geosphere.congregationplaner.ui.dialog.ConfirmDialog
 import de.geosphere.congregationplaner.ui.list.CollapsingHeaderColumn
 import de.geosphere.congregationplaner.ui.pane.DetailPane
 import de.geosphere.congregationplaner.ui.pane.ListPaneHeader
@@ -206,20 +206,17 @@ internal fun ExternalDirectoryContent(
     }
 
     deleteRequest?.let { request ->
-        AlertDialog(
-            onDismissRequest = { if (!isBusy) deleteRequest = null },
-            title = { Text("Löschen?") },
-            text = { Text(request.text) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        request.confirm()
-                        deleteRequest = null
-                    },
-                    enabled = !isBusy,
-                ) { Text("Löschen") }
+        ConfirmDialog(
+            title = "Löschen?",
+            message = request.text,
+            confirmText = "Löschen",
+            onConfirm = {
+                request.confirm()
+                deleteRequest = null
             },
-            dismissButton = { TextButton(onClick = { deleteRequest = null }) { Text("Abbrechen") } },
+            onDismiss = { deleteRequest = null },
+            isDangerous = true,
+            enabled = !isBusy,
         )
     }
 }

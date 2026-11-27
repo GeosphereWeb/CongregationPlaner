@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -49,6 +48,7 @@ import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.theming.nightCardColors
+import de.geosphere.congregationplaner.ui.dialog.ConfirmDialog
 import de.geosphere.congregationplaner.ui.list.SelectableListCard
 import de.geosphere.congregationplaner.ui.pane.DetailPane
 import de.geosphere.congregationplaner.ui.pane.DetailPlaceholder
@@ -212,27 +212,18 @@ internal fun OrganizationContent(
     }
 
     unitToDelete?.let { unit ->
-        AlertDialog(
-            onDismissRequest = { if (!isBusy) unitToDelete = null },
-            title = { Text("${level.label} löschen?") },
-            text = {
-                Text(
-                    "„${unit.displayName}“ wird dauerhaft gelöscht. Das geht nur, solange darunter keine " +
-                        "${checkNotNull(level.child).pluralLabel} mehr stehen.",
-                )
+        ConfirmDialog(
+            title = "${level.label} löschen?",
+            message = "„${unit.displayName}“ wird dauerhaft gelöscht. Das geht nur, solange darunter keine " +
+                "${checkNotNull(level.child).pluralLabel} mehr stehen.",
+            confirmText = "Löschen",
+            onConfirm = {
+                actions.onDelete(unit)
+                unitToDelete = null
             },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        actions.onDelete(unit)
-                        unitToDelete = null
-                    },
-                    enabled = !isBusy,
-                ) { Text("Löschen") }
-            },
-            dismissButton = {
-                TextButton(onClick = { unitToDelete = null }, enabled = !isBusy) { Text("Abbrechen") }
-            },
+            onDismiss = { unitToDelete = null },
+            isDangerous = true,
+            enabled = !isBusy,
         )
     }
 }

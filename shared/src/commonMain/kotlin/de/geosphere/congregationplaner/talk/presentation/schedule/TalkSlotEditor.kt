@@ -4,12 +4,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,6 +39,7 @@ import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.ui.button.SecondaryButton
 import de.geosphere.congregationplaner.ui.chip.StatusChip
 import de.geosphere.congregationplaner.ui.chip.StatusTone
+import de.geosphere.congregationplaner.ui.dialog.ConfirmDialog
 import de.geosphere.congregationplaner.ui.form.EditorActions
 import de.geosphere.congregationplaner.ui.form.SwitchRow
 import kotlinx.datetime.LocalDate
@@ -166,20 +164,17 @@ internal fun TalkSlotEditor(
     }
 
     if (showDeleteConfirm) {
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("Termin löschen?") },
-            text = { Text("Der Termin ${slotDateHeadline(slot.date)} wird endgültig gelöscht.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteConfirm = false
-                        onDelete()
-                    },
-                    colors = ButtonDefaults.textButtonColors(contentColor = NightColors.Coral),
-                ) { Text("Löschen") }
+        ConfirmDialog(
+            title = "Termin löschen?",
+            message = "Der Termin ${slotDateHeadline(slot.date)} wird endgültig gelöscht.",
+            confirmText = "Löschen",
+            onConfirm = {
+                showDeleteConfirm = false
+                onDelete()
             },
-            dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text("Abbrechen") } },
+            onDismiss = { showDeleteConfirm = false },
+            isDangerous = true,
+            enabled = !isSaving,
         )
     }
 
