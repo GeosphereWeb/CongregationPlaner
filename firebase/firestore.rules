@@ -104,7 +104,7 @@ rules_version = '2';
 //   region/.../congregation/{congId}/visitingSpeakers: congregationId: string (id of an external congregation),
 //     lastName: string (1..100), firstName: string (<= 100), mobilePhone, landlinePhone: string (<= 30 each),
 //     email: string (<= 200), talkNumbers: list<int> (<= 200 entries, the talk numbers the speaker gives),
-//     ranking: int (0..5), excludedFromPlanning: bool (the planner no longer offers the speaker); all of them are
+//     ranking: int (0..10, half stars: 7 = 3.5 stars), excludedFromPlanning: bool (the planner no longer offers the speaker); all of them are
 //     required
 // The rules check the form only, not whether circuitId/congregationId exist; the app does that.
 //
@@ -470,7 +470,7 @@ service cloud.firestore {
         data.landlinePhone is string && data.landlinePhone.size() <= 30 &&
         data.email is string && data.email.size() <= 200 &&
         data.talkNumbers is list && data.talkNumbers.size() <= 200 &&
-        data.ranking is int && data.ranking >= 0 && data.ranking <= 5 &&
+        data.ranking is int && data.ranking >= 0 && data.ranking <= 10 &&
         data.excludedFromPlanning is bool;
     }
 

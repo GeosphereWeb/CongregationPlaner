@@ -14,7 +14,8 @@ data class ExternalCongregation(val id: String = "", val circuitId: String, val 
  * Ein Redner einer [ExternalCongregation] (`…/visitingSpeakers/{id}`), der für die Vortragsplanung zur Verfügung steht.
  *
  * @param talkNumbers Nummern der Vorträge aus der Vortragsliste, die der Redner hält.
- * @param ranking Bewertung des Redners in Sternen, 0 (nicht bewertet) bis [MAX_RANKING].
+ * @param ranking Bewertung des Redners in halben Sternen, 0 (nicht bewertet) bis [MAX_RANKING] (= [STARS] Sterne);
+ *   7 heißt 3,5 Sterne.
  * @param excludedFromPlanning Der Planer bietet den Redner nicht mehr zur Auswahl an; bestehende Termine bleiben.
  */
 data class VisitingSpeaker(
@@ -34,7 +35,8 @@ data class VisitingSpeaker(
         const val MAX_PHONE_LENGTH = 30
         const val MAX_EMAIL_LENGTH = 200
         const val MAX_TALKS = 200
-        const val MAX_RANKING = 5
+        const val STARS = 5
+        const val MAX_RANKING = STARS * 2
     }
 }
 
@@ -64,7 +66,7 @@ sealed class ExternalDirectoryException(message: String) : Exception(message) {
             "Der Redner ist ungültig: Familienname und Versammlung erforderlich, Namen mit höchstens " +
                 "${VisitingSpeaker.MAX_NAME_LENGTH} Zeichen, Telefonnummern bis " +
                 "${VisitingSpeaker.MAX_PHONE_LENGTH} und E-Mail bis ${VisitingSpeaker.MAX_EMAIL_LENGTH} Zeichen, " +
-                "Bewertung 0 bis ${VisitingSpeaker.MAX_RANKING}.",
+                "Bewertung 0 bis ${VisitingSpeaker.STARS} Sterne in halben Schritten.",
         )
 
     class CircuitNotEmpty : ExternalDirectoryException("Der Kreis hat noch Versammlungen. Entferne sie zuerst.")

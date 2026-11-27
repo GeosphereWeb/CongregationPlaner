@@ -225,8 +225,9 @@ await expect('externer Redner mit leerem Familiennamen', post(EXT_SPEAKERS, { ..
 await expect('externer Redner mit Vortragsliste als Text', post(EXT_SPEAKERS, { ...validSpeaker, talkNumbers: '12' }), false);
 await expect('externer Redner mit zu langer Handynummer', post(EXT_SPEAKERS, { ...validSpeaker, mobilePhone: '1'.repeat(31) }), false);
 await expect('externer Redner mit zu langer Festnetznummer', post(EXT_SPEAKERS, { ...validSpeaker, landlinePhone: '1'.repeat(31) }), false);
-await expect('externer Redner mit Bewertung 5', post(EXT_SPEAKERS, { ...validSpeaker, ranking: 5 }), true);
-await expect('externer Redner mit Bewertung 6', post(EXT_SPEAKERS, { ...validSpeaker, ranking: 6 }), false);
+await expect('externer Redner mit 3,5 Sternen (7 halbe)', post(EXT_SPEAKERS, { ...validSpeaker, ranking: 7 }), true);
+await expect('externer Redner mit 5 Sternen (10 halbe)', post(EXT_SPEAKERS, { ...validSpeaker, ranking: 10 }), true);
+await expect('externer Redner mit Bewertung 11', post(EXT_SPEAKERS, { ...validSpeaker, ranking: 11 }), false);
 await expect('externer Redner mit negativer Bewertung', post(EXT_SPEAKERS, { ...validSpeaker, ranking: -1 }), false);
 await expect('externer Redner mit Bewertung als Text', post(EXT_SPEAKERS, { ...validSpeaker, ranking: '3' }), false);
 await expect('externer Redner ohne Bewertung', post(EXT_SPEAKERS, Object.fromEntries(Object.entries(validSpeaker).filter(([key]) => key !== 'ranking'))), false);
