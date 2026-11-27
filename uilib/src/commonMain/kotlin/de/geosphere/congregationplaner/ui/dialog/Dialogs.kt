@@ -1,17 +1,16 @@
 package de.geosphere.congregationplaner.ui.dialog
 
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
+import de.geosphere.congregationplaner.ui.button.DangerButton
 
 /**
- * Rückfrage mit Bestätigen und Abbrechen. [isDangerous] färbt den Bestätigungsknopf in der Fehlerfarbe (z. B. Löschen);
+ * Rückfrage mit Bestätigen und Abbrechen. Mit [isDangerous] ist Bestätigen ein roter [DangerButton] (z. B. Löschen);
  * [enabled] = `false` sperrt beide Knöpfe und das Wegtippen, solange etwas läuft.
  */
 @Composable
@@ -30,15 +29,11 @@ fun ConfirmDialog(
         title = { Text(title) },
         text = { Text(message) },
         confirmButton = {
-            TextButton(
-                onClick = onConfirm,
-                enabled = enabled,
-                colors = if (isDangerous) {
-                    ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                } else {
-                    ButtonDefaults.textButtonColors()
-                },
-            ) { Text(confirmText) }
+            if (isDangerous) {
+                DangerButton(confirmText, onConfirm, enabled = enabled)
+            } else {
+                TextButton(onClick = onConfirm, enabled = enabled) { Text(confirmText) }
+            }
         },
         dismissButton = { TextButton(onClick = onDismiss, enabled = enabled) { Text(dismissText) } },
     )

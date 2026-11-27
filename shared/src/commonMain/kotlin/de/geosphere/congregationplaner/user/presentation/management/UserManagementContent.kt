@@ -43,6 +43,7 @@ import de.geosphere.congregationplaner.presentation.components.rememberListDetai
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
+import de.geosphere.congregationplaner.ui.button.DangerButton
 import de.geosphere.congregationplaner.ui.button.SecondaryButton
 import de.geosphere.congregationplaner.ui.button.SpeedDialFab
 import de.geosphere.congregationplaner.ui.button.SpeedDialItem
@@ -280,12 +281,10 @@ internal fun UserManagementContent(
                                     family = state.editorFamily,
                                 )
                                 if (member != null && state.permissionsOf(member).canEdit) {
-                                    SecondaryButton(
+                                    DangerButton(
                                         text = "Aus der Versammlung entfernen",
                                         onClick = { memberToRemove = member },
                                         enabled = !isBusy && !state.isSaving,
-                                        outlined = false,
-                                        contentColor = NightColors.Coral,
                                     )
                                 }
                             } else {

@@ -8,7 +8,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -37,6 +36,7 @@ import de.geosphere.congregationplaner.talk.presentation.schedule.slotTalkText
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
+import de.geosphere.congregationplaner.ui.dialog.ConfirmDialog
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 
@@ -111,17 +111,13 @@ private fun AssignDayDialog(slots: List<TalkSlot>, error: String?, onPick: (Talk
 
 @Composable
 private fun DeclineDialog(dialog: RequestDialog.Decline, onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Anfrage abgesagt?") },
-        text = { Text(declineQuestion(dialog.open)) },
-        confirmButton = {
-            TextButton(
-                onClick = onConfirm,
-                colors = ButtonDefaults.textButtonColors(contentColor = NightColors.Coral),
-            ) { Text("Löschen") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen") } },
+    ConfirmDialog(
+        title = "Anfrage abgesagt?",
+        message = declineQuestion(dialog.open),
+        confirmText = "Löschen",
+        onConfirm = onConfirm,
+        onDismiss = onDismiss,
+        isDangerous = true,
     )
 }
 
