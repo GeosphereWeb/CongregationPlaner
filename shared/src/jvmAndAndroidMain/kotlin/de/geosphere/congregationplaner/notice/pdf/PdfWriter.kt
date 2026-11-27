@@ -6,7 +6,23 @@ import java.util.Locale
 import java.util.zip.DeflaterOutputStream
 
 /** Raster image: [rgb] has 3 bytes per pixel, [alpha] 1 byte per pixel or null if opaque. */
-class RgbaImage(val width: Int, val height: Int, val rgb: ByteArray, val alpha: ByteArray?)
+class RgbaImage(val width: Int, val height: Int, val rgb: ByteArray, val alpha: ByteArray?) {
+    companion object {
+        /** From non-premultiplied ARGB pixels; the alpha plane is dropped if every pixel is opaque. */
+        @Suppress("MagicNumber") // channel shifts of the ARGB packing
+        fun fromArgb(width: Int, height: Int, argb: IntArray): RgbaImage {
+            val rgb = ByteArray(argb.size * 3)
+            val alpha = ByteArray(argb.size)
+            argb.forEachIndexed { i, p ->
+                rgb[i * 3] = (p shr 16).toByte()
+                rgb[i * 3 + 1] = (p shr 8).toByte()
+                rgb[i * 3 + 2] = p.toByte()
+                alpha[i] = (p ushr 24).toByte()
+            }
+            return RgbaImage(width, height, rgb, alpha.takeUnless { a -> a.all { it == 0xFF.toByte() } })
+        }
+    }
+}
 
 private const val BITS_PER_BYTE = 8
 private const val BYTE_MASK = 0xFF
