@@ -6,6 +6,7 @@ import de.geosphere.congregationplaner.presentation.state.UiStateStore
 import de.geosphere.congregationplaner.talk.domain.model.ExternalDirectory
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalDirectoryUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalSpeakerVisitsUseCase
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.Job
@@ -20,6 +21,7 @@ import kotlinx.coroutines.launch
 @Inject
 class ExternalDirectoryViewModel(
     private val observeDirectory: ObserveExternalDirectoryUseCase,
+    private val observeVisits: ObserveExternalSpeakerVisitsUseCase,
     changeUseCases: DirectoryChangeUseCases,
     private val policy: TalkSchedulePermissionPolicy,
 ) : ViewModel() {
@@ -28,6 +30,7 @@ class ExternalDirectoryViewModel(
 
     private var currentUser: AppUser? = null
     private var observeJob: Job? = null
+    private var visitsJob: Job? = null
 
     /** Der Redner, der geöffnet wird, sobald das Verzeichnis geladen ist (Sprung aus der Planung). */
     private var pendingSpeakerId: String? = null
@@ -52,7 +55,9 @@ class ExternalDirectoryViewModel(
         } else {
             observeJob?.cancel()
             observeJob = null
-            store.update { it.copy(directory = ExternalDirectory(), isLoading = false) }
+            visitsJob?.cancel()
+            visitsJob = null
+            store.update { it.copy(directory = ExternalDirectory(), visits = null, isLoading = false) }
         }
     }
 
@@ -74,6 +79,11 @@ class ExternalDirectoryViewModel(
         editor.select(speaker)
     }
 
+    /** Schaltet zwischen Baum und flacher Liste nach letztem Besuch um. */
+    fun setSortByLastVisit(enabled: Boolean) {
+        store.update { it.copy(sortByLastVisit = enabled) }
+    }
+
     fun dismissError() {
         store.update { it.copy(errorMessage = null) }
         // Nach einem Ladefehler erneut laden.
@@ -81,6 +91,7 @@ class ExternalDirectoryViewModel(
     }
 
     private fun observe(user: AppUser) {
+        observeVisits(user)
         if (observeJob?.isActive == true) return
         store.update { it.copy(isLoading = true) }
         observeJob = viewModelScope.launch {
@@ -92,6 +103,16 @@ class ExternalDirectoryViewModel(
                     store.update { it.copy(directory = directory, isLoading = false) }
                     openPendingSpeaker()
                 }
+        }
+    }
+
+    /** Ohne Besuche (z. B. ohne Leserecht auf die Planung) bleibt die Liste ohne Farben; das ist kein Fehler. */
+    private fun observeVisits(user: AppUser) {
+        if (visitsJob?.isActive == true) return
+        visitsJob = viewModelScope.launch {
+            observeVisits.invoke(user)
+                .catch { store.update { it.copy(visits = null) } }
+                .collect { visits -> store.update { it.copy(visits = visits) } }
         }
     }
 }

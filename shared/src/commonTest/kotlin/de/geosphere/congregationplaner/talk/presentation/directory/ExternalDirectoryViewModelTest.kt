@@ -2,16 +2,20 @@ package de.geosphere.congregationplaner.talk.presentation.directory
 
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCircuit
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCongregation
+import de.geosphere.congregationplaner.talk.domain.model.SpeakerVisits
+import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteExternalCircuitUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteExternalCongregationUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.DeleteVisitingSpeakerUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalDirectoryUseCase
+import de.geosphere.congregationplaner.talk.domain.usecase.ObserveExternalSpeakerVisitsUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveExternalCircuitUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveExternalCongregationUseCase
 import de.geosphere.congregationplaner.talk.domain.usecase.SaveVisitingSpeakerUseCase
 import de.geosphere.congregationplaner.talk.testing.FakeExternalSpeakerDirectoryRepository
+import de.geosphere.congregationplaner.talk.testing.FakeTalkScheduleRepository
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.testing.testCongregation
@@ -20,6 +24,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -45,16 +51,29 @@ class ExternalDirectoryViewModelTest {
     private val altdorf = ExternalCongregation("g1", "c1", "Altdorf")
     private val berg = VisitingSpeaker("s1", "g1", "Berg", "Lea", talkNumbers = listOf(12))
 
+    private val visitDay = LocalDate(2024, 3, 3)
     private lateinit var repository: FakeExternalSpeakerDirectoryRepository
+    private lateinit var schedule: FakeTalkScheduleRepository
     private lateinit var viewModel: ExternalDirectoryViewModel
 
     @BeforeTest
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         repository = FakeExternalSpeakerDirectoryRepository(listOf(north), listOf(altdorf), listOf(berg))
+        schedule = FakeTalkScheduleRepository(
+            listOf(
+                TalkSlot(
+                    date = visitDay,
+                    time = LocalTime(10, 0),
+                    speakerLastName = "Berg",
+                    externalSpeakerId = "s1",
+                ),
+            ),
+        )
         val policy = TalkSchedulePermissionPolicy()
         viewModel = ExternalDirectoryViewModel(
             ObserveExternalDirectoryUseCase(repository),
+            ObserveExternalSpeakerVisitsUseCase(schedule),
             DirectoryChangeUseCases(
                 SaveExternalCircuitUseCase(repository, policy),
                 SaveExternalCongregationUseCase(repository, policy),
@@ -362,5 +381,49 @@ class ExternalDirectoryViewModelTest {
         viewModel.changes.save()
 
         assertTrue(repository.speakers.value.single().excludedFromPlanning)
+    }
+
+    @Test
+    fun `planner sees the visits of the speakers`() {
+        viewModel.onCurrentUserChanged(planner)
+
+        assertEquals(mapOf("s1" to SpeakerVisits(visitDay, 1)), state.visits)
+    }
+
+    @Test
+    fun `a failing visit stream leaves the list without colors and without error`() {
+        schedule.observeError = IllegalStateException("no access")
+
+        viewModel.onCurrentUserChanged(planner)
+
+        assertNull(state.visits)
+        assertNull(state.errorMessage)
+        assertEquals(listOf(berg), state.directory.speakers)
+    }
+
+    @Test
+    fun `the visit list needs loaded visits`() {
+        schedule.observeError = IllegalStateException("no access")
+        viewModel.onCurrentUserChanged(planner)
+        viewModel.setSortByLastVisit(true)
+
+        assertTrue(state.sortByLastVisit)
+        assertFalse(state.showsVisitList)
+    }
+
+    @Test
+    fun `sorting by last visit shows the visit list`() {
+        viewModel.onCurrentUserChanged(planner)
+        viewModel.setSortByLastVisit(true)
+
+        assertTrue(state.showsVisitList)
+    }
+
+    @Test
+    fun `a user without planning view drops the visits`() {
+        viewModel.onCurrentUserChanged(planner)
+        viewModel.onCurrentUserChanged(member)
+
+        assertNull(state.visits)
     }
 }

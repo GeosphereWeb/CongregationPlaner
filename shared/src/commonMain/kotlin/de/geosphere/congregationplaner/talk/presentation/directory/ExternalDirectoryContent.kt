@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -35,12 +36,14 @@ import de.geosphere.congregationplaner.talk.domain.model.ExternalCircuit
 import de.geosphere.congregationplaner.talk.domain.model.ExternalCongregation
 import de.geosphere.congregationplaner.talk.domain.model.ExternalDirectory
 import de.geosphere.congregationplaner.talk.domain.model.VisitingSpeaker
+import de.geosphere.congregationplaner.talk.presentation.common.rememberToday
 import de.geosphere.congregationplaner.talk.presentation.picker.label
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.ui.list.CollapsingHeaderColumn
 import de.geosphere.congregationplaner.ui.pane.DetailPane
 import de.geosphere.congregationplaner.ui.pane.ListPaneHeader
+import kotlinx.datetime.LocalDate
 
 /** Callbacks der Verwaltung; gebündelt, damit die Composables überschaubare Signaturen behalten. */
 internal data class ExternalDirectoryActions(
@@ -64,6 +67,7 @@ internal data class ExternalDirectoryActions(
     val onClearCongregations: () -> Unit = {},
     val onSearchCongregations: (String) -> Unit = {},
     val onSearchSpeakers: (String) -> Unit = {},
+    val onSortByLastVisit: (Boolean) -> Unit = {},
 )
 
 @Composable
@@ -92,9 +96,34 @@ fun ExternalDirectoryScreen(viewModel: ExternalDirectoryViewModel, modifier: Mod
             onClearCongregations = viewModel.filter::clearCongregations,
             onSearchCongregations = viewModel.filter::searchCongregations,
             onSearchSpeakers = viewModel.filter::searchSpeakers,
+            onSortByLastVisit = viewModel::setSortByLastVisit,
         ),
         modifier = modifier,
     )
+}
+
+/** Filter über der Liste; die Liste ist der Baum oder, nach letztem Besuch sortiert, flach (CP-193). */
+@Composable
+private fun DirectoryListPane(
+    state: ExternalDirectoryUiState,
+    actions: ExternalDirectoryActions,
+    isBusy: Boolean,
+    listState: LazyListState,
+    today: LocalDate = rememberToday(),
+) {
+    CollapsingHeaderColumn(
+        listState = listState,
+        header = { DirectoryFilterBar(state, actions) },
+        // Während der Suche bleibt das Suchfeld sichtbar, auch wenn die Liste gescrollt ist.
+        forceVisible = state.speakerQuery.isNotBlank(),
+        spacing = 8.dp,
+    ) {
+        if (state.showsVisitList) {
+            SpeakerVisitList(state, actions, isBusy, listState, today)
+        } else {
+            ExternalDirectoryTree(state, actions, isBusy, listState, today)
+        }
+    }
 }
 
 private fun ExternalDirectoryActions.add(action: AddAction) = when (action.target) {
@@ -141,17 +170,7 @@ internal fun ExternalDirectoryContent(
                 scaffoldState = navigator.scaffoldState,
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 listPane = {
-                    AnimatedPane {
-                        CollapsingHeaderColumn(
-                            listState = listState,
-                            header = { DirectoryFilterBar(state, actions) },
-                            // Während der Suche bleibt das Suchfeld sichtbar, auch wenn die Liste gescrollt ist.
-                            forceVisible = state.speakerQuery.isNotBlank(),
-                            spacing = 8.dp,
-                        ) {
-                            ExternalDirectoryTree(state, actions, isBusy, listState)
-                        }
-                    }
+                    AnimatedPane { DirectoryListPane(state, actions, isBusy, listState) }
                 },
                 detailPane = {
                     AnimatedPane {

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
@@ -24,6 +25,8 @@ import de.geosphere.congregationplaner.talk.domain.model.MemberRef
 import de.geosphere.congregationplaner.talk.domain.model.PlanningUsage
 import de.geosphere.congregationplaner.talk.domain.model.TalkPlanningSettings
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
+import de.geosphere.congregationplaner.talk.presentation.common.RecencyBadge
+import de.geosphere.congregationplaner.talk.presentation.common.recencyBadgeOf
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import kotlinx.datetime.LocalDate
@@ -40,7 +43,8 @@ internal data class SpeakerActions(
  * Auswahl des Redners: eigene Redner (nur mit der Berechtigung, die Mitglieder zu lesen) und externe Redner aus dem
  * Verzeichnis, das in der eigenen Verwaltung gepflegt wird. Vorgeschlagen werden zuerst die Redner, die am längsten
  * nicht eingeplant sind; Redner, die der Stichtag aus [usage] sperrt, lassen sich einblenden. Die externen Redner sind
- * schon auf den gewählten Vortrag eingeschränkt (siehe [offering]).
+ * schon auf den gewählten Vortrag eingeschränkt (siehe [offering]). Mit [today] zeigen externe Redner Farbe und Chip
+ * „wie lange nicht da“ (CP-193).
  */
 @Composable
 internal fun SpeakerPickerDialog(
@@ -50,6 +54,7 @@ internal fun SpeakerPickerDialog(
     actions: SpeakerActions,
     onDismiss: () -> Unit,
     usage: PlanningUsage = PlanningUsage(),
+    today: LocalDate? = null,
 ) {
     var query by remember { mutableStateOf("") }
     var showBlocked by remember { mutableStateOf(false) }
@@ -89,13 +94,7 @@ internal fun SpeakerPickerDialog(
                             }
                         }
                     }
-                    item { SectionTitle("Externe Redner") }
-                    if (externalSuggestions.isEmpty()) item { Text("Kein freier externer Redner gefunden.") }
-                    items(externalSuggestions, key = { "external-${it.item.id}" }) { suggestion ->
-                        SuggestionRow(suggestion.item.displayName, suggestion.note, suggestion.blocked) {
-                            actions.onSelectExternal(suggestion.item)
-                        }
-                    }
+                    externalRows(externalSuggestions, usage, today, actions)
                 }
             }
         },
@@ -107,6 +106,31 @@ internal fun SpeakerPickerDialog(
         dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen") } },
     )
 }
+
+/** Die externen Redner der Auswahl, mit Chip „wie lange nicht da“, sobald [today] bekannt ist. */
+private fun LazyListScope.externalRows(
+    suggestions: List<Suggestion<ExternalSpeaker>>,
+    usage: PlanningUsage,
+    today: LocalDate?,
+    actions: SpeakerActions,
+) {
+    item { SectionTitle("Externe Redner") }
+    if (suggestions.isEmpty()) item { Text("Kein freier externer Redner gefunden.") }
+    items(suggestions, key = { "external-${it.item.id}" }) { suggestion ->
+        SuggestionRow(
+            label = suggestion.item.displayName,
+            note = suggestion.note,
+            blocked = suggestion.blocked,
+            badge = today?.let { usage.externalBadge(suggestion.item.id, it) },
+        ) {
+            actions.onSelectExternal(suggestion.item)
+        }
+    }
+}
+
+/** Chip „wie lange nicht da“ eines externen Redners: letzter eingeplanter Tag und Zahl der Besuche (CP-193). */
+internal fun PlanningUsage.externalBadge(id: String, today: LocalDate): RecencyBadge =
+    recencyBadgeOf(externalLastPlanned[id], externalVisitCount[id] ?: 0, today)
 
 @Composable
 private fun SectionTitle(text: String) {
@@ -125,6 +149,9 @@ private fun SpeakerPickerDialogPreview() = PreviewThemeWrapper {
         usage = PlanningUsage(
             settings = TalkPlanningSettings(speakerFreeSince = LocalDate(2025, 6, 1)),
             memberLastPlanned = mapOf("1" to LocalDate(2026, 2, 1), "2" to LocalDate(2024, 10, 6)),
+            externalLastPlanned = mapOf("e1" to LocalDate(2023, 6, 4)),
+            externalVisitCount = mapOf("e1" to 2),
         ),
+        today = LocalDate(2026, 11, 25),
     )
 }

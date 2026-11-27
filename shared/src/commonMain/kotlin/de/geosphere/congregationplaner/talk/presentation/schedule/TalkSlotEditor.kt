@@ -191,6 +191,7 @@ internal fun TalkSlotEditor(
             actions = speakerActions.closingPicker { showSpeakerPicker = false },
             onDismiss = { showSpeakerPicker = false },
             usage = editor.usage,
+            today = rememberToday(),
         )
     }
 

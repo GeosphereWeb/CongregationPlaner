@@ -117,4 +117,17 @@ class PlanningUsageTest {
 
         assertEquals(2, planningUsageOf(slots, settings, edited).talkHeldCount[5])
     }
+
+    @Test
+    fun `the external visit count skips cancelled talks and the edited slot`() {
+        val edited = LocalDate(2026, 12, 6)
+        val slots = listOf(
+            slot(LocalDate(2020, 1, 5), external = "e1"),
+            slot(LocalDate(2024, 3, 3), external = "e1"),
+            slot(edited, external = "e1"),
+            slot(LocalDate(2025, 1, 5), external = "e1").copy(talkCancelled = true),
+        )
+
+        assertEquals(2, planningUsageOf(slots, settings, edited).externalVisitCount["e1"])
+    }
 }

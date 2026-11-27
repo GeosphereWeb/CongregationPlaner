@@ -17,11 +17,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.talk.presentation.picker.label
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
+import de.geosphere.congregationplaner.ui.field.AppSwitch
 
 /**
  * Rednersuche wie in „Redner wählen“ (Familien-, Vorname oder Versammlung) und Filter nach Kreisen und Versammlungen
@@ -41,6 +43,12 @@ internal fun DirectoryFilterBar(state: ExternalDirectoryUiState, actions: Extern
             modifier = Modifier.fillMaxWidth(),
         )
         CircuitAndCongregationFilter(state, actions)
+        if (state.canSortByLastVisit) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                AppSwitch(checked = state.sortByLastVisit, onCheckedChange = actions.onSortByLastVisit)
+                Text("Nach letztem Besuch")
+            }
+        }
     }
 }
 

@@ -126,4 +126,16 @@ class PlanningSuggestionsTest {
         assertEquals("vor 5 J. · 2×", usage.talkBadge(1, today).label)
         assertEquals("nie", usage.talkBadge(99, today).label)
     }
+
+    @Test
+    fun `an external badge uses last planned day and visit count`() {
+        val usage = PlanningUsage(
+            externalLastPlanned = mapOf("e1" to LocalDate(2024, 3, 3)),
+            externalVisitCount = mapOf("e1" to 3),
+        )
+        val today = LocalDate(2026, 11, 25)
+
+        assertEquals("vor 2 J. · 3×", usage.externalBadge("e1", today).label)
+        assertEquals("nie", usage.externalBadge("e9", today).label)
+    }
 }
