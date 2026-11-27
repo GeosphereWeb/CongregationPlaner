@@ -27,6 +27,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -50,6 +52,7 @@ import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.theming.nightCardColors
 import de.geosphere.congregationplaner.ui.appbar.NightTabRow
+import de.geosphere.congregationplaner.ui.dialog.ConfirmDialog
 import de.geosphere.congregationplaner.ui.field.AppSwitch
 import de.geosphere.congregationplaner.ui.list.SelectableListCard
 import de.geosphere.congregationplaner.ui.pane.DetailPane
@@ -213,6 +216,21 @@ internal fun ReferenceListDetail(
 @Composable
 private fun TalkCatalogTab(state: TalkCatalogUiState, actions: TalkCatalogActions) {
     ErrorRow(state.errorMessage, actions.onDismissError)
+    var talkToDelete by remember { mutableStateOf<Talk?>(null) }
+    talkToDelete?.let { talk ->
+        ConfirmDialog(
+            title = "Vortrag löschen?",
+            message = "„${talk.number} – ${talk.titleOn(state.today)}“ wird dauerhaft gelöscht.",
+            confirmText = "Löschen",
+            onConfirm = {
+                actions.onDelete(talk)
+                talkToDelete = null
+            },
+            onDismiss = { talkToDelete = null },
+            isDangerous = true,
+            enabled = !state.isSaving,
+        )
+    }
     if (state.isLoading) {
         CircularProgressIndicator()
         return
@@ -229,7 +247,7 @@ private fun TalkCatalogTab(state: TalkCatalogUiState, actions: TalkCatalogAction
                     SelectableListCard(
                         selected = state.editor?.original?.number == talk.number,
                         onSelect = { actions.onEdit(talk) },
-                        onDelete = { actions.onDelete(talk) },
+                        onDelete = { talkToDelete = talk },
                         actionsEnabled = !state.isSaving,
                         canDelete = true,
                     ) {
@@ -331,6 +349,21 @@ private fun TitleChanges(
 @Composable
 private fun WeekEventTab(state: WeekEventUiState, actions: WeekEventActions) {
     ErrorRow(state.errorMessage, actions.onDismissError)
+    var eventToDelete by remember { mutableStateOf<WeekEvent?>(null) }
+    eventToDelete?.let { event ->
+        ConfirmDialog(
+            title = "Wochenereignis löschen?",
+            message = "„${event.name}“ wird dauerhaft gelöscht.",
+            confirmText = "Löschen",
+            onConfirm = {
+                actions.onDelete(event)
+                eventToDelete = null
+            },
+            onDismiss = { eventToDelete = null },
+            isDangerous = true,
+            enabled = !state.isSaving,
+        )
+    }
     if (state.isLoading) {
         CircularProgressIndicator()
         return
@@ -347,7 +380,7 @@ private fun WeekEventTab(state: WeekEventUiState, actions: WeekEventActions) {
                     SelectableListCard(
                         selected = state.editor?.original?.id == event.id,
                         onSelect = { actions.onEdit(event) },
-                        onDelete = { actions.onDelete(event) },
+                        onDelete = { eventToDelete = event },
                         actionsEnabled = !state.isSaving,
                         canDelete = true,
                     ) {
