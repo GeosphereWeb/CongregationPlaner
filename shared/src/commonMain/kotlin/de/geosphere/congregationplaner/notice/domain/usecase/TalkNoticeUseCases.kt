@@ -12,6 +12,7 @@ import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import dev.zacsweers.metro.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
@@ -93,7 +94,9 @@ class AddNoticeImageUseCase(
     private suspend fun addIfRoom(congregation: CongregationRef, name: String, png: ByteArray): Result<NoticeImage> =
         repository.loadImages(congregation).mapCatching { images ->
             if (images.size >= MAX_IMAGES) throw TalkNoticeException.TooManyImages()
-        }.mapCatching { repository.addImage(congregation, name, png).getOrThrow() }
+        }.mapCatching {
+            repository.addImage(congregation, name, png).getOrThrow()
+        }.onFailure { if (it is CancellationException) throw it }
 }
 
 @Inject
@@ -117,11 +120,24 @@ class DeleteNoticeImageUseCase(
 ) {
     suspend operator fun invoke(user: AppUser, id: String): Result<Unit> {
         val congregation = user.plannerCongregation(policy) ?: return notAllowed()
-        val settings = repository.observeSettings(congregation).first()
-        if (settings.defaultImageId == id) {
-            repository.saveSettings(congregation, settings.copy(defaultImageId = null))
-                .onFailure { return Result.failure(it) }
+        return clearDefault(congregation, id).fold(
+            onSuccess = { repository.deleteImage(congregation, id) },
+            onFailure = { Result.failure(it) },
+        )
+    }
+
+    private suspend fun clearDefault(congregation: CongregationRef, id: String): Result<Unit> {
+        val settings = try {
+            repository.observeSettings(congregation).first()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+            return Result.failure(e)
         }
-        return repository.deleteImage(congregation, id)
+        return if (settings.defaultImageId == id) {
+            repository.saveSettings(congregation, settings.copy(defaultImageId = null)).map { }
+        } else {
+            Result.success(Unit)
+        }
     }
 }

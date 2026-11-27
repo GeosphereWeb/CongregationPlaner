@@ -8,7 +8,7 @@ import de.geosphere.congregationplaner.notice.data.createNoticeFileSource
 import de.geosphere.congregationplaner.notice.data.createNoticePdfRenderer
 import de.geosphere.congregationplaner.notice.data.createTalkNoticeRepository
 import de.geosphere.congregationplaner.notice.domain.repository.TalkNoticeRepository
-import de.geosphere.congregationplaner.notice.domain.usecase.LoadNoticeImagesUseCase
+import de.geosphere.congregationplaner.notice.presentation.TalkNoticeViewModel
 import de.geosphere.congregationplaner.talk.data.createTalkScheduleRepository
 import de.geosphere.congregationplaner.talk.domain.repository.TalkScheduleRepository
 import dev.zacsweers.metro.DependencyGraph
@@ -16,8 +16,7 @@ import dev.zacsweers.metro.Provides
 
 @DependencyGraph
 interface TalkNoticeGraph {
-    // Placeholder accessor so the graph compiles; the view model accessor is added with the presentation layer.
-    val loadNoticeImages: LoadNoticeImagesUseCase
+    val talkNoticeViewModel: TalkNoticeViewModel
 
     @Provides
     fun provideTalkNoticeRepository(): TalkNoticeRepository = createTalkNoticeRepository()

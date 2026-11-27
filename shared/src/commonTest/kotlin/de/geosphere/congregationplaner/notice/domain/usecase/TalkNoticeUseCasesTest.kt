@@ -9,13 +9,16 @@ import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermis
 import de.geosphere.congregationplaner.user.domain.model.AppUser
 import de.geosphere.congregationplaner.user.domain.model.CongregationRole
 import de.geosphere.congregationplaner.user.testing.testCongregation
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -138,5 +141,27 @@ class TalkNoticeUseCasesTest {
 
         assertEquals(keep.id, repository.settings.value.defaultImageId)
         assertEquals(listOf(keep), repository.images)
+    }
+
+    @Test
+    fun `a failing settings read makes the delete a failure`() = runBlocking {
+        val failing = object : TalkNoticeRepository by repository {
+            override fun observeSettings(congregation: CongregationRef): Flow<TalkNoticeSettings> =
+                flow { throw IllegalStateException("boom") }
+        }
+
+        assertTrue(DeleteNoticeImageUseCase(failing, policy)(planner, "x").isFailure)
+    }
+
+    @Test
+    fun `adding an image stays cancelled when the coroutine is cancelled`() {
+        val cancelling = object : TalkNoticeRepository by repository {
+            override suspend fun addImage(congregation: CongregationRef, name: String, png: ByteArray) =
+                throw CancellationException("cancelled")
+        }
+
+        assertFailsWith<CancellationException> {
+            runBlocking { AddNoticeImageUseCase(cancelling, policy)(planner, "a", png) }
+        }
     }
 }
