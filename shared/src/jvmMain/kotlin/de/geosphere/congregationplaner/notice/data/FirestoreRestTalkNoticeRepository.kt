@@ -1,6 +1,7 @@
 package de.geosphere.congregationplaner.notice.data
 
 import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import de.geosphere.congregationplaner.auth.data.FirebaseAuthManager
 import de.geosphere.congregationplaner.firestore.FirestoreRestClient
 import de.geosphere.congregationplaner.firestore.firestoreFields
@@ -21,6 +22,11 @@ import de.geosphere.congregationplaner.talk.data.settingsPath
 import kotlinx.coroutines.flow.Flow
 import java.net.http.HttpClient
 import java.util.Base64
+
+private const val COUNT_ALIAS = "count"
+private val COUNT_IMAGES_QUERY = """{"structuredAggregationQuery":{"structuredQuery":""" +
+    """{"from":[{"collectionId":"$NOTICE_IMAGES_SUBCOLLECTION"}]},""" +
+    """"aggregations":[{"alias":"$COUNT_ALIAS","count":{}}]}}"""
 
 actual fun createTalkNoticeRepository(): TalkNoticeRepository = FirestoreRestTalkNoticeRepository()
 
@@ -70,6 +76,15 @@ internal class FirestoreRestTalkNoticeRepository(
                 ),
             )
         }
+    }
+
+    // Counted on the server (:runAggregationQuery) so the large image data is not transferred.
+    override suspend fun countImages(congregation: CongregationRef): Result<Int> = runCatchingIo {
+        val url = "${client.collectionUrl(congregation.documentPath)}:runAggregationQuery"
+        JsonParser.parseString(client.request("POST", url, COUNT_IMAGES_QUERY))
+            .asJsonArray.first().asJsonObject
+            .getAsJsonObject("result").getAsJsonObject("aggregateFields").getAsJsonObject(COUNT_ALIAS)
+            .get("integerValue").asString.toInt()
     }
 
     override suspend fun addImage(congregation: CongregationRef, name: String, png: ByteArray): Result<NoticeImage> =

@@ -12,7 +12,6 @@ import de.geosphere.congregationplaner.notice.domain.model.NoticeColorSet
 import de.geosphere.congregationplaner.notice.domain.model.NoticeImage
 import de.geosphere.congregationplaner.notice.domain.model.TalkNoticeSettings
 import de.geosphere.congregationplaner.notice.domain.model.buildTalkNotice
-import de.geosphere.congregationplaner.notice.domain.model.isValidImageName as isValidName
 import de.geosphere.congregationplaner.notice.domain.usecase.AddNoticeImageUseCase
 import de.geosphere.congregationplaner.notice.domain.usecase.DeleteNoticeImageUseCase
 import de.geosphere.congregationplaner.notice.domain.usecase.LoadNoticeImagesUseCase
@@ -37,6 +36,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 import kotlin.time.Clock
+import de.geosphere.congregationplaner.notice.domain.model.isValidImageName as isValidName
 
 private const val DEFAULT_IMAGE_NAME = "Grafik"
 
@@ -96,6 +96,7 @@ class TalkNoticeViewModel(
     private var settingsLoaded = false
     private var imagesLoaded = false
     private var selectionInitialised = false
+    private val slotCache = mutableMapOf<Int, List<TalkSlot>>()
 
     fun onCurrentUserChanged(user: AppUser, today: LocalDate = Clock.System.todayIn(TimeZone.currentSystemDefault())) {
         val congregation = user.congregation
@@ -111,6 +112,7 @@ class TalkNoticeViewModel(
         settingsLoaded = false
         imagesLoaded = false
         selectionInitialised = false
+        slotCache.clear()
         val isAvailable = renderer.isAvailable && fileSource.isAvailable
         mutableUiState.value = TalkNoticeUiState(canManage = canManage, isAvailable = isAvailable)
         if (!canManage || congregation == null || !isAvailable) return
@@ -138,13 +140,20 @@ class TalkNoticeViewModel(
         }
     }
 
+    // Reads the next year only if this year has no slot left.
     private suspend fun firstSlotDate(congregation: CongregationRef, today: LocalDate): LocalDate? =
-        runCatchingKeepingCancellation { slotsOfYears(congregation, today.year) }.getOrNull()
-            ?.map { it.date }?.filter { it >= today }?.minOrNull()
+        runCatchingKeepingCancellation {
+            listOf(today.year, today.year + 1).firstNotNullOfOrNull { year ->
+                slotsOfYear(congregation, year).map { it.date }.filter { it >= today }.minOrNull()
+            }
+        }.getOrNull()
 
-    /** Reads the slots of [year] and the next year once; nothing stays subscribed. */
     private suspend fun slotsOfYears(congregation: CongregationRef, year: Int): List<TalkSlot> =
-        schedule.observeYear(congregation, year).first() + schedule.observeYear(congregation, year + 1).first()
+        slotsOfYear(congregation, year) + slotsOfYear(congregation, year + 1)
+
+    /** Reads the slots of [year] once per session; nothing stays subscribed. */
+    private suspend fun slotsOfYear(congregation: CongregationRef, year: Int): List<TalkSlot> =
+        slotCache[year] ?: schedule.observeYear(congregation, year).first().also { slotCache[year] = it }
 
     private suspend fun refreshImages(user: AppUser) {
         loadImages(user)

@@ -228,8 +228,39 @@ class TalkNoticeViewModelTest {
         assertNull(state.errorMessage)
         assertEquals("Berlin-Mitte", renderer.notice?.congregationName)
         assertEquals(listOf("So 06.12.2026", "So 03.01.2027"), renderer.notice?.rows?.map { it.dateText })
-        assertEquals(listOf(2026, 2027), requestedYears.takeLast(2))
+        assertEquals(listOf(2026, 2027), requestedYears)
         assertNull(renderer.png)
+    }
+
+    @Test
+    fun `each year of the schedule is read once per session`() {
+        val vm = viewModel().apply { onCurrentUserChanged(planner, today) }
+        assertEquals(listOf(2026), requestedYears)
+
+        vm.createPdf()
+        vm.createPdf()
+
+        assertEquals(listOf(2026, 2027), requestedYears)
+    }
+
+    @Test
+    fun `the next year is only read for the start when this year has no slot left`() {
+        schedule.slots.value = listOf(TalkSlot(LocalDate(2027, 1, 3), LocalTime(10, 0)))
+
+        val vm = viewModel().apply { onCurrentUserChanged(planner, today) }
+
+        assertEquals(listOf(2026, 2027), requestedYears)
+        assertEquals(LocalDate(2027, 1, 3), vm.uiState.value.start)
+    }
+
+    @Test
+    fun `a user change clears the cached years`() {
+        val vm = viewModel().apply { onCurrentUserChanged(planner, today) }
+
+        val other = testCongregation.copy(congregationId = "o")
+        vm.onCurrentUserChanged(planner.copy(uid = "b", congregation = other), today)
+
+        assertEquals(listOf(2026, 2026), requestedYears)
     }
 
     @Test

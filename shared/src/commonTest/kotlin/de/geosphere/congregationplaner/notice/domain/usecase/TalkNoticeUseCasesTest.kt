@@ -42,6 +42,8 @@ internal class FakeTalkNoticeRepository : TalkNoticeRepository {
     override suspend fun loadImages(congregation: CongregationRef): Result<List<NoticeImage>> =
         Result.success(images.toList())
 
+    override suspend fun countImages(congregation: CongregationRef): Result<Int> = Result.success(images.size)
+
     override suspend fun addImage(congregation: CongregationRef, name: String, png: ByteArray): Result<NoticeImage> =
         Result.success(NoticeImage("img${nextId++}", name, png).also { images += it })
 
@@ -118,6 +120,27 @@ class TalkNoticeUseCasesTest {
         assertIs<TalkNoticeException.ImageTooLargePixels>(add(planner, "a", testPng(2001, 10)).exceptionOrNull())
         assertIs<TalkNoticeException.ImageTooLargePixels>(add(planner, "a", testPng(10, 2001)).exceptionOrNull())
         assertIs<TalkNoticeException.NotAPng>(add(planner, "a", png.copyOf(20)).exceptionOrNull())
+    }
+
+    @Test
+    fun `adding counts the images instead of loading them`() = runBlocking {
+        val countOnly = object : TalkNoticeRepository by repository {
+            override suspend fun loadImages(congregation: CongregationRef): Result<List<NoticeImage>> =
+                throw AssertionError("must not load all images")
+        }
+
+        assertTrue(AddNoticeImageUseCase(countOnly, policy)(planner, "a", png).isSuccess)
+    }
+
+    @Test
+    fun `a failing count makes the add a failure`() = runBlocking {
+        val failing = object : TalkNoticeRepository by repository {
+            override suspend fun countImages(congregation: CongregationRef): Result<Int> =
+                Result.failure(IllegalStateException("boom"))
+        }
+
+        assertTrue(AddNoticeImageUseCase(failing, policy)(planner, "a", png).isFailure)
+        assertTrue(repository.images.isEmpty())
     }
 
     @Test

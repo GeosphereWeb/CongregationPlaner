@@ -90,8 +90,8 @@ class AddNoticeImageUseCase(
     }
 
     private suspend fun addIfRoom(congregation: CongregationRef, name: String, png: ByteArray): Result<NoticeImage> =
-        repository.loadImages(congregation).mapCatching { images ->
-            if (images.size >= MAX_IMAGES) throw TalkNoticeException.TooManyImages()
+        repository.countImages(congregation).mapCatching { count ->
+            if (count >= MAX_IMAGES) throw TalkNoticeException.TooManyImages()
         }.mapCatching {
             repository.addImage(congregation, name, png).getOrThrow()
         }.onFailure { if (it is CancellationException) throw it }

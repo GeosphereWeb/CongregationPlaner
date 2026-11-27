@@ -35,6 +35,8 @@ fun unavailableTalkNoticeRepository(platform: String): TalkNoticeRepository = ob
 
     override suspend fun loadImages(congregation: CongregationRef): Result<List<NoticeImage>> = unavailable()
 
+    override suspend fun countImages(congregation: CongregationRef): Result<Int> = unavailable()
+
     override suspend fun addImage(congregation: CongregationRef, name: String, png: ByteArray): Result<NoticeImage> =
         unavailable()
 
