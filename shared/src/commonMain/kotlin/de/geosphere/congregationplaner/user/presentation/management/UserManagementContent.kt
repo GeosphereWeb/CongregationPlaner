@@ -43,9 +43,11 @@ import de.geosphere.congregationplaner.presentation.components.rememberListDetai
 import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
+import de.geosphere.congregationplaner.ui.button.DangerButton
 import de.geosphere.congregationplaner.ui.button.SecondaryButton
 import de.geosphere.congregationplaner.ui.button.SpeedDialFab
 import de.geosphere.congregationplaner.ui.button.SpeedDialItem
+import de.geosphere.congregationplaner.ui.dialog.ConfirmDialog
 import de.geosphere.congregationplaner.ui.field.AppSwitch
 import de.geosphere.congregationplaner.ui.list.CollapsingHeaderColumn
 import de.geosphere.congregationplaner.ui.nav.NavCardRow
@@ -134,6 +136,7 @@ internal fun UserManagementContent(
     val singlePane = navigator.scaffoldDirective.maxHorizontalPartitions == 1
     val onCancelEditing = if (singlePane) actions.onCancelEditing else actions.onDiscardChanges
     val listState = rememberLazyListState()
+    var memberToRemove by remember { mutableStateOf<AppUser?>(null) }
 
     Column(
         modifier = modifier.fillMaxSize().padding(16.dp),
@@ -173,6 +176,20 @@ internal fun UserManagementContent(
                 onSelect = actions.transfer.onSelectPerson,
                 onConfirm = actions.transfer.onLink,
                 onDismiss = actions.transfer.onCloseLink,
+            )
+        }
+        memberToRemove?.let { member ->
+            ConfirmDialog(
+                title = "Mitglied entfernen?",
+                message = "„${member.label}“ wird aus der Versammlung entfernt.",
+                confirmText = "Entfernen",
+                onConfirm = {
+                    actions.onRemove(member)
+                    memberToRemove = null
+                },
+                onDismiss = { memberToRemove = null },
+                isDangerous = true,
+                enabled = !state.isSaving && member.uid !in state.busyMemberIds,
             )
         }
 
@@ -264,12 +281,10 @@ internal fun UserManagementContent(
                                     family = state.editorFamily,
                                 )
                                 if (member != null && state.permissionsOf(member).canEdit) {
-                                    SecondaryButton(
+                                    DangerButton(
                                         text = "Aus der Versammlung entfernen",
-                                        onClick = { actions.onRemove(member) },
+                                        onClick = { memberToRemove = member },
                                         enabled = !isBusy && !state.isSaving,
-                                        outlined = false,
-                                        contentColor = NightColors.Coral,
                                     )
                                 }
                             } else {

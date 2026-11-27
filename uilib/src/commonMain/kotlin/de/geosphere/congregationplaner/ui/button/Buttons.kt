@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -90,6 +91,29 @@ fun SecondaryButton(
     }
 }
 
+/** Gefährliche Aktion (Löschen, Entfernen): gefüllt in der Fehlerfarbe des Themes, damit sie als Knopf erkennbar ist. */
+@Composable
+fun DangerButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    height: Dp = 44.dp,
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.height(height),
+        enabled = enabled,
+        shape = ButtonShape,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.error,
+            contentColor = MaterialTheme.colorScheme.onError,
+        ),
+    ) {
+        Text(text, style = nightTextStyle(15.sp, FontWeight.Bold, Color.Unspecified))
+    }
+}
+
 @ThemePreviews
 @Composable
 private fun ButtonsPreview() = NightPreviewWrapper {
@@ -98,5 +122,7 @@ private fun ButtonsPreview() = NightPreviewWrapper {
         PrimaryButton("Link übernehmen", {}, Modifier.fillMaxWidth(), enabled = false, height = 48.dp)
         SecondaryButton("Mit Google fortfahren", {}, Modifier.fillMaxWidth())
         SecondaryButton("Abmelden", {}, Modifier.fillMaxWidth(), outlined = false)
+        DangerButton("Termin löschen", {})
+        DangerButton("Termin löschen", {}, enabled = false)
     }
 }

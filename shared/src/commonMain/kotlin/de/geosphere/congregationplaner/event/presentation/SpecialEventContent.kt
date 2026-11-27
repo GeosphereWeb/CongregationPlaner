@@ -23,6 +23,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -37,6 +40,7 @@ import de.geosphere.congregationplaner.talk.presentation.schedule.TalkDateInput
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.theming.nightCardColors
+import de.geosphere.congregationplaner.ui.dialog.ConfirmDialog
 import de.geosphere.congregationplaner.ui.list.SelectableListCard
 import de.geosphere.congregationplaner.ui.pane.DetailPlaceholder
 import de.geosphere.congregationplaner.user.domain.model.AppUser
@@ -95,13 +99,28 @@ internal fun SpecialEventContent(
 
 @Composable
 private fun SpecialEventList(state: SpecialEventUiState, actions: SpecialEventActions) {
+    var eventToDelete by remember { mutableStateOf<SpecialEvent?>(null) }
+    eventToDelete?.let { event ->
+        ConfirmDialog(
+            title = "Ereignis löschen?",
+            message = "„${event.title}“ wird dauerhaft gelöscht.",
+            confirmText = "Löschen",
+            onConfirm = {
+                actions.onDelete(event)
+                eventToDelete = null
+            },
+            onDismiss = { eventToDelete = null },
+            isDangerous = true,
+            enabled = !state.isSaving,
+        )
+    }
     LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (state.events.isEmpty()) item { Text("Noch keine besonderen Ereignisse.") }
         items(state.events, key = { it.id }) { event ->
             SelectableListCard(
                 selected = state.editor?.original?.id == event.id,
                 onSelect = { actions.onEdit(event) },
-                onDelete = { actions.onDelete(event) },
+                onDelete = { eventToDelete = event },
                 actionsEnabled = !state.isSaving,
                 canDelete = true,
             ) {

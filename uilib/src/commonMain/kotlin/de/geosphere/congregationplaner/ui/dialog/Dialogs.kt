@@ -7,9 +7,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
+import de.geosphere.congregationplaner.ui.button.DangerButton
 
 /**
- * Confirm Dialog Komponente
+ * Rückfrage mit Bestätigen und Abbrechen. Mit [isDangerous] ist Bestätigen ein roter [DangerButton] (z. B. Löschen);
+ * [enabled] = `false` sperrt beide Knöpfe und das Wegtippen, solange etwas läuft.
  */
 @Composable
 fun ConfirmDialog(
@@ -20,43 +22,20 @@ fun ConfirmDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
     isDangerous: Boolean = false,
+    enabled: Boolean = true,
 ) {
     AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = title,
-                color = Color.Unspecified,
-            )
-        },
-        text = {
-            Text(
-                text = message,
-                color = Color.Unspecified,
-            )
-        },
+        onDismissRequest = { if (enabled) onDismiss() },
+        title = { Text(title) },
+        text = { Text(message) },
         confirmButton = {
-            TextButton(
-                onClick = onConfirm,
-                content = {
-                    Text(
-                        text = confirmText,
-                        color = if (isDangerous) Color.Unspecified else Color.Unspecified,
-                    )
-                },
-            )
+            if (isDangerous) {
+                DangerButton(confirmText, onConfirm, enabled = enabled)
+            } else {
+                TextButton(onClick = onConfirm, enabled = enabled) { Text(confirmText) }
+            }
         },
-        dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-                content = {
-                    Text(
-                        text = dismissText,
-                        color = Color.Unspecified,
-                    )
-                },
-            )
-        },
+        dismissButton = { TextButton(onClick = onDismiss, enabled = enabled) { Text(dismissText) } },
     )
 }
 
@@ -104,9 +83,24 @@ private fun ConfirmDialogPreview() = PreviewThemeWrapper {
     ConfirmDialog(
         title = "Versammlung löschen?",
         message = "Diese Versammlung wird dauerhaft gelöscht.",
+        confirmText = "Löschen",
         onConfirm = {},
         onDismiss = {},
         isDangerous = true,
+    )
+}
+
+@ThemePreviews
+@Composable
+private fun ConfirmDialogDisabledPreview() = PreviewThemeWrapper {
+    ConfirmDialog(
+        title = "Versammlung löschen?",
+        message = "Diese Versammlung wird dauerhaft gelöscht.",
+        confirmText = "Löscht …",
+        onConfirm = {},
+        onDismiss = {},
+        isDangerous = true,
+        enabled = false,
     )
 }
 

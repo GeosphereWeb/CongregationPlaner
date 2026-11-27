@@ -3,9 +3,10 @@ package de.geosphere.congregationplaner.ui.form
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -14,9 +15,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import de.geosphere.congregationplaner.theming.NightColors
 import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
 import de.geosphere.congregationplaner.theming.ThemePreviews
+import de.geosphere.congregationplaner.ui.button.DangerButton
 import de.geosphere.congregationplaner.ui.button.PrimaryButton
 import de.geosphere.congregationplaner.ui.button.SecondaryButton
 import de.geosphere.congregationplaner.ui.card.FieldCard
@@ -44,7 +45,7 @@ fun FieldActions(changeLabel: String, enabled: Boolean, onChange: () -> Unit, on
 
 /**
  * Speichern, Verwerfen und (mit [onDelete]) Löschen eines Eintrags in der Detailansicht: auf dem Handy volle Breite
- * untereinander, sonst nebeneinander rechts; „Löschen“ steht als roter Textbutton darunter.
+ * untereinander, sonst nebeneinander rechts; „Löschen“ steht als roter Knopf in derselben Breite darunter.
  */
 @Composable
 @Suppress("LongParameterList")
@@ -58,36 +59,36 @@ fun EditorActions(
     deleteText: String = "Löschen",
     deleteEnabled: Boolean = true,
 ) {
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        BoxWithConstraints(Modifier.fillMaxWidth()) {
-            if (maxWidth < COMPACT_WIDTH) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    PrimaryButton(saveText, onSave, Modifier.fillMaxWidth(), saveEnabled, BUTTON_HEIGHT)
-                    SecondaryButton(
-                        "Verwerfen",
-                        onDiscard,
-                        Modifier.fillMaxWidth(),
-                        discardEnabled,
-                        height = BUTTON_HEIGHT,
-                    )
-                }
-            } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                ) {
+    val delete: @Composable () -> Unit = {
+        if (onDelete != null) {
+            DangerButton(deleteText, onDelete, Modifier.fillMaxWidth(), deleteEnabled, BUTTON_HEIGHT)
+        }
+    }
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        if (maxWidth < COMPACT_WIDTH) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                PrimaryButton(saveText, onSave, Modifier.fillMaxWidth(), saveEnabled, BUTTON_HEIGHT)
+                SecondaryButton(
+                    "Verwerfen",
+                    onDiscard,
+                    Modifier.fillMaxWidth(),
+                    discardEnabled,
+                    height = BUTTON_HEIGHT,
+                )
+                delete()
+            }
+        } else {
+            // Löschen so breit wie Verwerfen und Speichern zusammen.
+            Column(
+                modifier = Modifier.align(Alignment.TopEnd).width(IntrinsicSize.Max),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     SecondaryButton("Verwerfen", onDiscard, enabled = discardEnabled, height = BUTTON_HEIGHT)
                     PrimaryButton(saveText, onSave, enabled = saveEnabled, height = BUTTON_HEIGHT)
                 }
+                delete()
             }
-        }
-        if (onDelete != null) {
-            TextButton(
-                onClick = onDelete,
-                enabled = deleteEnabled,
-                modifier = Modifier.align(Alignment.End),
-                colors = ButtonDefaults.textButtonColors(contentColor = NightColors.Coral),
-            ) { Text(deleteText) }
         }
     }
 }
