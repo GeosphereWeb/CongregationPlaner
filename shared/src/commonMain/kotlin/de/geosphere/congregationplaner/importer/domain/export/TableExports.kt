@@ -105,7 +105,7 @@ fun exportSpeakerDirectory(directory: ExternalDirectory): ImportTable {
                 speaker.mobilePhone,
                 speaker.landlinePhone,
                 speaker.email,
-                speaker.ranking.toString(),
+                starsText(speaker.ranking),
             )
             speaker.talkNumbers.ifEmpty { listOf(null) }.map { talk ->
                 DIRECTORY_HEADERS.zip(person + talk?.toString()).toMap()
@@ -114,6 +114,9 @@ fun exportSpeakerDirectory(directory: ExternalDirectory): ImportTable {
     }
     return table(DIRECTORY_HEADERS, rows)
 }
+
+/** A rating in half stars (7) as stars in the file ("3.5"); whole stars without a fraction ("3"). */
+private fun starsText(halves: Int): String = if (halves % 2 == 0) "${halves / 2}" else "${halves / 2}.5"
 
 /** The talk list in the columns of `Export_tblVortaege`, sorted by number; the title history is not part of it. */
 fun exportTalkCatalog(talks: List<Talk>): ImportTable = table(

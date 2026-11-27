@@ -161,6 +161,15 @@ class ExternalSpeakerDirectoryUseCasesTest {
     }
 
     @Test
+    fun `ratings in half stars up to five stars are saved`() = runBlocking {
+        val save = SaveVisitingSpeakerUseCase(repository, policy)
+        val valid = VisitingSpeaker(congregationId = "g1", lastName = "Neu")
+
+        assertEquals(7, save(admin, valid.copy(ranking = 7)).getOrThrow().ranking)
+        assertEquals(10, save(admin, valid.copy(ranking = 10)).getOrThrow().ranking)
+    }
+
+    @Test
     fun `invalid speakers are rejected`() = runBlocking {
         val save = SaveVisitingSpeakerUseCase(repository, policy)
         val valid = VisitingSpeaker(congregationId = "g1", lastName = "Neu")

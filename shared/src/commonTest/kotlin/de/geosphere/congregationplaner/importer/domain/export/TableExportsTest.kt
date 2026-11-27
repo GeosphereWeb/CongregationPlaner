@@ -46,7 +46,8 @@ class TableExportsTest {
                 mobilePhone = "0170 123",
                 email = "lea@example.org",
                 talkNumbers = listOf(12, 13),
-                ranking = 3,
+                // 3.5 stars: the export writes "3.5", which the import reads back as 7.
+                ranking = 7,
                 excludedFromPlanning = true,
             ),
             VisitingSpeaker(id = "r2", congregationId = "v1", lastName = "Ohne Vortrag"),

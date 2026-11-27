@@ -37,8 +37,8 @@ class SpeakerDirectoryImportTest {
         )
         assertEquals(
             listOf(
-                VisitingSpeaker("5", "20", "Berg", "Lea", "0170", "08092", "lea@example.org", listOf(12, 45), 3),
-                VisitingSpeaker("6", "20", "Tal", "Lea", "0170", "08092", "lea@example.org", listOf(12), 3),
+                VisitingSpeaker("5", "20", "Berg", "Lea", "0170", "08092", "lea@example.org", listOf(12, 45), 6),
+                VisitingSpeaker("6", "20", "Tal", "Lea", "0170", "08092", "lea@example.org", listOf(12), 6),
             ),
             result.speakers.entries.map { it.item },
         )
@@ -65,6 +65,27 @@ class SpeakerDirectoryImportTest {
         assertEquals(ImportKind.SKIP, second.circuits.entries.single().kind)
         assertEquals(ImportKind.SKIP, second.congregations.entries.single().kind)
         assertEquals(ImportKind.UPDATE, second.speakers.entries.single().kind)
+    }
+
+    @Test
+    fun rankingIsReadInHalfStars() {
+        val result = planSpeakerDirectory(
+            table(line("5", "12", ranking = "3.5"), line("6", "12", ranking = "3,5"), line("7", "12", ranking = "0")),
+            ExternalDirectory(),
+            setOf(12),
+        )
+        assertEquals(listOf(7, 7, 0), result.speakers.entries.map { it.item.ranking })
+    }
+
+    @Test
+    fun rankingBetweenHalfStarsOrAboveFiveIsAnError() {
+        val result = planSpeakerDirectory(
+            table(line("5", "12", ranking = "3.3"), line("6", "12", ranking = "5.5"), line("7", "12")),
+            ExternalDirectory(),
+            setOf(12),
+        )
+        assertEquals(listOf(2, 3), result.speakers.errors.map { it.row })
+        assertEquals(listOf("7"), result.speakers.entries.map { it.item.id })
     }
 
     @Test
