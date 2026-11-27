@@ -57,7 +57,7 @@ class ReadOnlyViewTest {
     }
 
     @Test
-    fun `a speaker shows only the filled details`() {
+    fun `a speaker shows only the filled details and never the rating`() {
         val speaker = VisitingSpeaker(
             id = "s1",
             congregationId = "g1",
@@ -72,7 +72,8 @@ class ReadOnlyViewTest {
 
         assertEquals("Redner", view.title)
         assertEquals(
-            listOf("Berg, Lea", "Versammlung: Altdorf", "Handy: 0170 1", "Vorträge: 12, 45", "Bewertung: 3 von 5"),
+            // The rating is the planner's own judgement; the read-only view (talk helpers) never shows it.
+            listOf("Berg, Lea", "Versammlung: Altdorf", "Handy: 0170 1", "Vorträge: 12, 45"),
             view.lines,
         )
     }
