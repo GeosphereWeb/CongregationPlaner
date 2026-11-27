@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Card
@@ -47,6 +48,7 @@ import de.geosphere.congregationplaner.theming.nightCardColors
 import de.geosphere.congregationplaner.ui.field.AppSwitch
 import de.geosphere.congregationplaner.ui.list.CollapsingHeaderColumn
 import de.geosphere.congregationplaner.ui.list.SelectableListCard
+import de.geosphere.congregationplaner.ui.list.isAtStart
 import de.geosphere.congregationplaner.ui.pane.DetailPane
 import de.geosphere.congregationplaner.ui.pane.DetailPlaceholder
 import de.geosphere.congregationplaner.ui.pane.ListPaneHeader
@@ -91,6 +93,7 @@ internal fun TalkHistoryContent(
 ) {
     val navigator = rememberListDetailNavigation(state, onClose = actions.onClose)
     val listState = rememberLazyListState()
+    val gridState = rememberLazyGridState()
     Column(
         modifier = modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -111,7 +114,7 @@ internal fun TalkHistoryContent(
             return@Column
         }
         CollapsingHeaderColumn(
-            listState = listState,
+            atListStart = { if (state.showsTiles) gridState.isAtStart() else listState.isAtStart() },
             header = { TalkHistoryHeader(state, actions) },
             forceVisible = state.isSearching,
             modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -123,7 +126,7 @@ internal fun TalkHistoryContent(
                 listPane = {
                     AnimatedPane {
                         if (state.showsTiles) {
-                            TalkHistoryTiles(state, actions, today)
+                            TalkHistoryTiles(state, actions, gridState, today)
                         } else {
                             TalkHistoryList(state, actions, listState, today)
                         }

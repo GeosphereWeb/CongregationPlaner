@@ -1,5 +1,7 @@
 package de.geosphere.congregationplaner.ui.list
 
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import kotlinx.coroutines.flow.flowOf
@@ -51,5 +53,13 @@ class CollapsingHeaderColumnTest {
         assertFalse(state.visible)
         state.showWhenAtListStart(flowOf(false, true))
         assertTrue(state.visible)
+    }
+
+    @Test
+    fun listAndGridAreAtStartOnlyWithoutScrolling() {
+        assertTrue(LazyListState().isAtStart())
+        assertFalse(LazyListState(firstVisibleItemIndex = 2).isAtStart())
+        assertTrue(LazyGridState().isAtStart())
+        assertFalse(LazyGridState(firstVisibleItemIndex = 0, firstVisibleItemScrollOffset = 8).isAtStart())
     }
 }

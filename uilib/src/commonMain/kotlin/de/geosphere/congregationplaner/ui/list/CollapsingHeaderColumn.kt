@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -15,6 +16,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
@@ -47,6 +49,12 @@ internal fun nextHeaderVisible(current: Boolean, scrollDeltaY: Float): Boolean =
 internal fun isAtListStart(firstVisibleItemIndex: Int, firstVisibleItemScrollOffset: Int): Boolean =
     firstVisibleItemIndex == 0 && firstVisibleItemScrollOffset == 0
 
+/** True when nothing of the list is scrolled away above it. */
+fun LazyListState.isAtStart(): Boolean = isAtListStart(firstVisibleItemIndex, firstVisibleItemScrollOffset)
+
+/** True when nothing of the grid is scrolled away above it. */
+fun LazyGridState.isAtStart(): Boolean = isAtListStart(firstVisibleItemIndex, firstVisibleItemScrollOffset)
+
 /** Scroll-driven visibility of a header above a list; shown again whenever [listState] is back at the top. */
 @Stable
 internal class CollapsingHeaderState {
@@ -67,12 +75,11 @@ internal suspend fun CollapsingHeaderState.showWhenAtListStart(atListStart: Flow
 }
 
 @Composable
-internal fun rememberCollapsingHeaderState(listState: LazyListState): CollapsingHeaderState {
+internal fun rememberCollapsingHeaderState(atListStart: () -> Boolean): CollapsingHeaderState {
     val state = remember { CollapsingHeaderState() }
-    LaunchedEffect(listState) {
-        state.showWhenAtListStart(
-            snapshotFlow { isAtListStart(listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset) },
-        )
+    val currentAtListStart by rememberUpdatedState(atListStart)
+    LaunchedEffect(state) {
+        state.showWhenAtListStart(snapshotFlow { currentAtListStart() })
     }
     return state
 }
@@ -90,8 +97,29 @@ fun CollapsingHeaderColumn(
     forceVisible: Boolean = false,
     spacing: Dp = 12.dp,
     content: @Composable ColumnScope.() -> Unit,
+) = CollapsingHeaderColumn(
+    atListStart = { listState.isAtStart() },
+    header = header,
+    modifier = modifier,
+    forceVisible = forceVisible,
+    spacing = spacing,
+    content = content,
+)
+
+/**
+ * Like the [LazyListState] variant, for content whose scroll position is not a single list (e.g. a list that
+ * can switch to a grid): [atListStart] tells whether the visible content is scrolled to its very top.
+ */
+@Composable
+fun CollapsingHeaderColumn(
+    atListStart: () -> Boolean,
+    header: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    forceVisible: Boolean = false,
+    spacing: Dp = 12.dp,
+    content: @Composable ColumnScope.() -> Unit,
 ) {
-    val state = rememberCollapsingHeaderState(listState)
+    val state = rememberCollapsingHeaderState(atListStart)
     Column(modifier = modifier.nestedScroll(state.connection), verticalArrangement = Arrangement.spacedBy(spacing)) {
         CollapsingHeader(visible = state.visible || forceVisible, spacing = spacing, content = header)
         content()
