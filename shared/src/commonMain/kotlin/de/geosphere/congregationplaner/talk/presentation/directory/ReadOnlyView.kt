@@ -28,7 +28,6 @@ internal fun readOnlyView(editor: ExternalDirectoryEditor, directory: ExternalDi
                 speaker.landlinePhone.takeIf(String::isNotBlank)?.let { "Festnetz: $it" },
                 speaker.email.takeIf(String::isNotBlank)?.let { "E-Mail: $it" },
                 speaker.talkNumbers.takeIf { it.isNotEmpty() }?.let { "Vorträge: ${it.toText()}" },
-                speaker.ranking.takeIf { it > 0 }?.let { "Bewertung: $it von 5" },
                 EXCLUDED_FROM_PLANNING_LABEL.takeIf { speaker.excludedFromPlanning },
             ),
         )
