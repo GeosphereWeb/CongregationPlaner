@@ -5,6 +5,10 @@ const val MAX_TITLE_LENGTH = 120
 const val MAX_IMAGE_NAME_LENGTH = 60
 const val MAX_IMAGE_BYTES = 700_000
 const val MAX_IMAGES = 10
+const val MAX_IMAGE_PIXELS = 2000
+
+/** An image name is valid with 1..[MAX_IMAGE_NAME_LENGTH] characters after trimming. */
+fun isValidImageName(name: String): Boolean = name.trim().length in 1..MAX_IMAGE_NAME_LENGTH
 
 /** Notice settings of a congregation; without a stored document these defaults apply. */
 data class TalkNoticeSettings(

@@ -64,7 +64,10 @@ internal fun winAnsiBytes(text: String): ByteArray {
     return out.toByteArray()
 }
 
-/** Minimal single-page PDF 1.4 writer. Coordinates have a top-left origin; [text] y is the baseline. */
+/**
+ * Minimal single-page PDF 1.4 writer. Coordinates have a top-left origin; [text] y is the baseline.
+ * Colors are `0xAARRGGBB` values, but the alpha is ignored: every color is drawn opaque.
+ */
 class PdfWriter(private val widthPt: Float, private val heightPt: Float) {
     private val content = StringBuilder()
     private val images = mutableListOf<RgbaImage>()

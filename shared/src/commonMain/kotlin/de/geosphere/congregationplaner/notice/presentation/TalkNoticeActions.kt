@@ -20,6 +20,7 @@ data class TalkNoticeActions(
     val onMakeDefault: (String?) -> Unit = {},
     val onAddImage: () -> Unit = {},
     val onRenameImage: (String, String) -> Unit = { _, _ -> },
+    val isValidImageName: (String) -> Boolean = { true },
     val onRequestDeleteImage: (NoticeImage?) -> Unit = {},
     val onConfirmDeleteImage: () -> Unit = {},
 )

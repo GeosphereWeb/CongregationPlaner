@@ -51,9 +51,9 @@ internal class FirestoreRestClient(
         return response.body()
     }
 
-    // Abfragen per POST (:runQuery) lesen nur; alle anderen Methoden außer GET ändern Daten.
+    // Abfragen per POST (:runQuery, :runAggregationQuery) lesen nur; alle anderen Methoden außer GET ändern Daten.
     private fun isWrite(method: String, url: String): Boolean =
-        method != "GET" && !(method == "POST" && url.endsWith(":runQuery"))
+        method != "GET" && !(method == "POST" && (url.endsWith(":runQuery") || url.endsWith(":runAggregationQuery")))
 
     /** Wie [request], liefert für nicht existierende Dokumente (HTTP 404) aber `null`. */
     fun requestOrNull(method: String, url: String): String? = try {

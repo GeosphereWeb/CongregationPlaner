@@ -12,6 +12,9 @@ interface TalkNoticeRepository {
 
     suspend fun loadImages(congregation: CongregationRef): Result<List<NoticeImage>>
 
+    /** The number of images, without reading their data. */
+    suspend fun countImages(congregation: CongregationRef): Result<Int>
+
     suspend fun addImage(congregation: CongregationRef, name: String, png: ByteArray): Result<NoticeImage>
 
     suspend fun renameImage(congregation: CongregationRef, id: String, name: String): Result<Unit>

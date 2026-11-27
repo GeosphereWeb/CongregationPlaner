@@ -4,6 +4,7 @@ import de.geosphere.congregationplaner.notice.domain.model.NoticeImage
 import de.geosphere.congregationplaner.notice.domain.model.TalkNoticeException
 import de.geosphere.congregationplaner.notice.domain.model.TalkNoticeSettings
 import de.geosphere.congregationplaner.notice.domain.repository.TalkNoticeRepository
+import de.geosphere.congregationplaner.notice.testing.testPng
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
 import de.geosphere.congregationplaner.user.domain.model.AppUser
@@ -41,6 +42,8 @@ internal class FakeTalkNoticeRepository : TalkNoticeRepository {
     override suspend fun loadImages(congregation: CongregationRef): Result<List<NoticeImage>> =
         Result.success(images.toList())
 
+    override suspend fun countImages(congregation: CongregationRef): Result<Int> = Result.success(images.size)
+
     override suspend fun addImage(congregation: CongregationRef, name: String, png: ByteArray): Result<NoticeImage> =
         Result.success(NoticeImage("img${nextId++}", name, png).also { images += it })
 
@@ -73,7 +76,7 @@ class TalkNoticeUseCasesTest {
         congregation = testCongregation,
     )
     private val helper = planner.copy(uid = "h", roles = setOf(CongregationRole.TALK_HELPER))
-    private val png = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2)
+    private val png = testPng()
 
     @Test
     fun `helpers may only observe settings and load images`() = runBlocking {
@@ -100,6 +103,8 @@ class TalkNoticeUseCasesTest {
     fun `image validation covers size signature name and count`() = runBlocking {
         val big = png + ByteArray(700_000)
         assertIs<TalkNoticeException.ImageTooLarge>(add(planner, "a", big).exceptionOrNull())
+        assertTrue(add(planner, "exact", testPng(extraBytes = 700_000 - png.size)).isSuccess)
+        repository.images.clear()
         assertIs<TalkNoticeException.NotAPng>(add(planner, "a", byteArrayOf(1, 2, 3)).exceptionOrNull())
         assertIs<TalkNoticeException.InvalidImageName>(add(planner, "", png).exceptionOrNull())
         assertIs<TalkNoticeException.InvalidImageName>(add(planner, "a".repeat(61), png).exceptionOrNull())
@@ -107,6 +112,35 @@ class TalkNoticeUseCasesTest {
         repeat(10) { assertTrue(add(planner, "img $it", png).isSuccess) }
         assertIs<TalkNoticeException.TooManyImages>(add(planner, "eleven", png).exceptionOrNull())
         assertEquals(10, repository.images.size)
+    }
+
+    @Test
+    fun `the pixel limit is 2000 by 2000`(): Unit = runBlocking {
+        assertTrue(add(planner, "a", testPng(2000, 2000)).isSuccess)
+        assertIs<TalkNoticeException.ImageTooLargePixels>(add(planner, "a", testPng(2001, 10)).exceptionOrNull())
+        assertIs<TalkNoticeException.ImageTooLargePixels>(add(planner, "a", testPng(10, 2001)).exceptionOrNull())
+        assertIs<TalkNoticeException.NotAPng>(add(planner, "a", png.copyOf(20)).exceptionOrNull())
+    }
+
+    @Test
+    fun `adding counts the images instead of loading them`() = runBlocking {
+        val countOnly = object : TalkNoticeRepository by repository {
+            override suspend fun loadImages(congregation: CongregationRef): Result<List<NoticeImage>> =
+                throw AssertionError("must not load all images")
+        }
+
+        assertTrue(AddNoticeImageUseCase(countOnly, policy)(planner, "a", png).isSuccess)
+    }
+
+    @Test
+    fun `a failing count makes the add a failure`() = runBlocking {
+        val failing = object : TalkNoticeRepository by repository {
+            override suspend fun countImages(congregation: CongregationRef): Result<Int> =
+                Result.failure(IllegalStateException("boom"))
+        }
+
+        assertTrue(AddNoticeImageUseCase(failing, policy)(planner, "a", png).isFailure)
+        assertTrue(repository.images.isEmpty())
     }
 
     @Test
@@ -148,6 +182,32 @@ class TalkNoticeUseCasesTest {
         val failing = object : TalkNoticeRepository by repository {
             override fun observeSettings(congregation: CongregationRef): Flow<TalkNoticeSettings> =
                 flow { throw IllegalStateException("boom") }
+        }
+
+        assertTrue(DeleteNoticeImageUseCase(failing, policy)(planner, "x").isFailure)
+    }
+
+    @Test
+    fun `a failing settings save keeps the image and fails the delete`() = runBlocking {
+        val image = add(planner, "a", png).getOrThrow()
+        repository.settings.value = TalkNoticeSettings(defaultImageId = image.id)
+        val failing = object : TalkNoticeRepository by repository {
+            override suspend fun saveSettings(
+                congregation: CongregationRef,
+                settings: TalkNoticeSettings,
+            ): Result<TalkNoticeSettings> = Result.failure(IllegalStateException("denied"))
+        }
+
+        assertTrue(DeleteNoticeImageUseCase(failing, policy)(planner, image.id).isFailure)
+
+        assertEquals(listOf(image), repository.images)
+    }
+
+    @Test
+    fun `a failing image delete is returned as a failure`() = runBlocking {
+        val failing = object : TalkNoticeRepository by repository {
+            override suspend fun deleteImage(congregation: CongregationRef, id: String): Result<Unit> =
+                Result.failure(IllegalStateException("denied"))
         }
 
         assertTrue(DeleteNoticeImageUseCase(failing, policy)(planner, "x").isFailure)

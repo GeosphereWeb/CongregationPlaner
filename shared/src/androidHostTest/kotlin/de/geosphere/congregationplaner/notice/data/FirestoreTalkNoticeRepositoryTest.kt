@@ -1,5 +1,8 @@
 package de.geosphere.congregationplaner.notice.data
 
+import com.google.firebase.firestore.AggregateQuery
+import com.google.firebase.firestore.AggregateQuerySnapshot
+import com.google.firebase.firestore.AggregateSource
 import com.google.firebase.firestore.Blob
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
@@ -92,6 +95,19 @@ class FirestoreTalkNoticeRepositoryTest {
         every { imagesCollection.get() } returns successTask(snapshot)
 
         assertEquals(listOf(NoticeImage("a1", "Logo", png)), repository.loadImages(congregation).getOrThrow())
+    }
+
+    @Test
+    fun `countImages counts on the server without loading the images`(): Unit = withMockedLog {
+        val query = mockk<AggregateQuery>()
+        val snapshot = mockk<AggregateQuerySnapshot> { every { count } returns 4L }
+        every { imagesCollection.count() } returns query
+        every { query.get(AggregateSource.SERVER) } returns successTask(snapshot)
+
+        assertEquals(4, runBlocking { repository.countImages(congregation).getOrThrow() })
+
+        every { query.get(AggregateSource.SERVER) } returns failedTask(IllegalStateException("denied"))
+        assertTrue(runBlocking { repository.countImages(congregation).isFailure })
     }
 
     @Test

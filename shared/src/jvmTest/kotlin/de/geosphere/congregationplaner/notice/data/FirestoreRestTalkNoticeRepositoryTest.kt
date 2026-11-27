@@ -93,6 +93,27 @@ class FirestoreRestTalkNoticeRepositoryTest {
     }
 
     @Test
+    fun `countImages asks the server to count the noticeImages collection`() = runWithServer({
+        FakeResponse(200, """[{"result":{"aggregateFields":{"count":{"integerValue":"7"}}},"readTime":"x"}]""")
+    }) { server ->
+        assertEquals(7, repository.countImages(congregation).getOrThrow())
+
+        val request = server.requests.single()
+        assertEquals("POST", request.method)
+        assertEquals("$documents/${congregation.documentPath}:runAggregationQuery", request.path)
+        assertEquals(
+            """{"structuredAggregationQuery":{"structuredQuery":{"from":[{"collectionId":"noticeImages"}]},""" +
+                """"aggregations":[{"alias":"count","count":{}}]}}""",
+            request.body,
+        )
+    }
+
+    @Test
+    fun `countImages reports a rejected request`() = runWithServer({ FakeResponse(403, "{}") }) { _ ->
+        assertTrue(repository.countImages(congregation).isFailure)
+    }
+
+    @Test
     fun `addImage posts name and base64 bytes and returns the new id`() = runWithServer({
         FakeResponse(200, """{"name":"x/noticeImages/new42","fields":{}}""")
     }) { server ->

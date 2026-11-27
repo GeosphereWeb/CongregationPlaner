@@ -91,6 +91,7 @@ class DesktopPollingTest {
 
                 client.request("GET", client.collectionUrl("a"))
                 client.request("POST", "${client.collectionUrl("a")}:runQuery", "{}")
+                client.request("POST", "${client.collectionUrl("a")}:runAggregationQuery", "{}")
                 assertEquals(before, DesktopPolling.signals.writes.value)
 
                 client.request("PATCH", client.documentUrl("a", "b"), "{}")

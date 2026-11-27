@@ -13,8 +13,8 @@ interface NoticeFileSource {
     /** Asks for a PNG file; `null` if the user cancelled. */
     suspend fun pickPng(): Result<PickedPng?>
 
-    /** Asks where to save the PDF, proposing [fileName]; `false` if the user cancelled. */
-    suspend fun savePdf(fileName: String, bytes: ByteArray): Result<Boolean>
+    /** Asks where to save the PDF, proposing [fileName]; the chosen file name, `null` if the user cancelled. */
+    suspend fun savePdf(fileName: String, bytes: ByteArray): Result<String?>
 }
 
 /** Platform choice of the file source, like the repository factories. */
@@ -30,7 +30,7 @@ internal object UnavailableNoticeFileSource : NoticeFileSource {
 
     override suspend fun pickPng(): Result<PickedPng?> = unavailable()
 
-    override suspend fun savePdf(fileName: String, bytes: ByteArray): Result<Boolean> = unavailable()
+    override suspend fun savePdf(fileName: String, bytes: ByteArray): Result<String?> = unavailable()
 
     private fun <T> unavailable(): Result<T> =
         Result.failure(UnsupportedOperationException("Dateidialoge gibt es nur in der Android- und Desktop-App."))

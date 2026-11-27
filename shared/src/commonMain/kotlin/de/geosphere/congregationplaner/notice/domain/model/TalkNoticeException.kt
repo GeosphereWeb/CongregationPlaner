@@ -10,6 +10,9 @@ sealed class TalkNoticeException(message: String) : Exception(message) {
 
     class ImageTooLarge : TalkNoticeException("Die Grafik ist größer als 700 KB.")
 
+    class ImageTooLargePixels :
+        TalkNoticeException("Die Grafik ist größer als $MAX_IMAGE_PIXELS × $MAX_IMAGE_PIXELS Pixel.")
+
     class NotAPng : TalkNoticeException("Die Datei ist keine PNG-Grafik.")
 
     class TooManyImages : TalkNoticeException("Es sind höchstens $MAX_IMAGES Grafiken möglich.")

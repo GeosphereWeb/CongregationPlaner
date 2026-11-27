@@ -18,6 +18,7 @@ import de.geosphere.congregationplaner.notice.domain.usecase.LoadNoticeImagesUse
 import de.geosphere.congregationplaner.notice.domain.usecase.ObserveTalkNoticeSettingsUseCase
 import de.geosphere.congregationplaner.notice.domain.usecase.RenameNoticeImageUseCase
 import de.geosphere.congregationplaner.notice.domain.usecase.SaveTalkNoticeSettingsUseCase
+import de.geosphere.congregationplaner.notice.testing.testPng
 import de.geosphere.congregationplaner.organization.domain.model.CongregationRef
 import de.geosphere.congregationplaner.talk.domain.model.TalkSlot
 import de.geosphere.congregationplaner.talk.domain.permission.TalkSchedulePermissionPolicy
@@ -46,7 +47,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-private val PNG = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3)
+private val PNG = testPng()
 
 private class FakeRenderer(override val isAvailable: Boolean = true) : NoticePdfRenderer {
     var result: Result<ByteArray> = Result.success(byteArrayOf(7, 7))
@@ -64,14 +65,14 @@ private class FakeRenderer(override val isAvailable: Boolean = true) : NoticePdf
 
 private class FakeNoticeFileSource(override val isAvailable: Boolean = true) : NoticeFileSource {
     var picked: Result<PickedPng?> = Result.success(null)
-    var saveResult: Result<Boolean> = Result.success(true)
+    var saveResult: Result<String?>? = null
     val saved = mutableListOf<Pair<String, ByteArray>>()
 
     override suspend fun pickPng(): Result<PickedPng?> = picked
 
-    override suspend fun savePdf(fileName: String, bytes: ByteArray): Result<Boolean> {
+    override suspend fun savePdf(fileName: String, bytes: ByteArray): Result<String?> {
         saved += fileName to bytes
-        return saveResult
+        return saveResult ?: Result.success(fileName)
     }
 }
 
@@ -227,8 +228,39 @@ class TalkNoticeViewModelTest {
         assertNull(state.errorMessage)
         assertEquals("Berlin-Mitte", renderer.notice?.congregationName)
         assertEquals(listOf("So 06.12.2026", "So 03.01.2027"), renderer.notice?.rows?.map { it.dateText })
-        assertEquals(listOf(2026, 2027), requestedYears.takeLast(2))
+        assertEquals(listOf(2026, 2027), requestedYears)
         assertNull(renderer.png)
+    }
+
+    @Test
+    fun `each year of the schedule is read once per session`() {
+        val vm = viewModel().apply { onCurrentUserChanged(planner, today) }
+        assertEquals(listOf(2026), requestedYears)
+
+        vm.createPdf()
+        vm.createPdf()
+
+        assertEquals(listOf(2026, 2027), requestedYears)
+    }
+
+    @Test
+    fun `the next year is only read for the start when this year has no slot left`() {
+        schedule.slots.value = listOf(TalkSlot(LocalDate(2027, 1, 3), LocalTime(10, 0)))
+
+        val vm = viewModel().apply { onCurrentUserChanged(planner, today) }
+
+        assertEquals(listOf(2026, 2027), requestedYears)
+        assertEquals(LocalDate(2027, 1, 3), vm.uiState.value.start)
+    }
+
+    @Test
+    fun `a user change clears the cached years`() {
+        val vm = viewModel().apply { onCurrentUserChanged(planner, today) }
+
+        val other = testCongregation.copy(congregationId = "o")
+        vm.onCurrentUserChanged(planner.copy(uid = "b", congregation = other), today)
+
+        assertEquals(listOf(2026, 2026), requestedYears)
     }
 
     @Test
@@ -245,8 +277,18 @@ class TalkNoticeViewModelTest {
     }
 
     @Test
+    fun `the saved file shows the name the user chose`() {
+        fileSource.saveResult = Result.success("Mein Aushang.pdf")
+        val vm = viewModel().apply { onCurrentUserChanged(planner, today) }
+
+        vm.createPdf()
+
+        assertEquals("Mein Aushang.pdf", vm.uiState.value.savedFile)
+    }
+
+    @Test
     fun `cancelling the save dialog is neither saved nor an error`() {
-        fileSource.saveResult = Result.success(false)
+        fileSource.saveResult = Result.success(null)
         val vm = viewModel().apply { onCurrentUserChanged(planner, today) }
 
         vm.createPdf()
@@ -329,6 +371,15 @@ class TalkNoticeViewModelTest {
 
         assertEquals(listOf("Neu"), vm.uiState.value.images.map { it.name })
         assertEquals("img", vm.uiState.value.settings.defaultImageId)
+    }
+
+    @Test
+    fun `the view model tells whether an image name is valid`() {
+        val vm = viewModel()
+
+        assertTrue(vm.isValidImageName(" Saal "))
+        assertTrue(!vm.isValidImageName("  "))
+        assertTrue(!vm.isValidImageName("a".repeat(61)))
     }
 
     @Test

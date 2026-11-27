@@ -4,6 +4,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import javax.swing.JFileChooser
+import javax.swing.JOptionPane
 import javax.swing.SwingUtilities
 import javax.swing.filechooser.FileNameExtensionFilter
 
@@ -20,15 +21,30 @@ internal object SwingNoticeFileSource : NoticeFileSource {
         }
     }
 
-    override suspend fun savePdf(fileName: String, bytes: ByteArray): Result<Boolean> = withContext(Dispatchers.IO) {
+    override suspend fun savePdf(fileName: String, bytes: ByteArray): Result<String?> = withContext(Dispatchers.IO) {
         runCatching {
             val filter = FileNameExtensionFilter("PDF-Dokument (*.pdf)", "pdf")
             val file = chooseFile("Speichern unter", save = true, filter = filter, proposed = fileName)
-                ?: return@runCatching false
+                ?: return@runCatching null
             val target = if (file.extension.equals("pdf", ignoreCase = true)) file else File("${file.path}.pdf")
+            if (target.exists() && !confirmOverwrite(target.name)) return@runCatching null
             target.writeBytes(bytes)
-            true
+            target.name
         }
+    }
+
+    private fun confirmOverwrite(name: String): Boolean {
+        var replace = false
+        SwingUtilities.invokeAndWait {
+            val answer = JOptionPane.showConfirmDialog(
+                null,
+                "Die Datei „$name“ gibt es schon. Ersetzen?",
+                "Speichern unter",
+                JOptionPane.YES_NO_OPTION,
+            )
+            replace = answer == JOptionPane.YES_OPTION
+        }
+        return replace
     }
 
     private fun chooseFile(

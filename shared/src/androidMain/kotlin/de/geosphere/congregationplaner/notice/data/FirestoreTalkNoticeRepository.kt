@@ -1,5 +1,6 @@
 package de.geosphere.congregationplaner.notice.data
 
+import com.google.firebase.firestore.AggregateSource
 import com.google.firebase.firestore.Blob
 import com.google.firebase.firestore.FirebaseFirestore
 import de.geosphere.congregationplaner.auth.data.AndroidFirestoreProvider
@@ -58,6 +59,12 @@ internal class FirestoreTalkNoticeRepository(private val firestore: FirebaseFire
                         ?: throw IllegalArgumentException("Firestore field 'png' must be bytes."),
                 )
             }
+        }
+
+    override suspend fun countImages(congregation: CongregationRef): Result<Int> =
+        runFirestoreCatching("count notice images") {
+            firestore.collection(congregation.noticeImagesPath).count().get(AggregateSource.SERVER).awaitResult()
+                .count.toInt()
         }
 
     override suspend fun addImage(congregation: CongregationRef, name: String, png: ByteArray): Result<NoticeImage> =

@@ -1,6 +1,7 @@
 package de.geosphere.congregationplaner.notice.pdf
 
 import java.io.ByteArrayOutputStream
+import java.util.Locale
 import java.util.zip.InflaterInputStream
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -104,6 +105,36 @@ class PdfWriterTest {
         assertEquals(6.67f, HelveticaMetrics.width("A", 10f, false), 0.01f)
         assertEquals(7.22f, HelveticaMetrics.width("A", 10f, true), 0.01f)
         assertEquals(0f, HelveticaMetrics.width("", 10f, false))
+    }
+
+    @Test
+    fun `helvetica widths of letters with different regular and bold widths`() {
+        assertEquals(833f, HelveticaMetrics.width("m", 1000f, false), 0.01f)
+        assertEquals(889f, HelveticaMetrics.width("m", 1000f, true), 0.01f)
+        assertEquals(611f, HelveticaMetrics.width("ß", 1000f, false), 0.01f)
+        assertEquals(611f, HelveticaMetrics.width("ß", 1000f, true), 0.01f)
+        assertEquals(222f, HelveticaMetrics.width("i", 1000f, false), 0.01f)
+        assertEquals(278f, HelveticaMetrics.width("i", 1000f, true), 0.01f)
+    }
+
+    @Test
+    fun `numbers use a decimal point in a German default locale`() {
+        val previous = Locale.getDefault()
+        Locale.setDefault(Locale.GERMANY)
+        try {
+            val content = inflatedStreams(
+                PdfWriter(595.5f, 842.25f).apply {
+                    fillRect(10.5f, 10.25f, 100.75f, 20.5f, 0xFF1F3864)
+                    text(20.5f, 40.25f, "x", 12.5f, false, 0xFF404040)
+                }.toByteArray(),
+            )
+
+            assertContains(content, "10.5 ")
+            assertContains(content, "12.5 Tf")
+            assertFalse(content.contains(Regex("""\d,\d""")))
+        } finally {
+            Locale.setDefault(previous)
+        }
     }
 
     @Test

@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import de.geosphere.congregationplaner.notice.domain.model.NoticeColorSet
 import de.geosphere.congregationplaner.notice.domain.model.NoticeImage
 import de.geosphere.congregationplaner.theming.NightColors
+import de.geosphere.congregationplaner.theming.PreviewThemeWrapper
+import de.geosphere.congregationplaner.theming.ThemePreviews
 import de.geosphere.congregationplaner.ui.button.PrimaryButton
 import de.geosphere.congregationplaner.ui.button.SecondaryButton
 import de.geosphere.congregationplaner.ui.dialog.ConfirmDialog
@@ -71,9 +73,12 @@ internal fun TalkNoticeSettingsContent(state: TalkNoticeUiState, actions: TalkNo
         )
     }
     renaming?.let { image ->
-        RenameDialog(
-            image,
-            onConfirm = { name ->
+        var name by remember(image.id) { mutableStateOf(image.name) }
+        RenameImageDialog(
+            name = name,
+            onNameChange = { name = it },
+            canConfirm = actions.isValidImageName(name),
+            onConfirm = {
                 actions.onRenameImage(image.id, name)
                 renaming = null
             },
@@ -147,13 +152,27 @@ private fun Thumbnail(image: NoticeImage) {
 }
 
 @Composable
-private fun RenameDialog(image: NoticeImage, onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
-    var name by remember(image.id) { mutableStateOf(image.name) }
+internal fun RenameImageDialog(
+    name: String,
+    onNameChange: (String) -> Unit,
+    canConfirm: Boolean,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Grafik umbenennen") },
-        text = { FormTextField("Name", name) { name = it } },
-        confirmButton = { TextButton(onClick = { onConfirm(name) }) { Text("Speichern") } },
+        text = { FormTextField("Name", name, onValueChange = onNameChange) },
+        confirmButton = { TextButton(onClick = onConfirm, enabled = canConfirm) { Text("Speichern") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen") } },
     )
+}
+
+@ThemePreviews
+@Composable
+private fun RenameImageDialogPreview() = PreviewThemeWrapper {
+    Column {
+        RenameImageDialog("Saal", {}, canConfirm = true, onConfirm = {}, onDismiss = {})
+        RenameImageDialog("", {}, canConfirm = false, onConfirm = {}, onDismiss = {})
+    }
 }
