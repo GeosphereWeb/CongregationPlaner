@@ -34,15 +34,16 @@ internal object AndroidNoticeFileSource : NoticeFileSource {
         }
     }
 
-    override suspend fun savePdf(fileName: String, bytes: ByteArray): Result<Boolean> = runCatching {
+    override suspend fun savePdf(fileName: String, bytes: ByteArray): Result<String?> = runCatching {
         val activity = activity()
         val uri = activity.awaitResult(ActivityResultContracts.CreateDocument(PDF_MIME), fileName)
-            ?: return@runCatching false
+            ?: return@runCatching null
         withContext(Dispatchers.IO) {
             activity.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
                 ?: error("Die Datei konnte nicht gespeichert werden.")
+            // The system may have renamed the file (e.g. "Aushang (1).pdf"); show what was really created.
+            displayName(activity, uri).ifBlank { fileName }
         }
-        true
     }
 
     private fun displayName(activity: ComponentActivity, uri: Uri): String =

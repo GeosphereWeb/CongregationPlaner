@@ -65,14 +65,14 @@ private class FakeRenderer(override val isAvailable: Boolean = true) : NoticePdf
 
 private class FakeNoticeFileSource(override val isAvailable: Boolean = true) : NoticeFileSource {
     var picked: Result<PickedPng?> = Result.success(null)
-    var saveResult: Result<Boolean> = Result.success(true)
+    var saveResult: Result<String?>? = null
     val saved = mutableListOf<Pair<String, ByteArray>>()
 
     override suspend fun pickPng(): Result<PickedPng?> = picked
 
-    override suspend fun savePdf(fileName: String, bytes: ByteArray): Result<Boolean> {
+    override suspend fun savePdf(fileName: String, bytes: ByteArray): Result<String?> {
         saved += fileName to bytes
-        return saveResult
+        return saveResult ?: Result.success(fileName)
     }
 }
 
@@ -246,8 +246,18 @@ class TalkNoticeViewModelTest {
     }
 
     @Test
+    fun `the saved file shows the name the user chose`() {
+        fileSource.saveResult = Result.success("Mein Aushang.pdf")
+        val vm = viewModel().apply { onCurrentUserChanged(planner, today) }
+
+        vm.createPdf()
+
+        assertEquals("Mein Aushang.pdf", vm.uiState.value.savedFile)
+    }
+
+    @Test
     fun `cancelling the save dialog is neither saved nor an error`() {
-        fileSource.saveResult = Result.success(false)
+        fileSource.saveResult = Result.success(null)
         val vm = viewModel().apply { onCurrentUserChanged(planner, today) }
 
         vm.createPdf()

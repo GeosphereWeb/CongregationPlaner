@@ -264,9 +264,7 @@ class TalkNoticeViewModel(
             }
             val fileName = "Aushang_$start.pdf"
             fileSource.savePdf(fileName, bytes)
-                .onSuccess { saved ->
-                    mutableUiState.update { it.copy(isBusy = false, savedFile = fileName.takeIf { saved }) }
-                }
+                .onSuccess { saved -> mutableUiState.update { it.copy(isBusy = false, savedFile = saved) } }
                 .onFailure { fail("Die Datei konnte nicht gespeichert werden: ${it.message}") }
         }
     }
