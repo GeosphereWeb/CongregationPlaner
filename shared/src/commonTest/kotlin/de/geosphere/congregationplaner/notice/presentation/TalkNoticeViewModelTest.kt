@@ -192,6 +192,27 @@ class TalkNoticeViewModelTest {
     }
 
     @Test
+    fun `the count steppers stay within the rows that fit`() {
+        val vm = viewModel().apply { onCurrentUserChanged(planner, today) }
+
+        repeat(20) { vm.increaseCount() }
+        assertEquals(11, vm.uiState.value.count)
+        assertTrue(!vm.uiState.value.canIncreaseCount)
+        assertTrue(vm.uiState.value.canDecreaseCount)
+        repeat(20) { vm.decreaseCount() }
+        assertEquals(1, vm.uiState.value.count)
+        assertTrue(!vm.uiState.value.canDecreaseCount)
+        assertTrue(vm.uiState.value.canIncreaseCount)
+    }
+
+    @Test
+    fun `a graphic can be added until the limit is reached`() {
+        val image = NoticeImage("x", "Saal", byteArrayOf(1))
+        assertTrue(TalkNoticeUiState(images = List(9) { image }).canAddImage)
+        assertTrue(!TalkNoticeUiState(images = List(10) { image }).canAddImage)
+    }
+
+    @Test
     fun `createPdf builds the notice and saves the file`() {
         val vm = viewModel().apply { onCurrentUserChanged(planner, today) }
         vm.changeCount(5)

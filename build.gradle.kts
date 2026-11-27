@@ -106,6 +106,13 @@ val sonarExclusions = listOf(
     "**/NotificationCheckWorker.kt",
     "**/NotificationPresenter.kt",
     "**/NotificationGraph.kt",
+    // Aushang-PDF (ADR-0041): DI-Verdrahtung, Callback-Bündel mit leeren Standard-Lambdas und plattformnahe Dateien
+    // (PDF-Rendering mit Android-/AWT-Klassen, Datei-Dialoge); Logik ist in ViewModel, UseCases und Layout getestet
+    "**/TalkNoticeGraph.kt",
+    "**/TalkNoticeActions.kt",
+    "**/AndroidNoticePdfRenderer.kt",
+    "**/DesktopNoticePdfRenderer.kt",
+    "**/*NoticeFileSource.kt",
     // Exclude theming and ui modules from coverage
     "theming/**",
     "ui/**"

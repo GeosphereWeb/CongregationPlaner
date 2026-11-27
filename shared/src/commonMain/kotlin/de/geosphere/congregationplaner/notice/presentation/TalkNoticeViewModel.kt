@@ -6,6 +6,7 @@ import de.geosphere.congregationplaner.congregation.domain.repository.Congregati
 import de.geosphere.congregationplaner.notice.data.NoticeFileSource
 import de.geosphere.congregationplaner.notice.data.NoticePdfRenderer
 import de.geosphere.congregationplaner.notice.domain.model.DEFAULT_NOTICE_ROWS
+import de.geosphere.congregationplaner.notice.domain.model.MAX_IMAGES
 import de.geosphere.congregationplaner.notice.domain.model.MAX_NOTICE_ROWS
 import de.geosphere.congregationplaner.notice.domain.model.NoticeColorSet
 import de.geosphere.congregationplaner.notice.domain.model.NoticeImage
@@ -61,7 +62,11 @@ data class TalkNoticeUiState(
     val savedFile: String? = null,
     val errorMessage: String? = null,
     val pendingDeleteImage: NoticeImage? = null,
-)
+) {
+    val canAddImage: Boolean get() = !isBusy && images.size < MAX_IMAGES
+    val canDecreaseCount: Boolean get() = count > 1
+    val canIncreaseCount: Boolean get() = count < MAX_NOTICE_ROWS
+}
 
 /** Drives the talk notice section: settings, graphics, and creating the PDF. */
 @Inject
@@ -234,6 +239,10 @@ class TalkNoticeViewModel(
     fun changeStart(date: LocalDate) = mutableUiState.update { it.copy(start = date) }
 
     fun changeCount(count: Int) = mutableUiState.update { it.copy(count = count.coerceIn(1, MAX_NOTICE_ROWS)) }
+
+    fun decreaseCount() = changeCount(mutableUiState.value.count - 1)
+
+    fun increaseCount() = changeCount(mutableUiState.value.count + 1)
 
     fun createPdf() {
         val user = manager() ?: return
