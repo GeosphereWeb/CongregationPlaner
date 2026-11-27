@@ -42,15 +42,15 @@ internal object DesktopNoticePdfRenderer : NoticePdfRenderer {
     }
 
     /** Reads the image with subsampling so a huge PNG is never held at full size. */
-    private fun readSubsampled(png: ByteArray): BufferedImage? {
-        val input = ImageIO.createImageInputStream(ByteArrayInputStream(png))
-        val reader = ImageIO.getImageReaders(input).takeIf { it.hasNext() }?.next() ?: return null
-        return try {
-            reader.input = input
-            val sample = noticeImageSampleSize(reader.getWidth(0), reader.getHeight(0))
-            reader.read(0, reader.defaultReadParam.apply { setSourceSubsampling(sample, sample, 0, 0) })
-        } finally {
-            reader.dispose()
+    private fun readSubsampled(png: ByteArray): BufferedImage? =
+        ImageIO.createImageInputStream(ByteArrayInputStream(png)).use { input ->
+            val reader = ImageIO.getImageReaders(input).takeIf { it.hasNext() }?.next() ?: return@use null
+            try {
+                reader.input = input
+                val sample = noticeImageSampleSize(reader.getWidth(0), reader.getHeight(0))
+                reader.read(0, reader.defaultReadParam.apply { setSourceSubsampling(sample, sample, 0, 0) })
+            } finally {
+                reader.dispose()
+            }
         }
-    }
 }
